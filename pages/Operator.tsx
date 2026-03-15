@@ -56,7 +56,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
     }
   };
 
-  if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">ظ„ط§ طھظˆط¬ط¯ ظ‚ظˆط§ظ„ط¨ ظ†ط´ط·ط©. ط§ط°ظ‡ط¨ ظ„ظ„ظ…ظƒطھط¨ط© ظˆط£ظ†ط´ط¦ ظ‚ط§ظ„ط¨.</div>;
+  if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   return (
     <div className="flex h-full bg-gray-950">
@@ -64,7 +64,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
         <div className="p-4 border-b border-gray-800">
           <h2 className="font-bold text-white flex items-center gap-2">
             <Cast className="w-5 h-5 text-green-500" />
-            <span>ظ‚ط§ط¦ظ…ط© ط§ظ„طھط´ط؛ظٹظ„</span>
+            <span>قائمة التشغيل</span>
           </h2>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
@@ -133,7 +133,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
               }`}
             >
               {selectedOverlay.isVisible ? <Square className="fill-current w-8 h-8" /> : <Play className="fill-current w-8 h-8" />}
-              <span>{selectedOverlay.isVisible ? 'ط¥ظ†ظ‡ط§ط، ط§ظ„ط¸ظ‡ظˆط± (TAKE OUT)' : 'ط¥ط¸ظ‡ط§ط± ط¹ظ„ظ‰ ط§ظ„ط¨ط« (TAKE IN)'}</span>
+              <span>{selectedOverlay.isVisible ? 'إنهاء الظهور (TAKE OUT)' : 'إظهار على البث (TAKE IN)'}</span>
             </button>
           </div>
 
@@ -143,10 +143,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <LayoutTemplate className="w-5 h-5 text-blue-500" />
-                    طھط­ظƒظ… ط§ظ„ط´ط±ط§ط¦ط­
+                    تحكم الشرائح
                   </h3>
                   <span className="font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded">
-                    طµظپط­ط© {Number(selectedOverlay.fields.find(f => f.id === 'currentPage')?.value || 0) + 1}
+                    صفحة {Number(selectedOverlay.fields.find(f => f.id === 'currentPage')?.value || 0) + 1}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -155,14 +155,14 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                     className="flex-1 py-8 bg-gray-800 hover:bg-gray-700 text-white rounded-xl flex flex-col items-center justify-center gap-2 border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 transition-all"
                   >
                     <Rewind className="w-8 h-8" />
-                    <span className="font-bold">ط§ظ„ط³ط§ط¨ظ‚</span>
+                    <span className="font-bold">السابق</span>
                   </button>
                   <button
                     onClick={() => handleSmartNewsNav(selectedOverlay, 'next')}
                     className="flex-1 py-8 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex flex-col items-center justify-center gap-2 border-b-4 border-blue-900 active:border-b-0 active:translate-y-1 transition-all"
                   >
                     <FastForward className="w-8 h-8" />
-                    <span className="font-bold">ط§ظ„طھط§ظ„ظٹ</span>
+                    <span className="font-bold">التالي</span>
                   </button>
                 </div>
               </div>
@@ -170,10 +170,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
             {selectedOverlay.type === OverlayType.SCOREBOARD && (
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <h3 className="text-white font-bold mb-4">طھط¹ط¯ظٹظ„ ط§ظ„ظ†طھط§ط¦ط¬</h3>
+                <h3 className="text-white font-bold mb-4">تعديل النتائج</h3>
                 <div className="flex items-center gap-8 justify-center">
                   <div className="text-center space-y-2">
-                    <label className="text-gray-400 text-sm">ط§ظ„ظ…ط¶ظٹظپ</label>
+                    <label className="text-gray-400 text-sm">المضيف</label>
                     <div className="text-3xl font-mono font-bold text-white bg-black p-4 rounded-lg border border-gray-700">
                       {String(selectedOverlay.fields.find(f => f.id === 'homeScore')?.value)}
                     </div>
@@ -186,7 +186,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                   <div className="h-20 w-px bg-gray-800"></div>
 
                   <div className="text-center space-y-2">
-                    <label className="text-gray-400 text-sm">ط§ظ„ط¶ظٹظپ</label>
+                    <label className="text-gray-400 text-sm">الضيف</label>
                     <div className="text-3xl font-mono font-bold text-white bg-black p-4 rounded-lg border border-gray-700">
                       {String(selectedOverlay.fields.find(f => f.id === 'awayScore')?.value)}
                     </div>
@@ -204,7 +204,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-white font-bold">ط£ظˆط¶ط§ط¹ ظ‚ط§ظ„ط¨ ط§ظ„ط§ظ†طھط®ط§ط¨ط§طھ</h3>
+                      <h3 className="text-white font-bold">أوضاع قالب الانتخابات</h3>
                       <p className="text-xs text-gray-500 mt-1">{selectedMeta?.description || 'قالب انتخابات مستقل قابل للإظهار والإخفاء وحده.'}</p>
                     </div>
                     <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-black tracking-[0.2em] text-gray-300">
@@ -225,7 +225,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs text-gray-400">ط´ط§ط±ط© ط§ظ„ط­ط§ظ„ط©</label>
+                      <label className="mb-1 block text-xs text-gray-400">شارة الحالة</label>
                       <input
                         type="text"
                         value={String(getFieldValue(selectedOverlay, 'statusBadge', ''))}
@@ -234,7 +234,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-gray-400">ط§ظ„ظ…طµط¯ط±</label>
+                      <label className="mb-1 block text-xs text-gray-400">المصدر</label>
                       <input
                         type="text"
                         value={String(getFieldValue(selectedOverlay, 'sourceLabel', ''))}
@@ -243,7 +243,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-gray-400">ط¢ط®ط± طھط­ط¯ظٹط«</label>
+                      <label className="mb-1 block text-xs text-gray-400">آخر تحديث</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -255,7 +255,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                           onClick={() => stampElectionUpdate(selectedOverlay)}
                           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-500"
                         >
-                          ط§ظ„ط¢ظ†
+                          الآن
                         </button>
                       </div>
                     </div>
@@ -282,7 +282,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-gray-400">ظ…ظ„ط§ط­ط¸ط© ط§ظ„ط¨ط«</label>
+                      <label className="mb-1 block text-xs text-gray-400">ملاحظة البث</label>
                       <textarea
                         rows={4}
                         value={String(getFieldValue(selectedOverlay, 'specialText', ''))}
@@ -294,12 +294,12 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                 </div>
 
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-5">
-                  <h3 className="text-white font-bold">ط§ظ„ظ†طھط§ط¦ط¬ ط§ظ„ظ…ط¨ط§ط´ط±ط©</h3>
+                  <h3 className="text-white font-bold">النتائج المباشرة</h3>
 
                   {[1, 2].map(index => (
                     <div key={index} className="rounded-xl border border-gray-800 bg-black/30 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="font-bold text-white">{String(getFieldValue(selectedOverlay, `candidate${index}Name`, `ظ…ط±ط´ط­ ${index}`))}</div>
+                        <div className="font-bold text-white">{String(getFieldValue(selectedOverlay, `candidate${index}Name`, `مرشح ${index}`))}</div>
                         <div className="text-sm font-mono text-gray-400">{Number(getFieldValue(selectedOverlay, `candidate${index}Percent`, 0)).toFixed(1)}%</div>
                       </div>
 
@@ -315,7 +315,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="mb-1 block text-xs text-gray-400">ط§ظ„ط£طµظˆط§طھ</label>
+                          <label className="mb-1 block text-xs text-gray-400">الأصوات</label>
                           <input
                             type="number"
                             value={Number(getFieldValue(selectedOverlay, `candidate${index}Votes`, 0))}
@@ -324,7 +324,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs text-gray-400">ط§ظ„طھط؛ظٹط± %</label>
+                          <label className="mb-1 block text-xs text-gray-400">التغير %</label>
                           <input
                             type="number"
                             step={0.1}
@@ -340,7 +340,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                   {showUndecided && (
                     <div className="rounded-xl border border-gray-800 bg-black/30 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="font-bold text-white">{String(getFieldValue(selectedOverlay, 'undecidedLabel', 'ط؛ظٹط± ظ…ط­ط³ظˆظ…'))}</div>
+                        <div className="font-bold text-white">{String(getFieldValue(selectedOverlay, 'undecidedLabel', 'غير محسوم'))}</div>
                         <div className="text-sm font-mono text-gray-400">{Number(getFieldValue(selectedOverlay, 'undecidedPercent', 0)).toFixed(1)}%</div>
                       </div>
                       <input
@@ -357,7 +357,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
                   <div className="rounded-xl border border-gray-800 bg-black/30 p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="font-bold text-white">ط§ظ„ظ…ط´ط§ط±ظƒط©</div>
+                      <div className="font-bold text-white">المشاركة</div>
                       <div className="text-sm font-mono text-gray-400">{Number(getFieldValue(selectedOverlay, 'currentVoters', 0)).toLocaleString('en-US')}</div>
                     </div>
                     <input
@@ -388,8 +388,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
       {showStreamDeckModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-4">ط¨ظٹط§ظ†ط§طھ ط§ظ„طھط­ظƒظ… ط§ظ„ظ…طھظ‚ط¯ظ…ط©</h2>
-            <p className="text-gray-400 mb-4 text-sm">ظ„ظ„طھط­ظƒظ… ط§ظ„ط®ط§ط±ط¬ظٹ (StreamDeck / Bitfocus Companion)طŒ ظٹظ…ظƒظ†ظƒ ط§ط³طھط®ط¯ط§ظ… ط§ظ„ظ€ Studio ID ط§ظ„ط®ط§طµ ط¨ظƒ:</p>
+            <h2 className="text-xl font-bold text-white mb-4">بيانات التحكم المتقدمة</h2>
+            <p className="text-gray-400 mb-4 text-sm">للتحكم الخارجي (StreamDeck / Bitfocus Companion)، يمكنك استخدام الـ Studio ID الخاص بك:</p>
 
             <div className="bg-black p-4 rounded border border-gray-800 mb-4">
               <code className="text-green-400 font-mono text-lg">{syncManager.getStudioId()}</code>
@@ -398,7 +398,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
             <div className="mt-6 flex justify-end">
               <button onClick={() => setShowStreamDeckModal(false)} className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">
-                ط¥ط؛ظ„ط§ظ‚
+                إغلاق
               </button>
             </div>
           </div>

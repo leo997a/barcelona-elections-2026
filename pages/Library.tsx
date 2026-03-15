@@ -71,7 +71,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       if (btn && txt) {
         const originalText = txt.innerText;
         const originalClasses = btn.className;
-        txt.innerText = 'طھظ… ظ†ط³ط® ط§ظ„طھظˆظƒظ† ط¨ظ†ط¬ط§ط­!';
+        txt.innerText = 'تم نسخ التوكن بنجاح!';
         btn.className =
           'w-full mb-3 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl shadow-lg shadow-green-900/20 transform scale-105 transition-all duration-200';
         setTimeout(() => {
@@ -83,7 +83,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       }
     } catch (e) {
       console.error('Token Generation Error', e);
-      alert('ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھظˆظ„ظٹط¯ ط§ظ„طھظˆظƒظ†');
+      alert('حدث خطأ أثناء توليد التوكن');
     }
   };
 
@@ -93,7 +93,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
         <div>
           <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
             <Settings2 className="w-8 h-8 text-blue-500" />
-            ظ…ظƒطھط¨ط© ط§ظ„ظ‚ظˆط§ظ„ط¨
+            مكتبة القوالب
           </h2>
           <p className="text-gray-400 text-lg">كل قالب له Smart Token مستقل للربط مع Stream Deck والتحكم في الظهور بشكل منفصل.</p>
         </div>
@@ -103,14 +103,14 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
             className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl transition-colors border border-gray-700 font-bold"
           >
             <Play className="w-4 h-4 text-green-500" />
-            <span>ط؛ط±ظپط© ط§ظ„طھط­ظƒظ…</span>
+            <span>غرفة التحكم</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-colors font-bold shadow-lg shadow-blue-900/20"
           >
             <Plus className="w-5 h-5" />
-            <span>ظ‚ط§ظ„ط¨ ط¬ط¯ظٹط¯</span>
+            <span>قالب جديد</span>
           </button>
         </div>
       </div>
@@ -120,13 +120,13 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
           <div className="bg-gray-800 p-6 rounded-full mb-6">
             <Zap className="w-12 h-12 text-gray-500" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-2">ط§ظ„ظ…ظƒطھط¨ط© ظپط§ط±ط؛ط©</h3>
+          <h3 className="text-2xl font-bold text-white mb-2">المكتبة فارغة</h3>
           <p className="text-gray-500 mb-8 text-lg">أنشئ أول قالب لتحصل على كود الربط الخاص به.</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-colors font-bold shadow-lg"
           >
-            ط¥ظ†ط´ط§ط، ظ‚ط§ظ„ط¨ ط¬ط¯ظٹط¯
+            إنشاء قالب جديد
           </button>
         </div>
       ) : (
@@ -177,12 +177,12 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                       onClick={() => handleCopySmartToken(overlay)}
                       id={`token-btn-${overlay.id}`}
                       className="w-full py-3 flex items-center justify-center gap-3 bg-gray-800 hover:bg-gray-750 text-gray-300 rounded-xl transition-all border border-gray-700 hover:border-yellow-500/50 group/token relative overflow-hidden"
-                      title="ط§ط¶ط؛ط· ظ„ظ†ط³ط® ط§ظ„طھظˆظƒظ† ط§ظ„ط®ط§طµ ط¨ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨"
+                      title="اضغط لنسخ التوكن الخاص بهذا القالب"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-yellow-600/10 to-transparent opacity-0 group-hover/token:opacity-100 transition-opacity"></div>
                       <Key className="w-5 h-5 text-yellow-500 group-hover/token:text-yellow-400 transition-colors" />
                       <span id={`token-text-${overlay.id}`} className="text-sm font-bold relative z-10">
-                        ظ†ط³ط® Smart Token
+                        نسخ Smart Token
                       </span>
                     </button>
                   </div>
@@ -193,13 +193,13 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                       className="flex items-center justify-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-600/20 hover:border-blue-600/50 py-2.5 rounded-lg transition-all"
                     >
                       <Edit3 className="w-4 h-4" />
-                      <span className="text-xs font-bold">طھط¹ط¯ظٹظ„</span>
+                      <span className="text-xs font-bold">تعديل</span>
                     </button>
 
                     <button
                       onClick={() => onDelete(overlay.id)}
                       className="flex items-center justify-center bg-red-900/5 hover:bg-red-900/20 text-red-400/70 hover:text-red-400 border border-transparent hover:border-red-900/30 rounded-lg transition-colors"
-                      title="ط­ط°ظپ ط§ظ„ظ‚ط§ظ„ط¨"
+                      title="حذف القالب"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

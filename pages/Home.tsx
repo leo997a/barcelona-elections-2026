@@ -19,15 +19,15 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
           <div className="space-y-4 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-medium">
               <Zap className="w-3 h-3 fill-current" />
-              <span>ط¬ط§ظ‡ط² ظ„ظ„ط¨ط« - REO LIVE v2.0</span>
+              <span>جاهز للبث - REO LIVE v2.0</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
-              ط§ط¨ط¯ط£ ط¨ط«ظƒ ط§ظ„ط§ط­طھط±ط§ظپظٹ <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">ط®ظ„ط§ظ„ 60 ط«ط§ظ†ظٹط©</span>
+              ابدأ بثك الاحترافي <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">خلال 60 ثانية</span>
             </h1>
             <p className="text-gray-300 text-lg leading-relaxed">
-              ظ…ظ†ط¸ظˆظ…ط© ط±ط³ظˆظ…ظٹط© ظ…طھظƒط§ظ…ظ„ط© (Reo Live Stream) ظ…طµظ…ظ…ط© ظ„ظ„ط¨ط« ط§ظ„ظ…ط¨ط§ط´ط±.
-              طھط­ظƒظ… ظƒط§ظ…ظ„ ط¹ط¨ط± ط§ظ„ظ…طھطµظپط­طŒ Stream DeckطŒ ظˆ API.
+              منظومة رسومية متكاملة (Reo Live Stream) مصممة للبث المباشر.
+              تحكم كامل عبر المتصفح، Stream Deck، و API.
             </p>
             <div className="flex items-center gap-3 pt-4">
               <button
@@ -35,20 +35,20 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold shadow-lg shadow-blue-900/30 transition-all flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                <span>ط¥ظ†ط´ط§ط، ط¬ط±ط§ظپظٹظƒ ط¬ط¯ظٹط¯</span>
+                <span>إنشاء جرافيك جديد</span>
               </button>
               <button
                 onClick={() => onNavigate('operator')}
                 className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-lg font-bold transition-all flex items-center gap-2"
               >
                 <Activity className="w-5 h-5" />
-                <span>ط؛ط±ظپط© ط§ظ„طھط­ظƒظ…</span>
+                <span>غرفة التحكم</span>
               </button>
             </div>
           </div>
 
           <div className="bg-gray-950/50 backdrop-blur-sm border border-gray-800 p-6 rounded-xl w-full md:w-80">
-            <h3 className="text-gray-400 text-sm font-medium mb-4">ط­ط§ظ„ط© ط§ظ„ظ†ط¸ط§ظ…</h3>
+            <h3 className="text-gray-400 text-sm font-medium mb-4">حالة النظام</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -79,40 +79,40 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
 
       <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
         <Layers className="w-5 h-5 text-blue-500" />
-        <span>ظ‚ظˆط§ظ„ط¨ ط³ط±ظٹط¹ط© (Quick Launch)</span>
+        <span>قوالب سريعة (Quick Launch)</span>
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <QuickLaunchCard
-          title="ظ„ظˆط­ط© ط§ظ„ط¯ط§ط¹ظ…ظٹظ†"
-          desc="ط¹ط±ط¶ ظ‚ط§ط¦ظ…ط© ط§ظ„ط¯ط§ط¹ظ…ظٹظ† (Top Donors)"
+          title="لوحة الداعمين"
+          desc="عرض قائمة الداعمين (Top Donors)"
           color="from-yellow-600 to-orange-600"
           icon="BAR"
           onClick={() => onCreate('template-leaderboard-ribbon')}
         />
         <QuickLaunchCard
-          title="ط§ظ„طھظ‚ط±ظٹط± ط§ظ„ط°ظƒظٹ"
-          desc="طھط­ظˆظٹظ„ ط§ظ„ظ†طµظˆطµ ط§ظ„ط·ظˆظٹظ„ط© ظ„ط´ط±ط§ط¦ط­"
+          title="التقرير الذكي"
+          desc="تحويل النصوص الطويلة لشرائح"
           color="from-purple-600 to-indigo-600"
           icon="AI"
           onClick={() => onCreate('template-smart-news-1')}
         />
         <QuickLaunchCard
-          title="ظ„ظˆط­ط© ط§ظ„ظ†طھط§ط¦ط¬"
-          desc="ظƒط±ط© ظ‚ط¯ظ…طŒ ط³ظ„ط©طŒ ط·ط§ط¦ط±ط©"
+          title="لوحة النتائج"
+          desc="كرة قدم، سلة، طائرة"
           color="from-blue-600 to-cyan-600"
           icon="SCO"
           onClick={() => onCreate('template-soccer')}
         />
         <QuickLaunchCard
-          title="ط´ط±ظٹط· ط§ظ„ط£ط®ط¨ط§ط±"
-          desc="طھط­ط¯ظٹط«ط§طھ ط¹ط§ط¬ظ„ط© ظˆط³ط±ظٹط¹ط©"
+          title="شريط الأخبار"
+          desc="تحديثات عاجلة وسريعة"
           color="from-red-600 to-orange-600"
           icon="TIC"
           onClick={() => onCreate('template-news')}
         />
         <QuickLaunchCard
           title="Lower Third"
-          desc="طھط¹ط±ظٹظپ ط§ظ„ط¶ظٹظˆظپ ظˆط§ظ„ظ…ط°ظٹط¹ظٹظ†"
+          desc="تعريف الضيوف والمذيعين"
           color="from-green-600 to-emerald-600"
           icon="LT"
           onClick={() => onCreate('template-lower')}

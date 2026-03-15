@@ -129,7 +129,7 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
 }) => {
   const getField = (id: string) => config.fields.find(field => field.id === id)?.value;
 
-  const headline = String(getField('headline') || 'ط§ظ†طھط®ط§ط¨ط§طھ ط¨ط±ط´ظ„ظˆظ†ط© 2026');
+  const headline = String(getField('headline') || 'انتخابات برشلونة 2026');
   const subheadline = String(getField('subheadline') || 'Live coverage');
   const watermarkText = String(getField('watermarkText') || 'REO SHOW');
   const rawDesignStyle = String(getField('designStyle') || 'RESULTS_BAR');
