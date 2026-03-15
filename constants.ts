@@ -1,0 +1,561 @@
+
+import { OverlayType, OverlayConfig, OverlayField } from './types';
+
+// Helper to add common fields
+const commonFields: OverlayField[] = [
+  { id: 'channelName', label: 'اسم القناة (الحقوق)', type: 'text', value: 'REO LIVE' },
+];
+
+export const INITIAL_TEMPLATES: OverlayConfig[] = [
+  {
+    id: 'template-leaderboard-ribbon',
+    name: 'شريط الداعمين (Stream Ribbon)',
+    type: OverlayType.LEADERBOARD,
+    isVisible: true,
+    theme: {
+      primaryColor: '#f59e0b', // Gold default
+      secondaryColor: '#000000',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      // --- Data ---
+      { id: 'headline', label: 'عنوان القائمة', type: 'text', value: 'TOP SUPPORTERS' },
+      { id: 'sponsorsData', label: 'بيانات الداعمين', type: 'hidden', value: '[]' },
+      
+      // --- Layout & Dimensions (4K NATIVE DEFAULTS) ---
+      { 
+        id: 'sidebarWidth', 
+        label: 'عرض الشريط (px)', 
+        type: 'range', 
+        value: 650, // Massive increase for sharpness
+        min: 400, 
+        max: 1200, 
+        step: 10 
+      },
+      { 
+        id: 'itemsPerPage', 
+        label: 'عدد الأسماء في الصفحة', 
+        type: 'range', 
+        value: 6, 
+        min: 3, 
+        max: 10, 
+        step: 1 
+      },
+      { id: 'rotationTime', label: 'مدة عرض الصفحة (ثواني)', type: 'number', value: 10 },
+
+      // --- Typography Control (High DPI Defaults) ---
+      { 
+        id: 'headerFontSize', 
+        label: 'حجم خط العنوان', 
+        type: 'range', 
+        value: 48, // Large default
+        min: 24, 
+        max: 96, 
+        step: 1 
+      },
+      { 
+        id: 'nameFontSize', 
+        label: 'حجم خط الأسماء', 
+        type: 'range', 
+        value: 28, // Large default
+        min: 18, 
+        max: 60, 
+        step: 1 
+      },
+      { 
+        id: 'amountFontSize', 
+        label: 'حجم خط المبلغ', 
+        type: 'range', 
+        value: 20, // Large default
+        min: 14, 
+        max: 48, 
+        step: 1 
+      },
+
+      // --- Appearance & Style ---
+      { 
+        id: 'themePreset', 
+        label: 'نط الألوان', 
+        type: 'select', 
+        value: 'ROYAL_GOLD',
+        options: ['ROYAL_GOLD', 'CLASSIC_RED', 'TACTICAL_BLUE', 'NIGHT_PURPLE', 'DARK_MATTER', 'NEWS_ORANGE', 'PITCH_GREEN']
+      },
+      { 
+        id: 'bgOpacity', 
+        label: 'شفافية الخلفية', 
+        type: 'range', 
+        value: 0.92, 
+        min: 0, 
+        max: 1, 
+        step: 0.05 
+      },
+      
+      // --- Toggles ---
+      { id: 'showAvatars', label: 'إظهار الصور الرمزية', type: 'boolean', value: true },
+      { id: 'showAmounts', label: 'إظهار المبالغ', type: 'boolean', value: true },
+      { id: 'showRanks', label: 'إظهار الترتيب (أرقام)', type: 'boolean', value: true },
+
+      // --- Positioning ---
+      { 
+        id: 'positionX', 
+        label: 'إزاحة أفقية (X)', 
+        type: 'range', 
+        value: 50, 
+        min: 0, 
+        max: 1500, 
+        step: 10 
+      },
+      { 
+        id: 'positionY', 
+        label: 'إزاحة عمودية (Y)', 
+        type: 'range', 
+        value: 0, 
+        min: -1000, 
+        max: 1000, 
+        step: 10 
+      },
+      { 
+        id: 'scale', 
+        label: 'حجم الكلي (Scale)', 
+        type: 'range', 
+        value: 1.0, // Reset to 1 because base size is now huge
+        min: 0.5, 
+        max: 3.0, 
+        step: 0.05 
+      },
+    ]
+  },
+  {
+    id: 'template-smart-news-1',
+    name: 'التقرير الذكي (AI)',
+    type: OverlayType.SMART_NEWS,
+    isVisible: true,
+    theme: {
+      primaryColor: '#dc2626', 
+      secondaryColor: '#111827',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      // --- المحتوى ---
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'تقرير المباراة' },
+      { id: 'rawText', label: 'النص الكامل (AI)', type: 'textarea', value: 'الصق النص هنا...' },
+      
+      // --- إعدادات AI الجديدة ---
+      { 
+        id: 'aiPageCount', 
+        label: 'عدد الشرائح المستهدف (AI)', 
+        type: 'range', 
+        value: 6, 
+        min: 2, 
+        max: 20, 
+        step: 1 
+      },
+
+      { id: 'pagesData', label: 'البيانات (JSON)', type: 'hidden', value: '["شريحة 1", "شريحة 2"]' },
+      { id: 'currentPage', label: 'رقم الصفحة', type: 'number', value: 0 },
+      
+      // --- المؤثرات (NEW) ---
+      { 
+        id: 'transitionEffect', 
+        label: 'تأثير الانتقال (Transition)', 
+        type: 'select', 
+        value: 'CINEMATIC',
+        options: ['CINEMATIC', 'PAGE_FLIP', 'NEWS_SLIDE', 'ZOOM_IMPACT', 'CUBE_ROTATE', 'GLITCH']
+      },
+
+      // --- الثيمات والألوان ---
+      { 
+        id: 'themePreset', 
+        label: 'لون القالب (الثيم)', 
+        type: 'select', 
+        value: 'CLASSIC_RED',
+        options: ['CLASSIC_RED', 'TACTICAL_BLUE', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'DARK_MATTER', 'NEWS_ORANGE']
+      },
+
+      // --- الصور (High Res Default) ---
+      { 
+        id: 'images', 
+        label: 'معرض الصور', 
+        type: 'image-list', 
+        value: [
+          'https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1920&q=100'
+        ] 
+      },
+      { id: 'imageInterval', label: 'مدة قلب الصورة (ثواني)', type: 'range', value: 10, min: 3, max: 60, step: 1 },
+
+      // --- التحكم الحر بالأبعاد والموقع (Free Transform) ---
+      { 
+        id: 'scale', 
+        label: 'حجم القالب (Zoom)', 
+        type: 'range', 
+        value: 1.1, 
+        min: 0.5, 
+        max: 3.0, 
+        step: 0.1 
+      },
+      { 
+        id: 'positionY', 
+        label: 'الموقع العمودي (Y)', 
+        type: 'range', 
+        value: 0, 
+        min: -1000, 
+        max: 1000, 
+        step: 10 
+      },
+      { 
+        id: 'positionX', 
+        label: 'الموقع الأفقي (X)', 
+        type: 'range', 
+        value: 0, 
+        min: -1500, 
+        max: 1500, 
+        step: 10 
+      },
+      { 
+        id: 'containerWidth', 
+        label: 'عرض البطاقة (%)', 
+        type: 'range', 
+        value: 90, 
+        min: 30, 
+        max: 100, 
+        step: 5 
+      },
+      
+      // --- الخلفية والعلامة المائية ---
+      { id: 'watermarkText', label: 'نص الخلفية المتحرك', type: 'text', value: 'REO LIVE' },
+      { 
+        id: 'bgOpacity', 
+        label: 'شفافية الخلفية الكاملة', 
+        type: 'range', 
+        value: 0.95, 
+        min: 0, 
+        max: 1, 
+        step: 0.05 
+      },
+
+      // --- الصوت ---
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  },
+  {
+    id: 'template-soccer',
+    name: 'لوحة نتائج كرة القدم',
+    type: OverlayType.SCOREBOARD,
+    isVisible: true,
+    theme: {
+      primaryColor: '#2563eb',
+      secondaryColor: '#dc2626',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { 
+        id: 'scale', 
+        label: 'حجم القالب', 
+        type: 'range', 
+        value: 1.3, // Larger default
+        min: 0.5, 
+        max: 3.0, 
+        step: 0.1 
+      },
+      { 
+        id: 'positionY', 
+        label: 'الموقع العمودي (Y)', 
+        type: 'range', 
+        value: 0, 
+        min: -1000, 
+        max: 1000, 
+        step: 10 
+      },
+      { id: 'homeName', label: 'الفريق المضيف', type: 'text', value: 'الهلال' },
+      { id: 'awayName', label: 'الفريق الضيف', type: 'text', value: 'النصر' },
+      { id: 'homeScore', label: 'نتائج المضيف', type: 'number', value: 2 },
+      { id: 'awayScore', label: 'نتائج الضيف', type: 'number', value: 1 },
+      { id: 'period', label: 'الشوط', type: 'text', value: 'الشوط الثاني' },
+      { id: 'time', label: 'الوقت', type: 'text', value: '74:30' },
+      { id: 'homeLogo', label: 'شعار المضيف', type: 'image', value: 'https://picsum.photos/200/200?random=1' },
+      { id: 'awayLogo', label: 'شعار الضيف', type: 'image', value: 'https://picsum.photos/200/200?random=2' },
+    ]
+  },
+  {
+    id: 'template-news',
+    name: 'شريط أخبار عاجلة',
+    type: OverlayType.TICKER,
+    isVisible: true,
+    theme: {
+      primaryColor: '#b91c1c',
+      secondaryColor: '#ffffff',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { 
+        id: 'scale', 
+        label: 'حجم القالب', 
+        type: 'range', 
+        value: 1.2, 
+        min: 0.5, 
+        max: 3.0, 
+        step: 0.1 
+      },
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'عاجل' },
+      { id: 'content', label: 'نص الخبر', type: 'text', value: 'انطلاق فعاليات البطولة اليوم بمشاركة واسعة...' },
+      { id: 'scrollSpeed', label: 'سرعة التمرير', type: 'number', value: 10 },
+    ]
+  },
+  {
+    id: 'template-lower',
+    name: 'تعريف ضيف (Lower Third)',
+    type: OverlayType.LOWER_THIRD,
+    isVisible: true,
+    theme: {
+      primaryColor: '#0f172a',
+      secondaryColor: '#3b82f6',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { 
+        id: 'scale', 
+        label: 'حجم القالب', 
+        type: 'range', 
+        value: 1.2, 
+        min: 0.5, 
+        max: 3.0, 
+        step: 0.1 
+      },
+      { id: 'name', label: 'الاسم', type: 'text', value: 'أحمد محمد' },
+      { id: 'role', label: 'المنصب', type: 'text', value: 'محلل رياضي' },
+    ]
+  },
+  {
+    id: 'template-exclusive-alert',
+    name: 'خبر حصري (Exclusive Alert)',
+    type: OverlayType.EXCLUSIVE_ALERT,
+    isVisible: false,
+    theme: {
+      primaryColor: '#ef4444',
+      secondaryColor: '#000000',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'النص الرئيسي', type: 'text', value: 'حصرياً' },
+      { id: 'subHeadline', label: 'النص الفرعي', type: 'text', value: 'مع REO' },
+      { id: 'position', label: 'الموقع', type: 'select', value: 'RIGHT', options: ['RIGHT', 'LEFT'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.5, min: 0.5, max: 3.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 100, min: -1000, max: 1000, step: 10 },
+      { id: 'useTTS', label: 'تفعيل النطق الصوتي (TTS)', type: 'boolean', value: true },
+      { id: 'ttsText', label: 'نص النطق الصوتي', type: 'text', value: 'حصرياً مع ريو' },
+      { id: 'themePreset', label: 'اللون', type: 'select', value: 'CLASSIC_RED', options: ['CLASSIC_RED', 'ROYAL_GOLD', 'TACTICAL_BLUE', 'PITCH_GREEN', 'NIGHT_PURPLE'] },
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  },
+  {
+    id: 'template-guests',
+    name: 'ضيوف الحلقة (Guests)',
+    type: OverlayType.GUESTS,
+    isVisible: false,
+    theme: {
+      primaryColor: '#3b82f6',
+      secondaryColor: '#0f172a',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'عنوان الفقرة', type: 'text', value: 'ضيوف الحلقة' },
+      { id: 'watermarkText', label: 'الحقوق', type: 'text', value: 'REO SHOW' },
+      { id: 'designStyle', label: 'التصميم (الستايل)', type: 'select', value: 'STYLE_1', options: ['STYLE_1', 'STYLE_2', 'STYLE_3'] },
+      { id: 'themePreset', label: 'اللون الأساسي', type: 'select', value: 'TACTICAL_BLUE', options: ['CLASSIC_RED', 'ROYAL_GOLD', 'TACTICAL_BLUE', 'PITCH_GREEN', 'NIGHT_PURPLE'] },
+      { id: 'guestsCount', label: 'عدد الضيوف', type: 'range', value: 3, min: 1, max: 6, step: 1 },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      
+      // Guest 1
+      { id: 'guest1Name', label: 'اسم الضيف 1', type: 'text', value: 'محمد العويس' },
+      { id: 'guest1Image', label: 'صورة الضيف 1', type: 'image', value: 'https://picsum.photos/400/400?random=11' },
+      // Guest 2
+      { id: 'guest2Name', label: 'اسم الضيف 2', type: 'text', value: 'سالم الدوسري' },
+      { id: 'guest2Image', label: 'صورة الضيف 2', type: 'image', value: 'https://picsum.photos/400/400?random=12' },
+      // Guest 3
+      { id: 'guest3Name', label: 'اسم الضيف 3', type: 'text', value: 'ياسر الشهراني' },
+      { id: 'guest3Image', label: 'صورة الضيف 3', type: 'image', value: 'https://picsum.photos/400/400?random=13' },
+      // Guest 4
+      { id: 'guest4Name', label: 'اسم الضيف 4', type: 'text', value: 'سلمان الفرج' },
+      { id: 'guest4Image', label: 'صورة الضيف 4', type: 'image', value: 'https://picsum.photos/400/400?random=14' },
+      // Guest 5
+      { id: 'guest5Name', label: 'اسم الضيف 5', type: 'text', value: 'نواف العقيدي' },
+      { id: 'guest5Image', label: 'صورة الضيف 5', type: 'image', value: 'https://picsum.photos/400/400?random=15' },
+      // Guest 6
+      { id: 'guest6Name', label: 'اسم الضيف 6', type: 'text', value: 'علي البليهي' },
+      { id: 'guest6Image', label: 'صورة الضيف 6', type: 'image', value: 'https://picsum.photos/400/400?random=16' },
+    ]
+  },
+  {
+    id: 'template-ucl-draw',
+    name: 'قرعة الأبطال (UCL Draw)',
+    type: OverlayType.UCL_DRAW,
+    isVisible: false,
+    theme: {
+      primaryColor: '#001489',
+      secondaryColor: '#000836',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'OITAVOS DE FINAL' },
+      { id: 'watermarkText', label: 'الحقوق', type: 'text', value: 'REO SHOW' },
+      { id: 'designStyle', label: 'التصميم (الستايل)', type: 'select', value: 'STYLE_1', options: ['STYLE_1', 'STYLE_2', 'STYLE_3'] },
+      { id: 'themePreset', label: 'اللون الأساسي', type: 'select', value: 'UCL_BLUE', options: ['UCL_BLUE', 'DARK_MATTER', 'ROYAL_GOLD'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'centerImage', label: 'صورة المنتصف (الكأس)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/b/bf/UEFA_Champions_League_logo_2.svg' },
+      
+      { id: 'pair1', label: 'المواجهة 1 (باريس/نيوكاسل)', type: 'select', value: 'UNDECIDED', options: ['UNDECIDED', 'BARCA_LEFT', 'CHELSEA_LEFT'] },
+      { id: 'pair2', label: 'المواجهة 2 (غلطة/أتلتيكو)', type: 'select', value: 'UNDECIDED', options: ['UNDECIDED', 'LIV_LEFT', 'TOT_LEFT'] },
+      { id: 'pair3', label: 'المواجهة 3 (مدريد/بودو)', type: 'select', value: 'UNDECIDED', options: ['UNDECIDED', 'SPORTING_LEFT', 'CITY_LEFT'] },
+      { id: 'pair4', label: 'المواجهة 4 (أتلانتا/ليفركوزن)', type: 'select', value: 'UNDECIDED', options: ['UNDECIDED', 'ARSENAL_LEFT', 'BAYERN_LEFT'] },
+
+      // Fixed Teams
+      { id: 'teamL1', label: 'فريق يسار 1 (باريس)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' },
+      { id: 'teamR1', label: 'فريق يمين 1 (نيوكاسل)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg' },
+      
+      { id: 'teamL2', label: 'فريق يسار 2 (غلطة سراي)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Galatasaray_Sports_Club_Logo.png/200px-Galatasaray_Sports_Club_Logo.png' },
+      { id: 'teamR2', label: 'فريق يمين 2 (أتلتيكو)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/200px-Atletico_Madrid_2017_logo.svg.png' },
+
+      { id: 'teamL3', label: 'فريق يسار 3 (ريال مدريد)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/200px-Real_Madrid_CF.svg.png' },
+      { id: 'teamR3', label: 'فريق يمين 3 (بودو)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/FK_Bod%C3%B8-Glimt.svg/200px-FK_Bod%C3%B8-Glimt.svg.png' },
+
+      { id: 'teamL4', label: 'فريق يسار 4 (أتلانتا)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/66/AtalantaBC.svg/200px-AtalantaBC.svg.png' },
+      { id: 'teamR4', label: 'فريق يمين 4 (ليفركوزن)', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/200px-Bayer_04_Leverkusen_logo.svg.png' },
+
+      // Variable Teams
+      { id: 'varBarca', label: 'شعار برشلونة', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg' },
+      { id: 'varChelsea', label: 'شعار تشيلسي', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg' },
+      
+      { id: 'varLiv', label: 'شعار ليفربول', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg' },
+      { id: 'varTot', label: 'شعار توتنهام', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg' },
+
+      { id: 'varSporting', label: 'شعار سبورتنغ', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e2/Sporting_Clube_de_Portugal_crest.svg/200px-Sporting_Clube_de_Portugal_crest.svg.png' },
+      { id: 'varCity', label: 'شعار مان سيتي', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/200px-Manchester_City_FC_badge.svg.png' },
+
+      { id: 'varArsenal', label: 'شعار أرسنال', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg' },
+      { id: 'varBayern', label: 'شعار بايرن', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg' },
+      
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  },
+  {
+    id: 'template-election',
+    name: 'انتخابات برشلونة 2026',
+    type: OverlayType.ELECTION,
+    isVisible: false,
+    theme: {
+      primaryColor: '#a50044', // Barca Red
+      secondaryColor: '#004d98', // Barca Blue
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'انتخابات برشلونة 2026' },
+      { id: 'subheadline', label: 'العنوان التوضيحي', type: 'text', value: 'تغطية مباشرة لسباق رئاسة النادي في 2026' },
+      { id: 'watermarkText', label: 'الحقوق', type: 'text', value: 'REO SHOW' },
+      { id: 'statusBadge', label: 'شارة الحالة', type: 'text', value: 'تغطية مباشرة' },
+      { id: 'phaseLabel', label: 'مرحلة النتائج', type: 'text', value: 'نتائج أولية' },
+      { id: 'sourceLabel', label: 'المصدر', type: 'text', value: 'مركز برشلونة الانتخابي' },
+      { id: 'lastUpdated', label: 'آخر تحديث', type: 'text', value: 'آخر تحديث 20:45' },
+      { id: 'designStyle', label: 'التصميم (الستايل)', type: 'select', value: 'RESULTS_HUB', options: ['RESULTS_HUB', 'SPLIT_BAR_LEFT', 'COUNTDOWN_TOP', 'LEAKS_FULL', 'STATEMENT_FULL', 'LIVE_TRANSITION', 'STUDIO_BACKGROUND', 'VOTER_TURNOUT'] },
+      { id: 'themePreset', label: 'اللون الأساسي', type: 'select', value: 'BARCA_RED', options: ['BARCA_RED', 'BARCA_BLUE', 'ROYAL_GOLD', 'DARK_MATTER'] },
+      { id: 'barcaLogo', label: 'شعار برشلونة', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png' },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+
+      // Customization for Leaks & Statements
+      { id: 'boxColor', label: 'لون الصندوق (التسريبات/التصريحات)', type: 'color', value: '#0f172a' },
+      { id: 'accentColor', label: 'لون التمييز (التسريبات/التصريحات)', type: 'color', value: '#eab308' },
+
+      // Voter Turnout Fields
+      { id: 'currentVoters', label: 'عدد المصوتين الحالي', type: 'number', value: 25000 },
+      { id: 'totalVoters', label: 'إجمالي الناخبين', type: 'number', value: 114504 },
+      { id: 'turnoutTitle', label: 'عنوان الإقبال', type: 'text', value: 'نسبة المشاركة في التصويت' },
+      { id: 'turnoutSubtitle', label: 'العنوان الفرعي للإقبال', type: 'text', value: 'إجمالي الناخبين المسموح لهم' },
+      { id: 'currentVotersTitle', label: 'عنوان المصوتين الحاليين', type: 'text', value: 'المصوتين حتى الآن' },
+
+      // Studio Background specific
+      { id: 'cameraX', label: 'موقع الكاميرا (X)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'cameraY', label: 'موقع الكاميرا (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'cameraScale', label: 'حجم الكاميرا', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'bgImage', label: 'صورة الخلفية', type: 'image', value: 'https://images.unsplash.com/photo-1518632765486-a09a4c1aeb82?q=80&w=2000&auto=format&fit=crop' },
+
+      // Candidate 1
+      { id: 'candidate1Name', label: 'اسم المرشح 1', type: 'text', value: 'خوان لابورتا' },
+      { id: 'candidate1Image', label: 'صورة المرشح 1', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Joan_Laporta_2015_%28cropped%29.jpg/220px-Joan_Laporta_2015_%28cropped%29.jpg' },
+      { id: 'candidate1Percent', label: 'نسبة المرشح 1 (%)', type: 'range', value: 52, min: 0, max: 100, step: 0.1 },
+      { id: 'candidate1Votes', label: 'أصوات المرشح 1', type: 'number', value: 48310 },
+      { id: 'candidate1Delta', label: 'تغير المرشح 1 (%)', type: 'number', value: 2.6 },
+      { id: 'candidate1Tag', label: 'وصف المرشح 1', type: 'text', value: 'الإدارة الحالية' },
+      { id: 'candidate1Color', label: 'لون المرشح 1', type: 'color', value: '#a50044' },
+
+      // Candidate 2
+      { id: 'candidate2Name', label: 'اسم المرشح 2', type: 'text', value: 'فيكتور فونت' },
+      { id: 'candidate2Image', label: 'صورة المرشح 2', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/V%C3%ADctor_Font_Mante.jpg/220px-V%C3%ADctor_Font_Mante.jpg' },
+      { id: 'candidate2Percent', label: 'نسبة المرشح 2 (%)', type: 'range', value: 39, min: 0, max: 100, step: 0.1 },
+      { id: 'candidate2Votes', label: 'أصوات المرشح 2', type: 'number', value: 36140 },
+      { id: 'candidate2Delta', label: 'تغير المرشح 2 (%)', type: 'number', value: -1.4 },
+      { id: 'candidate2Tag', label: 'وصف المرشح 2', type: 'text', value: 'مشروع تجديد' },
+      { id: 'candidate2Color', label: 'لون المرشح 2', type: 'color', value: '#004d98' },
+
+      // Undecided / Residual bloc
+      { id: 'showUndecided', label: 'إظهار غير المحسوم', type: 'boolean', value: true },
+      { id: 'undecidedLabel', label: 'اسم غير المحسوم', type: 'text', value: 'أوراق أخرى / غير محسوم' },
+      { id: 'undecidedPercent', label: 'نسبة غير المحسوم (%)', type: 'range', value: 9, min: 0, max: 100, step: 0.1 },
+      { id: 'undecidedColor', label: 'لون غير المحسوم', type: 'color', value: '#6b7280' },
+
+      // Countdown
+      { id: 'targetDate', label: 'تاريخ النهاية (YYYY-MM-DD HH:mm)', type: 'text', value: '2026-06-30 20:00' },
+
+      // Special Modules Content
+      { id: 'specialText', label: 'نص (تسريبات/تصريح/ملاحظة)', type: 'textarea', value: 'تقدّم لابورتا في فرز الدفعة الأخيرة مع ارتفاع ملحوظ في المشاركة داخل برشلونة.' },
+      { id: 'statementAuthor', label: 'صاحب التصريح', type: 'text', value: 'خوان لابورتا' },
+      { id: 'leaksTitle', label: 'عنوان التسريبات', type: 'text', value: 'عاجل' },
+      { id: 'leaksSubtitle', label: 'عنوان فرعي للتسريبات', type: 'text', value: 'تسريب خاص' },
+      { id: 'leaksContent', label: 'محتوى التسريب', type: 'textarea', value: 'نص التسريب هنا...' },
+      { id: 'statementTitle', label: 'عنوان التصريح', type: 'text', value: 'بيان رسمي' },
+      { id: 'transitionTitle', label: 'عنوان الانتقال', type: 'text', value: 'الانتقال للبث المباشر' },
+      { id: 'transitionSubtitle', label: 'عنوان فرعي للانتقال', type: 'text', value: 'انتخابات برشلونة 2026' },
+      { id: 'liveText', label: 'نص المباشر', type: 'text', value: 'LIVE' },
+      { id: 'countdownTitle', label: 'عنوان العداد', type: 'text', value: 'الوقت المتبقي' },
+      { id: 'countdownDays', label: 'نص الأيام', type: 'text', value: 'يوم' },
+      { id: 'countdownHours', label: 'نص الساعات', type: 'text', value: 'ساعة' },
+      { id: 'countdownMinutes', label: 'نص الدقائق', type: 'text', value: 'دقيقة' },
+      { id: 'countdownSeconds', label: 'نص الثواني', type: 'text', value: 'ثانية' },
+      
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  }
+];

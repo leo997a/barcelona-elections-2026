@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reo Live Stream - نظام البث السحابي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Tajawal', 'sans-serif'],
+            },
+            colors: {
+              primary: '#3b82f6',
+              secondary: '#10b981',
+              dark: '#111827',
+              darker: '#0b0f19',
+            },
+            animation: {
+              'marquee': 'marquee 20s linear infinite',
+              'slide-in-right': 'slideInRight 0.6s ease-out forwards',
+              'fade-in-up': 'fadeInUp 1s ease-out forwards',
+              // --- NEW TRANSITIONS ---
+              'cinematic-fade-up': 'cinematicFadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+              'cinematic-blur-in': 'cinematicBlurIn 0.6s cubic-bezier(0.4, 0.0, 0.2, 1) forwards',
+              'page-flip': 'pageFlip 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards',
+              'news-slide': 'newsSlide 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+              'zoom-impact': 'zoomImpact 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+              'cube-rotate': 'cubeRotate 0.8s ease-in-out forwards',
+              'glitch': 'glitch 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite',
+              'pan-diagonal': 'panDiagonal 200s linear infinite',
+              // --- SIDEBAR ANIMATIONS (NEW) ---
+              'slide-in-from-left': 'slideInFromLeft 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+              'slide-out-to-left': 'slideOutToLeft 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+              // --- MODERN ANIMATIONS ---
+              'modern-slide-up': 'modernSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+              'modern-slide-right': 'modernSlideRight 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+              'modern-pop': 'modernPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+              'modern-fade': 'modernFade 0.4s ease-out forwards',
+            },
+            keyframes: {
+              marquee: {
+                '0%': { transform: 'translateX(-100%)' },
+                '100%': { transform: 'translateX(100%)' },
+              },
+              slideInRight: {
+                '0%': { transform: 'translateX(100%)', opacity: '0' },
+                '100%': { transform: 'translateX(0)', opacity: '1' },
+              },
+              fadeInUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              panDiagonal: {
+                  '0%': { transform: 'translate(-10%, -10%)' },
+                  '50%': { transform: 'translate(5%, 5%)' },
+                  '100%': { transform: 'translate(-10%, -10%)' },
+              },
+              // Sidebar Animations
+              slideInFromLeft: {
+                '0%': { transform: 'translateX(-120%)', opacity: '0', filter: 'blur(10px)' },
+                '100%': { transform: 'translateX(0)', opacity: '1', filter: 'blur(0)' },
+              },
+              slideOutToLeft: {
+                '0%': { transform: 'translateX(0)', opacity: '1', filter: 'blur(0)' },
+                '100%': { transform: 'translateX(-120%)', opacity: '0', filter: 'blur(10px)' },
+              },
+              // Modern Animations
+              modernSlideUp: {
+                '0%': { opacity: '0', transform: 'translateY(40px) scale(0.95)', filter: 'blur(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0) scale(1)', filter: 'blur(0px)' },
+              },
+              modernSlideRight: {
+                '0%': { opacity: '0', transform: 'translateX(-40px)', filter: 'blur(10px)' },
+                '100%': { opacity: '1', transform: 'translateX(0)', filter: 'blur(0px)' },
+              },
+              modernPop: {
+                '0%': { opacity: '0', transform: 'scale(0.8)', filter: 'blur(10px)' },
+                '50%': { transform: 'scale(1.02)' },
+                '100%': { opacity: '1', transform: 'scale(1)', filter: 'blur(0px)' },
+              },
+              modernFade: {
+                '0%': { opacity: '0', filter: 'blur(10px)' },
+                '100%': { opacity: '1', filter: 'blur(0px)' },
+              },
+              // 1. Cinematic (Default)
+              cinematicFadeUp: {
+                '0%': { transform: 'translateY(30px)', opacity: '0', filter: 'blur(10px)' },
+                '100%': { transform: 'translateY(0)', opacity: '1', filter: 'blur(0)' },
+              },
+              cinematicBlurIn: {
+                '0%': { opacity: '0', filter: 'blur(20px)', transform: 'scale(1.02)' },
+                '100%': { opacity: '1', filter: 'blur(0)', transform: 'scale(1)' },
+              },
+              // 2. Page Flip (3D)
+              pageFlip: {
+                '0%': { transform: 'perspective(2000px) rotateY(90deg)', opacity: '0', transformOrigin: 'right center' },
+                '100%': { transform: 'perspective(2000px) rotateY(0deg)', opacity: '1', transformOrigin: 'right center' },
+              },
+              // 3. News Slide
+              newsSlide: {
+                '0%': { transform: 'translateX(100%)', opacity: '0' },
+                '100%': { transform: 'translateX(0)', opacity: '1' },
+              },
+              // 4. Zoom Impact
+              zoomImpact: {
+                '0%': { transform: 'scale(2)', opacity: '0', filter: 'blur(20px)' },
+                '100%': { transform: 'scale(1)', opacity: '1', filter: 'blur(0)' },
+              },
+              // 5. Cube Rotate
+              cubeRotate: {
+                '0%': { transform: 'perspective(1000px) rotateX(-90deg) translateY(50%)', opacity: '0' },
+                '100%': { transform: 'perspective(1000px) rotateX(0deg) translateY(0)', opacity: '1' },
+              },
+              // 6. Glitch
+              glitch: {
+                '0%': { transform: 'translate(0)', opacity: '0' },
+                '20%': { transform: 'translate(-2px, 2px)', opacity: '1' },
+                '40%': { transform: 'translate(-2px, -2px)' },
+                '60%': { transform: 'translate(2px, 2px)' },
+                '80%': { transform: 'translate(2px, -2px)' },
+                '100%': { transform: 'translate(0)', opacity: '1' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Tajawal', sans-serif;
+        background-color: #0b0f19;
+        color: white;
+        /* GLOBAL FONT SMOOTHING FOR 4K */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; 
+      }
+      
+      .pattern-grid {
+         background-image: linear-gradient(#1f2937 1px, transparent 1px), linear-gradient(90deg, #1f2937 1px, transparent 1px);
+         background-size: 20px 20px;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+    "mqtt": "https://esm.sh/mqtt@5.3.5",
+    "jszip": "https://esm.sh/jszip@3.10.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
