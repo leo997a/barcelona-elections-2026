@@ -6,6 +6,7 @@ import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, 
 import { processSmartText, generateMatchData } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
+import { normalizeElectionOverlay } from '../utils/election';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -39,7 +40,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [activeImageFieldId, setActiveImageFieldId] = useState<string | null>(null);
 
   // Draft State
-  const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(JSON.parse(JSON.stringify(liveOverlay)));
+  const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // --- SPONSORS MANAGEMENT STATE ---
@@ -62,7 +63,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // --- SMART SYNC ---
   useEffect(() => {
      setDraftOverlay(prevDraft => {
-         const newDraft = { ...prevDraft };
+         const newDraft = normalizeElectionOverlay({ ...prevDraft, fields: prevDraft.fields.map(field => ({ ...field })) });
          let shouldUpdate = false;
 
          if (prevDraft.isVisible !== liveOverlay.isVisible) {
@@ -71,7 +72,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
          }
 
          liveOverlay.fields.forEach(liveField => {
-             const draftField = prevDraft.fields.find(f => f.id === liveField.id);
+             const draftField = newDraft.fields.find(f => f.id === liveField.id);
              if (draftField) {
                  const isControlField = ['homeScore', 'awayScore', 'currentPage', 'period', 'time'].includes(liveField.id);
                  if (isControlField && JSON.stringify(liveField.value) !== JSON.stringify(draftField.value)) {
@@ -81,7 +82,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              }
          });
 
-         return shouldUpdate ? newDraft : prevDraft;
+         return shouldUpdate ? normalizeElectionOverlay(newDraft) : prevDraft;
      });
   }, [liveOverlay]);
 
@@ -102,7 +103,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const updatedFields = draftOverlay.fields.map(f => 
       f.id === id ? { ...f, value } : f
     );
-    setDraftOverlay({ ...draftOverlay, fields: updatedFields });
+    setDraftOverlay(normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, id));
     setHasUnsavedChanges(true);
   };
 
@@ -120,7 +121,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const handleRevert = () => {
       if(confirm('هل تريد إلغاء التغييرات والعودة للنسخة المباشرة؟')) {
-          setDraftOverlay(JSON.parse(JSON.stringify(liveOverlay)));
+          setDraftOverlay(normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
           setHasUnsavedChanges(false);
       }
   };
@@ -365,12 +366,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      const isTurnoutField = ['currentVoters', 'totalVoters', 'turnoutTitle', 'turnoutSubtitle', 'currentVotersTitle'].includes(field.id);
                      
                      const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
+                     const candidate1Profile = String(draftOverlay.fields.find(f => f.id === 'candidate1Profile')?.value || 'CUSTOM');
+                     const candidate2Profile = String(draftOverlay.fields.find(f => f.id === 'candidate2Profile')?.value || 'CUSTOM');
+                     const statementSource = String(draftOverlay.fields.find(f => f.id === 'statementSource')?.value || 'CANDIDATE_1');
+                     const candidate1IdentityFields = ['candidate1Name', 'candidate1Image', 'candidate1Tag', 'candidate1Color'];
+                     const candidate2IdentityFields = ['candidate2Name', 'candidate2Image', 'candidate2Tag', 'candidate2Color'];
+                     const customStatementFields = ['statementSubjectName', 'statementSubjectTag', 'statementSubjectImage', 'statementSubjectColor'];
                      
                      let isContentField = false;
                      if (designStyle === 'LEAKS_FULL') {
                          isContentField = ['leaksTitle', 'leaksSubtitle', 'leaksContent'].includes(field.id);
                      } else if (designStyle === 'STATEMENT_FULL') {
-                         isContentField = ['specialText', 'statementAuthor', 'statementTitle'].includes(field.id);
+                         isContentField = ['specialText', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields].includes(field.id);
                      } else if (designStyle === 'LIVE_TRANSITION') {
                          isContentField = ['transitionTitle', 'transitionSubtitle', 'liveText'].includes(field.id);
                      } else if (designStyle === 'STUDIO_BACKGROUND') {
@@ -380,10 +387,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      }
 
                      // Hide irrelevant content fields from ALL tabs if they don't belong to the current designStyle
-                     const allContentFields = ['specialText', 'specialImage', 'statementAuthor', 'leaksTitle', 'leaksSubtitle', 'leaksContent', 'statementTitle', 'transitionTitle', 'transitionSubtitle', 'liveText'];
+                     const allContentFields = ['specialText', 'specialImage', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields, 'leaksTitle', 'leaksSubtitle', 'leaksContent', 'transitionTitle', 'transitionSubtitle', 'liveText'];
                      if (allContentFields.includes(field.id) && !isContentField) {
                          return null; // Completely hide this field
                      }
+
+                     if (candidate1IdentityFields.includes(field.id) && candidate1Profile !== 'CUSTOM') return null;
+                     if (candidate2IdentityFields.includes(field.id) && candidate2Profile !== 'CUSTOM') return null;
+                     if (customStatementFields.includes(field.id) && statementSource !== 'CUSTOM') return null;
                      
                      // Hide time fields if not COUNTDOWN_TOP
                      if (isTimeField && designStyle !== 'COUNTDOWN_TOP') return null;
@@ -445,7 +456,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <div key={field.id} className="space-y-1">
                             <label className="text-xs text-gray-400 block">{field.label}</label>
                             <select value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500">
-                                {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                {field.options?.map(opt => {
+                                  const option = typeof opt === 'string' ? { value: opt, label: opt } : opt;
+                                  return <option key={option.value} value={option.value}>{option.label}</option>;
+                                })}
                             </select>
                         </div>
                     )

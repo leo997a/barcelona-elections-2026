@@ -14,12 +14,17 @@ export enum OverlayType {
 
 export type OverlayStatus = 'LIVE' | 'PREVIEW' | 'HIDDEN';
 
+export interface SelectOption {
+  label: string;
+  value: string;
+}
+
 export interface OverlayField {
   id: string;
   label: string;
   type: 'text' | 'number' | 'color' | 'image' | 'image-list' | 'boolean' | 'textarea' | 'select' | 'hidden' | 'range';
   value: string | number | boolean | string[];
-  options?: string[]; // For select type
+  options?: Array<string | SelectOption>; // For select type
   min?: number; // For range/number type
   max?: number; // For range/number type
   step?: number; // For range/number type

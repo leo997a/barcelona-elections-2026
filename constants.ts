@@ -1,11 +1,19 @@
 
 import { OverlayType, OverlayConfig, OverlayField } from './types';
-import { ELECTION_SOUND_OPTIONS } from './utils/election';
+import {
+  createElectionCandidateProfileField,
+  createElectionStatementFields,
+  ELECTION_ENTITY_PRESETS,
+  ELECTION_SOUND_OPTIONS,
+} from './utils/election';
 
 // Helper to add common fields
 const commonFields: OverlayField[] = [
   { id: 'channelName', label: 'اسم القناة (الحقوق)', type: 'text', value: 'REO LIVE' },
 ];
+
+const LAPORTA_PRESET = ELECTION_ENTITY_PRESETS.LAPORTA;
+const FONT_PRESET = ELECTION_ENTITY_PRESETS.FONT;
 
 type ElectionTemplateOptions = {
   id: string;
@@ -86,20 +94,22 @@ const createElectionTemplate = ({
     { id: 'turnoutTitle', label: 'عنوان الإقبال', type: 'text', value: 'نسبة المشاركة' },
     { id: 'turnoutSubtitle', label: 'العنوان الفرعي للإقبال', type: 'text', value: 'إجمالي هيئة التصويت' },
     { id: 'currentVotersTitle', label: 'عنوان المصوتين الحاليين', type: 'text', value: 'المصوتون حتى الآن' },
-    { id: 'candidate1Name', label: 'اسم المرشح 1', type: 'text', value: 'خوان لابورتا' },
-    { id: 'candidate1Image', label: 'صورة المرشح 1', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Joan_Laporta_2015_%28cropped%29.jpg/220px-Joan_Laporta_2015_%28cropped%29.jpg' },
+    createElectionCandidateProfileField(1, 'LAPORTA'),
+    { id: 'candidate1Name', label: 'اسم المرشح 1', type: 'text', value: LAPORTA_PRESET.name },
+    { id: 'candidate1Image', label: 'صورة المرشح 1', type: 'image', value: LAPORTA_PRESET.image },
     { id: 'candidate1Percent', label: 'نسبة المرشح 1 (%)', type: 'range', value: 52, min: 0, max: 100, step: 0.1 },
     { id: 'candidate1Votes', label: 'أصوات المرشح 1', type: 'number', value: 48310 },
     { id: 'candidate1Delta', label: 'تغير المرشح 1 (%)', type: 'number', value: 2.6 },
-    { id: 'candidate1Tag', label: 'وصف المرشح 1', type: 'text', value: 'Incumbent' },
-    { id: 'candidate1Color', label: 'لون المرشح 1', type: 'color', value: '#a50044' },
-    { id: 'candidate2Name', label: 'اسم المرشح 2', type: 'text', value: 'فيكتور فونت' },
-    { id: 'candidate2Image', label: 'صورة المرشح 2', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/V%C3%ADctor_Font_Mante.jpg/220px-V%C3%ADctor_Font_Mante.jpg' },
+    { id: 'candidate1Tag', label: 'وصف المرشح 1', type: 'text', value: LAPORTA_PRESET.tag },
+    { id: 'candidate1Color', label: 'لون المرشح 1', type: 'color', value: LAPORTA_PRESET.color },
+    createElectionCandidateProfileField(2, 'FONT'),
+    { id: 'candidate2Name', label: 'اسم المرشح 2', type: 'text', value: FONT_PRESET.name },
+    { id: 'candidate2Image', label: 'صورة المرشح 2', type: 'image', value: FONT_PRESET.image },
     { id: 'candidate2Percent', label: 'نسبة المرشح 2 (%)', type: 'range', value: 39, min: 0, max: 100, step: 0.1 },
     { id: 'candidate2Votes', label: 'أصوات المرشح 2', type: 'number', value: 36140 },
     { id: 'candidate2Delta', label: 'تغير المرشح 2 (%)', type: 'number', value: -1.4 },
-    { id: 'candidate2Tag', label: 'وصف المرشح 2', type: 'text', value: 'Renewal project' },
-    { id: 'candidate2Color', label: 'لون المرشح 2', type: 'color', value: '#004d98' },
+    { id: 'candidate2Tag', label: 'وصف المرشح 2', type: 'text', value: FONT_PRESET.tag },
+    { id: 'candidate2Color', label: 'لون المرشح 2', type: 'color', value: FONT_PRESET.color },
     { id: 'showUndecided', label: 'إظهار غير المحسوم', type: 'boolean', value: true },
     { id: 'undecidedLabel', label: 'اسم غير المحسوم', type: 'text', value: 'Other / Undecided' },
     { id: 'undecidedPercent', label: 'نسبة غير المحسوم (%)', type: 'range', value: 9, min: 0, max: 100, step: 0.1 },
@@ -112,6 +122,7 @@ const createElectionTemplate = ({
     { id: 'countdownSeconds', label: 'نص الثواني', type: 'text', value: 'Seconds' },
     { id: 'specialText', label: 'نص المحتوى', type: 'textarea', value: specialText },
     { id: 'statementAuthor', label: 'صاحب الاقتباس', type: 'text', value: statementAuthor },
+    ...createElectionStatementFields('CANDIDATE_1'),
     { id: 'leaksTitle', label: 'عنوان التدفق العاجل', type: 'text', value: 'Breaking' },
     { id: 'leaksSubtitle', label: 'عنوان فرعي', type: 'text', value: 'Election desk' },
     { id: 'leaksContent', label: 'نص الخبر العاجل', type: 'textarea', value: specialText },
@@ -699,22 +710,24 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       { id: 'bgImage', label: 'صورة الخلفية', type: 'image', value: 'https://images.unsplash.com/photo-1518632765486-a09a4c1aeb82?q=80&w=2000&auto=format&fit=crop' },
 
       // Candidate 1
-      { id: 'candidate1Name', label: 'اسم المرشح 1', type: 'text', value: 'خوان لابورتا' },
-      { id: 'candidate1Image', label: 'صورة المرشح 1', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Joan_Laporta_2015_%28cropped%29.jpg/220px-Joan_Laporta_2015_%28cropped%29.jpg' },
+      createElectionCandidateProfileField(1, 'LAPORTA'),
+      { id: 'candidate1Name', label: 'اسم المرشح 1', type: 'text', value: LAPORTA_PRESET.name },
+      { id: 'candidate1Image', label: 'صورة المرشح 1', type: 'image', value: LAPORTA_PRESET.image },
       { id: 'candidate1Percent', label: 'نسبة المرشح 1 (%)', type: 'range', value: 52, min: 0, max: 100, step: 0.1 },
       { id: 'candidate1Votes', label: 'أصوات المرشح 1', type: 'number', value: 48310 },
       { id: 'candidate1Delta', label: 'تغير المرشح 1 (%)', type: 'number', value: 2.6 },
-      { id: 'candidate1Tag', label: 'وصف المرشح 1', type: 'text', value: 'الإدارة الحالية' },
-      { id: 'candidate1Color', label: 'لون المرشح 1', type: 'color', value: '#a50044' },
+      { id: 'candidate1Tag', label: 'وصف المرشح 1', type: 'text', value: LAPORTA_PRESET.tag },
+      { id: 'candidate1Color', label: 'لون المرشح 1', type: 'color', value: LAPORTA_PRESET.color },
 
       // Candidate 2
-      { id: 'candidate2Name', label: 'اسم المرشح 2', type: 'text', value: 'فيكتور فونت' },
-      { id: 'candidate2Image', label: 'صورة المرشح 2', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/V%C3%ADctor_Font_Mante.jpg/220px-V%C3%ADctor_Font_Mante.jpg' },
+      createElectionCandidateProfileField(2, 'FONT'),
+      { id: 'candidate2Name', label: 'اسم المرشح 2', type: 'text', value: FONT_PRESET.name },
+      { id: 'candidate2Image', label: 'صورة المرشح 2', type: 'image', value: FONT_PRESET.image },
       { id: 'candidate2Percent', label: 'نسبة المرشح 2 (%)', type: 'range', value: 39, min: 0, max: 100, step: 0.1 },
       { id: 'candidate2Votes', label: 'أصوات المرشح 2', type: 'number', value: 36140 },
       { id: 'candidate2Delta', label: 'تغير المرشح 2 (%)', type: 'number', value: -1.4 },
-      { id: 'candidate2Tag', label: 'وصف المرشح 2', type: 'text', value: 'مشروع تجديد' },
-      { id: 'candidate2Color', label: 'لون المرشح 2', type: 'color', value: '#004d98' },
+      { id: 'candidate2Tag', label: 'وصف المرشح 2', type: 'text', value: FONT_PRESET.tag },
+      { id: 'candidate2Color', label: 'لون المرشح 2', type: 'color', value: FONT_PRESET.color },
 
       // Undecided / Residual bloc
       { id: 'showUndecided', label: 'إظهار غير المحسوم', type: 'boolean', value: true },
@@ -727,7 +740,8 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
 
       // Special Modules Content
       { id: 'specialText', label: 'نص (تسريبات/تصريح/ملاحظة)', type: 'textarea', value: 'تقدّم لابورتا في فرز الدفعة الأخيرة مع ارتفاع ملحوظ في المشاركة داخل برشلونة.' },
-      { id: 'statementAuthor', label: 'صاحب التصريح', type: 'text', value: 'خوان لابورتا' },
+      { id: 'statementAuthor', label: 'صاحب التصريح', type: 'text', value: LAPORTA_PRESET.name },
+      ...createElectionStatementFields('CANDIDATE_1'),
       { id: 'leaksTitle', label: 'عنوان التسريبات', type: 'text', value: 'عاجل' },
       { id: 'leaksSubtitle', label: 'عنوان فرعي للتسريبات', type: 'text', value: 'تسريب خاص' },
       { id: 'leaksContent', label: 'محتوى التسريب', type: 'textarea', value: 'نص التسريب هنا...' },

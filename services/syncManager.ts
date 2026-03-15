@@ -1,6 +1,7 @@
 
 import mqtt from 'mqtt';
 import { OverlayConfig } from '../types';
+import { normalizeElectionOverlay } from '../utils/election';
 
 const BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
 
@@ -21,6 +22,10 @@ class SyncManager {
   // المخزن المحلي للبيانات الحية (Live State) - مصدر الحقيقة الوحيد
   private currentState: OverlayConfig[] = [];
 
+  private normalizeOverlay(overlay: OverlayConfig, changedFieldId?: string) {
+    return normalizeElectionOverlay(overlay, changedFieldId);
+  }
+
   constructor() {
     this.studioId = this.detectStudioId();
     
@@ -30,7 +35,7 @@ class SyncManager {
     
     try {
         const saved = localStorage.getItem('rge_overlays');
-        if (saved) this.currentState = JSON.parse(saved);
+        if (saved) this.currentState = JSON.parse(saved).map((overlay: OverlayConfig) => this.normalizeOverlay(overlay));
     } catch (e) {
         this.currentState = [];
     }
@@ -81,7 +86,7 @@ class SyncManager {
             // Handle Full State Sync
             if (topic.includes('/full_state')) {
                 const remoteData = JSON.parse(msgString);
-                this.currentState = remoteData;
+                this.currentState = remoteData.map((overlay: OverlayConfig) => this.normalizeOverlay(overlay));
                 this.persist(false); // Don't re-publish what we just received
             } 
             // Handle Actions (Commands)
@@ -104,21 +109,25 @@ class SyncManager {
           if (overlay.id !== cmd.targetId) return overlay;
 
           modified = true;
+          let nextOverlay: OverlayConfig = overlay;
           switch (cmd.action) {
               case 'toggle_visible':
-                  return { ...overlay, isVisible: !overlay.isVisible };
+                  nextOverlay = { ...overlay, isVisible: !overlay.isVisible };
+                  break;
               
               case 'set_visible':
-                  return { ...overlay, isVisible: cmd.value };
+                  nextOverlay = { ...overlay, isVisible: cmd.value };
+                  break;
 
               case 'update_field':
-                  return {
+                  nextOverlay = {
                       ...overlay,
                       fields: overlay.fields.map(f => f.id === cmd.fieldId ? { ...f, value: cmd.value } : f)
                   };
+                  break;
 
               case 'increment_field':
-                  return {
+                  nextOverlay = {
                       ...overlay,
                       fields: overlay.fields.map(f => {
                           if (f.id === cmd.fieldId) {
@@ -144,10 +153,13 @@ class SyncManager {
                           return f;
                       })
                   };
+                  break;
 
               default:
-                  return overlay;
+                  nextOverlay = overlay;
           }
+
+          return this.normalizeOverlay(nextOverlay, cmd.action === 'update_field' ? cmd.fieldId : undefined);
       });
 
       if (modified) {
@@ -189,7 +201,7 @@ class SyncManager {
 
   // --- CRUD OPERATIONS ---
   public addOverlay(overlay: OverlayConfig) {
-      this.currentState = [...this.currentState, overlay];
+      this.currentState = [...this.currentState, this.normalizeOverlay(overlay)];
       this.pushToCloud();
   }
   public deleteOverlay(id: string) {
@@ -197,7 +209,7 @@ class SyncManager {
       this.pushToCloud();
   }
   public updateOverlay(updatedOverlay: OverlayConfig) {
-      this.currentState = this.currentState.map(o => o.id === updatedOverlay.id ? updatedOverlay : o);
+      this.currentState = this.currentState.map(o => o.id === updatedOverlay.id ? this.normalizeOverlay(updatedOverlay) : o);
       this.pushToCloud();
   }
   public updateLiveField(overlayId: string, fieldId: string | 'isVisible', value: any) {

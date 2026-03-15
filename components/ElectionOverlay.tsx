@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { OverlayConfig } from '../types';
-import { resolveElectionStyle } from '../utils/election';
+import { resolveElectionStatementEntity, resolveElectionStyle } from '../utils/election';
 
 type ElectionTheme = {
   primary: string;
@@ -180,8 +180,8 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
   ];
 
   const leader = useMemo(() => [...candidates].sort((left, right) => right.percent - left.percent)[0], [candidates]);
-  const quoteCandidate =
-    candidates.find(candidate => statementAuthor && candidate.name.toLowerCase().includes(statementAuthor.toLowerCase())) || leader;
+  const quoteCandidate = resolveElectionStatementEntity(config.fields);
+  const activeQuoteCandidate = quoteCandidate.image ? quoteCandidate : { ...quoteCandidate, image: leader.image || barcaLogo };
 
   const undecidedSegment = {
     label: String(getField('undecidedLabel') || 'Undecided'),
@@ -322,13 +322,17 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
           {designStyle === 'QUOTE_PANEL' && (
             <div className="absolute top-10 right-10 flex w-[1480px] max-w-[94vw] items-end gap-6">
               <div className="relative w-[320px] shrink-0 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-[0_30px_90px_rgba(15,23,42,0.3)]">
-                <img src={quoteCandidate.image} alt={quoteCandidate.name} className="h-[430px] w-full object-cover object-top" />
+                <div className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: activeQuoteCandidate.color }} />
+                <img src={activeQuoteCandidate.image} alt={activeQuoteCandidate.name} className="h-[430px] w-full object-cover object-top" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/25 to-transparent" />
                 <div className="absolute bottom-5 right-5 left-5">
-                  <div className="mb-2 inline-flex rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[11px] font-black tracking-[0.2em] text-white">
-                    {quoteCandidate.tag}
+                  <div
+                    className="mb-2 inline-flex rounded-full border border-white/10 px-3 py-1 text-[11px] font-black tracking-[0.2em] text-white"
+                    style={{ backgroundColor: `${activeQuoteCandidate.color}CC` }}
+                  >
+                    {activeQuoteCandidate.tag}
                   </div>
-                  <div className="text-2xl font-black text-white">{quoteCandidate.name}</div>
+                  <div className="text-2xl font-black text-white">{activeQuoteCandidate.name}</div>
                 </div>
               </div>
 
@@ -353,7 +357,7 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
                       <img src={barcaLogo} alt="Barcelona" className="h-12 w-12" />
                       <div>
                         <div className="text-sm font-black uppercase tracking-[0.28em] text-slate-500">{watermarkText}</div>
-                        <div className="text-2xl font-black text-slate-950">{statementAuthor || quoteCandidate.name}</div>
+                        <div className="text-2xl font-black text-slate-950">{statementAuthor || activeQuoteCandidate.name}</div>
                       </div>
                     </div>
                     <div className="rounded-full bg-slate-950 px-5 py-3 text-sm font-black uppercase tracking-[0.24em] text-white">

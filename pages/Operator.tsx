@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
 import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
+import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
@@ -35,6 +36,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   const getFieldValue = (overlay: OverlayConfig, fieldId: string, fallback: any = '') =>
     overlay.fields.find(f => f.id === fieldId)?.value ?? fallback;
   const showUndecided = selectedOverlay ? getFieldValue(selectedOverlay, 'showUndecided', true) === true : false;
+  const selectedDesignStyle = selectedOverlay ? String(getFieldValue(selectedOverlay, 'designStyle', '')) : '';
 
   const stampElectionUpdate = (overlay: OverlayConfig) => {
     const now = new Date();
@@ -259,6 +261,69 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                         </button>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[1, 2].map(index => (
+                        <div key={`candidate-profile-${index}`}>
+                          <label className="mb-1 block text-xs text-gray-400">{`الملف الذكي للمرشح ${index}`}</label>
+                          <select
+                            value={String(getFieldValue(selectedOverlay, `candidate${index}Profile`, index === 1 ? 'LAPORTA' : 'FONT'))}
+                            onChange={e => updateField(selectedOverlay, `candidate${index}Profile`, e.target.value)}
+                            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-blue-500"
+                          >
+                            {ELECTION_CANDIDATE_PROFILE_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedDesignStyle === 'STATEMENT_FULL' && (
+                      <>
+                        <div>
+                          <label className="mb-1 block text-xs text-gray-400">مصدر شخصية التصريح</label>
+                          <select
+                            value={String(getFieldValue(selectedOverlay, 'statementSource', 'CANDIDATE_1'))}
+                            onChange={e => updateField(selectedOverlay, 'statementSource', e.target.value)}
+                            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-blue-500"
+                          >
+                            {ELECTION_STATEMENT_SOURCE_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {String(getFieldValue(selectedOverlay, 'statementSource', 'CANDIDATE_1')) === 'CUSTOM' && (
+                          <div className="grid grid-cols-1 gap-3 rounded-xl border border-gray-800 bg-black/20 p-4">
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-400">اسم الشخص المخصص</label>
+                              <input
+                                type="text"
+                                value={String(getFieldValue(selectedOverlay, 'statementSubjectName', ''))}
+                                onChange={e => updateField(selectedOverlay, 'statementSubjectName', e.target.value)}
+                                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-400">وصف الشخص المخصص</label>
+                              <input
+                                type="text"
+                                value={String(getFieldValue(selectedOverlay, 'statementSubjectTag', ''))}
+                                onChange={e => updateField(selectedOverlay, 'statementSubjectTag', e.target.value)}
+                                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-400">صورة الشخص المخصص</label>
+                              <input
+                                type="text"
+                                value={String(getFieldValue(selectedOverlay, 'statementSubjectImage', ''))}
+                                onChange={e => updateField(selectedOverlay, 'statementSubjectImage', e.target.value)}
+                                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="mb-1 block text-xs text-gray-400">Take In Sound</label>
