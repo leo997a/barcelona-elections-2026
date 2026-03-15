@@ -29,6 +29,11 @@ export interface OverlayConfig {
   id: string;
   name: string;
   type: OverlayType;
+  templateId?: string;
+  templateDescription?: string;
+  templateIcon?: string;
+  templateAccent?: string;
+  templateGroup?: string;
   fields: OverlayField[];
   slots: Record<string, OverlayField[]>; // Map slot name to field values
   activeSlot?: string;

@@ -1,9 +1,196 @@
 
 import { OverlayType, OverlayConfig, OverlayField } from './types';
+import { ELECTION_SOUND_OPTIONS } from './utils/election';
 
 // Helper to add common fields
 const commonFields: OverlayField[] = [
   { id: 'channelName', label: 'اسم القناة (الحقوق)', type: 'text', value: 'REO LIVE' },
+];
+
+type ElectionTemplateOptions = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  accent: string;
+  designStyle: string;
+  headline?: string;
+  subheadline?: string;
+  statusBadge?: string;
+  phaseLabel?: string;
+  sourceLabel?: string;
+  specialText?: string;
+  statementAuthor?: string;
+  positionX?: number;
+  positionY?: number;
+  scale?: number;
+  themePreset?: string;
+  soundInStyle: string;
+  soundOutStyle: string;
+};
+
+const createElectionTemplate = ({
+  id,
+  name,
+  description,
+  icon,
+  accent,
+  designStyle,
+  headline = 'ط§ظ†طھط®ط§ط¨ط§طھ ط¨ط±ط´ظ„ظˆظ†ط© 2026',
+  subheadline = 'طھط؛ط·ظٹط© ظ„ط­ط¸ظٹط© ظ…ط¨ط§ط´ط±ط© ظ„ط³ط¨ط§ظ‚ ط±ط¦ط§ط³ط© ظ†ط§ط¯ظٹ ط¨ط±ط´ظ„ظˆظ†ط©',
+  statusBadge = 'LIVE',
+  phaseLabel = 'Live count',
+  sourceLabel = 'Barcelona Elections Center',
+  specialText = 'ظ„ط§ط¨ظˆط±طھط§ ظٹط¤ظƒط¯ ط£ظ† ط§ظ„ط³ط¨ط§ظ‚ ظ…ط§ ط²ط§ظ„ ظ…ظپطھظˆط­ط§ظ‹ ظ…ط¹ ط§ط±طھظپط§ط¹ ظ…ط¹ط¯ظ„ ط§ظ„ظ…ط´ط§ط±ظƒط© ظپظٹ ط§ظ„ط³ط§ط¹ط§طھ ط§ظ„ط£ط®ظٹط±ط©.',
+  statementAuthor = 'ط®ظˆط§ظ† ظ„ط§ط¨ظˆط±طھط§',
+  positionX = 0,
+  positionY = 0,
+  scale = 1,
+  themePreset = 'BARCA_RED',
+  soundInStyle,
+  soundOutStyle,
+}: ElectionTemplateOptions): OverlayConfig => ({
+  id,
+  templateId: id,
+  templateDescription: description,
+  templateIcon: icon,
+  templateAccent: accent,
+  templateGroup: 'BARCELONA_2026',
+  name,
+  type: OverlayType.ELECTION,
+  isVisible: false,
+  theme: {
+    primaryColor: '#a50044',
+    secondaryColor: '#004d98',
+    backgroundColor: 'transparent',
+    fontFamily: 'Tajawal'
+  },
+  slots: {},
+  fields: [
+    ...commonFields,
+    { id: 'headline', label: 'ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„ط±ط¦ظٹط³ظٹ', type: 'text', value: headline },
+    { id: 'subheadline', label: 'ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„طھظˆط¶ظٹط­ظٹ', type: 'text', value: subheadline },
+    { id: 'watermarkText', label: 'ط§ظ„ط­ظ‚ظˆظ‚', type: 'text', value: 'REO SHOW' },
+    { id: 'statusBadge', label: 'ط´ط§ط±ط© ط§ظ„ط­ط§ظ„ط©', type: 'text', value: statusBadge },
+    { id: 'phaseLabel', label: 'ظ…ط±ط­ظ„ط© ط§ظ„طھط؛ط·ظٹط©', type: 'text', value: phaseLabel },
+    { id: 'sourceLabel', label: 'ط§ظ„ظ…طµط¯ط±', type: 'text', value: sourceLabel },
+    { id: 'lastUpdated', label: 'ط¢ط®ط± طھط­ط¯ظٹط«', type: 'text', value: 'Last update 20:45' },
+    { id: 'designStyle', label: 'Style', type: 'hidden', value: designStyle },
+    { id: 'themePreset', label: 'ط§ظ„ظ„ظˆظ† ط§ظ„ط£ط³ط§ط³ظٹ', type: 'select', value: themePreset, options: ['BARCA_RED', 'BARCA_BLUE', 'ROYAL_GOLD', 'DARK_MATTER'] },
+    { id: 'barcaLogo', label: 'ط´ط¹ط§ط± ط¨ط±ط´ظ„ظˆظ†ط©', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png' },
+    { id: 'scale', label: 'ط­ط¬ظ… ط§ظ„ظ‚ط§ظ„ط¨', type: 'range', value: scale, min: 0.5, max: 1.8, step: 0.05 },
+    { id: 'positionY', label: 'ط¥ط²ط§ط­ط© ط¹ظ…ظˆط¯ظٹط© (Y)', type: 'range', value: positionY, min: -700, max: 700, step: 10 },
+    { id: 'positionX', label: 'ط¥ط²ط§ط­ط© ط£ظپظ‚ظٹط© (X)', type: 'range', value: positionX, min: -1200, max: 1200, step: 10 },
+    { id: 'currentVoters', label: 'ط¹ط¯ط¯ ط§ظ„ظ…طµظˆطھظٹظ† ط§ظ„ط­ط§ظ„ظٹ', type: 'number', value: 25000 },
+    { id: 'totalVoters', label: 'ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ†ط§ط®ط¨ظٹظ†', type: 'number', value: 114504 },
+    { id: 'turnoutTitle', label: 'ط¹ظ†ظˆط§ظ† ط§ظ„ط¥ظ‚ط¨ط§ظ„', type: 'text', value: 'ظ†ط³ط¨ط© ط§ظ„ظ…ط´ط§ط±ظƒط©' },
+    { id: 'turnoutSubtitle', label: 'ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„ظپط±ط¹ظٹ ظ„ظ„ط¥ظ‚ط¨ط§ظ„', type: 'text', value: 'ط¥ط¬ظ…ط§ظ„ظٹ ظ‡ظٹط¦ط© ط§ظ„طھطµظˆظٹطھ' },
+    { id: 'currentVotersTitle', label: 'ط¹ظ†ظˆط§ظ† ط§ظ„ظ…طµظˆطھظٹظ† ط§ظ„ط­ط§ظ„ظٹظٹظ†', type: 'text', value: 'ط§ظ„ظ…طµظˆطھظˆظ† ط­طھظ‰ ط§ظ„ط¢ظ†' },
+    { id: 'candidate1Name', label: 'ط§ط³ظ… ط§ظ„ظ…ط±ط´ط­ 1', type: 'text', value: 'ط®ظˆط§ظ† ظ„ط§ط¨ظˆط±طھط§' },
+    { id: 'candidate1Image', label: 'طµظˆط±ط© ط§ظ„ظ…ط±ط´ط­ 1', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Joan_Laporta_2015_%28cropped%29.jpg/220px-Joan_Laporta_2015_%28cropped%29.jpg' },
+    { id: 'candidate1Percent', label: 'ظ†ط³ط¨ط© ط§ظ„ظ…ط±ط´ط­ 1 (%)', type: 'range', value: 52, min: 0, max: 100, step: 0.1 },
+    { id: 'candidate1Votes', label: 'ط£طµظˆط§طھ ط§ظ„ظ…ط±ط´ط­ 1', type: 'number', value: 48310 },
+    { id: 'candidate1Delta', label: 'طھط؛ظٹط± ط§ظ„ظ…ط±ط´ط­ 1 (%)', type: 'number', value: 2.6 },
+    { id: 'candidate1Tag', label: 'ظˆطµظپ ط§ظ„ظ…ط±ط´ط­ 1', type: 'text', value: 'Incumbent' },
+    { id: 'candidate1Color', label: 'ظ„ظˆظ† ط§ظ„ظ…ط±ط´ط­ 1', type: 'color', value: '#a50044' },
+    { id: 'candidate2Name', label: 'ط§ط³ظ… ط§ظ„ظ…ط±ط´ط­ 2', type: 'text', value: 'ظپظٹظƒطھظˆط± ظپظˆظ†طھ' },
+    { id: 'candidate2Image', label: 'طµظˆط±ط© ط§ظ„ظ…ط±ط´ط­ 2', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/V%C3%ADctor_Font_Mante.jpg/220px-V%C3%ADctor_Font_Mante.jpg' },
+    { id: 'candidate2Percent', label: 'ظ†ط³ط¨ط© ط§ظ„ظ…ط±ط´ط­ 2 (%)', type: 'range', value: 39, min: 0, max: 100, step: 0.1 },
+    { id: 'candidate2Votes', label: 'ط£طµظˆط§طھ ط§ظ„ظ…ط±ط´ط­ 2', type: 'number', value: 36140 },
+    { id: 'candidate2Delta', label: 'طھط؛ظٹط± ط§ظ„ظ…ط±ط´ط­ 2 (%)', type: 'number', value: -1.4 },
+    { id: 'candidate2Tag', label: 'ظˆطµظپ ط§ظ„ظ…ط±ط´ط­ 2', type: 'text', value: 'Renewal project' },
+    { id: 'candidate2Color', label: 'ظ„ظˆظ† ط§ظ„ظ…ط±ط´ط­ 2', type: 'color', value: '#004d98' },
+    { id: 'showUndecided', label: 'ط¥ط¸ظ‡ط§ط± ط؛ظٹط± ط§ظ„ظ…ط­ط³ظˆظ…', type: 'boolean', value: true },
+    { id: 'undecidedLabel', label: 'ط§ط³ظ… ط؛ظٹط± ط§ظ„ظ…ط­ط³ظˆظ…', type: 'text', value: 'Other / Undecided' },
+    { id: 'undecidedPercent', label: 'ظ†ط³ط¨ط© ط؛ظٹط± ط§ظ„ظ…ط­ط³ظˆظ… (%)', type: 'range', value: 9, min: 0, max: 100, step: 0.1 },
+    { id: 'undecidedColor', label: 'ظ„ظˆظ† ط؛ظٹط± ط§ظ„ظ…ط­ط³ظˆظ…', type: 'color', value: '#94a3b8' },
+    { id: 'targetDate', label: 'طھط§ط±ظٹط® ط§ظ„ظ†ظ‡ط§ظٹط© (YYYY-MM-DD HH:mm)', type: 'text', value: '2026-06-30 20:00' },
+    { id: 'countdownTitle', label: 'ط¹ظ†ظˆط§ظ† ط§ظ„ط¹ط¯ط§ط¯', type: 'text', value: 'Closing Countdown' },
+    { id: 'countdownDays', label: 'ظ†طµ ط§ظ„ط£ظٹط§ظ…', type: 'text', value: 'Days' },
+    { id: 'countdownHours', label: 'ظ†طµ ط§ظ„ط³ط§ط¹ط§طھ', type: 'text', value: 'Hours' },
+    { id: 'countdownMinutes', label: 'ظ†طµ ط§ظ„ط¯ظ‚ط§ط¦ظ‚', type: 'text', value: 'Minutes' },
+    { id: 'countdownSeconds', label: 'ظ†طµ ط§ظ„ط«ظˆط§ظ†ظٹ', type: 'text', value: 'Seconds' },
+    { id: 'specialText', label: 'ظ†طµ ط§ظ„ظ…ط­طھظˆظ‰', type: 'textarea', value: specialText },
+    { id: 'statementAuthor', label: 'طµط§ط­ط¨ ط§ظ„ط§ظ‚طھط¨ط§ط³', type: 'text', value: statementAuthor },
+    { id: 'leaksTitle', label: 'ط¹ظ†ظˆط§ظ† ط§ظ„طھط¯ظپظ‚ ط§ظ„ط¹ط§ط¬ظ„', type: 'text', value: 'Breaking' },
+    { id: 'leaksSubtitle', label: 'ط¹ظ†ظˆط§ظ† ظپط±ط¹ظٹ', type: 'text', value: 'Election desk' },
+    { id: 'leaksContent', label: 'ظ†طµ ط§ظ„ط®ط¨ط± ط§ظ„ط¹ط§ط¬ظ„', type: 'textarea', value: specialText },
+    { id: 'statementTitle', label: 'ط¹ظ†ظˆط§ظ† ط§ظ„ط§ظ‚طھط¨ط§ط³', type: 'text', value: 'Key Statement' },
+    { id: 'soundEnabled', label: 'طھظپط¹ظٹظ„ ط§ظ„طµظˆطھ', type: 'boolean', value: true },
+    { id: 'soundVolume', label: 'ظ…ط³طھظˆظ‰ ط§ظ„طµظˆطھ', type: 'range', value: 0.7, min: 0, max: 1, step: 0.05 },
+    { id: 'soundInStyle', label: 'ظ…ط¤ط«ط± TAKE IN', type: 'select', value: soundInStyle, options: ELECTION_SOUND_OPTIONS },
+    { id: 'soundOutStyle', label: 'ظ…ط¤ط«ط± TAKE OUT', type: 'select', value: soundOutStyle, options: ELECTION_SOUND_OPTIONS },
+  ],
+});
+
+const BARCELONA_ELECTION_TEMPLATES: OverlayConfig[] = [
+  createElectionTemplate({
+    id: 'template-election-results-bar',
+    name: 'ط¨ط±ط´ظ„ظˆظ†ط© 2026 - شريط النتائج',
+    description: 'شريط نتائج سفلي حديث للبث المباشر مع نسب المرشحين والأصوات وآخر تحديث.',
+    icon: 'BAR',
+    accent: '#edb111',
+    designStyle: 'RESULTS_HUB',
+    statusBadge: 'RESULTS',
+    phaseLabel: 'Live count',
+    soundInStyle: 'RESULTS_STING',
+    soundOutStyle: 'SOFT_FADE',
+  }),
+  createElectionTemplate({
+    id: 'template-election-quote-panel',
+    name: 'ط¨ط±ط´ظ„ظˆظ†ط© 2026 - بطاقة اقتباس',
+    description: 'بطاقة اقتباس مدمجة بصورة المرشح ونص كبير مناسب للمداخلات والتصريحات.',
+    icon: 'QTE',
+    accent: '#38bdf8',
+    designStyle: 'STATEMENT_FULL',
+    headline: 'تصريحات انتخابات برشلونة 2026',
+    subheadline: 'تصميم اقتباس مخصص للنصوص المهمة داخل البث المباشر',
+    statusBadge: 'QUOTE',
+    phaseLabel: 'Statement',
+    specialText: 'هذه ليست ليلة أرقام فقط، بل لحظة تحديد اتجاه برشلونة لسنوات قادمة.',
+    statementAuthor: 'ط®ظˆط§ظ† ظ„ط§ط¨ظˆط±طھط§',
+    soundInStyle: 'QUOTE_SWEEP',
+    soundOutStyle: 'SOFT_FADE',
+  }),
+  createElectionTemplate({
+    id: 'template-election-versus-panel',
+    name: 'ط¨ط±ط´ظ„ظˆظ†ط© 2026 - مواجهة المرشحين',
+    description: 'لوحة مواجهة ثنائية حديثة بين المرشحين مع نسب ودلتا وأسلوب بصري مناسب للبث.',
+    icon: 'VS',
+    accent: '#f8fafc',
+    designStyle: 'SPLIT_BAR_LEFT',
+    statusBadge: 'RACE',
+    phaseLabel: 'Head to head',
+    soundInStyle: 'VERSUS_IMPACT',
+    soundOutStyle: 'SOFT_FADE',
+  }),
+  createElectionTemplate({
+    id: 'template-election-sidebar-tower',
+    name: 'ط¨ط±ط´ظ„ظˆظ†ط© 2026 - برج جانبي',
+    description: 'لوحة عمودية على يمين الشاشة لعرض النسب والحالة والمشاركة بدون حجب البث.',
+    icon: 'SIDE',
+    accent: '#60a5fa',
+    designStyle: 'RESULTS_HUB',
+    statusBadge: 'LIVE',
+    phaseLabel: 'Sidebar',
+    soundInStyle: 'SIDEBAR_CHIME',
+    soundOutStyle: 'SOFT_FADE',
+    scale: 0.95,
+  }),
+  createElectionTemplate({
+    id: 'template-election-turnout-strip',
+    name: 'ط¨ط±ط´ظ„ظˆظ†ط© 2026 - شريط الإقبال',
+    description: 'شريط بيانات سريع لعرض نسبة المشاركة والوقت الحالي مناسب مع بقية القوالب.',
+    icon: 'TURN',
+    accent: '#22c55e',
+    designStyle: 'VOTER_TURNOUT',
+    headline: 'مشاركة أعضاء برشلونة 2026',
+    subheadline: 'تحديث سريع لنسبة الإقبال في الانتخابات',
+    statusBadge: 'TURNOUT',
+    phaseLabel: 'Data',
+    soundInStyle: 'DATA_PULSE',
+    soundOutStyle: 'SOFT_FADE',
+  }),
 ];
 
 export const INITIAL_TEMPLATES: OverlayConfig[] = [
@@ -557,5 +744,6 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
       { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
     ]
-  }
+  },
+  ...BARCELONA_ELECTION_TEMPLATES
 ];

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import { Sparkles } from 'lucide-react';
 import ElectionOverlay from './ElectionOverlay';
+import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectionStyle } from '../utils/election';
 
 interface OverlayRendererProps {
   config: OverlayConfig;
@@ -39,27 +40,57 @@ const SOUND_EFFECTS = {
     EXIT: "https://assets.mixkit.co/active_storage/sfx/204/204.wav"
 };
 
-const ELECTION_SOUNDS_IN: Record<string, string> = {
-    'SPLIT_BAR_LEFT': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'COUNTDOWN_TOP': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'LEAKS_FULL': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'STATEMENT_FULL': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'LIVE_TRANSITION': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'STUDIO_BACKGROUND': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'VOTER_TURNOUT': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
-    'RESULTS_HUB': 'https://assets.mixkit.co/active_storage/sfx/3120/3120.wav',
+type ElectionSynthStep = {
+    delay: number;
+    duration: number;
+    frequency: number;
+    toFrequency?: number;
+    waveform: OscillatorType;
+    gain: number;
 };
 
-const ELECTION_SOUNDS_OUT: Record<string, string> = {
-    'SPLIT_BAR_LEFT': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'COUNTDOWN_TOP': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'LEAKS_FULL': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'STATEMENT_FULL': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'LIVE_TRANSITION': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'STUDIO_BACKGROUND': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'VOTER_TURNOUT': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
-    'RESULTS_HUB': 'https://assets.mixkit.co/active_storage/sfx/204/204.wav',
+const ELECTION_SOUND_PATTERNS: Record<string, ElectionSynthStep[]> = {
+    RESULTS_STING: [
+        { delay: 0, duration: 0.14, frequency: 420, toFrequency: 560, waveform: 'triangle', gain: 0.7 },
+        { delay: 0.1, duration: 0.22, frequency: 660, toFrequency: 940, waveform: 'sawtooth', gain: 0.9 },
+        { delay: 0.26, duration: 0.32, frequency: 980, toFrequency: 1220, waveform: 'sine', gain: 0.45 },
+    ],
+    QUOTE_SWEEP: [
+        { delay: 0, duration: 0.28, frequency: 280, toFrequency: 520, waveform: 'sine', gain: 0.45 },
+        { delay: 0.12, duration: 0.24, frequency: 480, toFrequency: 760, waveform: 'triangle', gain: 0.4 },
+        { delay: 0.3, duration: 0.2, frequency: 860, waveform: 'sine', gain: 0.18 },
+    ],
+    VERSUS_IMPACT: [
+        { delay: 0, duration: 0.2, frequency: 120, toFrequency: 90, waveform: 'sawtooth', gain: 0.9 },
+        { delay: 0.04, duration: 0.12, frequency: 220, toFrequency: 180, waveform: 'square', gain: 0.45 },
+        { delay: 0.16, duration: 0.18, frequency: 540, toFrequency: 700, waveform: 'triangle', gain: 0.32 },
+    ],
+    SIDEBAR_CHIME: [
+        { delay: 0, duration: 0.18, frequency: 660, waveform: 'sine', gain: 0.4 },
+        { delay: 0.14, duration: 0.2, frequency: 880, waveform: 'sine', gain: 0.38 },
+        { delay: 0.28, duration: 0.24, frequency: 1040, waveform: 'triangle', gain: 0.28 },
+    ],
+    DATA_PULSE: [
+        { delay: 0, duration: 0.08, frequency: 240, waveform: 'square', gain: 0.3 },
+        { delay: 0.1, duration: 0.08, frequency: 320, waveform: 'square', gain: 0.34 },
+        { delay: 0.2, duration: 0.12, frequency: 440, waveform: 'triangle', gain: 0.28 },
+    ],
+    COUNTDOWN_TICK: [
+        { delay: 0, duration: 0.05, frequency: 920, waveform: 'square', gain: 0.2 },
+        { delay: 0.1, duration: 0.05, frequency: 920, waveform: 'square', gain: 0.2 },
+        { delay: 0.24, duration: 0.18, frequency: 560, toFrequency: 740, waveform: 'triangle', gain: 0.32 },
+    ],
+    BREAKING_WHOOSH: [
+        { delay: 0, duration: 0.34, frequency: 980, toFrequency: 240, waveform: 'sawtooth', gain: 0.8 },
+        { delay: 0.08, duration: 0.22, frequency: 640, toFrequency: 320, waveform: 'triangle', gain: 0.38 },
+    ],
+    SOFT_FADE: [
+        { delay: 0, duration: 0.18, frequency: 620, toFrequency: 400, waveform: 'sine', gain: 0.22 },
+        { delay: 0.12, duration: 0.24, frequency: 420, toFrequency: 220, waveform: 'triangle', gain: 0.18 },
+    ],
 };
+
+let sharedAudioContext: AudioContext | null = null;
 
 // --- COMPONENTS ---
 
@@ -119,25 +150,82 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   // Internal Pagination for Leaderboard
   const [leaderboardPage, setLeaderboardPage] = useState(0);
 
+  const playElectionSynth = async (cue: string) => {
+      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextCtor) return false;
+
+      if (!sharedAudioContext) {
+          sharedAudioContext = new AudioContextCtor();
+      }
+
+      if (sharedAudioContext.state === 'suspended') {
+          await sharedAudioContext.resume();
+      }
+
+      const pattern = ELECTION_SOUND_PATTERNS[cue] || ELECTION_SOUND_PATTERNS.RESULTS_STING;
+      const now = sharedAudioContext.currentTime;
+      const master = sharedAudioContext.createGain();
+      master.connect(sharedAudioContext.destination);
+      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.16, now);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
+
+      pattern.forEach(step => {
+          const oscillator = sharedAudioContext!.createOscillator();
+          const gain = sharedAudioContext!.createGain();
+          const startAt = now + step.delay;
+          const endAt = startAt + step.duration;
+
+          oscillator.type = step.waveform;
+          oscillator.frequency.setValueAtTime(step.frequency, startAt);
+          if (step.toFrequency) {
+              oscillator.frequency.exponentialRampToValueAtTime(step.toFrequency, endAt);
+          }
+
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.exponentialRampToValueAtTime(step.gain, startAt + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+
+          oscillator.connect(gain);
+          gain.connect(master);
+          oscillator.start(startAt);
+          oscillator.stop(endAt + 0.03);
+      });
+
+      window.setTimeout(() => {
+          master.disconnect();
+      }, 1400);
+
+      return true;
+  };
+
   // Play Sound Logic
   const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
       if (isEditor) return; 
-      if (!soundEnabled || !audioRef.current) return;
+      if (!soundEnabled) return;
       try {
           if (config.type === OverlayType.UCL_DRAW && type === 'ENTRY') {
+              if (!audioRef.current) return;
               audioRef.current.src = "https://assets.mixkit.co/active_storage/sfx/1435/1435.wav"; // Epic cinematic impact
           } else if (config.type === OverlayType.ELECTION) {
-              const designStyle = String(getField('designStyle') || 'SPLIT_BAR_LEFT');
+              const designStyle = resolveElectionStyle(String(getField('designStyle') || 'RESULTS_BAR'));
+              const soundInStyle = String(getField('soundInStyle') || ELECTION_SOUND_IN_DEFAULTS[designStyle] || 'RESULTS_STING');
+              const soundOutStyle = String(getField('soundOutStyle') || ELECTION_SOUND_OUT_DEFAULTS[designStyle] || 'SOFT_FADE');
               if (type === 'ENTRY') {
-                  audioRef.current.src = ELECTION_SOUNDS_IN[designStyle] || SOUND_EFFECTS.ENTRY;
+                  const played = await playElectionSynth(soundInStyle);
+                  if (played) return;
               } else if (type === 'EXIT') {
-                  audioRef.current.src = ELECTION_SOUNDS_OUT[designStyle] || SOUND_EFFECTS.EXIT;
-              } else {
+                  const played = await playElectionSynth(soundOutStyle);
+                  if (played) return;
+              } else if (audioRef.current) {
                   audioRef.current.src = SOUND_EFFECTS[type];
+              } else {
+                  return;
               }
           } else {
+              if (!audioRef.current) return;
               audioRef.current.src = SOUND_EFFECTS[type];
           }
+          if (!audioRef.current) return;
           audioRef.current.volume = Math.min(soundVolume, 1);
           audioRef.current.currentTime = 0;
           await audioRef.current.play();

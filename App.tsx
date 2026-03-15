@@ -64,12 +64,19 @@ const App: React.FC = () => {
   }, []);
   
   // Actions delegated to SyncManager
-  const handleCreateOverlay = (type: OverlayType) => {
-    const template = INITIAL_TEMPLATES.find(t => t.type === type) || INITIAL_TEMPLATES[0];
+  const handleCreateOverlay = (templateId: string) => {
+    const template =
+      INITIAL_TEMPLATES.find(t => t.id === templateId || t.templateId === templateId) ||
+      INITIAL_TEMPLATES.find(t => t.type === (templateId as OverlayType)) ||
+      INITIAL_TEMPLATES[0];
+    const templateClone = JSON.parse(JSON.stringify(template)) as OverlayConfig;
+    const baseTemplateId = templateClone.templateId || templateClone.id;
+    const sameTemplateCount = overlays.filter(o => (o.templateId || o.id) === baseTemplateId).length + 1;
     const newOverlay: OverlayConfig = {
-      ...template,
+      ...templateClone,
       id: `instance-${Date.now()}`,
-      name: `${template.name} #${overlays.length + 1}`,
+      templateId: baseTemplateId,
+      name: sameTemplateCount > 1 ? `${templateClone.name} #${sameTemplateCount}` : templateClone.name,
       isVisible: false,
       createdAt: Date.now()
     };
