@@ -1,20 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Barcelona Elections 2026
 
-# Run and deploy your AI Studio app
+Live overlay toolkit for Barcelona elections coverage, built with React and Vite.
 
-This contains everything you need to run your app locally.
+## Run locally
 
-View your app in AI Studio: https://ai.studio/apps/1c476f43-2c0f-4b31-b589-801d017cd987
+Prerequisites: Node.js
 
-## Run Locally
+1. Install dependencies with `npm install`
+2. If you use Gemini features, set `GEMINI_API_KEY` in `.env.local`
+3. Start development with `npm run dev`
 
-**Prerequisites:**  Node.js
+## Build
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- `npm run build`
+- `npm run lint`
