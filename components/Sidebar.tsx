@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, LayoutGrid, Play, Tv, Cpu, Wifi } from 'lucide-react';
+import { Home, LayoutGrid, Play, Tv, Cpu, Wifi, Shield } from 'lucide-react';
 
 interface SidebarProps {
   activePage: string;
@@ -13,6 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
     { id: 'library', label: 'المكتبة (Tokens)', icon: LayoutGrid },
     { id: 'operator', label: 'غرفة التحكم', icon: Play }, 
     { id: 'integrations', label: 'الربط الخارجي', icon: Cpu },
+    { id: 'settings', label: 'الحماية والربط', icon: Shield },
   ];
 
   return (

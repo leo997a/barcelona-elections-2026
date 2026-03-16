@@ -3,6 +3,7 @@ import { OverlayConfig, OverlayType } from '../types';
 import { Plus, Edit3, Trash2, Play, Key, Zap, Settings2, X } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { INITIAL_TEMPLATES } from '../constants';
+import { encodeBase64UrlUtf8 } from '../utils/base64';
 
 interface LibraryProps {
   overlays: OverlayConfig[];
@@ -52,17 +53,18 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
   );
 
   const handleCopySmartToken = (overlay: OverlayConfig) => {
+    const secureContext = syncManager.getSmartTokenContext();
     const payload = {
       s: syncManager.getStudioId(),
       id: overlay.id,
       tp: overlay.type,
-      nm: overlay.name
+      nm: overlay.name,
+      sv: secureContext?.provider || 'local',
+      ct: secureContext?.controlAccessKey || undefined,
     };
 
     try {
-      const jsonString = JSON.stringify(payload);
-      const utf8Bytes = unescape(encodeURIComponent(jsonString));
-      const token = 'rge_' + btoa(utf8Bytes);
+      const token = 'rge_' + encodeBase64UrlUtf8(JSON.stringify(payload));
       navigator.clipboard.writeText(token);
 
       const btn = document.getElementById(`token-btn-${overlay.id}`);
@@ -71,7 +73,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       if (btn && txt) {
         const originalText = txt.innerText;
         const originalClasses = btn.className;
-        txt.innerText = 'تم نسخ التوكن بنجاح!';
+        txt.innerText = secureContext ? 'تم نسخ Smart Token الآمن' : 'تم نسخ Smart Token المحلي';
         btn.className =
           'w-full mb-3 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl shadow-lg shadow-green-900/20 transform scale-105 transition-all duration-200';
         setTimeout(() => {

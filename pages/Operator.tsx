@@ -16,6 +16,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   const [showStreamDeckModal, setShowStreamDeckModal] = useState(false);
 
   const selectedOverlay = overlays.find(o => o.id === selectedId);
+  const secureContext = syncManager.getSmartTokenContext();
 
   const selectedMeta = useMemo(() => {
     if (!selectedOverlay) return null;
@@ -454,12 +455,19 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-4">بيانات التحكم المتقدمة</h2>
-            <p className="text-gray-400 mb-4 text-sm">للتحكم الخارجي (StreamDeck / Bitfocus Companion)، يمكنك استخدام الـ Studio ID الخاص بك:</p>
+            <p className="text-gray-400 mb-4 text-sm">
+              الربط الخارجي أصبح يعتمد على Smart Tokens والربط الآمن. استخدم معرف الاستوديو هذا
+              كمرجع تشغيلي:
+            </p>
 
             <div className="bg-black p-4 rounded border border-gray-800 mb-4">
               <code className="text-green-400 font-mono text-lg">{syncManager.getStudioId()}</code>
             </div>
-            <p className="text-xs text-gray-500">لا يوجد REST API مباشر حالياً. الربط يتم من خلال التوكنات والإضافة الحالية.</p>
+            <p className="text-xs leading-6 text-gray-500">
+              {secureContext
+                ? 'الربط الآمن مفعل. انسخ Smart Token من المكتبة أو نزّل إضافة Stream Deck من صفحة التكاملات.'
+                : 'الربط الآمن غير مفعل بعد. فعّله من صفحة الحماية والربط إذا كنت تريد تحكمًا خارجيًا موثوقًا.'}
+            </p>
 
             <div className="mt-6 flex justify-end">
               <button onClick={() => setShowStreamDeckModal(false)} className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">

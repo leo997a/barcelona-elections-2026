@@ -52,6 +52,34 @@ export interface OverlayConfig {
   createdAt?: number;
 }
 
+export interface FirebaseWebConfig {
+  apiKey: string;
+  authDomain: string;
+  databaseURL: string;
+  projectId: string;
+  appId?: string;
+  messagingSenderId?: string;
+  storageBucket?: string;
+  measurementId?: string;
+}
+
+export interface SecureSyncConfig extends FirebaseWebConfig {
+  provider: 'firebase';
+  studioId: string;
+  stateAccessKey: string;
+  controlAccessKey: string;
+  updatedAt: number;
+}
+
+export type SyncStatus = 'local' | 'connecting' | 'secure' | 'error';
+
+export type ActionCommand =
+  | { action: 'toggle_visible'; targetId: string }
+  | { action: 'set_visible'; targetId: string; value: boolean }
+  | { action: 'update_field'; targetId: string; fieldId: string; value: unknown }
+  | { action: 'increment_field'; targetId: string; fieldId: string; amount: number }
+  | { action: 'load_slot'; targetId: string; slotName: string };
+
 export interface SmartNewsContent {
   title: string;
   pages: string[];

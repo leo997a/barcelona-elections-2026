@@ -6,6 +6,7 @@ import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, 
 import { processSmartText, generateMatchData } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
+import { adminSessionService } from '../services/adminSession';
 import { normalizeElectionOverlay } from '../utils/election';
 
 interface EditorProps {
@@ -46,7 +47,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // --- SPONSORS MANAGEMENT STATE ---
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isAdminAuthorizing, setIsAdminAuthorizing] = useState(false);
   
   const [newSponsor, setNewSponsor] = useState({ name: '', amount: '', currency: 'SAR', avatar: '' });
   const [isAddingSponsor, setIsAddingSponsor] = useState(false);
@@ -85,6 +87,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
          return shouldUpdate ? normalizeElectionOverlay(newDraft) : prevDraft;
      });
   }, [liveOverlay]);
+
+  useEffect(() => {
+      let isMounted = true;
+
+      adminSessionService.verifyStoredSession().then(isValid => {
+          if (isMounted) {
+              setIsAdminUnlocked(isValid);
+          }
+      }).catch(error => {
+          console.error('Failed to verify admin session', error);
+      });
+
+      return () => {
+          isMounted = false;
+      };
+  }, []);
 
   // --- LIVE CURRENCY PREVIEW EFFECT ---
   useEffect(() => {
@@ -135,14 +153,26 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   // --- SPONSORS LOGIC ---
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (adminPassword === 'gESO0SqLNkHwYK') {
+      setIsAdminAuthorizing(true);
+      setPasswordError(null);
+
+      try {
+          await adminSessionService.login(adminPassword);
           setIsAdminUnlocked(true);
-          setPasswordError(false);
-      } else {
-          setPasswordError(true);
+          setAdminPassword('');
+      } catch (error) {
+          setPasswordError(error instanceof Error ? error.message : 'تعذر فتح جلسة المسؤول.');
+      } finally {
+          setIsAdminAuthorizing(false);
       }
+  };
+
+  const handleAdminLogout = () => {
+      adminSessionService.clear();
+      setIsAdminUnlocked(false);
+      setPasswordError(null);
   };
 
   const handleAddSponsor = async () => {
@@ -531,10 +561,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 onChange={(e) => setAdminPassword(e.target.value)}
                                 className="w-full bg-black border border-gray-600 rounded p-2 text-white text-center focus:border-red-500 focus:outline-none"
                               />
-                              <button type="submit" className="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold transition-colors">
-                                  فتح القفل
+                              <button type="submit" disabled={isAdminAuthorizing} className="w-full bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white py-2 rounded font-bold transition-colors">
+                                  {isAdminAuthorizing ? 'جاري التحقق...' : 'فتح الجلسة'}
                               </button>
-                              {passwordError && <p className="text-xs text-red-400">كلمة المرور غير صحيحة</p>}
+                              {passwordError && <p className="text-xs text-red-400">{passwordError}</p>}
                           </form>
                       </div>
                   ) : (
@@ -543,7 +573,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               <h3 className="text-sm font-bold text-green-400 flex items-center gap-2">
                                   <Unlock className="w-4 h-4" /> وضع المسؤول
                               </h3>
-                              <button onClick={() => setIsAdminUnlocked(false)} className="text-xs text-gray-500 hover:text-white">قفل</button>
+                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white">قفل</button>
                           </div>
 
                           {/* Add Form */}
@@ -839,7 +869,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      <span>{liveOverlay.isVisible ? 'ON AIR' : 'OFF AIR'}</span>
                  </button>
              </div>
-             <button onClick={() => { window.open(`${window.location.origin}${window.location.pathname}#/output/${liveOverlay.id}?studio=${syncManager.getStudioId()}`, '_blank', 'width=1280,height=720') }} className="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-600/30"><Monitor className="w-5 h-5" /></button>
+             <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id), '_blank', 'width=1280,height=720') }} className="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-600/30"><Monitor className="w-5 h-5" /></button>
          </div>
 
          <div className="flex-1 overflow-hidden flex items-center justify-center p-8 bg-black/50 relative">
