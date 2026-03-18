@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { OverlayConfig, OverlayType } from './types';
-import { INITIAL_TEMPLATES } from './constants';
+import { OverlayConfig } from './types';
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import Library from './pages/Library';
@@ -12,6 +11,7 @@ import Settings from './pages/Settings';
 import OverlayRenderer from './components/OverlayRenderer';
 import { Volume2, CloudLightning } from 'lucide-react';
 import { syncManager } from './services/syncManager';
+import { createOverlayFromTemplate } from './utils/templateRegistry';
 
 const AudioUnlockOverlay = () => {
     const [visible, setVisible] = useState(true);
@@ -66,23 +66,7 @@ const App: React.FC = () => {
   
   // Actions delegated to SyncManager
   const handleCreateOverlay = (templateId: string) => {
-    const template =
-      INITIAL_TEMPLATES.find(t => t.id === templateId || t.templateId === templateId) ||
-      INITIAL_TEMPLATES.find(t => t.type === (templateId as OverlayType)) ||
-      INITIAL_TEMPLATES[0];
-    const templateClone = JSON.parse(JSON.stringify(template)) as OverlayConfig;
-    const baseTemplateId = templateClone.templateId || templateClone.id;
-    const sameTemplateCount = overlays.filter(o => (o.templateId || o.id) === baseTemplateId).length + 1;
-    const newOverlay: OverlayConfig = {
-      ...templateClone,
-      id: `instance-${Date.now()}`,
-      templateId: baseTemplateId,
-      name: sameTemplateCount > 1 ? `${templateClone.name} #${sameTemplateCount}` : templateClone.name,
-      isVisible: false,
-      createdAt: Date.now()
-    };
-    
-    syncManager.addOverlay(newOverlay);
+    syncManager.addOverlay(createOverlayFromTemplate(templateId, overlays));
     setRoute('library');
   };
 

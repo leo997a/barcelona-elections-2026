@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { OverlayConfig, OverlayType } from '../types';
+import { OverlayConfig } from '../types';
 import { Plus, Edit3, Trash2, Play, Key, Zap, Settings2, X } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
-import { INITIAL_TEMPLATES } from '../constants';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
+import { getTemplateMeta, getVisibleTemplates } from '../utils/templateRegistry';
 
 interface LibraryProps {
   overlays: OverlayConfig[];
@@ -13,44 +13,10 @@ interface LibraryProps {
   onNavigateOperator: () => void;
 }
 
-const LEGACY_HIDDEN_TEMPLATE_IDS = new Set(['template-election']);
-
-const FALLBACK_TEMPLATE_META: Record<OverlayType, { icon: string; accent: string; description: string }> = {
-  [OverlayType.LEADERBOARD]: { icon: 'LDR', accent: '#f59e0b', description: 'لوحة داعمين متحركة مناسبة للبث المباشر.' },
-  [OverlayType.SMART_NEWS]: { icon: 'AI', accent: '#8b5cf6', description: 'تحويل النصوص الطويلة إلى شرائح أخبار ذكية.' },
-  [OverlayType.SCOREBOARD]: { icon: 'SCO', accent: '#3b82f6', description: 'نتائج المباريات والاسكور بشكل مباشر.' },
-  [OverlayType.TICKER]: { icon: 'TIC', accent: '#ef4444', description: 'شريط أخبار عاجلة سريع أسفل البث.' },
-  [OverlayType.LOWER_THIRD]: { icon: 'LT', accent: '#10b981', description: 'تعريف ضيف أو مذيع بأسلوب عملي.' },
-  [OverlayType.ALERT]: { icon: 'ALT', accent: '#f97316', description: 'تنبيهات مباشرة داخل البث.' },
-  [OverlayType.EXCLUSIVE_ALERT]: { icon: 'EX', accent: '#dc2626', description: 'خبر حصري بصيغة سريعة وواضحة.' },
-  [OverlayType.GUESTS]: { icon: 'GST', accent: '#60a5fa', description: 'قالب ضيوف متعدد بأساليب مختلفة.' },
-  [OverlayType.UCL_DRAW]: { icon: 'UCL', accent: '#38bdf8', description: 'قالب قرعة دوري الأبطال.' },
-  [OverlayType.ELECTION]: { icon: 'BCN', accent: '#a50044', description: 'قوالب انتخابات برشلونة 2026 للبث المباشر.' },
-};
-
-const getTemplateMeta = (overlay: OverlayConfig) => {
-  const fallback = FALLBACK_TEMPLATE_META[overlay.type];
-  return {
-    id: overlay.templateId || overlay.id,
-    icon: overlay.templateIcon || fallback.icon,
-    accent: overlay.templateAccent || fallback.accent,
-    description: overlay.templateDescription || fallback.description,
-    group: overlay.templateGroup || overlay.type,
-  };
-};
-
 const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const availableTemplates = useMemo(
-    () =>
-      INITIAL_TEMPLATES.filter(template => !LEGACY_HIDDEN_TEMPLATE_IDS.has(template.id)).sort((left, right) => {
-        if ((left.templateGroup || '') === 'BARCELONA_2026' && (right.templateGroup || '') !== 'BARCELONA_2026') return -1;
-        if ((left.templateGroup || '') !== 'BARCELONA_2026' && (right.templateGroup || '') === 'BARCELONA_2026') return 1;
-        return left.name.localeCompare(right.name, 'ar');
-      }),
-    []
-  );
+  const availableTemplates = useMemo(() => getVisibleTemplates(), []);
 
   const handleCopySmartToken = (overlay: OverlayConfig) => {
     const secureContext = syncManager.getSmartTokenContext();
