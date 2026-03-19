@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import { GoogleGenAI, Type } from '@google/genai';
 import { readJsonBody, sendJson } from './_lib/http';
 
@@ -11,22 +10,28 @@ interface AiRequestBody {
 
 const cleanJsonOutput = (text: string): string => text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return sendJson(res, 405, { error: 'الطريقة غير مدعومة.' });
+export default async function handler(request: Request) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'الطريقة غير مدعومة.' }), {
+      status: 405,
+      headers: {
+        'Allow': 'POST',
+        'Cache-Control': 'no-store',
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+    });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return sendJson(res, 503, {
+    return sendJson(503, {
       error: 'خدمة الذكاء الاصطناعي غير مفعلة بعد. أضف GEMINI_API_KEY إلى البيئة أولاً.',
     });
   }
 
-  const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
+  const body = await readJsonBody<AiRequestBody>(request).catch(() => null);
   if (!body?.action) {
-    return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
+    return sendJson(400, { error: 'نوع الطلب غير موجود.' });
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -35,7 +40,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     if (body.action === 'match-data') {
       const sport = body.sport?.trim();
       if (!sport) {
-        return sendJson(res, 400, { error: 'اسم الرياضة مطلوب.' });
+        return sendJson(400, { error: 'اسم الرياضة مطلوب.' });
       }
 
       const response = await ai.models.generateContent({
@@ -58,16 +63,16 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       });
 
       if (!response.text) {
-        return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي بيانات.' });
+        return sendJson(502, { error: 'لم يعد الذكاء الاصطناعي أي بيانات.' });
       }
 
-      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(response.text)) });
+      return sendJson(200, { data: JSON.parse(cleanJsonOutput(response.text)) });
     }
 
     if (body.action === 'smart-text') {
       const rawText = body.rawText?.trim();
       if (!rawText) {
-        return sendJson(res, 400, { error: 'النص الخام مطلوب.' });
+        return sendJson(400, { error: 'النص الخام مطلوب.' });
       }
 
       const targetPages = Math.min(Math.max(Number(body.targetPages) || 6, 1), 10);
@@ -106,16 +111,16 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       });
 
       if (!response.text) {
-        return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي نص منظم.' });
+        return sendJson(502, { error: 'لم يعد الذكاء الاصطناعي أي نص منظم.' });
       }
 
-      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(response.text)) });
+      return sendJson(200, { data: JSON.parse(cleanJsonOutput(response.text)) });
     }
 
-    return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
+    return sendJson(400, { error: 'نوع الطلب غير معروف.' });
   } catch (error) {
     console.error('Secure AI route failed', error);
-    return sendJson(res, 500, {
+    return sendJson(500, {
       error: 'تعذر إكمال طلب الذكاء الاصطناعي من الخادم.',
     });
   }
