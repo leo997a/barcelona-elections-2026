@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
-import { issueAdminSession, verifyAdminSession } from '../_lib/adminToken';
-import { getBearerToken, readJsonBody, sendJson } from '../_lib/http';
+import { issueAdminSession, verifyAdminSession } from '../_lib/adminToken.js';
+import { getBearerToken, readJsonBody, sendJson } from '../_lib/http.js';
 
 interface SessionBody {
   passcode?: string;

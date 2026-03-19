@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { readJsonBody, sendJson } from './_lib/http';
+import { readJsonBody, sendJson } from './_lib/http.js';
 
 interface AiRequestBody {
   action?: 'match-data' | 'smart-text';
