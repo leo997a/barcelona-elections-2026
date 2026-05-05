@@ -62,6 +62,16 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#a50044',
     description: 'قوالب انتخابات برشلونة 2026 للبث المباشر.',
   },
+  [OverlayType.SOCIAL_MEDIA]: {
+    icon: 'SOC',
+    accent: '#1da1f2',
+    description: 'عرض تعليقات أو تغريدات من منصات التواصل الاجتماعي.',
+  },
+  [OverlayType.TODAYS_EPISODE]: {
+    icon: 'EPI',
+    accent: '#f59e0b',
+    description: 'عرض محاور الحلقة (لاعبين، مدربين، مواضيع) من 1 إلى 8 عناصر.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

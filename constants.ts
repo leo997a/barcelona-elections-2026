@@ -759,5 +759,65 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
     ]
   },
+  {
+    id: 'template-social-media',
+    name: 'تغريدة / تعليق (Social Media)',
+    type: OverlayType.SOCIAL_MEDIA,
+    isVisible: false,
+    theme: {
+      primaryColor: '#1da1f2',
+      secondaryColor: '#ffffff',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'platform', label: 'المنصة', type: 'select', value: 'X (Twitter)', options: ['X (Twitter)', 'Instagram', 'Facebook', 'YouTube'] },
+      { id: 'authorName', label: 'اسم الحساب', type: 'text', value: 'أحمد محمد' },
+      { id: 'authorHandle', label: 'المعرف (Handle)', type: 'text', value: '@ahmed_m' },
+      { id: 'authorImage', label: 'صورة الحساب', type: 'image', value: 'https://ui-avatars.com/api/?name=Ahmed&background=random' },
+      { id: 'content', label: 'نص التعليق', type: 'textarea', value: 'مباراة رائعة وأداء ممتاز من الفريقين! #برشلونة' },
+      { id: 'likes', label: 'الإعجابات', type: 'number', value: 1200 },
+      { id: 'time', label: 'وقت النشر', type: 'text', value: 'منذ ساعتين' },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.2, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'LIGHT', options: ['LIGHT', 'DARK', 'GLASS'] },
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  },
+  {
+    id: 'template-todays-episode',
+    name: 'حلقة اليوم فيها',
+    type: OverlayType.TODAYS_EPISODE,
+    isVisible: false,
+    theme: {
+      primaryColor: '#f59e0b',
+      secondaryColor: '#1e293b',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'حلقة اليوم فيها :' },
+      { id: 'itemsCount', label: 'عدد المحاور', type: 'range', value: 4, min: 1, max: 8, step: 1 },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'MODERN_GLASS', options: ['MODERN_GLASS', 'DARK_NEON', 'CLEAN_LIGHT'] },
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      ...Array.from({ length: 8 }).flatMap((_, i) => [
+          { id: `item${i+1}Name`, label: `اسم المحور ${i+1}`, type: 'text' as const, value: `موضوع ${i+1}` },
+          { id: `item${i+1}Image`, label: `صورة المحور ${i+1}`, type: 'image' as const, value: `https://picsum.photos/400/600?random=${i+10}` },
+          { id: `item${i+1}Scale`, label: `تكبير صورة ${i+1}`, type: 'range' as const, value: 1.0, min: 0.5, max: 2.5, step: 0.1 },
+          { id: `item${i+1}PosX`, label: `إزاحة أفقية (X) ${i+1}`, type: 'range' as const, value: 0, min: -200, max: 200, step: 5 },
+          { id: `item${i+1}PosY`, label: `إزاحة عمودية (Y) ${i+1}`, type: 'range' as const, value: 0, min: -200, max: 200, step: 5 },
+      ])
+    ]
+  },
   ...BARCELONA_ELECTION_TEMPLATES
 ];
