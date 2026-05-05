@@ -14,7 +14,7 @@ interface AiRequestBody {
   targetPages?: number;
   viewers?: { name: string; rank: number }[];
   channelName?: string;
-  images?: string[]; // base64 encoded images for extract-viewers
+  images?: string[]; // base64 images for Vision
 }
 
 const cleanJsonOutput = (text: string): string =>
@@ -22,30 +22,40 @@ const cleanJsonOutput = (text: string): string =>
 
 const MODEL = 'gemini-2.0-flash-exp';
 
-export default async function handler(request: ServerlessRequest, response: ServerlessResponse) {
-  if (request.method !== 'POST') {
-    return sendMethodNotAllowed(response, 'POST', { error: 'الطريقة غير مدعومة.' });
+// Wrap array schema in object to satisfy Gemini structured output constraints
+const arrSchema = (props: Record<string, unknown>, required: string[]) => ({
+  type: Type.OBJECT,
+  properties: {
+    items: {
+      type: Type.ARRAY,
+      items: { type: Type.OBJECT, properties: props, required },
+    },
+  },
+  required: ['items'],
+});
+
+export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
+  if (req.method !== 'POST') {
+    return sendMethodNotAllowed(res, 'POST', { error: 'الطريقة غير مدعومة.' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return sendJson(response, 503, {
+    return sendJson(res, 503, {
       error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY إلى البيئة.',
     });
   }
 
-  const body = await readJsonBody<AiRequestBody>(request).catch(() => null);
-  if (!body?.action) {
-    return sendJson(response, 400, { error: 'نوع الطلب غير موجود.' });
-  }
+  const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
+  if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
 
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    // ── MATCH DATA ───────────────────────────────────────────────────────────
+    // ── MATCH DATA ─────────────────────────────────────────────────────────
     if (body.action === 'match-data') {
       const sport = body.sport?.trim();
-      if (!sport) return sendJson(response, 400, { error: 'اسم الرياضة مطلوب.' });
+      if (!sport) return sendJson(res, 400, { error: 'اسم الرياضة مطلوب.' });
 
       const result = await ai.models.generateContent({
         model: MODEL,
@@ -66,34 +76,28 @@ export default async function handler(request: ServerlessRequest, response: Serv
         },
       });
 
-      if (!result.text) return sendJson(response, 502, { error: 'لم يعد الذكاء الاصطناعي أي بيانات.' });
-      return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
+      if (!result.text) return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي بيانات.' });
+      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
     }
 
-    // ── SMART TEXT ───────────────────────────────────────────────────────────
+    // ── SMART TEXT ─────────────────────────────────────────────────────────
     if (body.action === 'smart-text') {
       const rawText = body.rawText?.trim();
-      if (!rawText) return sendJson(response, 400, { error: 'النص الخام مطلوب.' });
-
+      if (!rawText) return sendJson(res, 400, { error: 'النص الخام مطلوب.' });
       const targetPages = Math.min(Math.max(Number(body.targetPages) || 6, 1), 10);
 
       const result = await ai.models.generateContent({
         model: MODEL,
         contents: `
-Role: You are an expert TV Broadcast Editor and Scriptwriter.
+Role: Expert TV Broadcast Editor.
+Task: Convert the Arabic text into exactly ${targetPages} slides for a news overlay.
+Requirements:
+1. Extract a concise headline.
+2. Split into EXACTLY ${targetPages} slides (15-25 words each).
+3. Do NOT remove names, dates, or numbers.
+Return pure JSON.
 
-Task: Convert the provided raw Arabic text into a structured script for a news overlay.
-
-Strict Requirements:
-1. Extract a concise, catchy Headline.
-2. Split the body into EXACTLY ${targetPages} distinct slides (pages).
-3. INTEGRITY IS CRITICAL: Do NOT summarize heavily. Do NOT remove names, dates, numbers, or key details.
-4. Each slide must be 15-25 words max for readability on screen.
-5. Return purely JSON.
-
-Raw Text:
-"${rawText}"
-        `,
+Text: "${rawText}"`,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -107,55 +111,44 @@ Raw Text:
         },
       });
 
-      if (!result.text) return sendJson(response, 502, { error: 'لم يعد الذكاء الاصطناعي أي نص منظم.' });
-      return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
+      if (!result.text) return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي نص.' });
+      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
     }
 
-    // ── VIEWER BADGES ────────────────────────────────────────────────────────
+    // ── VIEWER BADGES ──────────────────────────────────────────────────────
     if (body.action === 'viewer-badges') {
       const viewers = body.viewers || [];
       const channelName = body.channelName || 'REO LIVE';
-      if (!viewers.length) return sendJson(response, 400, { error: 'يلزم وجود قائمة متفاعلين.' });
+      if (!viewers.length) return sendJson(res, 400, { error: 'يلزم وجود قائمة متفاعلين.' });
 
-      const viewerList = viewers
-        .map((v) => `المرتبة ${v.rank}: ${v.name}`)
-        .join('\n');
+      const list = viewers.map(v => `المرتبة ${v.rank}: ${v.name}`).join('\n');
 
       const result = await ai.models.generateContent({
         model: MODEL,
-        contents: `أنت خبير في مجتمعات البث المباشر. قناة "${channelName}" تريد تكريم أبرز متفاعليها.
-أعطِ وسامًا/لقبًا قصيرًا (1-4 كلمات عربية + إيموجي) مناسبًا لكل متفاعل حسب ترتيبه.
-المتفاعلون:
-${viewerList}
-
-أعِد JSON array فقط.`,
+        contents: `أنت خبير في مجتمعات البث المباشر لقناة "${channelName}".
+أعطِ وسامًا قصيرًا (1-4 كلمات عربية + إيموجي) لكل متفاعل حسب مرتبته:
+${list}
+أعد JSON: {"items": [{"rank":1,"badge":"👑 ..."},...]}`,
         config: {
           responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                rank:  { type: Type.INTEGER },
-                badge: { type: Type.STRING },
-              },
-              required: ['rank', 'badge'],
-            },
-          },
+          responseSchema: arrSchema(
+            { rank: { type: Type.INTEGER }, badge: { type: Type.STRING } },
+            ['rank', 'badge']
+          ),
         },
       });
 
-      if (!result.text) return sendJson(response, 502, { error: 'فشل توليد الأوسمة.' });
-      return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
+      if (!result.text) return sendJson(res, 502, { error: 'فشل توليد الأوسمة.' });
+      const parsed = JSON.parse(cleanJsonOutput(result.text));
+      return sendJson(res, 200, { data: parsed.items ?? parsed });
     }
 
     // ── EXTRACT VIEWERS FROM SCREENSHOTS (Vision) ──────────────────────────
     if (body.action === 'extract-viewers') {
       const images = body.images || [];
-      if (!images.length) return sendJson(response, 400, { error: 'يلزم إرسال صورة واحدة على الأقل.' });
+      if (!images.length) return sendJson(res, 400, { error: 'يلزم إرسال صورة واحدة على الأقل.' });
 
-      // Build multimodal parts
-      const imageParts = images.map((b64: string) => ({
+      const imageParts = images.slice(0, 3).map((b64: string) => ({
         inlineData: {
           mimeType: 'image/jpeg' as const,
           data: b64.replace(/^data:image\/\w+;base64,/, ''),
@@ -169,11 +162,11 @@ ${viewerList}
             role: 'user',
             parts: [
               {
-                text: `أنت محلل مجتمعات بث مباشر. هذه لقطات شاشة بث مباشر.
-استخرج أبرز المتفاعلين (أسماء مستخدمين / مرسلي تعليقات من الشاشة).
-رتّبهم حسب تكرار الظهور أو تسلسل اللقاء.
-أعِد JSON array به إلى 10 متفاعلين بحد أقصى.
-لكل متفاعل: rank (رقم بدءًا من 1), name (اسم المستخدم), badge (وسام مناسب بالعربية + إيموجي).`,
+                text: `أنت محلل مجتمعات بث مباشر. هذه لقطات شاشة بث.
+استخرج أبرز المتفاعلين (أسماء المستخدمين الظاهرة في الشاشة).
+رتّبهم حسب تكرار الظهور.
+لكل متفاعل: rank (يبدأ من 1), name (اسم المستخدم), badge (وسام عربي + إيموجي مناسب).
+أعد JSON: {"items": [{"rank":1,"name":"...","badge":"👑 ..."},...]}`,
               },
               ...imageParts,
             ],
@@ -181,29 +174,26 @@ ${viewerList}
         ],
         config: {
           responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                rank:  { type: Type.INTEGER },
-                name:  { type: Type.STRING },
-                badge: { type: Type.STRING },
-              },
-              required: ['rank', 'name', 'badge'],
+          responseSchema: arrSchema(
+            {
+              rank:  { type: Type.INTEGER },
+              name:  { type: Type.STRING },
+              badge: { type: Type.STRING },
             },
-          },
+            ['rank', 'name', 'badge']
+          ),
         },
       });
 
-      if (!result.text) return sendJson(response, 502, { error: 'فشل استخراج المتفاعلين.' });
-      return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
+      if (!result.text) return sendJson(res, 502, { error: 'فشل استخراج المتفاعلين.' });
+      const parsed = JSON.parse(cleanJsonOutput(result.text));
+      return sendJson(res, 200, { data: parsed.items ?? parsed });
     }
 
-    return sendJson(response, 400, { error: 'نوع الطلب غير معروف.' });
+    return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
 
-  } catch (error) {
-    console.error('AI route error:', error);
-    return sendJson(response, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي.' });
+  } catch (err) {
+    console.error('AI route error:', err);
+    return sendJson(res, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي.' });
   }
 }
