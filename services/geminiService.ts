@@ -29,17 +29,17 @@ const callSecureAi = async <T>(payload: Record<string, unknown>): Promise<T | nu
 };
 
 export const generateMatchData = async (sport: string): Promise<GeneratedContent | null> =>
-  callSecureAi<GeneratedContent>({
-    action: 'match-data',
-    sport,
-  });
+  callSecureAi<GeneratedContent>({ action: 'match-data', sport });
 
-export const processSmartText = async (
-  rawText: string,
-  targetPages: number = 6
-): Promise<SmartNewsContent | null> =>
-  callSecureAi<SmartNewsContent>({
-    action: 'smart-text',
-    rawText,
-    targetPages,
+export const processSmartText = async (rawText: string, targetPages: number = 6): Promise<SmartNewsContent | null> =>
+  callSecureAi<SmartNewsContent>({ action: 'smart-text', rawText, targetPages });
+
+export const generateViewerBadges = async (
+  viewers: { name: string; rank: number }[],
+  channelName: string
+): Promise<{ rank: number; badge: string }[] | null> =>
+  callSecureAi<{ rank: number; badge: string }[]>({
+    action: 'viewer-badges',
+    viewers,
+    channelName,
   });

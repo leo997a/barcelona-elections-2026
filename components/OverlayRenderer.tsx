@@ -17,6 +17,7 @@ import { SocialMediaRenderer } from './renderers/SocialMediaRenderer';
 import { UclDrawRenderer } from './renderers/UclDrawRenderer';
 import { TodaysEpisodeRenderer } from './renderers/TodaysEpisodeRenderer';
 import { PlayerProfileRenderer } from './renderers/PlayerProfileRenderer';
+import { TopViewersRenderer } from './renderers/TopViewersRenderer';
 
 interface OverlayRendererProps {
   config: OverlayConfig;
@@ -199,6 +200,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           {config.type === OverlayType.SOCIAL_MEDIA && <SocialMediaRenderer {...props} />}
           {config.type === OverlayType.TODAYS_EPISODE && <TodaysEpisodeRenderer {...props} />}
           {config.type === OverlayType.PLAYER_PROFILE && <PlayerProfileRenderer {...props} />}
+          {config.type === OverlayType.TOP_VIEWERS && <TopViewersRenderer {...props} />}
           {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer {...props} />}
           {config.type === OverlayType.ELECTION && (
               <ElectionOverlay

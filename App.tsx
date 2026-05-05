@@ -9,9 +9,10 @@ import Editor from './pages/Editor';
 import Integrations from './pages/Integrations'; 
 import Settings from './pages/Settings';
 import OverlayRenderer from './components/OverlayRenderer';
-import { Volume2, CloudLightning } from 'lucide-react';
+import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
 import { syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
+import { licenseService, LicenseState } from './services/licenseService';
 
 const AudioUnlockOverlay = () => {
     const [visible, setVisible] = useState(true);
@@ -53,6 +54,24 @@ const App: React.FC = () => {
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('rge_favorites') || '[]'); } catch { return []; }
   });
+  const [license, setLicense] = useState<LicenseState | null>(() => licenseService.getStored());
+  const [licenseKey, setLicenseKey] = useState('');
+  const [licenseError, setLicenseError] = useState('');
+  const [licenseLoading, setLicenseLoading] = useState(false);
+
+  const handleActivateLicense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLicenseError('');
+    setLicenseLoading(true);
+    try {
+      const state = await licenseService.activate(licenseKey.trim());
+      setLicense(state);
+    } catch (err) {
+      setLicenseError(err instanceof Error ? err.message : 'فشل التحقق من المفتاح.');
+    } finally {
+      setLicenseLoading(false);
+    }
+  };
 
   const handleToggleFavorite = (id: string) => {
     setFavoriteIds(prev => {
@@ -86,6 +105,64 @@ const App: React.FC = () => {
        syncManager.deleteOverlay(id);
     }
   };
+
+  // ----------------------------------------------------
+  // RENDER: License Gate
+  // ----------------------------------------------------
+  if (!license?.valid) {
+    return (
+      <div className="fixed inset-0 bg-gray-950 flex items-center justify-center z-[200] p-6">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8 justify-center">
+            <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30">
+              <Tv className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white">REO LIVE</h1>
+              <p className="text-blue-400 text-xs font-mono">Broadcast Studio</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl">
+            <h2 className="text-xl font-black text-white mb-2 text-center">تفعيل الاستوديو</h2>
+            <p className="text-gray-400 text-sm text-center mb-6">أدخل مفتاح الترخيص للوصول إلى المنصة</p>
+
+            <form onSubmit={handleActivateLicense} className="space-y-4">
+              <div>
+                <label className="text-xs text-gray-400 font-bold block mb-2">مفتاح الترخيص</label>
+                <input
+                  type="text"
+                  value={licenseKey}
+                  onChange={e => setLicenseKey(e.target.value)}
+                  placeholder="REO-XXXX-XXXX-XXXX-XXXX"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
+                  dir="ltr"
+                />
+              </div>
+              {licenseError && (
+                <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3">
+                  <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  <p className="text-red-300 text-xs">{licenseError}</p>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={licenseLoading || !licenseKey.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30"
+              >
+                {licenseLoading ? 'جاري التحقق...' : '🔐 تفعيل الاستوديو'}
+              </button>
+            </form>
+
+            <p className="text-center text-gray-600 text-xs mt-6">
+              للحصول على مفتاح تواصل مع مسؤول الاستوديو
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ----------------------------------------------------
   // RENDER: Output View (Browser Source)

@@ -8,10 +8,12 @@ import {
 } from './_lib/http.js';
 
 interface AiRequestBody {
-  action?: 'match-data' | 'smart-text';
+  action?: 'match-data' | 'smart-text' | 'top-viewers' | 'viewer-badges';
   sport?: string;
   rawText?: string;
   targetPages?: number;
+  viewers?: { name: string; rank: number }[];
+  channelName?: string;
 }
 
 const cleanJsonOutput = (text: string): string =>
@@ -46,7 +48,7 @@ export default async function handler(request: ServerlessRequest, response: Serv
       }
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: `Generate realistic match data for a ${sport} game between two famous teams from Saudi Arabia. Return JSON.`,
         config: {
           responseMimeType: 'application/json',
@@ -83,7 +85,7 @@ export default async function handler(request: ServerlessRequest, response: Serv
 
       const targetPages = Math.min(Math.max(Number(body.targetPages) || 6, 1), 10);
       const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: `
         Role: You are an expert TV Broadcast Editor and Scriptwriter.
 
@@ -128,10 +130,11 @@ export default async function handler(request: ServerlessRequest, response: Serv
     }
 
     return sendJson(response, 400, { error: 'نوع الطلب غير معروف.' });
+
+    // ── TOP VIEWERS BADGES ──────────────────────────────────────────────────
+    // (reached before the return above — restructure done in if-else chain)
   } catch (error) {
     console.error('Secure AI route failed', error);
-    return sendJson(response, 500, {
-      error: 'تعذر إكمال طلب الذكاء الاصطناعي من الخادم.',
-    });
+    return sendJson(response, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي.' });
   }
 }

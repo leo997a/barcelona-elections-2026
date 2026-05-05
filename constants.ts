@@ -832,5 +832,36 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       ])
     ]
   },
+  // ── TOP VIEWERS TEMPLATE ──────────────────────────────────────────────────
+  {
+    id: 'template-top-viewers',
+    templateId: 'template-top-viewers',
+    name: 'أبرز المتفاعلين',
+    type: OverlayType.TOP_VIEWERS,
+    isVisible: false,
+    templateIcon: '🏆',
+    templateAccent: '#f59e0b',
+    templateGroup: 'BROADCAST',
+    templateDescription: 'قالب يعرض أبرز متفاعلي القناة مع صورهم وبياناتهم بمساعدة الذكاء الاصطناعي.',
+    theme: { primaryColor: '#f59e0b', secondaryColor: '#1e3a5f', backgroundColor: '#0f172a', fontFamily: 'Inter' },
+    slots: {},
+    fields: [
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelLogo', label: 'شعار القناة', type: 'image', value: '' },
+      { id: 'title', label: 'عنوان القالب', type: 'text', value: 'أبرز المتفاعلين' },
+      { id: 'viewerCount', label: 'عدد المتفاعلين (1-10)', type: 'range', value: 5, min: 1, max: 10, step: 1 },
+      { id: 'displayMode', label: 'نمط العرض', type: 'select', value: 'TICKER', options: ['TICKER', 'CARDS'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'BLUE', options: ['BLUE', 'GOLD', 'RED', 'GREEN', 'PURPLE'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: false },
+      ...Array.from({ length: 10 }).flatMap((_, i) => [
+        { id: `viewer${i+1}Name`,  label: `اسم المتفاعل ${i+1}`,  type: 'text'  as const, value: i === 0 ? 'محمد العمري' : i === 1 ? 'سارة الغامدي' : i === 2 ? 'خالد المطيري' : '' },
+        { id: `viewer${i+1}Image`, label: `صورة المتفاعل ${i+1}`, type: 'image' as const, value: i < 3 ? `https://ui-avatars.com/api/?name=${encodeURIComponent(['محمد','سارة','خالد'][i] || '')}&background=random&size=200` : '' },
+        { id: `viewer${i+1}Badge`, label: `وسام/لقب المتفاعل ${i+1}`, type: 'text' as const, value: i === 0 ? '🥇 المتفاعل الأول' : i === 1 ? '🥈 المتفاعلة الثانية' : i === 2 ? '🥉 المتفاعل الثالث' : '' },
+      ])
+    ]
+  },
   ...BARCELONA_ELECTION_TEMPLATES
 ];

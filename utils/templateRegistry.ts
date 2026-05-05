@@ -77,6 +77,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#3b82f6',
     description: 'بطاقة إحصائيات وتقييم لاعب بصورة متحركة.',
   },
+  [OverlayType.TOP_VIEWERS]: {
+    icon: '🏆',
+    accent: '#f59e0b',
+    description: 'قالب أبرز متفاعلي القناة مع مساعدة الذكاء الاصطناعي.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

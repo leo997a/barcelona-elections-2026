@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap } from 'lucide-react';
-import { processSmartText, generateMatchData } from '../services/geminiService';
+import { processSmartText, generateMatchData, generateViewerBadges } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
 import { adminSessionService } from '../services/adminSession';
@@ -456,6 +456,41 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         إرسال 🚀
                     </button>
                 </div>
+            </div>
+        )}
+
+        {draftOverlay.type === OverlayType.TOP_VIEWERS && (
+            <div className="p-4 bg-yellow-950/30 border-b border-yellow-900/40">
+                <label className="text-xs text-yellow-400 font-bold block mb-2 flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> ذكاء اصطناعي — توليد الأوسمة
+                </label>
+                <p className="text-[10px] text-gray-400 mb-3">أدخل أسماء المتفاعلين أولاً ثم اضغط ليولد الذكاء أوسمة مناسبة لكل متفاعل.</p>
+                <button
+                    onClick={async () => {
+                        const count = Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5);
+                        const channelName = String(draftOverlay.fields.find(f => f.id === 'channelName')?.value || 'REO LIVE');
+                        const viewers: { name: string; rank: number }[] = [];
+                        for (let i = 1; i <= count; i++) {
+                            const name = String(draftOverlay.fields.find(f => f.id === `viewer${i}Name`)?.value || '').trim();
+                            if (name) viewers.push({ name, rank: i });
+                        }
+                        if (viewers.length === 0) { alert('أدخل أسماء المتفاعلين أولاً'); return; }
+                        const btn = document.getElementById('ai-badges-btn') as HTMLButtonElement;
+                        if (btn) { btn.textContent = '✨ جاري التوليد...'; btn.disabled = true; }
+                        try {
+                            const badges = await generateViewerBadges(viewers, channelName);
+                            if (badges && Array.isArray(badges)) {
+                                badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
+                            }
+                        } finally {
+                            if (btn) { btn.textContent = '⚡ توليد الأوسمة بالذكاء الاصطناعي'; btn.disabled = false; }
+                        }
+                    }}
+                    id="ai-badges-btn"
+                    className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors"
+                >
+                    ⚡ توليد الأوسمة بالذكاء الاصطناعي
+                </button>
             </div>
         )}
         
