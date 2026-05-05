@@ -60,6 +60,7 @@ const Settings: React.FC = () => {
 
   // ── License state ──────────────────────────────────────────────────────────
   const [currentLicense, setCurrentLicense] = useState<LicenseState | null>(() => licenseService.getStored());
+  const isAdmin = currentLicense?.role === 'ADMIN';
   
   // Generator form (admin only)
   const [genAdminSecret, setGenAdminSecret] = useState('');
@@ -212,7 +213,8 @@ const Settings: React.FC = () => {
             )}
           </div>
 
-          {/* Key Generator */}
+          {/* Key Generator - ADMIN ONLY */}
+          {isAdmin ? (
           <div className="rounded-2xl border border-yellow-800/40 bg-yellow-900/10 p-6">
             <h3 className="text-sm font-bold text-yellow-300 mb-4 flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -278,6 +280,13 @@ const Settings: React.FC = () => {
               )}
             </div>
           </div>
+          ) : (
+            <div className="rounded-2xl border border-gray-800/60 bg-gray-900/40 p-8 flex flex-col items-center justify-center text-center gap-3">
+              <Lock className="w-10 h-10 text-gray-700" />
+              <p className="text-gray-600 text-sm font-bold">توليد المفاتيح خاص بالمسؤول</p>
+              <p className="text-gray-700 text-xs">مستواك الحالي: <span className="text-blue-500 font-mono">{currentLicense?.role}</span></p>
+            </div>
+          )}
         </div>
       </div>
 

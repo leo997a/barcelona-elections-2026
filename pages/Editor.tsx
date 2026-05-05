@@ -459,40 +459,87 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
         )}
 
-        {draftOverlay.type === OverlayType.TOP_VIEWERS && (
-            <div className="p-4 bg-yellow-950/30 border-b border-yellow-900/40">
-                <label className="text-xs text-yellow-400 font-bold block mb-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> ذكاء اصطناعي — توليد الأوسمة
-                </label>
-                <p className="text-[10px] text-gray-400 mb-3">أدخل أسماء المتفاعلين أولاً ثم اضغط ليولد الذكاء أوسمة مناسبة لكل متفاعل.</p>
-                <button
-                    onClick={async () => {
-                        const count = Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5);
-                        const channelName = String(draftOverlay.fields.find(f => f.id === 'channelName')?.value || 'REO LIVE');
-                        const viewers: { name: string; rank: number }[] = [];
-                        for (let i = 1; i <= count; i++) {
-                            const name = String(draftOverlay.fields.find(f => f.id === `viewer${i}Name`)?.value || '').trim();
-                            if (name) viewers.push({ name, rank: i });
-                        }
-                        if (viewers.length === 0) { alert('أدخل أسماء المتفاعلين أولاً'); return; }
-                        const btn = document.getElementById('ai-badges-btn') as HTMLButtonElement;
-                        if (btn) { btn.textContent = '✨ جاري التوليد...'; btn.disabled = true; }
-                        try {
-                            const badges = await generateViewerBadges(viewers, channelName);
-                            if (badges && Array.isArray(badges)) {
-                                badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
+        {draftOverlay.type === OverlayType.TOP_VIEWERS && (() => {
+            const count = Math.min(Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5), 10);
+            return (
+            <div className="bg-yellow-950/20 border-b border-yellow-900/30">
+                {/* Quick entry table */}
+                <div className="p-4 pb-2">
+                    <label className="text-xs text-yellow-400 font-bold flex items-center gap-1.5 mb-3">
+                        <Zap className="w-3 h-3" /> إدخال سريع للمتفاعلين
+                    </label>
+                    <div className="space-y-2">
+                        {Array.from({ length: count }, (_, i) => {
+                            const idx = i + 1;
+                            const nameVal = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Name`)?.value || '');
+                            const imgVal  = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Image`)?.value || '');
+                            const medal = idx === 1 ? '👑' : idx === 2 ? '🥈' : idx === 3 ? '🥉' : `#${idx}`;
+                            return (
+                                <div key={idx} className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-yellow-900/20">
+                                    <span className="text-xs w-5 text-center flex-shrink-0">{medal}</span>
+                                    {/* Avatar preview / image URL */}
+                                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-700 flex-shrink-0 bg-gray-800">
+                                        {imgVal ? (
+                                            <img src={imgVal} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <ImageIcon className="w-3 h-3 text-gray-600" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Name */}
+                                    <input
+                                        type="text"
+                                        value={nameVal}
+                                        onChange={e => handleDraftFieldChange(`viewer${idx}Name`, e.target.value)}
+                                        placeholder={`الاسم ${idx}`}
+                                        className="flex-1 bg-transparent text-white text-xs placeholder-gray-600 focus:outline-none min-w-0"
+                                    />
+                                    {/* Image URL */}
+                                    <input
+                                        type="text"
+                                        value={imgVal}
+                                        onChange={e => handleDraftFieldChange(`viewer${idx}Image`, e.target.value)}
+                                        placeholder="رابط الصورة..."
+                                        className="flex-1 bg-transparent text-gray-400 text-[10px] placeholder-gray-700 focus:outline-none min-w-0 font-mono"
+                                        dir="ltr"
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                {/* AI badges button */}
+                <div className="px-4 pb-4">
+                    <button
+                        onClick={async () => {
+                            const channelName = String(draftOverlay.fields.find(f => f.id === 'channelName')?.value || 'REO LIVE');
+                            const viewers: { name: string; rank: number }[] = [];
+                            for (let i = 1; i <= count; i++) {
+                                const name = String(draftOverlay.fields.find(f => f.id === `viewer${i}Name`)?.value || '').trim();
+                                if (name) viewers.push({ name, rank: i });
                             }
-                        } finally {
-                            if (btn) { btn.textContent = '⚡ توليد الأوسمة بالذكاء الاصطناعي'; btn.disabled = false; }
-                        }
-                    }}
-                    id="ai-badges-btn"
-                    className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors"
-                >
-                    ⚡ توليد الأوسمة بالذكاء الاصطناعي
-                </button>
+                            if (viewers.length === 0) { alert('أدخل أسماء المتفاعلين أولاً'); return; }
+                            const btn = document.getElementById('ai-badges-btn') as HTMLButtonElement;
+                            if (btn) { btn.textContent = '✨ جاري التوليد...'; btn.disabled = true; }
+                            try {
+                                const badges = await generateViewerBadges(viewers, channelName);
+                                if (badges && Array.isArray(badges)) {
+                                    badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
+                                }
+                            } finally {
+                                if (btn) { btn.textContent = '⚡ توليد الأوسمة بالذكاء الاصطناعي'; btn.disabled = false; }
+                            }
+                        }}
+                        id="ai-badges-btn"
+                        className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
+                    >
+                        ⚡ توليد الأوسمة بالذكاء الاصطناعي
+                    </button>
+                </div>
             </div>
-        )}
+            );
+        })()}
         
         <div className="flex border-b border-gray-800 overflow-x-auto no-scrollbar">
           {/* ALWAYS: Main data tab */}

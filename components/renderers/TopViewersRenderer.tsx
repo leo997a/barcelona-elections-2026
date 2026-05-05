@@ -1,15 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RendererProps } from './SharedComponents';
 
 interface Viewer {
+  rank: number;
   name: string;
   image: string;
   badge: string;
-  rank: number;
 }
 
-// Parse viewers from flat fields: viewer1Name, viewer1Image, viewer1Badge …
-const parseViewers = (getField: (id: string) => any, count: number): Viewer[] => {
+const parseViewers = (getField: (id: string) => unknown, count: number): Viewer[] => {
   const list: Viewer[] = [];
   for (let i = 1; i <= count; i++) {
     const name = String(getField(`viewer${i}Name`) || '').trim();
@@ -24,9 +23,21 @@ const parseViewers = (getField: (id: string) => any, count: number): Viewer[] =>
   return list;
 };
 
-// ─── Single viewer avatar (ticker mode) ───────────────────────────────────────
+// ─── Rank medal colors ────────────────────────────────────────────────────────
+const MEDAL: Record<number, { color: string; icon: string }> = {
+  1: { color: '#FFD700', icon: '👑' },
+  2: { color: '#C0C0C0', icon: '🥈' },
+  3: { color: '#CD7F32', icon: '🥉' },
+};
 
-const ViewerAvatar: React.FC<{ v: Viewer; accent: string; delay: number; style?: string }> = ({ v, accent, delay, style }) => {
+// ─── Single card with staggered entrance ─────────────────────────────────────
+
+const ViewerRow: React.FC<{
+  v: Viewer;
+  accent: string;
+  delay: number;
+  compact: boolean;
+}> = ({ v, accent, delay, compact }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -34,50 +45,67 @@ const ViewerAvatar: React.FC<{ v: Viewer; accent: string; delay: number; style?:
     return () => clearTimeout(t);
   }, [delay]);
 
+  const medal = MEDAL[v.rank];
+  const rankColor = medal?.color || accent;
+
   return (
     <div
-      className="flex flex-col items-center gap-2 flex-shrink-0"
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.85)',
-        transition: 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.34,1.56,0.64,1)',
-        minWidth: 90,
+        transform: visible ? 'translateX(0) scale(1)' : 'translateX(-40px) scale(0.95)',
+        transition: `opacity 0.55s cubic-bezier(.22,1,.36,1), transform 0.55s cubic-bezier(.22,1,.36,1)`,
+        transitionDelay: `${delay}ms`,
       }}
+      className="relative flex items-center gap-3 group"
     >
+      {/* Glow line on left edge */}
+      <div
+        className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full opacity-70"
+        style={{ backgroundColor: rankColor }}
+      />
+
       {/* Rank badge */}
-      <div className="relative">
-        {/* Glow ring */}
-        <div className="absolute inset-0 rounded-full opacity-50 blur-md scale-110"
-          style={{ backgroundColor: accent }} />
-        {/* Avatar */}
-        <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 shadow-xl"
-          style={{ borderColor: accent }}>
-          {v.image ? (
-            <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white"
-              style={{ background: `linear-gradient(135deg, ${accent}88, ${accent}22)` }}>
-              {v.name.charAt(0)}
-            </div>
-          )}
-        </div>
-        {/* Rank number */}
-        <div
-          className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-lg border border-black/30"
-          style={{ background: v.rank === 1 ? '#f59e0b' : v.rank === 2 ? '#94a3b8' : v.rank === 3 ? '#b45309' : '#374151' }}
-        >
-          {v.rank === 1 ? '👑' : v.rank}
-        </div>
+      <div
+        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border-2 shadow-lg"
+        style={{ borderColor: rankColor + '88', backgroundColor: rankColor + '22', color: rankColor }}
+      >
+        {medal ? medal.icon : v.rank}
       </div>
 
-      {/* Name */}
-      <div className="text-center">
-        <p className="text-white font-bold text-sm leading-tight whitespace-nowrap max-w-[100px] truncate" title={v.name}>
+      {/* Avatar */}
+      <div
+        className="flex-shrink-0 rounded-xl overflow-hidden border-2 shadow-lg"
+        style={{
+          width: compact ? 44 : 52,
+          height: compact ? 44 : 52,
+          borderColor: rankColor + '66',
+        }}
+      >
+        {v.image ? (
+          <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center text-lg font-black text-white"
+            style={{ background: `linear-gradient(135deg, ${accent}99, ${accent}22)` }}
+          >
+            {v.name.charAt(0)}
+          </div>
+        )}
+      </div>
+
+      {/* Name + badge */}
+      <div className="flex-1 min-w-0 pl-1">
+        <p
+          className="text-white font-black text-sm truncate leading-tight"
+          style={{ textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}
+        >
           {v.name}
         </p>
         {v.badge && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block"
-            style={{ backgroundColor: accent + '33', color: accent }}>
+          <span
+            className="text-[10px] font-bold mt-0.5 inline-block truncate max-w-full"
+            style={{ color: accent }}
+          >
             {v.badge}
           </span>
         )}
@@ -86,145 +114,114 @@ const ViewerAvatar: React.FC<{ v: Viewer; accent: string; delay: number; style?:
   );
 };
 
-// ─── Card mode viewer ──────────────────────────────────────────────────────────
-
-const ViewerCard: React.FC<{ v: Viewer; accent: string; delay: number }> = ({ v, accent, delay }) => {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-
-  const rankColor = v.rank === 1 ? '#f59e0b' : v.rank === 2 ? '#94a3b8' : v.rank === 3 ? '#b45309' : accent;
-
-  return (
-    <div
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateX(0)' : 'translateX(60px)',
-        transition: `opacity 0.5s ease ${delay}ms, transform 0.5s cubic-bezier(0.34,1.2,0.64,1) ${delay}ms`,
-      }}
-      className="flex items-center gap-4 bg-black/40 backdrop-blur-md rounded-2xl px-5 py-3.5 border border-white/10 shadow-xl"
-    >
-      {/* Rank */}
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black shrink-0 shadow"
-        style={{ backgroundColor: rankColor + '33', color: rankColor, border: `2px solid ${rankColor}66` }}>
-        {v.rank === 1 ? '👑' : v.rank}
-      </div>
-
-      {/* Avatar */}
-      <div className="w-14 h-14 rounded-full overflow-hidden border-2 shrink-0 shadow-lg"
-        style={{ borderColor: rankColor }}>
-        {v.image ? (
-          <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl font-black"
-            style={{ background: `linear-gradient(135deg, ${accent}88, ${accent}11)`, color: 'white' }}>
-            {v.name.charAt(0)}
-          </div>
-        )}
-      </div>
-
-      {/* Name & badge */}
-      <div className="flex-1 min-w-0">
-        <p className="text-white font-bold text-base truncate">{v.name}</p>
-        {v.badge && <p className="text-sm font-medium mt-0.5" style={{ color: accent }}>{v.badge}</p>}
-      </div>
-    </div>
-  );
-};
-
 // ─── Main Renderer ────────────────────────────────────────────────────────────
 
-export const TopViewersRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, animClass }) => {
-  const viewerCount = Number(getField('viewerCount') || 5);
-  const displayMode = String(getField('displayMode') || 'TICKER');
-  const title = String(getField('title') || 'أبرز المتفاعلين');
-  const channelName = String(getField('channelName') || 'REO LIVE');
-  const channelLogo = String(getField('channelLogo') || '');
-  const themePreset = String(getField('themePreset') || 'BLUE');
-  const viewers = parseViewers(getField, Math.min(viewerCount, 10));
+export const TopViewersRenderer: React.FC<RendererProps> = ({
+  config, getField, containerStyle, contentWrapperStyle, animClass,
+}) => {
+  const viewerCount  = Math.min(Number(getField('viewerCount') || 5), 10);
+  const title        = String(getField('title') || 'أبرز المتفاعلين');
+  const channelName  = String(getField('channelName') || 'REO LIVE');
+  const channelLogo  = String(getField('channelLogo') || '');
+  const themePreset  = String(getField('themePreset') || 'BLUE');
+  const viewers      = parseViewers(getField, viewerCount);
 
-  const THEMES: Record<string, { accent: string; bg: string; border: string }> = {
-    BLUE:   { accent: '#3b82f6', bg: 'linear-gradient(135deg,#0f172a,#1e3a5f)', border: '#3b82f6' },
-    GOLD:   { accent: '#f59e0b', bg: 'linear-gradient(135deg,#1a1200,#3d2c00)', border: '#f59e0b' },
-    RED:    { accent: '#ef4444', bg: 'linear-gradient(135deg,#1a0000,#3d0000)', border: '#ef4444' },
-    GREEN:  { accent: '#10b981', bg: 'linear-gradient(135deg,#001a0f,#003d22)', border: '#10b981' },
-    PURPLE: { accent: '#8b5cf6', bg: 'linear-gradient(135deg,#0f0020,#250050)', border: '#8b5cf6' },
+  const THEMES: Record<string, { accent: string; bg: string; glow: string }> = {
+    BLUE:   { accent: '#60a5fa', bg: 'linear-gradient(180deg,#0a1628 0%,#0d1f3c 100%)', glow: 'rgba(59,130,246,0.25)' },
+    GOLD:   { accent: '#fbbf24', bg: 'linear-gradient(180deg,#1a1000 0%,#2d1e00 100%)', glow: 'rgba(251,191,36,0.25)' },
+    RED:    { accent: '#f87171', bg: 'linear-gradient(180deg,#1a0000 0%,#2d0000 100%)', glow: 'rgba(239,68,68,0.25)' },
+    GREEN:  { accent: '#34d399', bg: 'linear-gradient(180deg,#001a0d 0%,#002d1a 100%)', glow: 'rgba(16,185,129,0.25)' },
+    PURPLE: { accent: '#a78bfa', bg: 'linear-gradient(180deg,#0d0020 0%,#1a003d 100%)', glow: 'rgba(139,92,246,0.25)' },
   };
 
   const theme = THEMES[themePreset] || THEMES.BLUE;
+  const compact = viewerCount > 6;
 
   return (
     <div style={containerStyle}>
-      <div style={contentWrapperStyle} className={`relative z-10 flex flex-col items-center justify-end pb-16 ${animClass}`}>
-
-        {/* ── TICKER MODE ── */}
-        {displayMode === 'TICKER' && viewers.length > 0 && (
+      <div
+        style={contentWrapperStyle}
+        className={`relative z-10 flex items-center justify-start h-full pl-10 ${animClass}`}
+      >
+        {viewers.length > 0 && (
           <div
-            className="rounded-3xl overflow-hidden shadow-2xl"
+            className="relative flex flex-col"
             style={{
               background: theme.bg,
-              border: `2px solid ${theme.accent}44`,
-              minWidth: 900,
-              maxWidth: 1400,
+              borderRadius: 20,
+              border: `1px solid ${theme.accent}33`,
+              boxShadow: `0 0 60px ${theme.glow}, inset 0 0 40px rgba(0,0,0,0.4)`,
+              width: 300,
+              overflow: 'hidden',
+              backdropFilter: 'blur(12px)',
             }}
           >
-            {/* Header bar */}
-            <div className="flex items-center justify-between px-8 py-3 border-b" style={{ borderColor: theme.accent + '33' }}>
-              <div className="flex items-center gap-3">
-                {channelLogo && <img src={channelLogo} alt="logo" className="w-8 h-8 rounded-full object-cover" />}
-                <span className="text-white font-black text-lg tracking-wide">{channelName}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} />
-                <span className="font-bold text-sm" style={{ color: theme.accent }}>{title}</span>
-              </div>
-            </div>
+            {/* Animated top glow bar */}
+            <div
+              className="absolute top-0 left-0 right-0 h-0.5"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)`,
+                animation: 'shimmer 3s ease-in-out infinite',
+              }}
+            />
 
-            {/* Avatars row */}
-            <div className="flex items-start gap-6 px-8 py-6 justify-center flex-wrap">
-              {viewers.map((v, i) => (
-                <ViewerAvatar key={i} v={v} accent={theme.accent} delay={i * 150} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── CARDS MODE ── */}
-        {displayMode === 'CARDS' && viewers.length > 0 && (
-          <div
-            className="rounded-3xl overflow-hidden shadow-2xl"
-            style={{
-              background: theme.bg,
-              border: `2px solid ${theme.accent}44`,
-              width: 520,
-            }}
-          >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: theme.accent + '33' }}>
-              <div className="flex items-center gap-3">
-                {channelLogo && <img src={channelLogo} alt="logo" className="w-9 h-9 rounded-full object-cover" />}
+            <div
+              className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ borderColor: theme.accent + '22' }}
+            >
+              <div className="flex items-center gap-2.5">
+                {channelLogo ? (
+                  <img src={channelLogo} alt="logo" className="w-8 h-8 rounded-full object-cover border" style={{ borderColor: theme.accent + '44' }} />
+                ) : (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black border"
+                    style={{ backgroundColor: theme.accent + '22', borderColor: theme.accent + '44', color: theme.accent }}>
+                    {channelName.charAt(0)}
+                  </div>
+                )}
                 <div>
-                  <p className="text-white font-black text-base">{channelName}</p>
-                  <p className="text-xs font-medium" style={{ color: theme.accent }}>{title}</p>
+                  <p className="text-white text-xs font-black leading-none">{channelName}</p>
+                  <p className="text-[9px] mt-0.5 font-bold" style={{ color: theme.accent }}>{title}</p>
                 </div>
               </div>
+              {/* Live dot */}
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} />
-                <span className="text-xs font-black text-white/60">LIVE</span>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} />
+                <span className="text-[9px] font-black" style={{ color: theme.accent }}>LIVE</span>
               </div>
             </div>
 
-            {/* Cards list */}
-            <div className="flex flex-col gap-2.5 p-5">
-              {viewers.slice(0, 5).map((v, i) => (
-                <ViewerCard key={i} v={v} accent={theme.accent} delay={i * 120} />
+            {/* Viewers list */}
+            <div className="flex flex-col gap-3 px-5 py-4">
+              {viewers.map((v, i) => (
+                <ViewerRow
+                  key={v.rank}
+                  v={v}
+                  accent={theme.accent}
+                  delay={300 + i * 120}
+                  compact={compact}
+                />
               ))}
             </div>
+
+            {/* Bottom shimmer */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-0.5"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${theme.accent}66, transparent)`,
+                animation: 'shimmer 3s ease-in-out infinite reverse',
+              }}
+            />
           </div>
         )}
+
+        <style>{`
+          @keyframes shimmer {
+            0%   { opacity: 0.2; transform: scaleX(0.3); }
+            50%  { opacity: 1;   transform: scaleX(1); }
+            100% { opacity: 0.2; transform: scaleX(0.3); }
+          }
+        `}</style>
       </div>
     </div>
   );
