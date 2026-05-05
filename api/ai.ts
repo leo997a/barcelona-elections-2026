@@ -20,7 +20,7 @@ interface AiRequestBody {
 const cleanJsonOutput = (text: string): string =>
   text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-const MODEL = 'gemini-2.0-flash-exp';
+const MODEL = 'gemini-2.5-flash';
 
 // Wrap array schema in object to satisfy Gemini structured output constraints
 const arrSchema = (props: Record<string, unknown>, required: string[]) => ({
