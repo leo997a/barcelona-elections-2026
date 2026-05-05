@@ -42,7 +42,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // --- SPONSORS MANAGEMENT STATE ---
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
@@ -121,28 +120,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const updatedFields = draftOverlay.fields.map(f => 
       f.id === id ? { ...f, value } : f
     );
-    setDraftOverlay(normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, id));
-    setHasUnsavedChanges(true);
+    const newOverlay = normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, id);
+    setDraftOverlay(newOverlay);
+    syncManager.updateOverlay(newOverlay);
   };
 
   const updateDraftTheme = (key: string, value: string) => {
-      setDraftOverlay({ ...draftOverlay, theme: { ...draftOverlay.theme, [key]: value } });
-      setHasUnsavedChanges(true);
+      const newOverlay = { ...draftOverlay, theme: { ...draftOverlay.theme, [key]: value } };
+      setDraftOverlay(newOverlay);
+      syncManager.updateOverlay(newOverlay);
   };
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
-
-  const handleSaveChanges = () => {
-      syncManager.updateOverlay(draftOverlay);
-      setHasUnsavedChanges(false);
-  };
-
-  const handleRevert = () => {
-      if(confirm('هل تريد إلغاء التغييرات والعودة للنسخة المباشرة؟')) {
-          setDraftOverlay(normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
-          setHasUnsavedChanges(false);
-      }
-  };
 
   const toggleLiveVisibility = () => {
       syncManager.updateLiveField(liveOverlay.id, 'isVisible', !liveOverlay.isVisible);
@@ -344,13 +333,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              <ChevronRight className="w-4 h-4" /> عودة
            </button>
            <div className="flex items-center gap-2">
-               {hasUnsavedChanges && (
-                   <button onClick={handleRevert} title="إلغاء" className="text-gray-500 hover:text-red-400"><RotateCcw className="w-4 h-4" /></button>
-               )}
-               <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${hasUnsavedChanges ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-900/50 animate-pulse' : 'bg-gray-800 text-gray-500'}`}>
-                <Save className="w-3 h-3" />
-                <span>{hasUnsavedChanges ? 'حفظ' : 'محفوظ'}</span>
-               </button>
+               <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold text-green-500 bg-green-900/20 border border-green-500/20">
+                <Sparkles className="w-3 h-3" />
+                <span>حفظ تلقائي</span>
+               </div>
            </div>
         </div>
         
@@ -874,8 +860,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
          <div className="flex-1 overflow-hidden flex items-center justify-center p-8 bg-black/50 relative">
             <div className="relative z-10 w-full max-w-5xl aspect-video bg-transparent border border-gray-700 shadow-2xl transition-all duration-300">
-                 {hasUnsavedChanges && <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-0.5 z-50 font-bold uppercase">Editing Draft</div>}
-                 <OverlayRenderer config={hasUnsavedChanges ? { ...draftOverlay, isVisible: true } : { ...liveOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                 <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
             </div>
          </div>
       </div>
