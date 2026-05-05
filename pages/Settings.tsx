@@ -10,7 +10,11 @@ import {
   Shield,
   Trash2,
   Wifi,
+  Lock,
+  Unlock,
+  Plus,
 } from 'lucide-react';
+import { licenseService, LicenseState } from '../services/licenseService';
 import { FirebaseWebConfig } from '../types';
 import { syncManager } from '../services/syncManager';
 
@@ -53,6 +57,51 @@ const Settings: React.FC = () => {
   const [configJson, setConfigJson] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // ── License state ──────────────────────────────────────────────────────────
+  const [currentLicense, setCurrentLicense] = useState<LicenseState | null>(() => licenseService.getStored());
+  
+  // Generator form (admin only)
+  const [genAdminSecret, setGenAdminSecret] = useState('');
+  const [genRole, setGenRole] = useState<'VIEWER'|'OPERATOR'|'EDITOR'|'ADMIN'>('EDITOR');
+  const [genStudioId, setGenStudioId] = useState('reo-studio-1');
+  const [genDays, setGenDays] = useState(0);
+  const [generatedKey, setGeneratedKey] = useState('');
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError, setGenError] = useState('');
+
+  const handleGenerateKey = async () => {
+    setGenError('');
+    setGeneratedKey('');
+    setGenLoading(true);
+    try {
+      const res = await fetch('/api/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', adminSecret: genAdminSecret, role: genRole, studioId: genStudioId, daysValid: genDays }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل توليد المفتاح');
+      setGeneratedKey(data.key);
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'خطأ غير متوقع');
+    } finally {
+      setGenLoading(false);
+    }
+  };
+
+  const ROLE_COLORS: Record<string, string> = {
+    ADMIN: 'text-red-400 bg-red-900/20 border-red-700/40',
+    EDITOR: 'text-blue-400 bg-blue-900/20 border-blue-700/40',
+    OPERATOR: 'text-green-400 bg-green-900/20 border-green-700/40',
+    VIEWER: 'text-gray-400 bg-gray-800/40 border-gray-700/40',
+  };
+  const ROLE_LABEL: Record<string, string> = {
+    ADMIN: 'مسؤول كامل',
+    EDITOR: 'محرر',
+    OPERATOR: 'مشغل',
+    VIEWER: 'مشاهد',
+  };
 
   const secureConfig = useMemo(() => syncManager.getSecureConfig(), []);
   const status = syncManager.getStatus();
@@ -115,6 +164,123 @@ const Settings: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl animate-fade-in-up space-y-10 p-8">
+
+      {/* ── LICENSE SECTION ────────────────────────────────────────────────── */}
+      <div className="rounded-3xl border border-yellow-500/20 bg-gradient-to-br from-yellow-950/50 via-gray-950 to-gray-900 p-8 shadow-2xl">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-200">
+          <KeyRound className="h-3.5 w-3.5" />
+          نظام الترخيص
+        </div>
+        <h2 className="text-2xl font-black text-white mb-6">🔐 مفاتيح الترخيص والتفعيل</h2>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+
+          {/* Current license status */}
+          <div className="rounded-2xl border border-gray-800 bg-black/30 p-6">
+            <h3 className="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+              {currentLicense?.valid ? <Unlock className="w-4 h-4 text-green-400" /> : <Lock className="w-4 h-4 text-red-400" />}
+              الترخيص الحالي
+            </h3>
+            {currentLicense?.valid ? (
+              <>
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black border mb-4 ${ROLE_COLORS[currentLicense.role] || ''}`}>
+                  {ROLE_LABEL[currentLicense.role] || currentLicense.role}
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between text-gray-400">
+                    <span>معرف الاستوديو</span>
+                    <span className="font-mono text-blue-300">{currentLicense.studioId}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>انتهاء الصلاحية</span>
+                    <span className="font-mono text-green-300">{currentLicense.exp === 0 ? 'لا تنتهي أبداً' : new Date(currentLicense.exp * 1000).toLocaleDateString('ar')}</span>
+                  </div>
+                  <div className="pt-2 font-mono text-[10px] text-gray-600 break-all bg-black/30 rounded-lg p-2">
+                    {currentLicense.key}
+                  </div>
+                </div>
+                <button onClick={() => { licenseService.revoke(); setCurrentLicense(null); window.location.reload(); }}
+                  className="mt-4 w-full text-xs text-red-400 hover:text-red-300 border border-red-900/40 rounded-lg py-2 transition-colors">
+                  إلغاء الترخيص
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <Lock className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">لا يوجد ترخيص مفعّل</p>
+              </div>
+            )}
+          </div>
+
+          {/* Key Generator */}
+          <div className="rounded-2xl border border-yellow-800/40 bg-yellow-900/10 p-6">
+            <h3 className="text-sm font-bold text-yellow-300 mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              توليد مفتاح جديد (للمسؤول فقط)
+            </h3>
+
+            <div className="space-y-3">
+              {/* Admin Secret */}
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">كلمة سر المسؤول</label>
+                <input type="password" value={genAdminSecret} onChange={e => setGenAdminSecret(e.target.value)}
+                  placeholder="LICENSE_ADMIN_SECRET من Vercel"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs placeholder-gray-600 focus:outline-none focus:border-yellow-500 font-mono"
+                  dir="ltr" />
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">مستوى الصلاحية</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['ADMIN','EDITOR','OPERATOR','VIEWER'] as const).map(r => (
+                    <button key={r} onClick={() => setGenRole(r)}
+                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all ${genRole === r ? ROLE_COLORS[r] : 'text-gray-600 border-gray-800 bg-transparent'}`}>
+                      {ROLE_LABEL[r]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Studio ID */}
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">معرف الاستوديو</label>
+                <input value={genStudioId} onChange={e => setGenStudioId(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-yellow-500 font-mono"
+                  dir="ltr" />
+              </div>
+
+              {/* Days Valid */}
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">مدة الصلاحية (يوم، 0 = لا تنتهي)</label>
+                <input type="number" value={genDays} onChange={e => setGenDays(Number(e.target.value))} min={0}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-yellow-500 font-mono" />
+              </div>
+
+              <button onClick={handleGenerateKey} disabled={!genAdminSecret || genLoading}
+                className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-black font-black py-2.5 rounded-lg text-sm transition-colors mt-1">
+                {genLoading ? 'جاري التوليد...' : '⚡ إنشاء المفتاح'}
+              </button>
+
+              {genError && <p className="text-red-400 text-xs bg-red-900/20 p-2 rounded-lg">{genError}</p>}
+
+              {generatedKey && (
+                <div className="mt-2 p-4 bg-green-900/20 border border-green-700/40 rounded-xl">
+                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">✅ المفتاح جاهز</p>
+                  <div className="font-mono text-lg text-white font-black tracking-widest text-center bg-black/40 rounded-lg py-3 px-2 break-all">
+                    {generatedKey}
+                  </div>
+                  <button onClick={() => navigator.clipboard.writeText(generatedKey)}
+                    className="w-full mt-2 text-xs text-green-400 border border-green-700/40 rounded-lg py-1.5 hover:bg-green-900/20 transition-colors">
+                    نسخ المفتاح
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-3xl border border-blue-500/20 bg-gradient-to-br from-blue-950 via-gray-950 to-gray-900 p-8 shadow-2xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-200">
