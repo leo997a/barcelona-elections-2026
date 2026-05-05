@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar } from 'lucide-react';
+import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap } from 'lucide-react';
 import { processSmartText, generateMatchData } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -114,6 +114,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setPreviewUSD(null);
       }
   }, [newSponsor.amount, newSponsor.currency]);
+
+  // --- HOTKEYS ---
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          // Prevent hotkeys if typing in input/textarea
+          if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+          if (e.code === 'Space') {
+              e.preventDefault();
+              syncManager.updateLiveField(liveOverlay.id, 'isVisible', !liveOverlay.isVisible);
+          }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [liveOverlay.id, liveOverlay.isVisible]);
 
   // --- HANDLERS ---
   const handleDraftFieldChange = (id: string, value: any) => {
@@ -328,17 +344,120 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       
       {/* RIGHT PANEL */}
       <div className="w-96 bg-gray-900 border-l border-gray-800 flex flex-col z-10 shadow-2xl">
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900">
+         <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900">
            <button onClick={onBack} className="text-gray-400 hover:text-white text-sm flex items-center gap-1">
              <ChevronRight className="w-4 h-4" /> عودة
            </button>
            <div className="flex items-center gap-2">
-               <div className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold text-green-500 bg-green-900/20 border border-green-500/20">
+               <span className="text-[10px] text-gray-500 font-mono tracking-widest hidden lg:block border border-gray-700 px-2 rounded">SPACE = ON AIR</span>
+               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-green-500 bg-green-900/20 border border-green-500/20">
                 <Sparkles className="w-3 h-3" />
                 <span>حفظ تلقائي</span>
                </div>
            </div>
         </div>
+
+        {/* QUICK ACTIONS PANEL */}
+        {draftOverlay.type === OverlayType.SCOREBOARD && (
+            <div className="p-4 bg-gray-950/50 border-b border-gray-800 grid grid-cols-2 gap-2">
+                <button onClick={() => {
+                    const field = draftOverlay.fields.find(f => f.id === 'homeScore');
+                    if(field) handleDraftFieldChange('homeScore', Number(field.value) + 1);
+                }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
+                    <span className="text-[10px] text-blue-200">صاحب الأرض</span>
+                    <span>+1 هدف</span>
+                </button>
+                <button onClick={() => {
+                    const field = draftOverlay.fields.find(f => f.id === 'awayScore');
+                    if(field) handleDraftFieldChange('awayScore', Number(field.value) + 1);
+                }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
+                    <span className="text-[10px] text-red-200">الضيف</span>
+                    <span>+1 هدف</span>
+                </button>
+                <button onClick={() => handleDraftFieldChange('period', 'الشوط الثاني')} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-1.5 rounded-lg text-xs col-span-2">
+                    بداية الشوط الثاني
+                </button>
+            </div>
+        )}
+        
+        {draftOverlay.type === OverlayType.PLAYER_PROFILE && (
+            <div className="p-4 bg-gray-950/50 border-b border-gray-800">
+                <label className="text-xs text-blue-400 font-bold block mb-2 flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> التعبئة الذكية (Presets)
+                </label>
+                <select onChange={(e) => {
+                    const preset = e.target.value;
+                    if(preset === 'messi') {
+                        handleDraftFieldChange('playerName', 'Lionel Messi');
+                        handleDraftFieldChange('playerNumber', '10');
+                        handleDraftFieldChange('playerRole', 'Forward');
+                        handleDraftFieldChange('stat1Value', '838');
+                        handleDraftFieldChange('stat1Label', 'Goals');
+                        handleDraftFieldChange('stat2Value', '374');
+                        handleDraftFieldChange('stat2Label', 'Assists');
+                        handleDraftFieldChange('stat3Value', '9.9');
+                        handleDraftFieldChange('stat3Label', 'Rating');
+                        handleDraftFieldChange('playerImage', 'https://upload.wikimedia.org/wikipedia/commons/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg');
+                    } else if(preset === 'yamal') {
+                        handleDraftFieldChange('playerName', 'Lamine Yamal');
+                        handleDraftFieldChange('playerNumber', '27');
+                        handleDraftFieldChange('playerRole', 'Winger');
+                        handleDraftFieldChange('stat1Value', '8');
+                        handleDraftFieldChange('stat1Label', 'Goals');
+                        handleDraftFieldChange('stat2Value', '12');
+                        handleDraftFieldChange('stat2Label', 'Assists');
+                        handleDraftFieldChange('stat3Value', '9.2');
+                        handleDraftFieldChange('stat3Label', 'Rating');
+                        handleDraftFieldChange('playerImage', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Lamine_Yamal_2023.jpg/800px-Lamine_Yamal_2023.jpg');
+                    } else if(preset === 'pedri') {
+                        handleDraftFieldChange('playerName', 'Pedri');
+                        handleDraftFieldChange('playerNumber', '8');
+                        handleDraftFieldChange('playerRole', 'Midfielder');
+                        handleDraftFieldChange('stat1Value', '5');
+                        handleDraftFieldChange('stat1Label', 'Goals');
+                        handleDraftFieldChange('stat2Value', '10');
+                        handleDraftFieldChange('stat2Label', 'Assists');
+                        handleDraftFieldChange('stat3Value', '9.0');
+                        handleDraftFieldChange('stat3Label', 'Rating');
+                        handleDraftFieldChange('playerImage', 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Pedri_2024.jpg/800px-Pedri_2024.jpg');
+                    }
+                    e.target.value = "";
+                }} className="w-full bg-blue-900/20 text-blue-300 border border-blue-500/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-bold">
+                    <option value="">-- اختر لاعب للتعبئة التلقائية --</option>
+                    <option value="messi">ليونيل ميسي (أيقونة)</option>
+                    <option value="yamal">لامين يامال (موهبة)</option>
+                    <option value="pedri">بيدري (مايسترو)</option>
+                </select>
+            </div>
+        )}
+
+        {draftOverlay.type === OverlayType.TICKER && (
+            <div className="p-4 bg-red-950/30 border-b border-red-900/50">
+                <label className="text-xs text-red-400 font-bold block mb-2 flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> خبر عاجل مباشر
+                </label>
+                <div className="flex gap-2">
+                    <input type="text" id="quick-ticker" placeholder="اكتب الخبر العاجل هنا..." className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-xs focus:border-red-500" onKeyDown={(e) => {
+                        if(e.key === 'Enter') {
+                            const val = e.currentTarget.value;
+                            if(val) {
+                                handleDraftFieldChange('text', val);
+                                e.currentTarget.value = '';
+                            }
+                        }
+                    }}/>
+                    <button onClick={() => {
+                        const input = document.getElementById('quick-ticker') as HTMLInputElement;
+                        if(input && input.value) {
+                            handleDraftFieldChange('text', input.value);
+                            input.value = '';
+                        }
+                    }} className="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-2 rounded text-xs transition-colors whitespace-nowrap">
+                        إرسال 🚀
+                    </button>
+                </div>
+            </div>
+        )}
         
         <div className="flex border-b border-gray-800 overflow-x-auto no-scrollbar">
           {/* ALWAYS: Main data tab */}
