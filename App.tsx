@@ -13,7 +13,7 @@ import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
 import { syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
-import { AnimatedOverlay } from './components/AnimatedOverlay';
+
 import { unlockAudio } from './services/soundService';
 
 const AudioUnlockOverlay = () => {
@@ -261,13 +261,7 @@ const App: React.FC = () => {
          onClick={unlockAudio}
        >
          <AudioUnlockOverlay />
-         <AnimatedOverlay
-           isVisible={overlay.isVisible}
-           overlayType={overlay.type}
-           soundEnabled={overlay.fields?.find(f => f.id === 'soundEnabled')?.value !== false}
-         >
-           <OverlayRenderer config={{ ...overlay, isVisible: true }} />
-         </AnimatedOverlay>
+         <OverlayRenderer config={overlay} />
        </div>
     );
   }
