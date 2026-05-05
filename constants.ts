@@ -760,12 +760,45 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       { id: 'content', label: 'نص التعليق', type: 'textarea', value: 'مباراة رائعة وأداء ممتاز من الفريقين! #برشلونة' },
       { id: 'likes', label: 'الإعجابات', type: 'number', value: 1200 },
       { id: 'time', label: 'وقت النشر', type: 'text', value: 'منذ ساعتين' },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'LIGHT', options: ['LIGHT', 'DARK', 'GLASS'] },
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.2, min: 0.5, max: 2.0, step: 0.1 },
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
       { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
-      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'LIGHT', options: ['LIGHT', 'DARK', 'GLASS'] },
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
       { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+    ]
+  },
+  {
+    id: 'template-player-profile',
+    name: 'بطاقة إحصائيات لاعب',
+    type: OverlayType.PLAYER_PROFILE,
+    isVisible: false,
+    theme: {
+      primaryColor: '#3b82f6',
+      secondaryColor: '#1e3a8a',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal'
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text' as const, value: 'Lionel Messi' },
+      { id: 'playerNumber', label: 'رقم اللاعب', type: 'text' as const, value: '10' },
+      { id: 'playerRole', label: 'المركز', type: 'text' as const, value: 'Forward' },
+      { id: 'playerImage', label: 'صورة اللاعب', type: 'image' as const, value: 'https://picsum.photos/400/600?random=88' },
+      { id: 'clubLogo', label: 'شعار النادي', type: 'image' as const, value: 'https://picsum.photos/100?random=99' },
+      { id: 'stat1Label', label: 'الإحصائية 1 (الاسم)', type: 'text' as const, value: 'Goals' },
+      { id: 'stat1Value', label: 'الإحصائية 1 (القيمة)', type: 'text' as const, value: '34' },
+      { id: 'stat2Label', label: 'الإحصائية 2 (الاسم)', type: 'text' as const, value: 'Assists' },
+      { id: 'stat2Value', label: 'الإحصائية 2 (القيمة)', type: 'text' as const, value: '15' },
+      { id: 'stat3Label', label: 'الإحصائية 3 (الاسم)', type: 'text' as const, value: 'Rating' },
+      { id: 'stat3Value', label: 'الإحصائية 3 (القيمة)', type: 'text' as const, value: '9.8' },
+      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'MODERN', options: ['MODERN', 'DARK'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'DARK_MATTER'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range' as const, value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range' as const, value: 0, min: -1500, max: 1500, step: 10 },
+      { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean' as const, value: true }
     ]
   },
   {

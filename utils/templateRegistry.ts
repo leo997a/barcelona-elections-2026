@@ -72,6 +72,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#f59e0b',
     description: 'عرض محاور الحلقة (لاعبين، مدربين، مواضيع) من 1 إلى 8 عناصر.',
   },
+  [OverlayType.PLAYER_PROFILE]: {
+    icon: 'PLY',
+    accent: '#3b82f6',
+    description: 'بطاقة إحصائيات وتقييم لاعب بصورة متحركة.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

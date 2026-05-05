@@ -847,21 +847,46 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         </div>
       </div>
 
-      {/* CENTER PANEL */}
-      <div className="flex-1 flex flex-col bg-gray-950 relative">
-         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-6 bg-gray-900 shadow-lg z-20">
-             <div className="flex items-center gap-4">
-                 <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all ${liveOverlay.isVisible ? 'bg-red-600 text-white animate-pulse' : 'bg-gray-700 text-gray-300'}`}>
-                     {liveOverlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                     <span>{liveOverlay.isVisible ? 'ON AIR' : 'OFF AIR'}</span>
+      {/* CENTER PANEL (PREVIEW MONITOR) */}
+      <div className="flex-1 flex flex-col bg-[#0f1115] relative overflow-hidden">
+         {/* Top Control Bar */}
+         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-8 bg-[#15181e] shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-20">
+             <div className="flex items-center gap-6">
+                 <h2 className="text-xl font-black text-white tracking-wider flex items-center gap-3">
+                     <Monitor className="w-6 h-6 text-blue-500" />
+                     شاشة المراقبة <span className="text-gray-500 text-sm font-normal">| Live Preview</span>
+                 </h2>
+                 <div className="h-6 w-[1px] bg-gray-700"></div>
+                 <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-6 py-2 rounded-xl font-black transition-all shadow-lg ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-red-900/50 hover:bg-red-500' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}`}>
+                     {liveOverlay.isVisible ? <Eye className="w-4 h-4 animate-pulse" /> : <EyeOff className="w-4 h-4" />}
+                     <span>{liveOverlay.isVisible ? 'ON AIR' : 'TAKE LIVE'}</span>
                  </button>
              </div>
-             <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id), '_blank', 'width=1280,height=720') }} className="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-600/30"><Monitor className="w-5 h-5" /></button>
+             <div className="flex items-center gap-3">
+                 <button onClick={() => setPreviewChroma(!previewChroma)} className={`p-2.5 rounded-xl transition-colors border ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`} title="تفعيل الكروما الخضراء للاختبار">
+                     <ImageIcon className="w-5 h-5" />
+                 </button>
+                 <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id), '_blank', 'width=1280,height=720') }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
+                     <Monitor className="w-4 h-4" />
+                     <span>نافذة البث</span>
+                 </button>
+             </div>
          </div>
 
-         <div className="flex-1 overflow-hidden flex items-center justify-center p-8 bg-black/50 relative">
-            <div className="relative z-10 w-full max-w-5xl aspect-video bg-transparent border border-gray-700 shadow-2xl transition-all duration-300">
+         {/* Monitor Area */}
+         <div className="flex-1 overflow-hidden flex items-center justify-center p-8 relative">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
+            
+            {/* Transparency Grid (OBS Style) */}
+            <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-lg overflow-hidden border-2 border-gray-700 shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-300 transform scale-95 hover:scale-100 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgvwMDwnxE8Z0AxioEYMFqA0UCA0UAEYQzMjCwMzH+QZIBJGBqGUQAAyEcf4V8+BIAAAAAASUVORK5CYII=')]">
+                 {/* Dark Overlay for Chroma test if not active */}
+                 {!previewChroma && <div className="absolute inset-0 bg-black/40"></div>}
                  <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                 
+                 {/* Safe Margins overlay (optional, broadcast standard) */}
+                 <div className="absolute inset-[5%] border border-white/10 border-dashed pointer-events-none rounded"></div>
+                 <div className="absolute inset-[10%] border border-red-500/20 border-dashed pointer-events-none rounded"></div>
             </div>
          </div>
       </div>
