@@ -50,6 +50,17 @@ const App: React.FC = () => {
   const [route, setRoute] = useState<string>('home'); 
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [hashPath, setHashPath] = useState(window.location.hash);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('rge_favorites') || '[]'); } catch { return []; }
+  });
+
+  const handleToggleFavorite = (id: string) => {
+    setFavoriteIds(prev => {
+      const next = prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id];
+      localStorage.setItem('rge_favorites', JSON.stringify(next));
+      return next;
+    });
+  };
   
   // Handle Hash Routing (Output Window)
   useEffect(() => {
@@ -116,7 +127,7 @@ const App: React.FC = () => {
         </div>
       ) : (
         <>
-          <Sidebar activePage={route} onNavigate={setRoute} />
+          <Sidebar activePage={route} onNavigate={setRoute} favoriteCount={favoriteIds.length} />
           
           <main className="flex-1 overflow-y-auto bg-gray-950 relative">
              <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
@@ -137,6 +148,8 @@ const App: React.FC = () => {
                    onDelete={handleDeleteOverlay}
                    onCreate={handleCreateOverlay}
                    onNavigateOperator={() => setRoute('operator')}
+                   favoriteIds={favoriteIds}
+                   onToggleFavorite={handleToggleFavorite}
                  />
                )}
                
