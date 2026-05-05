@@ -26,7 +26,7 @@ export const GuestsRenderer: React.FC<RendererProps> = ({
     return (
         <div style={containerStyle}>
             <div style={contentWrapperStyle} className="relative z-10">
-                <div className={`w-full h-full flex flex-col justify-center items-center subpixel-antialiased ${animClass}`}>
+                <div className={`w-full h-full flex flex-col justify-center items-center subpixel-antialiased ${animClass || 'animate-cinematic-blur-in'}`}>
                 
                 {/* Header */}
                 <div className="mb-12 text-center relative">

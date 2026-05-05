@@ -14,23 +14,18 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
     const itemsCount = Number(getField('itemsCount') || 4);
     const themePreset = String(getField('themePreset') || 'MODERN_GLASS');
 
-    // Handle Custom Audio Loop for this specific template
+    // Handle Custom Audio Loop
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio || !config.isVisible) return;
-        
         const handleTimeUpdate = () => {
-            // Loop logic: If it reaches 79 seconds (60 seconds after 19), jump back to 19s
             if (audio.currentTime >= 79) {
                 audio.currentTime = 19;
                 audio.play().catch(() => {});
             }
         };
-        
         audio.addEventListener('timeupdate', handleTimeUpdate);
-        return () => {
-            audio.removeEventListener('timeupdate', handleTimeUpdate);
-        };
+        return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); };
     }, [audioRef, config.isVisible]);
 
     const items = [];
@@ -47,25 +42,31 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
     const isGlass = themePreset === 'MODERN_GLASS';
     const isDarkNeon = themePreset === 'DARK_NEON';
 
-    let componentAnimClass = 'opacity-0 translate-x-full';
-    if (config.isVisible) {
-        componentAnimClass = 'animate-slide-in-right opacity-100 translate-x-0 transition-all duration-700 ease-out';
-    } else if (wasVisible) {
-        componentAnimClass = 'animate-slide-out-right opacity-0 translate-x-full transition-all duration-700 ease-in';
-    }
+    const slideClass = config.isVisible
+        ? 'opacity-100 translate-x-0 transition-all duration-700 ease-out'
+        : wasVisible
+        ? 'opacity-0 translate-x-full transition-all duration-700 ease-in'
+        : 'opacity-0 translate-x-full';
 
-    // Dynamic sizing based on count
-    const getItemWidthClass = () => {
+    const getItemSize = () => {
         if (itemsCount === 1) return 'w-[500px] h-[700px]';
         if (itemsCount === 2) return 'w-[400px] h-[600px]';
         if (itemsCount === 3) return 'w-[350px] h-[500px]';
         if (itemsCount === 4) return 'w-[300px] h-[450px]';
-        return 'w-[260px] h-[380px]'; // 5 to 8
+        return 'w-[260px] h-[380px]';
     };
 
     return (
         <div style={containerStyle}>
-            {/* Background elements */}
+            {/* Inline keyframes for episode animation */}
+            <style>{`
+              @keyframes episode-fade-up {
+                from { opacity: 0; transform: translateY(40px) scale(0.95); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+              }
+            `}</style>
+
+            {/* Background */}
             <div className={`absolute inset-0 transition-opacity duration-1000 ${config.isVisible ? 'opacity-100' : 'opacity-0'}`}>
                 {isDarkNeon && (
                     <div className="absolute inset-0 bg-black/90">
@@ -74,9 +75,7 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
                     </div>
                 )}
                 {isGlass && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 to-slate-800/90 backdrop-blur-sm">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 to-slate-800/90 backdrop-blur-sm"></div>
                 )}
                 {themePreset === 'CLEAN_LIGHT' && (
                     <div className="absolute inset-0 bg-slate-50/95">
@@ -86,36 +85,31 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
             </div>
 
             <div style={contentWrapperStyle} className="relative z-10 p-16">
-                <div className={`w-full max-w-[1700px] mx-auto flex flex-col justify-center items-center h-full ${componentAnimClass}`}>
+                <div className={`w-full max-w-[1700px] mx-auto flex flex-col justify-center items-center h-full ${slideClass}`}>
                     
                     {/* Headline */}
                     <div className="mb-16 text-center relative z-20">
                         <h1 className={`text-6xl md:text-8xl font-black uppercase tracking-tight 
-                            ${isGlass ? 'text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]' : ''}
-                            ${isDarkNeon ? 'text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400' : ''}
-                            ${themePreset === 'CLEAN_LIGHT' ? 'text-slate-900 drop-shadow-sm' : ''}
-                        `} style={{ 
-                            textShadow: isDarkNeon ? `0 0 40px ${activeTheme.primary}` : undefined 
-                        }}>
+                            ${themePreset === 'CLEAN_LIGHT' ? 'text-slate-900 drop-shadow-sm' : 'text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]'}
+                        `} style={{ textShadow: isDarkNeon ? `0 0 40px ${activeTheme.primary}` : undefined }}>
                             {headline}
                         </h1>
                         <div className="h-2 w-48 mx-auto mt-6 rounded-full shadow-lg" 
                              style={{ backgroundColor: activeTheme.accent, boxShadow: `0 0 20px ${activeTheme.accent}80` }}></div>
                     </div>
 
-                    {/* Dynamic Grid / Flex Layout */}
-                    <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 w-full perspective-1000">
+                    {/* Items Grid */}
+                    <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 w-full">
                         {items.map((item, index) => (
                             <div 
                                 key={index} 
-                                className={`relative group ${getItemWidthClass()}`}
+                                className={`relative group ${getItemSize()}`}
                                 style={{ 
-                                    animation: config.isVisible ? `cinematic-fade-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.15}s forwards` : 'none',
-                                    opacity: config.isVisible ? 0 : 1,
-                                    transform: config.isVisible ? 'translateY(50px)' : 'none'
+                                    animation: config.isVisible 
+                                        ? `episode-fade-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) ${index * 0.15}s both` 
+                                        : 'none'
                                 }}
                             >
-                                {/* Card Container */}
                                 <div className={`w-full h-full rounded-3xl overflow-hidden relative shadow-2xl transition-all duration-500 ease-out transform group-hover:scale-[1.03] group-hover:-translate-y-2
                                     ${isGlass ? 'bg-white/10 backdrop-blur-md border border-white/20' : ''}
                                     ${isDarkNeon ? 'bg-black/50 border-2' : ''}
@@ -124,9 +118,8 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
                                     borderColor: isDarkNeon ? activeTheme.primary : undefined,
                                     boxShadow: isDarkNeon ? `0 0 30px ${activeTheme.primary}40` : undefined
                                 }}>
-                                    
-                                    {/* Image with dynamic zoom and pan */}
-                                    <div className="absolute inset-0 w-full h-full overflow-hidden rounded-t-3xl bg-gray-800">
+                                    {/* Image */}
+                                    <div className="absolute inset-0 overflow-hidden bg-gray-800">
                                         <img 
                                             src={item.image} 
                                             alt={item.name}
@@ -141,7 +134,7 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
                                         `}></div>
                                     </div>
 
-                                    {/* Subject Name Area */}
+                                    {/* Name */}
                                     <div className="absolute bottom-0 w-full p-6 pb-8 text-center translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
                                         <h2 className={`text-3xl md:text-4xl font-black uppercase tracking-wider
                                             ${themePreset === 'CLEAN_LIGHT' ? 'text-slate-900' : 'text-white drop-shadow-[0_4px_10px_rgba(0,0,0,1)]'}
@@ -149,15 +142,13 @@ export const TodaysEpisodeRenderer: React.FC<RendererProps> = ({
                                             {item.name}
                                         </h2>
                                         {isDarkNeon && (
-                                            <div className="w-1/2 h-1 mx-auto mt-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ backgroundColor: activeTheme.accent, boxShadow: `0 0 15px ${activeTheme.accent}` }}></div>
+                                            <div className="w-1/2 h-1 mx-auto mt-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ backgroundColor: activeTheme.accent }}></div>
                                         )}
                                     </div>
-                                    
                                 </div>
                             </div>
                         ))}
                     </div>
-
                 </div>
             </div>
         </div>

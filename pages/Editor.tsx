@@ -341,31 +341,53 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         </div>
         
         <div className="flex border-b border-gray-800 overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveTab('fields')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>البيانات</button>
-          
-          {draftOverlay.type === OverlayType.LEADERBOARD && (
-             <button onClick={() => setActiveTab('sponsors')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sponsors' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>الداعمين</button>
+          {/* ALWAYS: Main data tab */}
+          <button onClick={() => setActiveTab('fields')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>📝 البيانات</button>
+
+          {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
+          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
+            <button onClick={() => setActiveTab('images')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'images' ? 'text-amber-400 border-b-2 border-amber-500' : 'text-gray-400 hover:text-white'}`}>🖼️ الصور</button>
           )}
 
+          {/* ALWAYS for non-ELECTION: Appearance tab */}
+          {draftOverlay.type !== OverlayType.ELECTION && (
+            <button onClick={() => setActiveTab('style')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'style' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>🎨 المظهر</button>
+          )}
+
+          {/* ALWAYS for non-ELECTION: Position/Size tab */}
+          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale','positionX','positionY','containerWidth','sidebarWidth'].includes(f.id)) && (
+            <button onClick={() => setActiveTab('position')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'position' ? 'text-cyan-400 border-b-2 border-cyan-500' : 'text-gray-400 hover:text-white'}`}>📐 الأبعاد</button>
+          )}
+
+          {/* ALWAYS for non-ELECTION: Sound tab if exists */}
+          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
+            <button onClick={() => setActiveTab('sound')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sound' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>🔊 الصوت</button>
+          )}
+
+          {/* LEADERBOARD: Sponsors tab */}
+          {draftOverlay.type === OverlayType.LEADERBOARD && (
+             <button onClick={() => setActiveTab('sponsors')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sponsors' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>👥 الداعمين</button>
+          )}
+
+          {/* ELECTION: specialized tabs */}
           {draftOverlay.type === OverlayType.ELECTION && (() => {
               const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
               return (
                   <>
-                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'candidates' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>المرشحين</button>}
+                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'candidates' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>المرشحون</button>}
                       {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'time' ? 'text-orange-400 border-b-2 border-orange-500' : 'text-gray-400 hover:text-white'}`}>الوقت</button>}
                       {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'content' ? 'text-pink-400 border-b-2 border-pink-500' : 'text-gray-400 hover:text-white'}`}>المحتوى</button>}
                       {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'camera' ? 'text-teal-400 border-b-2 border-teal-500' : 'text-gray-400 hover:text-white'}`}>الكاميرا</button>}
                       {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'turnout' ? 'text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-white'}`}>الإقبال</button>}
+                      <button onClick={() => setActiveTab('style')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'style' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>🎨 المظهر</button>
                   </>
               );
           })()}
-
-          <button onClick={() => setActiveTab('style')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'style' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>المظهر</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* FIELDS TAB */}
-          {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout'].includes(activeTab) && (
+          {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound'].includes(activeTab) && (
              <>
                {draftOverlay.fields.map((field) => {
                  if (field.type === 'hidden' || field.id === 'currentPage') return null;
@@ -373,79 +395,58 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  // Separate Font Size controls for Typography section
                  if (['headerFontSize', 'nameFontSize', 'amountFontSize'].includes(field.id)) return null;
 
-                 // Filter fields based on active tab for ELECTION
-                 if (draftOverlay.type === OverlayType.ELECTION) {
-                     const isStyleField = ['themePreset', 'designStyle', 'barcaLogo', 'scale', 'positionX', 'positionY', 'soundEnabled', 'soundVolume', 'soundInStyle', 'soundOutStyle', 'boxColor', 'accentColor'].includes(field.id);
-                     const isCandidateField = field.id.startsWith('candidate') || ['showUndecided', 'undecidedLabel', 'undecidedPercent', 'undecidedColor'].includes(field.id);
-                     const isTimeField = ['targetDate', 'targetTime', 'countdownTitle', 'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'].includes(field.id);
-                     const isCameraField = field.id.startsWith('camera') || field.id === 'bgImage';
-                     const isTurnoutField = ['currentVoters', 'totalVoters', 'turnoutTitle', 'turnoutSubtitle', 'currentVotersTitle'].includes(field.id);
-                     
-                     const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
-                     const candidate1Profile = String(draftOverlay.fields.find(f => f.id === 'candidate1Profile')?.value || 'CUSTOM');
-                     const candidate2Profile = String(draftOverlay.fields.find(f => f.id === 'candidate2Profile')?.value || 'CUSTOM');
-                     const statementSource = String(draftOverlay.fields.find(f => f.id === 'statementSource')?.value || 'CANDIDATE_1');
-                     const candidate1IdentityFields = ['candidate1Name', 'candidate1Image', 'candidate1Tag', 'candidate1Color'];
-                     const candidate2IdentityFields = ['candidate2Name', 'candidate2Image', 'candidate2Tag', 'candidate2Color'];
-                     const customStatementFields = ['statementSubjectName', 'statementSubjectTag', 'statementSubjectImage', 'statementSubjectColor'];
-                     
-                     let isContentField = false;
-                     if (designStyle === 'LEAKS_FULL') {
-                         isContentField = ['leaksTitle', 'leaksSubtitle', 'leaksContent'].includes(field.id);
-                     } else if (designStyle === 'STATEMENT_FULL') {
-                         isContentField = ['specialText', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields].includes(field.id);
-                     } else if (designStyle === 'LIVE_TRANSITION') {
-                         isContentField = ['transitionTitle', 'transitionSubtitle', 'liveText'].includes(field.id);
-                     } else if (designStyle === 'STUDIO_BACKGROUND') {
-                         isContentField = ['specialText', 'liveText'].includes(field.id);
-                     } else if (designStyle === 'RESULTS_HUB') {
-                         isContentField = ['specialText'].includes(field.id);
-                     }
-
-                     // Hide irrelevant content fields from ALL tabs if they don't belong to the current designStyle
-                     const allContentFields = ['specialText', 'specialImage', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields, 'leaksTitle', 'leaksSubtitle', 'leaksContent', 'transitionTitle', 'transitionSubtitle', 'liveText'];
-                     if (allContentFields.includes(field.id) && !isContentField) {
-                         return null; // Completely hide this field
-                     }
-
-                     if (candidate1IdentityFields.includes(field.id) && candidate1Profile !== 'CUSTOM') return null;
-                     if (candidate2IdentityFields.includes(field.id) && candidate2Profile !== 'CUSTOM') return null;
-                     if (customStatementFields.includes(field.id) && statementSource !== 'CUSTOM') return null;
-                     
-                     // Hide time fields if not COUNTDOWN_TOP
-                     if (isTimeField && designStyle !== 'COUNTDOWN_TOP') return null;
-                     
-                     // Hide candidate fields if not SPLIT_BAR_LEFT or STATEMENT_FULL (STATEMENT_FULL uses candidate images)
-                     if (isCandidateField && designStyle !== 'SPLIT_BAR_LEFT' && designStyle !== 'STATEMENT_FULL' && designStyle !== 'RESULTS_HUB') return null;
-                     
-                     // Hide camera fields if not STUDIO_BACKGROUND
-                     if (isCameraField && designStyle !== 'STUDIO_BACKGROUND') return null;
-
-                     // Hide turnout fields if not VOTER_TURNOUT
-                     if (isTurnoutField && designStyle !== 'VOTER_TURNOUT' && designStyle !== 'RESULTS_HUB') return null;
-
-                     // Hide specific style fields based on design style
-                     if ((field.id === 'boxColor' || field.id === 'accentColor') && designStyle !== 'LEAKS_FULL' && designStyle !== 'STATEMENT_FULL') return null;
-
-                     if (activeTab === 'fields') {
-                         if (isStyleField || isCandidateField || isTimeField || isContentField || isCameraField || isTurnoutField) return null;
-                     } else if (activeTab === 'candidates') {
-                         if (!isCandidateField) return null;
-                     } else if (activeTab === 'time') {
-                         if (!isTimeField) return null;
-                     } else if (activeTab === 'content') {
-                         if (!isContentField) return null;
-                     } else if (activeTab === 'camera') {
-                         if (!isCameraField) return null;
-                     } else if (activeTab === 'turnout') {
-                         if (!isTurnoutField) return null;
-                     } else if (activeTab === 'style') {
-                         if (!isStyleField) return null;
-                     }
-                 } else {
-                     // For non-ELECTION overlays, 'style' tab only shows theme colors (handled separately below)
-                     if (activeTab === 'style') return null;
-                 }
+                  // SMART UNIVERSAL FIELD FILTERING
+                  if (draftOverlay.type === OverlayType.ELECTION) {
+                      const isStyleField = ['themePreset', 'designStyle', 'barcaLogo', 'scale', 'positionX', 'positionY', 'soundEnabled', 'soundVolume', 'soundInStyle', 'soundOutStyle', 'boxColor', 'accentColor'].includes(field.id);
+                      const isCandidateField = field.id.startsWith('candidate') || ['showUndecided', 'undecidedLabel', 'undecidedPercent', 'undecidedColor'].includes(field.id);
+                      const isTimeField = ['targetDate', 'targetTime', 'countdownTitle', 'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'].includes(field.id);
+                      const isCameraField = field.id.startsWith('camera') || field.id === 'bgImage';
+                      const isTurnoutField = ['currentVoters', 'totalVoters', 'turnoutTitle', 'turnoutSubtitle', 'currentVotersTitle'].includes(field.id);
+                      const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
+                      const candidate1Profile = String(draftOverlay.fields.find(f => f.id === 'candidate1Profile')?.value || 'CUSTOM');
+                      const candidate2Profile = String(draftOverlay.fields.find(f => f.id === 'candidate2Profile')?.value || 'CUSTOM');
+                      const statementSource = String(draftOverlay.fields.find(f => f.id === 'statementSource')?.value || 'CANDIDATE_1');
+                      const candidate1IdentityFields = ['candidate1Name', 'candidate1Image', 'candidate1Tag', 'candidate1Color'];
+                      const candidate2IdentityFields = ['candidate2Name', 'candidate2Image', 'candidate2Tag', 'candidate2Color'];
+                      const customStatementFields = ['statementSubjectName', 'statementSubjectTag', 'statementSubjectImage', 'statementSubjectColor'];
+                      let isContentField = false;
+                      if (designStyle === 'LEAKS_FULL') isContentField = ['leaksTitle', 'leaksSubtitle', 'leaksContent'].includes(field.id);
+                      else if (designStyle === 'STATEMENT_FULL') isContentField = ['specialText', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields].includes(field.id);
+                      else if (designStyle === 'LIVE_TRANSITION') isContentField = ['transitionTitle', 'transitionSubtitle', 'liveText'].includes(field.id);
+                      else if (designStyle === 'STUDIO_BACKGROUND') isContentField = ['specialText', 'liveText'].includes(field.id);
+                      else if (designStyle === 'RESULTS_HUB') isContentField = ['specialText'].includes(field.id);
+                      const allContentFields = ['specialText', 'specialImage', 'statementAuthor', 'statementTitle', 'statementSource', ...customStatementFields, 'leaksTitle', 'leaksSubtitle', 'leaksContent', 'transitionTitle', 'transitionSubtitle', 'liveText'];
+                      if (allContentFields.includes(field.id) && !isContentField) return null;
+                      if (candidate1IdentityFields.includes(field.id) && candidate1Profile !== 'CUSTOM') return null;
+                      if (candidate2IdentityFields.includes(field.id) && candidate2Profile !== 'CUSTOM') return null;
+                      if (customStatementFields.includes(field.id) && statementSource !== 'CUSTOM') return null;
+                      if (isTimeField && designStyle !== 'COUNTDOWN_TOP') return null;
+                      if (isCandidateField && designStyle !== 'SPLIT_BAR_LEFT' && designStyle !== 'STATEMENT_FULL' && designStyle !== 'RESULTS_HUB') return null;
+                      if (isCameraField && designStyle !== 'STUDIO_BACKGROUND') return null;
+                      if (isTurnoutField && designStyle !== 'VOTER_TURNOUT' && designStyle !== 'RESULTS_HUB') return null;
+                      if ((field.id === 'boxColor' || field.id === 'accentColor') && designStyle !== 'LEAKS_FULL' && designStyle !== 'STATEMENT_FULL') return null;
+                      if (activeTab === 'fields') { if (isStyleField || isCandidateField || isTimeField || isContentField || isCameraField || isTurnoutField) return null; }
+                      else if (activeTab === 'candidates') { if (!isCandidateField) return null; }
+                      else if (activeTab === 'time') { if (!isTimeField) return null; }
+                      else if (activeTab === 'content') { if (!isContentField) return null; }
+                      else if (activeTab === 'camera') { if (!isCameraField) return null; }
+                      else if (activeTab === 'turnout') { if (!isTurnoutField) return null; }
+                      else if (activeTab === 'style') { if (!isStyleField) return null; }
+                  } else {
+                      // UNIVERSAL SMART TABS for ALL non-election templates
+                      const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime'];
+                      const SOUND_FIELDS = ['soundEnabled', 'soundVolume', 'useTTS', 'ttsText', 'soundInStyle', 'soundOutStyle'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'scrollSpeed'];
+                      const isPositionField = POSITION_FIELDS.includes(field.id);
+                      const isSoundField = SOUND_FIELDS.includes(field.id);
+                      const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);
+                      const isImageField = field.type === 'image' || field.type === 'image-list';
+                      if (activeTab === 'fields') { if (isPositionField || isSoundField || isAppearanceField || isImageField) return null; }
+                      else if (activeTab === 'images') { if (!isImageField) return null; }
+                      else if (activeTab === 'style') { if (!isAppearanceField) return null; }
+                      else if (activeTab === 'position') { if (!isPositionField) return null; }
+                      else if (activeTab === 'sound') { if (!isSoundField) return null; }
+                  }
 
                  // Render standard fields...
                  if (field.type === 'range') {

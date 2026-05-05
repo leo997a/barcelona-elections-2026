@@ -456,32 +456,20 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { 
-        id: 'scale', 
-        label: 'حجم القالب', 
-        type: 'range', 
-        value: 1.3, // Larger default
-        min: 0.5, 
-        max: 3.0, 
-        step: 0.1 
-      },
-      { 
-        id: 'positionY', 
-        label: 'الموقع العمودي (Y)', 
-        type: 'range', 
-        value: 0, 
-        min: -1000, 
-        max: 1000, 
-        step: 10 
-      },
-      { id: 'homeName', label: 'الفريق المضيف', type: 'text', value: 'الهلال' },
-      { id: 'awayName', label: 'الفريق الضيف', type: 'text', value: 'النصر' },
-      { id: 'homeScore', label: 'نتائج المضيف', type: 'number', value: 2 },
-      { id: 'awayScore', label: 'نتائج الضيف', type: 'number', value: 1 },
-      { id: 'period', label: 'الشوط', type: 'text', value: 'الشوط الثاني' },
-      { id: 'time', label: 'الوقت', type: 'text', value: '74:30' },
-      { id: 'homeLogo', label: 'شعار المضيف', type: 'image', value: 'https://picsum.photos/200/200?random=1' },
-      { id: 'awayLogo', label: 'شعار الضيف', type: 'image', value: 'https://picsum.photos/200/200?random=2' },
+      { id: 'homeName', label: 'الفريق المضيف', type: 'text' as const, value: 'الهلال' },
+      { id: 'awayName', label: 'الفريق الضيف', type: 'text' as const, value: 'النصر' },
+      { id: 'homeScore', label: 'نتيجة المضيف', type: 'number' as const, value: 2 },
+      { id: 'awayScore', label: 'نتيجة الضيف', type: 'number' as const, value: 1 },
+      { id: 'period', label: 'الشوط', type: 'text' as const, value: 'الشوط الثاني' },
+      { id: 'time', label: 'الوقت', type: 'text' as const, value: '74:30' },
+      { id: 'homeLogo', label: 'شعار المضيف', type: 'image' as const, value: 'https://picsum.photos/200/200?random=1' },
+      { id: 'awayLogo', label: 'شعار الضيف', type: 'image' as const, value: 'https://picsum.photos/200/200?random=2' },
+      // Appearance
+      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'DARK'] },
+      { id: 'themePreset', label: 'الثيم (Colors)', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'UCL_BLUE', 'DARK_MATTER'] },
+      // Position
+      { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.3, min: 0.5, max: 3.0, step: 0.1 },
+      { id: 'positionY', label: 'الموقع العمودي (Y)', type: 'range' as const, value: 0, min: -1000, max: 1000, step: 10 },
     ]
   },
   {
@@ -498,18 +486,14 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { 
-        id: 'scale', 
-        label: 'حجم القالب', 
-        type: 'range', 
-        value: 1.2, 
-        min: 0.5, 
-        max: 3.0, 
-        step: 0.1 
-      },
-      { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'عاجل' },
-      { id: 'content', label: 'نص الخبر', type: 'text', value: 'انطلاق فعاليات البطولة اليوم بمشاركة واسعة...' },
-      { id: 'scrollSpeed', label: 'سرعة التمرير', type: 'number', value: 10 },
+      { id: 'headline', label: 'العنوان الرئيسي', type: 'text' as const, value: 'عاجل' },
+      { id: 'content', label: 'نص الخبر', type: 'text' as const, value: 'انطلاق فعاليات البطولة اليوم بمشاركة واسعة...' },
+      // Appearance
+      { id: 'themePreset', label: 'الثيم', type: 'select' as const, value: 'CLASSIC_RED', options: ['CLASSIC_RED', 'TACTICAL_BLUE', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'NEWS_ORANGE', 'DARK_MATTER'] },
+      // Position
+      { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.2, min: 0.5, max: 3.0, step: 0.1 },
+      // Sound
+      { id: 'scrollSpeed', label: 'سرعة التمرير (1-30)', type: 'range' as const, value: 10, min: 1, max: 30, step: 1 },
     ]
   },
   {
@@ -526,17 +510,13 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { 
-        id: 'scale', 
-        label: 'حجم القالب', 
-        type: 'range', 
-        value: 1.2, 
-        min: 0.5, 
-        max: 3.0, 
-        step: 0.1 
-      },
-      { id: 'name', label: 'الاسم', type: 'text', value: 'أحمد محمد' },
-      { id: 'role', label: 'المنصب', type: 'text', value: 'محلل رياضي' },
+      { id: 'name', label: 'الاسم', type: 'text' as const, value: 'أحمد محمد' },
+      { id: 'role', label: 'المنصب', type: 'text' as const, value: 'محلل رياضي' },
+      // Appearance
+      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'MINIMAL'] },
+      { id: 'themePreset', label: 'الثيم (Colors)', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'DARK_MATTER'] },
+      // Position
+      { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.2, min: 0.5, max: 3.0, step: 0.1 },
     ]
   },
   {
