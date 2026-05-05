@@ -192,8 +192,8 @@ ${list}
 
     return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('AI route error:', err);
-    return sendJson(res, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي.' });
+    return sendJson(res, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي: ' + (err?.message || 'خطأ غير معروف') });
   }
 }
