@@ -193,8 +193,8 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                   {/* Abstract Representation of Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center z-0 opacity-40 group-hover:opacity-60 transition-opacity duration-500 group-hover:scale-105 transform">
                      <div className="w-32 h-32 rounded-full blur-[60px]" style={{ backgroundColor: meta.accent }}></div>
-                     <div className="absolute text-white/10 drop-shadow-2xl">
-                         {React.cloneElement(meta.icon as React.ReactElement, { className: 'w-32 h-32' })}
+                     <div className="absolute text-white/10 drop-shadow-2xl flex items-center justify-center">
+                         <span className="text-[120px] font-black">{meta.icon}</span>
                      </div>
                   </div>
 
@@ -275,7 +275,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                         <div className="w-full h-32 relative bg-gray-800 overflow-hidden flex items-center justify-center">
                             <div className="absolute inset-0 opacity-30" style={{ background: `linear-gradient(45deg, ${meta.accent}, transparent)` }}></div>
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-                            <div className="relative z-10 w-16 h-16 bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl text-white transform group-hover:scale-110 transition-transform duration-500">
+                            <div className="relative z-10 w-16 h-16 bg-black/50 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl text-white font-black text-2xl transform group-hover:scale-110 transition-transform duration-500">
                                 {meta.icon}
                             </div>
                         </div>

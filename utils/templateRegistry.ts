@@ -88,7 +88,11 @@ const cloneOverlay = <T,>(value: T): T => {
 };
 
 export const getTemplateMeta = (overlay: OverlayConfig): TemplateMeta => {
-  const fallback = FALLBACK_TEMPLATE_META[overlay.type];
+  const fallback = FALLBACK_TEMPLATE_META[overlay.type] || {
+    icon: '?',
+    accent: '#888888',
+    description: 'قالب غير معروف أو تم حذفه.',
+  };
 
   return {
     id: overlay.templateId || overlay.id,
