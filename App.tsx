@@ -106,15 +106,39 @@ const App: React.FC = () => {
     }
   };
 
+  // ── License Gate inner state ──────────────────────────────────────────────
+  const [showGenPanel, setShowGenPanel] = React.useState(false);
+  const [genSecret, setGenSecret] = React.useState('');
+  const [genRole, setGenRole] = React.useState('ADMIN');
+  const [genDays, setGenDays] = React.useState(0);
+  const [genResult, setGenResult] = React.useState('');
+  const [genErr, setGenErr] = React.useState('');
+  const [genLoading2, setGenLoading2] = React.useState(false);
+
+  const handleGenerate = async () => {
+    setGenErr(''); setGenResult(''); setGenLoading2(true);
+    try {
+      const res = await fetch('/api/license', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', adminSecret: genSecret, role: genRole, studioId: 'reo-main', daysValid: genDays }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل التوليد');
+      setGenResult(data.key);
+      setLicenseKey(data.key); // auto-fill in activate box
+    } catch(e) { setGenErr(e instanceof Error ? e.message : 'خطأ'); }
+    finally { setGenLoading2(false); }
+  };
+
   // ----------------------------------------------------
   // RENDER: License Gate
   // ----------------------------------------------------
   if (!license?.valid) {
     return (
-      <div className="fixed inset-0 bg-gray-950 flex items-center justify-center z-[200] p-6">
-        <div className="w-full max-w-md">
+      <div className="fixed inset-0 bg-gray-950 flex items-center justify-center z-[200] p-4 overflow-y-auto">
+        <div className="w-full max-w-lg py-8">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8 justify-center">
+          <div className="flex items-center gap-3 mb-6 justify-center">
             <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30">
               <Tv className="w-6 h-6 text-white" />
             </div>
@@ -124,45 +148,94 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl">
-            <h2 className="text-xl font-black text-white mb-2 text-center">تفعيل الاستوديو</h2>
-            <p className="text-gray-400 text-sm text-center mb-6">أدخل مفتاح الترخيص للوصول إلى المنصة</p>
+          {/* ── ACTIVATE PANEL ── */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl mb-3">
+            <h2 className="text-lg font-black text-white mb-1 text-center">تفعيل الاستوديو</h2>
+            <p className="text-gray-500 text-xs text-center mb-5">الصق مفتاح الترخيص هنا</p>
 
-            <form onSubmit={handleActivateLicense} className="space-y-4">
-              <div>
-                <label className="text-xs text-gray-400 font-bold block mb-2">مفتاح الترخيص</label>
-                <input
-                  type="text"
-                  value={licenseKey}
-                  onChange={e => setLicenseKey(e.target.value)}
-                  placeholder="REO-XXXX-XXXX-XXXX-XXXX"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
-                  dir="ltr"
-                />
-              </div>
+            <form onSubmit={handleActivateLicense} className="space-y-3">
+              <input
+                type="text"
+                value={licenseKey}
+                onChange={e => setLicenseKey(e.target.value)}
+                placeholder="REO-XXXX-XXXX-XXXX-XXXX"
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
+                dir="ltr"
+              />
               {licenseError && (
-                <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-2">
                   <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <p className="text-red-300 text-xs">{licenseError}</p>
                 </div>
               )}
-              <button
-                type="submit"
-                disabled={licenseLoading || !licenseKey.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30"
-              >
-                {licenseLoading ? 'جاري التحقق...' : '🔐 تفعيل الاستوديو'}
+              <button type="submit" disabled={licenseLoading || !licenseKey.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30">
+                {licenseLoading ? 'جاري التحقق...' : '🔐 دخول الاستوديو'}
               </button>
             </form>
+          </div>
 
-            <p className="text-center text-gray-600 text-xs mt-6">
-              للحصول على مفتاح تواصل مع مسؤول الاستوديو
-            </p>
+          {/* ── ADMIN GENERATOR (collapsible) ── */}
+          <div className="bg-gray-900 border border-yellow-900/40 rounded-2xl overflow-hidden shadow-xl">
+            <button
+              onClick={() => setShowGenPanel(p => !p)}
+              className="w-full flex items-center justify-between px-6 py-4 text-yellow-400 hover:bg-yellow-900/10 transition-colors"
+            >
+              <span className="text-sm font-bold flex items-center gap-2">
+                <span>⚡</span> أنا المسؤول — أريد توليد مفتاح
+              </span>
+              <span className="text-gray-500 text-xs">{showGenPanel ? '▲ إخفاء' : '▼ فتح'}</span>
+            </button>
+
+            {showGenPanel && (
+              <div className="px-6 pb-6 border-t border-yellow-900/30 pt-4 space-y-3">
+                <p className="text-gray-500 text-xs">أدخل كلمة سر المسؤول من Vercel (LICENSE_ADMIN_SECRET) لتوليد مفتاح جديد</p>
+
+                <input type="password" value={genSecret} onChange={e => setGenSecret(e.target.value)}
+                  placeholder="LICENSE_ADMIN_SECRET"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-yellow-500"
+                  dir="ltr" />
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(['ADMIN','EDITOR','OPERATOR','VIEWER'] as const).map(r => (
+                    <button key={r} onClick={() => setGenRole(r)}
+                      className={`py-2 rounded-lg text-xs font-bold border transition-all ${genRole === r ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/40' : 'text-gray-600 border-gray-800'}`}>
+                      {r === 'ADMIN' ? '👑 مسؤول' : r === 'EDITOR' ? '✏️ محرر' : r === 'OPERATOR' ? '▶️ مشغل' : '👁 مشاهد'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-gray-500 whitespace-nowrap">صلاحية (يوم):</label>
+                  <input type="number" value={genDays} onChange={e => setGenDays(Number(e.target.value))} min={0}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-yellow-500" />
+                  <span className="text-gray-600 text-xs">0 = لا تنتهي</span>
+                </div>
+
+                <button onClick={handleGenerate} disabled={!genSecret || genLoading2}
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-black font-black py-2.5 rounded-lg text-sm transition-colors">
+                  {genLoading2 ? '⏳ جاري التوليد...' : '⚡ توليد المفتاح'}
+                </button>
+
+                {genErr && <p className="text-red-400 text-xs bg-red-900/20 p-2 rounded-lg text-center">{genErr}</p>}
+
+                {genResult && (
+                  <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-4 text-center">
+                    <p className="text-green-400 text-[10px] font-bold uppercase tracking-wider mb-2">✅ تم التوليد — سيُملأ تلقائياً ↑</p>
+                    <div className="font-mono text-white font-black tracking-widest text-sm break-all bg-black/40 rounded-lg p-3">
+                      {genResult}
+                    </div>
+                    <p className="text-gray-500 text-[10px] mt-2">اضغط "دخول الاستوديو" أعلاه الآن</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
     );
   }
+
 
   // ----------------------------------------------------
   // RENDER: Output View (Browser Source)
