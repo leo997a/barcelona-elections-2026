@@ -32,19 +32,22 @@ interface LicenseRequestBody {
   adminSecret?: string;
 }
 
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const hmacChunk = (data: string): string =>
-  createHmac('sha256', SECRET).update(data).digest('hex').substring(0, 4).toUpperCase();
+// Use full 8-char HMAC prefix as signature for better collision resistance
+const hmacSig = (data: string): string =>
+  createHmac('sha256', SECRET).update(data).digest('hex').substring(0, 8).toUpperCase();
 
+// HEX is case-insensitive → safe to uppercase in the key display
 const encodePayload = (payload: LicensePayload): string => {
   const raw = `${payload.role}|${payload.studioId}|${payload.exp}|${payload.nonce}`;
-  return Buffer.from(raw).toString('base64url');
+  return Buffer.from(raw, 'utf8').toString('hex').toUpperCase();
 };
 
-const decodePayload = (encoded: string): LicensePayload | null => {
+const decodePayload = (hexStr: string): LicensePayload | null => {
   try {
-    const raw = Buffer.from(encoded, 'base64url').toString('utf8');
+    const raw = Buffer.from(hexStr.toLowerCase(), 'hex').toString('utf8');
     const [role, studioId, exp, nonce] = raw.split('|');
     if (!ROLES.includes(role as LicenseRole)) return null;
     return { role: role as LicenseRole, studioId, exp: Number(exp), nonce };
@@ -53,20 +56,24 @@ const decodePayload = (encoded: string): LicensePayload | null => {
   }
 };
 
+// Key format: REO-{HEX_CHUNK_1}-{HEX_CHUNK_2}-...-{SIG}
+// We take first 24 hex chars (split into 3×8) + 8-char sig = REO-XXXXXXXX-XXXXXXXX-XXXXXXXX-SSSSSSSS
 const buildKey = (payload: LicensePayload): string => {
-  const encoded = encodePayload(payload);
-  const parts = encoded.match(/.{1,8}/g) || [encoded];
-  const sig = hmacChunk(encoded);
-  return `REO-${parts.slice(0, 4).join('-').toUpperCase()}-${sig}`;
+  const hex = encodePayload(payload); // full hex
+  const sig = hmacSig(hex);
+  // store full hex in first chunks separated by dashes
+  const chunks = hex.match(/.{1,8}/g) || [hex];
+  return `REO-${chunks.join('-')}-${sig}`;
 };
 
-const parseKey = (key: string): { encoded: string; sig: string } | null => {
-  const clean = key.trim().toUpperCase();
+const parseKey = (key: string): { hex: string; sig: string } | null => {
+  const clean = key.trim().toUpperCase().replace(/\s/g, '');
   const parts = clean.split('-');
+  // parts[0] = "REO", parts[last] = sig, middle = hex chunks
   if (parts.length < 3 || parts[0] !== 'REO') return null;
   const sig = parts[parts.length - 1];
-  const encoded = Buffer.from(parts.slice(1, -1).join('').toLowerCase(), 'base64url').toString('base64url');
-  return { encoded, sig };
+  const hex = parts.slice(1, -1).join('');
+  return { hex, sig };
 };
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -85,12 +92,12 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const parsed = parseKey(key);
     if (!parsed) return sendJson(res, 401, { valid: false, error: 'صيغة المفتاح غير صحيحة.' });
 
-    const expectedSig = hmacChunk(parsed.encoded);
+    const expectedSig = hmacSig(parsed.hex);
     if (parsed.sig !== expectedSig) {
       return sendJson(res, 401, { valid: false, error: 'المفتاح غير صالح أو مزوّر.' });
     }
 
-    const payload = decodePayload(parsed.encoded);
+    const payload = decodePayload(parsed.hex);
     if (!payload) return sendJson(res, 401, { valid: false, error: 'تعذّر قراءة المفتاح.' });
 
     if (payload.exp > 0 && payload.exp < Math.floor(Date.now() / 1000)) {
