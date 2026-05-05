@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap } from 'lucide-react';
-import { processSmartText, generateMatchData, generateViewerBadges } from '../services/geminiService';
+import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
 import { adminSessionService } from '../services/adminSession';
@@ -461,14 +461,84 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
         {draftOverlay.type === OverlayType.TOP_VIEWERS && (() => {
             const count = Math.min(Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5), 10);
+
+            // ── resize image to max 512px and return base64 ──────────────────
+            const resizeToBase64 = (file: File): Promise<string> =>
+              new Promise(resolve => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                  const MAX = 512;
+                  const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                  const c = document.createElement('canvas');
+                  c.width = img.width * scale;
+                  c.height = img.height * scale;
+                  c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height);
+                  URL.revokeObjectURL(url);
+                  resolve(c.toDataURL('image/jpeg', 0.8));
+                };
+                img.src = url;
+              });
+
             return (
             <div className="bg-yellow-950/20 border-b border-yellow-900/30">
-                {/* Quick entry table */}
+
+                {/* ── Screenshot drop zone for AI Vision ── */}
                 <div className="p-4 pb-2">
-                    <label className="text-xs text-yellow-400 font-bold flex items-center gap-1.5 mb-3">
-                        <Zap className="w-3 h-3" /> إدخال سريع للمتفاعلين
+                  <label className="text-xs text-yellow-400 font-bold flex items-center gap-1.5 mb-2">
+                    <Zap className="w-3 h-3" /> استخراج المتفاعلين من لقطة الشاشة (Gemini Vision)
+                  </label>
+                  <p className="text-gray-500 text-[10px] mb-3">ارفع 1-3 صور من شاشة البث — الذكاء يستخرج الأسماء والأوسمة تلقائياً</p>
+
+                  <label
+                    htmlFor="screenshot-upload"
+                    className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-yellow-700/40 rounded-xl p-5 cursor-pointer hover:border-yellow-500/60 hover:bg-yellow-900/10 transition-all"
+                  >
+                    <span className="text-3xl">📸</span>
+                    <span className="text-yellow-400 text-xs font-bold">اضغط لاختيار الصور (1-3)</span>
+                    <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP — حجم أقصى 5MB لكل صورة</span>
+                  </label>
+                  <input
+                    id="screenshot-upload"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async e => {
+                      const files = Array.from(e.target.files || []).slice(0, 3);
+                      if (!files.length) return;
+                      const btn = document.getElementById('ai-extract-btn') as HTMLButtonElement;
+                      if (btn) { btn.textContent = '🔍 جاري الاستخراج...'; btn.disabled = true; }
+                      try {
+                        const base64s = await Promise.all(files.map(resizeToBase64));
+                        const results = await extractViewersFromScreenshots(base64s);
+                        if (results && Array.isArray(results)) {
+                          results.slice(0, count).forEach(v => {
+                            handleDraftFieldChange(`viewer${v.rank}Name`, v.name);
+                            handleDraftFieldChange(`viewer${v.rank}Badge`, v.badge);
+                          });
+                        }
+                      } finally {
+                        if (btn) { btn.textContent = '🤖 استخراج المتفاعلين من الصور'; btn.disabled = false; }
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  <button
+                    id="ai-extract-btn"
+                    disabled
+                    className="w-full mt-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors disabled:opacity-40"
+                  >
+                    🤖 استخراج المتفاعلين من الصور
+                  </button>
+                </div>
+
+                {/* ── Quick name+image entry table ── */}
+                <div className="px-4 pb-2">
+                    <label className="text-xs text-gray-500 font-bold flex items-center gap-1.5 mb-2">
+                      أو أدخل يدوياً:
                     </label>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         {Array.from({ length: count }, (_, i) => {
                             const idx = i + 1;
                             const nameVal = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Name`)?.value || '');
@@ -477,39 +547,28 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             return (
                                 <div key={idx} className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-yellow-900/20">
                                     <span className="text-xs w-5 text-center flex-shrink-0">{medal}</span>
-                                    {/* Avatar preview / image URL */}
-                                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-gray-700 flex-shrink-0 bg-gray-800">
-                                        {imgVal ? (
-                                            <img src={imgVal} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <ImageIcon className="w-3 h-3 text-gray-600" />
-                                            </div>
-                                        )}
+                                    <div className="w-7 h-7 rounded-lg overflow-hidden border border-gray-700 flex-shrink-0 bg-gray-800">
+                                        {imgVal
+                                          ? <img src={imgVal} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                                          : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-3 h-3 text-gray-600" /></div>
+                                        }
                                     </div>
-                                    {/* Name */}
-                                    <input
-                                        type="text"
-                                        value={nameVal}
+                                    <input type="text" value={nameVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Name`, e.target.value)}
                                         placeholder={`الاسم ${idx}`}
-                                        className="flex-1 bg-transparent text-white text-xs placeholder-gray-600 focus:outline-none min-w-0"
-                                    />
-                                    {/* Image URL */}
-                                    <input
-                                        type="text"
-                                        value={imgVal}
+                                        className="flex-1 bg-transparent text-white text-xs placeholder-gray-600 focus:outline-none min-w-0" />
+                                    <input type="text" value={imgVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Image`, e.target.value)}
                                         placeholder="رابط الصورة..."
                                         className="flex-1 bg-transparent text-gray-400 text-[10px] placeholder-gray-700 focus:outline-none min-w-0 font-mono"
-                                        dir="ltr"
-                                    />
+                                        dir="ltr" />
                                 </div>
                             );
                         })}
                     </div>
                 </div>
-                {/* AI badges button */}
+
+                {/* ── AI Badges button ── */}
                 <div className="px-4 pb-4">
                     <button
                         onClick={async () => {
@@ -524,23 +583,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             if (btn) { btn.textContent = '✨ جاري التوليد...'; btn.disabled = true; }
                             try {
                                 const badges = await generateViewerBadges(viewers, channelName);
-                                if (badges && Array.isArray(badges)) {
-                                    badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
-                                }
+                                if (badges && Array.isArray(badges)) badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
                             } finally {
                                 if (btn) { btn.textContent = '⚡ توليد الأوسمة بالذكاء الاصطناعي'; btn.disabled = false; }
                             }
                         }}
                         id="ai-badges-btn"
-                        className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
+                        className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
                     >
-                        ⚡ توليد الأوسمة بالذكاء الاصطناعي
+                        ⚡ توليد الأوسمة بالذكاء الاصطناعي (للأسماء المدخلة)
                     </button>
                 </div>
             </div>
             );
         })()}
-        
+
+
         <div className="flex border-b border-gray-800 overflow-x-auto no-scrollbar">
           {/* ALWAYS: Main data tab */}
           <button onClick={() => setActiveTab('fields')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>📝 البيانات</button>

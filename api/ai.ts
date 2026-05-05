@@ -8,12 +8,13 @@ import {
 } from './_lib/http.js';
 
 interface AiRequestBody {
-  action?: 'match-data' | 'smart-text' | 'viewer-badges';
+  action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers';
   sport?: string;
   rawText?: string;
   targetPages?: number;
   viewers?: { name: string; rank: number }[];
   channelName?: string;
+  images?: string[]; // base64 encoded images for extract-viewers
 }
 
 const cleanJsonOutput = (text: string): string =>
@@ -145,6 +146,57 @@ ${viewerList}
       });
 
       if (!result.text) return sendJson(response, 502, { error: 'فشل توليد الأوسمة.' });
+      return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
+    }
+
+    // ── EXTRACT VIEWERS FROM SCREENSHOTS (Vision) ──────────────────────────
+    if (body.action === 'extract-viewers') {
+      const images = body.images || [];
+      if (!images.length) return sendJson(response, 400, { error: 'يلزم إرسال صورة واحدة على الأقل.' });
+
+      // Build multimodal parts
+      const imageParts = images.map((b64: string) => ({
+        inlineData: {
+          mimeType: 'image/jpeg' as const,
+          data: b64.replace(/^data:image\/\w+;base64,/, ''),
+        },
+      }));
+
+      const result = await ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `أنت محلل مجتمعات بث مباشر. هذه لقطات شاشة بث مباشر.
+استخرج أبرز المتفاعلين (أسماء مستخدمين / مرسلي تعليقات من الشاشة).
+رتّبهم حسب تكرار الظهور أو تسلسل اللقاء.
+أعِد JSON array به إلى 10 متفاعلين بحد أقصى.
+لكل متفاعل: rank (رقم بدءًا من 1), name (اسم المستخدم), badge (وسام مناسب بالعربية + إيموجي).`,
+              },
+              ...imageParts,
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                rank:  { type: Type.INTEGER },
+                name:  { type: Type.STRING },
+                badge: { type: Type.STRING },
+              },
+              required: ['rank', 'name', 'badge'],
+            },
+          },
+        },
+      });
+
+      if (!result.text) return sendJson(response, 502, { error: 'فشل استخراج المتفاعلين.' });
       return sendJson(response, 200, { data: JSON.parse(cleanJsonOutput(result.text)) });
     }
 

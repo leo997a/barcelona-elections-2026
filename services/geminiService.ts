@@ -43,3 +43,11 @@ export const generateViewerBadges = async (
     viewers,
     channelName,
   });
+
+export const extractViewersFromScreenshots = async (
+  images: string[] // base64 strings
+): Promise<{ rank: number; name: string; badge: string }[] | null> =>
+  callSecureAi<{ rank: number; name: string; badge: string }[]>({
+    action: 'extract-viewers' as never,
+    images,
+  });
