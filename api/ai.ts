@@ -49,7 +49,10 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
   if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ 
+    apiKey,
+    httpOptions: { apiVersion: 'v1' }
+  });
 
   try {
     // ── MATCH DATA ─────────────────────────────────────────────────────────
