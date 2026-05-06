@@ -21,9 +21,10 @@ const cleanJsonOutput = (text: string): string =>
 
 const MODEL = 'gemini-1.5-flash';
 
-// Helper to call raw Google Gemini API directly
+// Helper to call raw Google Gemini API directly using stable V1 endpoint
 async function callGeminiRaw(apiKey: string, contents: any[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+  // Use v1 instead of v1beta for production stability
+  const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,6 +33,19 @@ async function callGeminiRaw(apiKey: string, contents: any[]) {
   
   if (!response.ok) {
     const errText = await response.text();
+    // If v1 fails, try v1beta as fallback with gemini-1.5-flash-latest
+    if (response.status === 404) {
+       const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+       const fbResp = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents }),
+       });
+       if (fbResp.ok) {
+          const fbData = await fbResp.json();
+          return fbData.candidates?.[0]?.content?.parts?.[0]?.text;
+       }
+    }
     throw new Error(`Google API Error ${response.status}: ${errText}`);
   }
   
