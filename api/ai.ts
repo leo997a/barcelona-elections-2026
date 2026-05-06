@@ -19,7 +19,7 @@ interface AiRequestBody {
 const cleanJsonOutput = (text: string): string =>
   text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-const MODEL = 'gemini-1.5-flash';
+const MODEL = 'gemini-2.0-flash-exp';
 
 // Helper to call raw Google Gemini API directly using v1beta endpoint
 async function callGeminiRaw(apiKey: string, contents: any[]) {
@@ -32,9 +32,9 @@ async function callGeminiRaw(apiKey: string, contents: any[]) {
   
   if (!response.ok) {
     const errText = await response.text();
-    // If primary model fails, try fallback
+    // If primary model fails, try fallback to gemini-1.5-pro
     if (response.status === 404) {
-       const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+       const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
        const fbResp = await fetch(fallbackUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
