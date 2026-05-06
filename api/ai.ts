@@ -49,7 +49,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
   if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
 
-  const ai = new GoogleGenAI({ 
+  const ai = new GoogleGenAI({
     apiKey,
     httpOptions: { apiVersion: 'v1' }
   });
@@ -62,21 +62,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
       const result = await ai.models.generateContent({
         model: MODEL,
-        contents: `Generate realistic match data for a ${sport} game between two famous teams from Saudi Arabia. Return JSON.`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              homeTeam:  { type: Type.STRING },
-              awayTeam:  { type: Type.STRING },
-              homeScore: { type: Type.INTEGER },
-              awayScore: { type: Type.INTEGER },
-              period:    { type: Type.STRING },
-            },
-            required: ['homeTeam', 'awayTeam', 'homeScore', 'awayScore', 'period'],
-          },
-        },
+        contents: `Generate realistic match data for a ${sport} game between two famous teams from Saudi Arabia. 
+Return ONLY pure JSON in this exact format: {"homeTeam":"Team A","awayTeam":"Team B","homeScore":2,"awayScore":1,"period":"90'"}`
       });
 
       if (!result.text) return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي بيانات.' });
@@ -98,20 +85,9 @@ Requirements:
 1. Extract a concise headline.
 2. Split into EXACTLY ${targetPages} slides (15-25 words each).
 3. Do NOT remove names, dates, or numbers.
-Return pure JSON.
+Return ONLY pure JSON in this exact format: {"title":"Short Headline","pages":["Slide 1 text", "Slide 2 text"]}
 
-Text: "${rawText}"`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              pages: { type: Type.ARRAY, items: { type: Type.STRING } },
-            },
-            required: ['title', 'pages'],
-          },
-        },
+Text: "${rawText}"`
       });
 
       if (!result.text) return sendJson(res, 502, { error: 'لم يعد الذكاء الاصطناعي أي نص.' });
@@ -131,14 +107,7 @@ Text: "${rawText}"`,
         contents: `أنت خبير في مجتمعات البث المباشر لقناة "${channelName}".
 أعطِ وسامًا قصيرًا (1-4 كلمات عربية + إيموجي) لكل متفاعل حسب مرتبته:
 ${list}
-أعد JSON: {"items": [{"rank":1,"badge":"👑 ..."},...]}`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: arrSchema(
-            { rank: { type: Type.INTEGER }, badge: { type: Type.STRING } },
-            ['rank', 'badge']
-          ),
-        },
+أعد فقط JSON بالصيغة الدقيقة التالية بدون أي نص إضافي: {"items": [{"rank":1,"badge":"👑 ملك البث"}, ...]}`
       });
 
       if (!result.text) return sendJson(res, 502, { error: 'فشل توليد الأوسمة.' });
@@ -169,23 +138,12 @@ ${list}
 استخرج أبرز المتفاعلين (أسماء المستخدمين الظاهرة في الشاشة).
 رتّبهم حسب تكرار الظهور.
 لكل متفاعل: rank (يبدأ من 1), name (اسم المستخدم), badge (وسام عربي + إيموجي مناسب).
-أعد JSON: {"items": [{"rank":1,"name":"...","badge":"👑 ..."},...]}`,
+أعد فقط JSON بالصيغة الدقيقة التالية بدون أي نص إضافي: {"items": [{"rank":1,"name":"اسم_المستخدم","badge":"👑 ملك البث"}, ...]}`,
               },
               ...imageParts,
             ],
           },
-        ],
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: arrSchema(
-            {
-              rank:  { type: Type.INTEGER },
-              name:  { type: Type.STRING },
-              badge: { type: Type.STRING },
-            },
-            ['rank', 'name', 'badge']
-          ),
-        },
+        ]
       });
 
       if (!result.text) return sendJson(res, 502, { error: 'فشل استخراج المتفاعلين.' });
