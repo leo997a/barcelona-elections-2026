@@ -141,6 +141,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     syncManager.updateOverlay(newOverlay);
   };
 
+  const handleDraftFieldChanges = (updates: Record<string, any>) => {
+    const updatedFields = draftOverlay.fields.map(field =>
+      Object.prototype.hasOwnProperty.call(updates, field.id) ? { ...field, value: updates[field.id] } : field
+    );
+    const firstChangedId = Object.keys(updates)[0];
+    const newOverlay = normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, firstChangedId);
+    setDraftOverlay(newOverlay);
+    syncManager.updateOverlay(newOverlay);
+  };
+
   const updateDraftTheme = (key: string, value: string) => {
       const newOverlay = { ...draftOverlay, theme: { ...draftOverlay.theme, [key]: value } };
       setDraftOverlay(newOverlay);
@@ -155,6 +165,55 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const updateLiveControl = (fieldId: string, value: any) => {
       syncManager.updateLiveField(liveOverlay.id, fieldId, value);
+  };
+
+  const handleGenerateScoreboardData = async () => {
+      setIsProcessingAI(true);
+      setAiError(false);
+      try {
+          const generated = await generateMatchData('football live broadcast');
+          if (!generated) {
+              setAiError(true);
+              return;
+          }
+
+          handleDraftFieldChanges({
+              homeName: generated.homeTeam,
+              awayName: generated.awayTeam,
+              homeScore: generated.homeScore,
+              awayScore: generated.awayScore,
+              period: generated.period,
+          });
+      } finally {
+          setIsProcessingAI(false);
+      }
+  };
+
+  const handleGenerateSmartNewsSlides = async () => {
+      const rawText = String(getDraftValue('rawText') || '').trim();
+      const targetPages = Number(getDraftValue('aiPageCount') || 6);
+      if (!rawText) {
+          setAiError(true);
+          return;
+      }
+
+      setIsProcessingAI(true);
+      setAiError(false);
+      try {
+          const generated = await processSmartText(rawText, targetPages);
+          if (!generated) {
+              setAiError(true);
+              return;
+          }
+
+          handleDraftFieldChanges({
+              headline: generated.title,
+              pagesData: JSON.stringify(generated.pages),
+              currentPage: 0,
+          });
+      } finally {
+          setIsProcessingAI(false);
+      }
   };
 
   // --- SPONSORS LOGIC ---
@@ -380,6 +439,36 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
         )}
         
+        {draftOverlay.type === OverlayType.SCOREBOARD && (
+            <div className="p-4 bg-purple-950/25 border-b border-purple-900/40 space-y-2">
+                <button
+                  onClick={handleGenerateScoreboardData}
+                  disabled={isProcessingAI}
+                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2"
+                >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {isProcessingAI ? 'جاري توليد بيانات المباراة...' : 'ملء بيانات مباراة بالذكاء الاصطناعي'}
+                </button>
+                {aiError && <div className="text-[11px] text-red-400 text-center">تعذر تشغيل الذكاء الاصطناعي. تحقق من GEMINI_API_KEY أو جرّب لاحقا.</div>}
+            </div>
+        )}
+
+        {draftOverlay.type === OverlayType.SMART_NEWS && (
+            <div className="p-4 bg-purple-950/30 border-b border-purple-900/50 space-y-2">
+                <label className="text-xs text-purple-300 font-bold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> توليد الشرائح من النص
+                </label>
+                <button
+                  onClick={handleGenerateSmartNewsSlides}
+                  disabled={isProcessingAI}
+                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors"
+                >
+                    {isProcessingAI ? 'جاري تجهيز الشرائح...' : 'تحويل النص إلى شرائح بث احترافية'}
+                </button>
+                {aiError && <div className="text-[11px] text-red-400">اكتب النص الكامل أولا، وتأكد من إعداد مفتاح Gemini في الخادم.</div>}
+            </div>
+        )}
+
         {draftOverlay.type === OverlayType.PLAYER_PROFILE && (
             <div className="p-4 bg-gray-950/50 border-b border-gray-800">
                 <label className="text-xs text-blue-400 font-bold block mb-2 flex items-center gap-1">
@@ -441,7 +530,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         if(e.key === 'Enter') {
                             const val = e.currentTarget.value;
                             if(val) {
-                                handleDraftFieldChange('text', val);
+                                handleDraftFieldChange('content', val);
                                 e.currentTarget.value = '';
                             }
                         }
@@ -449,7 +538,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     <button onClick={() => {
                         const input = document.getElementById('quick-ticker') as HTMLInputElement;
                         if(input && input.value) {
-                            handleDraftFieldChange('text', input.value);
+                            handleDraftFieldChange('content', input.value);
                             input.value = '';
                         }
                     }} className="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-2 rounded text-xs transition-colors whitespace-nowrap">
@@ -656,7 +745,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                   // SMART UNIVERSAL FIELD FILTERING
                   if (draftOverlay.type === OverlayType.ELECTION) {
-                      const isStyleField = ['themePreset', 'designStyle', 'barcaLogo', 'scale', 'positionX', 'positionY', 'soundEnabled', 'soundVolume', 'soundInStyle', 'soundOutStyle', 'boxColor', 'accentColor'].includes(field.id);
+                      const isStyleField = ['themePreset', 'designStyle', 'barcaLogo', 'scale', 'positionX', 'positionY', 'transitionIn', 'transitionOut', 'soundEnabled', 'soundVolume', 'soundInStyle', 'soundOutStyle', 'boxColor', 'accentColor'].includes(field.id);
                       const isCandidateField = field.id.startsWith('candidate') || ['showUndecided', 'undecidedLabel', 'undecidedPercent', 'undecidedColor'].includes(field.id);
                       const isTimeField = ['targetDate', 'targetTime', 'countdownTitle', 'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'].includes(field.id);
                       const isCameraField = field.id.startsWith('camera') || field.id === 'bgImage';
@@ -695,7 +784,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       // UNIVERSAL SMART TABS for ALL non-election templates
                       const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime'];
                       const SOUND_FIELDS = ['soundEnabled', 'soundVolume', 'useTTS', 'ttsText', 'soundInStyle', 'soundOutStyle'];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'scrollSpeed'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);

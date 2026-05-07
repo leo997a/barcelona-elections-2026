@@ -13,48 +13,120 @@ interface AiRequestBody {
   targetPages?: number;
   viewers?: { name: string; rank: number }[];
   channelName?: string;
-  images?: string[]; // base64 images for Vision
+  images?: string[];
 }
 
-const cleanJsonOutput = (text: string): string =>
-  text.replace(/```json/g, '').replace(/```/g, '').trim();
+type GeminiPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } };
 
-const MODEL = 'gemini-2.0-flash-exp';
+type GeminiContent = {
+  role: 'user' | 'model';
+  parts: GeminiPart[];
+};
 
-// Helper to call raw Google Gemini API directly using v1beta endpoint
-async function callGeminiRaw(apiKey: string, contents: any[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents }),
-  });
-  
-  if (!response.ok) {
-    const errText = await response.text();
-    // If primary model fails, try fallback to gemini-1.5-pro
-    if (response.status === 404) {
-       const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
-       const fbResp = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents }),
-       });
-       if (fbResp.ok) {
-          const fbData = await fbResp.json();
-          return fbData.candidates?.[0]?.content?.parts?.[0]?.text;
-       } else {
-          const fbErrText = await fbResp.text();
-          throw new Error(`Google API Fallback Error ${fbResp.status}: ${fbErrText}`);
-       }
-    }
-    throw new Error(`Google API Error ${response.status}: ${errText}`);
+const FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+
+const uniqueModels = () => {
+  const configured = process.env.GEMINI_MODEL?.trim();
+  return Array.from(new Set([configured, ...FALLBACK_MODELS].filter(Boolean))) as string[];
+};
+
+const cleanJsonOutput = (text: string): string => {
+  const stripped = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const objectStart = stripped.indexOf('{');
+  const objectEnd = stripped.lastIndexOf('}');
+  const arrayStart = stripped.indexOf('[');
+  const arrayEnd = stripped.lastIndexOf(']');
+
+  if (objectStart !== -1 && objectEnd > objectStart) return stripped.slice(objectStart, objectEnd + 1);
+  if (arrayStart !== -1 && arrayEnd > arrayStart) return stripped.slice(arrayStart, arrayEnd + 1);
+  return stripped;
+};
+
+const parseModelJson = <T>(text: string): T => JSON.parse(cleanJsonOutput(text)) as T;
+
+const clampInteger = (value: unknown, fallback: number, min: number, max: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(Math.round(parsed), min), max);
+};
+
+const fallbackSlides = (rawText: string, targetPages: number): string[] => {
+  const normalized = rawText.replace(/\s+/g, ' ').trim();
+  const sentences = normalized
+    .split(/(?<=[.!؟?])\s+/)
+    .map(sentence => sentence.trim())
+    .filter(Boolean);
+
+  const source = sentences.length >= targetPages ? sentences : normalized.match(/.{1,130}(\s|$)/g) || [normalized];
+  const pages = source.map(page => page.trim()).filter(Boolean).slice(0, targetPages);
+  while (pages.length < targetPages) pages.push(pages[pages.length - 1] || normalized || 'تحديث مباشر');
+  return pages;
+};
+
+const normalizeSmartNews = (payload: unknown, rawText: string, targetPages: number) => {
+  const value = payload as { title?: unknown; headline?: unknown; pages?: unknown };
+  const pages = Array.isArray(value.pages)
+    ? value.pages.map(page => String(page).trim()).filter(Boolean)
+    : fallbackSlides(rawText, targetPages);
+
+  const normalizedPages = pages.slice(0, targetPages);
+  while (normalizedPages.length < targetPages) {
+    normalizedPages.push(...fallbackSlides(rawText, targetPages - normalizedPages.length));
   }
-  
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('No text returned from Gemini API.');
-  return text;
+
+  return {
+    title: String(value.title || value.headline || 'ملخص البث').trim(),
+    pages: normalizedPages.slice(0, targetPages),
+  };
+};
+
+async function callGeminiRaw(apiKey: string, contents: GeminiContent[], jsonMode = true) {
+  const errors: string[] = [];
+
+  for (const model of uniqueModels()) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const body = {
+      contents,
+      generationConfig: {
+        temperature: 0.35,
+        topP: 0.9,
+        ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => response.statusText);
+      errors.push(`${model}: ${response.status} ${detail.slice(0, 220)}`);
+      continue;
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || '')
+      .join('')
+      .trim();
+
+    if (text) return text;
+    errors.push(`${model}: empty response`);
+  }
+
+  if (jsonMode) {
+    try {
+      return await callGeminiRaw(apiKey, contents, false);
+    } catch (fallbackError) {
+      errors.push(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+    }
+  }
+
+  throw new Error(`Gemini request failed. Tried ${uniqueModels().join(', ')}. ${errors.join(' | ')}`);
 }
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
@@ -65,7 +137,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return sendJson(res, 503, {
-      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY إلى البيئة.',
+      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY في متغيرات البيئة.',
     });
   }
 
@@ -73,61 +145,92 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
 
   try {
-    // ── MATCH DATA ─────────────────────────────────────────────────────────
     if (body.action === 'match-data') {
-      const sport = body.sport?.trim();
-      if (!sport) return sendJson(res, 400, { error: 'اسم الرياضة مطلوب.' });
-
+      const sport = body.sport?.trim() || 'football';
       const text = await callGeminiRaw(apiKey, [
         {
           role: 'user',
-          parts: [{ text: `Generate realistic match data for a ${sport} game between two famous teams from Saudi Arabia. \nReturn ONLY pure JSON in this exact format: {"homeTeam":"Team A","awayTeam":"Team B","homeScore":2,"awayScore":1,"period":"90'"}` }]
-        }
+          parts: [{
+            text:
+              `أنشئ بيانات افتراضية واقعية لقالب نتيجة بث مباشر في كرة القدم أو الرياضة التالية: ${sport}.\n` +
+              'لا تستخدم معلومات مباشرة أو نتائج حقيقية. أعد JSON فقط بهذا الشكل:\n' +
+              '{"homeTeam":"Team A","awayTeam":"Team B","homeScore":2,"awayScore":1,"period":"74:30"}',
+          }],
+        },
       ]);
-      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(text)) });
+
+      const parsed = parseModelJson<{
+        homeTeam?: string;
+        awayTeam?: string;
+        homeScore?: number;
+        awayScore?: number;
+        period?: string;
+      }>(text);
+
+      return sendJson(res, 200, {
+        data: {
+          homeTeam: String(parsed.homeTeam || 'Home FC'),
+          awayTeam: String(parsed.awayTeam || 'Away FC'),
+          homeScore: clampInteger(parsed.homeScore, 0, 0, 20),
+          awayScore: clampInteger(parsed.awayScore, 0, 0, 20),
+          period: String(parsed.period || "45'"),
+        },
+      });
     }
 
-    // ── SMART TEXT ─────────────────────────────────────────────────────────
     if (body.action === 'smart-text') {
       const rawText = body.rawText?.trim();
       if (!rawText) return sendJson(res, 400, { error: 'النص الخام مطلوب.' });
-      const targetPages = Math.min(Math.max(Number(body.targetPages) || 6, 1), 10);
 
+      const targetPages = clampInteger(body.targetPages, 6, 1, 20);
       const text = await callGeminiRaw(apiKey, [
         {
           role: 'user',
-          parts: [{ text: `Role: Expert TV Broadcast Editor.\nTask: Convert the Arabic text into exactly ${targetPages} slides for a news overlay.\nRequirements:\n1. Extract a concise headline.\n2. Split into EXACTLY ${targetPages} slides (15-25 words each).\n3. Do NOT remove names, dates, or numbers.\nReturn ONLY pure JSON in this exact format: {"title":"Short Headline","pages":["Slide 1 text", "Slide 2 text"]}\n\nText: "${rawText}"` }]
-        }
+          parts: [{
+            text:
+              'أنت محرر بث تلفزيوني رياضي عربي.\n' +
+              `حوّل النص التالي إلى ${targetPages} شرائح بالضبط لقالب بث مباشر.\n` +
+              'الشروط: عنوان قصير، جمل واضحة، لا تحذف الأسماء أو الأرقام أو التواريخ، ولا تضف معلومات من خارج النص.\n' +
+              'أعد JSON فقط بهذا الشكل: {"title":"عنوان قصير","pages":["نص الشريحة 1","نص الشريحة 2"]}\n\n' +
+              `النص:\n${rawText}`,
+          }],
+        },
       ]);
-      return sendJson(res, 200, { data: JSON.parse(cleanJsonOutput(text)) });
+
+      return sendJson(res, 200, { data: normalizeSmartNews(parseModelJson(text), rawText, targetPages) });
     }
 
-    // ── VIEWER BADGES ──────────────────────────────────────────────────────
     if (body.action === 'viewer-badges') {
       const viewers = body.viewers || [];
       const channelName = body.channelName || 'REO LIVE';
       if (!viewers.length) return sendJson(res, 400, { error: 'يلزم وجود قائمة متفاعلين.' });
 
-      const list = viewers.map(v => `المرتبة ${v.rank}: ${v.name}`).join('\n');
+      const list = viewers.map(viewer => `المرتبة ${viewer.rank}: ${viewer.name}`).join('\n');
       const text = await callGeminiRaw(apiKey, [
         {
           role: 'user',
-          parts: [{ text: `أنت خبير في مجتمعات البث المباشر لقناة "${channelName}".\nأعطِ وسامًا قصيرًا (1-4 كلمات عربية + إيموجي) لكل متفاعل حسب مرتبته:\n${list}\nأعد فقط JSON بالصيغة الدقيقة التالية بدون أي نص إضافي: {"items": [{"rank":1,"badge":"👑 ملك البث"}, ...]}` }]
-        }
+          parts: [{
+            text:
+              `أنت محرر مجتمع بث مباشر لقناة "${channelName}".\n` +
+              'اكتب وساما قصيرا لكل متفاعل: من كلمتين إلى أربع كلمات عربية، بدون إساءة، ومناسب للبث.\n' +
+              `${list}\n` +
+              'أعد JSON فقط بهذا الشكل: {"items":[{"rank":1,"badge":"ملك البث"}, {"rank":2,"badge":"نجم التعليقات"}]}',
+          }],
+        },
       ]);
-      const parsed = JSON.parse(cleanJsonOutput(text));
-      return sendJson(res, 200, { data: parsed.items ?? parsed });
+
+      const parsed = parseModelJson<{ items?: { rank: number; badge: string }[] } | { rank: number; badge: string }[]>(text);
+      return sendJson(res, 200, { data: Array.isArray(parsed) ? parsed : parsed.items || [] });
     }
 
-    // ── EXTRACT VIEWERS FROM SCREENSHOTS (Vision) ──────────────────────────
     if (body.action === 'extract-viewers') {
       const images = body.images || [];
       if (!images.length) return sendJson(res, 400, { error: 'يلزم إرسال صورة واحدة على الأقل.' });
 
-      const imageParts = images.slice(0, 3).map((b64: string) => ({
+      const imageParts: GeminiPart[] = images.slice(0, 3).map(image => ({
         inlineData: {
-          mimeType: 'image/jpeg',
-          data: b64.replace(/^data:image\/\w+;base64,/, ''),
+          mimeType: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+          data: image.replace(/^data:image\/\w+;base64,/, ''),
         },
       }));
 
@@ -135,19 +238,26 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         {
           role: 'user',
           parts: [
-            { text: `أنت محلل مجتمعات بث مباشر. هذه لقطات شاشة بث.\nاستخرج أبرز المتفاعلين (أسماء المستخدمين الظاهرة في الشاشة).\nرتّبهم حسب تكرار الظهور.\nلكل متفاعل: rank (يبدأ من 1), name (اسم المستخدم), badge (وسام عربي + إيموجي مناسب).\nأعد فقط JSON بالصيغة الدقيقة التالية بدون أي نص إضافي: {"items": [{"rank":1,"name":"اسم_المستخدم","badge":"👑 ملك البث"}, ...]}` },
+            {
+              text:
+                'حلل لقطات شاشة من بث مباشر واستخرج أسماء المتفاعلين الظاهرة بوضوح فقط.\n' +
+                'رتبهم حسب تكرار أو وضوح الظهور، وأضف وساما عربيا قصيرا مناسبا لكل اسم.\n' +
+                'أعد JSON فقط بهذا الشكل: {"items":[{"rank":1,"name":"اسم المستخدم","badge":"نجم البث"}]}',
+            },
             ...imageParts,
           ],
-        }
+        },
       ]);
-      const parsed = JSON.parse(cleanJsonOutput(text));
-      return sendJson(res, 200, { data: parsed.items ?? parsed });
+
+      const parsed = parseModelJson<{ items?: { rank: number; name: string; badge: string }[] }>(text);
+      return sendJson(res, 200, { data: parsed.items || [] });
     }
 
     return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
-
-  } catch (err: any) {
+  } catch (err) {
     console.error('AI route error:', err);
-    return sendJson(res, 500, { error: 'تعذر إكمال طلب الذكاء الاصطناعي: ' + (err?.message || 'خطأ غير معروف') });
+    return sendJson(res, 500, {
+      error: 'تعذر إكمال طلب الذكاء الاصطناعي: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'),
+    });
   }
 }

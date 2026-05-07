@@ -6,10 +6,89 @@ import {
   ELECTION_ENTITY_PRESETS,
   ELECTION_SOUND_OPTIONS,
 } from './utils/election';
+import {
+  BROADCAST_EXIT_OPTIONS,
+  BROADCAST_SOUND_OPTIONS,
+  BROADCAST_TRANSITION_OPTIONS,
+} from './components/renderers/OverlayConstants';
 
 // Helper to add common fields
 const commonFields: OverlayField[] = [
   { id: 'channelName', label: 'اسم القناة (الحقوق)', type: 'text', value: 'REO LIVE' },
+];
+
+const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayField[] => {
+  const hasField = (id: string) => existingFields.some(field => field.id === id);
+  const additions: OverlayField[] = [];
+
+  if (!hasField('transitionIn')) {
+    additions.push({
+      id: 'transitionIn',
+      label: 'انتقال الظهور',
+      type: 'select',
+      value: 'DEFAULT',
+      options: BROADCAST_TRANSITION_OPTIONS,
+    });
+  }
+
+  if (!hasField('transitionOut')) {
+    additions.push({
+      id: 'transitionOut',
+      label: 'انتقال الإخفاء',
+      type: 'select',
+      value: 'DEFAULT',
+      options: BROADCAST_EXIT_OPTIONS,
+    });
+  }
+
+  if (!hasField('soundEnabled')) {
+    additions.push({ id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true });
+  }
+
+  if (!hasField('soundVolume')) {
+    additions.push({ id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.05 });
+  }
+
+  if (!hasField('soundInStyle')) {
+    additions.push({
+      id: 'soundInStyle',
+      label: 'مؤثر الظهور',
+      type: 'select',
+      value: 'DEFAULT',
+      options: BROADCAST_SOUND_OPTIONS,
+    });
+  }
+
+  if (!hasField('soundOutStyle')) {
+    additions.push({
+      id: 'soundOutStyle',
+      label: 'مؤثر الإخفاء',
+      type: 'select',
+      value: 'DEFAULT',
+      options: BROADCAST_SOUND_OPTIONS,
+    });
+  }
+
+  return additions;
+};
+
+const withBroadcastControls = (template: OverlayConfig): OverlayConfig => ({
+  ...template,
+  fields: [...template.fields, ...createBroadcastControlFields(template.fields)],
+});
+
+const broadcastMotionPreset = (
+  transitionIn: string,
+  transitionOut: string,
+  soundInStyle: string,
+  soundOutStyle = 'BROADCAST_OUT',
+): OverlayField[] => [
+  { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: transitionIn, options: BROADCAST_TRANSITION_OPTIONS },
+  { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: transitionOut, options: BROADCAST_EXIT_OPTIONS },
+  { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
+  { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.75, min: 0, max: 1, step: 0.05 },
+  { id: 'soundInStyle', label: 'مؤثر الظهور', type: 'select', value: soundInStyle, options: BROADCAST_SOUND_OPTIONS },
+  { id: 'soundOutStyle', label: 'مؤثر الإخفاء', type: 'select', value: soundOutStyle, options: BROADCAST_SOUND_OPTIONS },
 ];
 
 const LAPORTA_PRESET = ELECTION_ENTITY_PRESETS.LAPORTA;
@@ -204,7 +283,155 @@ const BARCELONA_ELECTION_TEMPLATES: OverlayConfig[] = [
   }),
 ];
 
-export const INITIAL_TEMPLATES: OverlayConfig[] = [
+const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
+  {
+    id: 'template-football-world-scorebug',
+    templateId: 'template-football-world-scorebug',
+    name: 'كروي عالمي - Scorebug علوي',
+    type: OverlayType.SCOREBOARD,
+    isVisible: false,
+    templateIcon: 'SBUG',
+    templateAccent: '#00a86b',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'لوحة نتيجة علوية مدمجة مناسبة للبث المباشر، بتوقيت واضح واختصارات الفرق وشارة LIVE.',
+    theme: { primaryColor: '#00a86b', secondaryColor: '#101820', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'competition', label: 'اسم البطولة', type: 'text', value: 'WORLD MATCH LIVE' },
+      { id: 'matchStatus', label: 'حالة المباراة', type: 'text', value: 'LIVE' },
+      { id: 'homeName', label: 'الفريق المضيف', type: 'text', value: 'Barcelona' },
+      { id: 'awayName', label: 'الفريق الضيف', type: 'text', value: 'Madrid' },
+      { id: 'homeShort', label: 'اختصار المضيف', type: 'text', value: 'BAR' },
+      { id: 'awayShort', label: 'اختصار الضيف', type: 'text', value: 'MAD' },
+      { id: 'homeScore', label: 'نتيجة المضيف', type: 'number', value: 2 },
+      { id: 'awayScore', label: 'نتيجة الضيف', type: 'number', value: 1 },
+      { id: 'period', label: 'الشوط', type: 'text', value: '2nd Half' },
+      { id: 'time', label: 'الوقت', type: 'text', value: '74:30' },
+      { id: 'homeLogo', label: 'شعار المضيف', type: 'image', value: 'https://ui-avatars.com/api/?name=BAR&background=101820&color=ffffff&size=256&bold=true' },
+      { id: 'awayLogo', label: 'شعار الضيف', type: 'image', value: 'https://ui-avatars.com/api/?name=MAD&background=111827&color=ffffff&size=256&bold=true' },
+      { id: 'designStyle', label: 'النمط', type: 'select', value: 'WORLD_FEED', options: ['WORLD_FEED', 'PREMIUM_BAR', 'CLASSIC', 'MODERN', 'DARK'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'WORLD_FEED', options: ['WORLD_FEED', 'ELITE_SILVER', 'MATCH_NIGHT', 'TACTICAL_BLUE', 'PITCH_GREEN', 'ROYAL_GOLD'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.05, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      ...broadcastMotionPreset('SCOREBUG_SNAP', 'SCOREBUG_SNAP_OUT', 'SCOREBUG_SNAP', 'BROADCAST_OUT'),
+    ],
+  },
+  {
+    id: 'template-football-premium-matchbar',
+    templateId: 'template-football-premium-matchbar',
+    name: 'كروي عالمي - Match Bar فاخر',
+    type: OverlayType.SCOREBOARD,
+    isVisible: false,
+    templateIcon: 'MBAR',
+    templateAccent: '#f5c518',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'شريط نتيجة سفلي عريض بتوازن بصري مناسب للمباريات الكبيرة والاستوديو التحليلي.',
+    theme: { primaryColor: '#cbd5e1', secondaryColor: '#111827', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'competition', label: 'اسم البطولة', type: 'text', value: 'ELITE FOOTBALL NIGHT' },
+      { id: 'matchStatus', label: 'حالة المباراة', type: 'text', value: 'MATCHDAY LIVE' },
+      { id: 'homeName', label: 'الفريق المضيف', type: 'text', value: 'Al Hilal' },
+      { id: 'awayName', label: 'الفريق الضيف', type: 'text', value: 'Al Nassr' },
+      { id: 'homeShort', label: 'اختصار المضيف', type: 'text', value: 'HIL' },
+      { id: 'awayShort', label: 'اختصار الضيف', type: 'text', value: 'NAS' },
+      { id: 'homeScore', label: 'نتيجة المضيف', type: 'number', value: 1 },
+      { id: 'awayScore', label: 'نتيجة الضيف', type: 'number', value: 1 },
+      { id: 'period', label: 'الشوط', type: 'text', value: 'HT' },
+      { id: 'time', label: 'الوقت', type: 'text', value: '45:00' },
+      { id: 'homeLogo', label: 'شعار المضيف', type: 'image', value: 'https://ui-avatars.com/api/?name=HIL&background=0f172a&color=ffffff&size=256&bold=true' },
+      { id: 'awayLogo', label: 'شعار الضيف', type: 'image', value: 'https://ui-avatars.com/api/?name=NAS&background=18181b&color=ffffff&size=256&bold=true' },
+      { id: 'designStyle', label: 'النمط', type: 'select', value: 'PREMIUM_BAR', options: ['PREMIUM_BAR', 'WORLD_FEED', 'CLASSIC', 'MODERN', 'DARK'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'ELITE_SILVER', options: ['ELITE_SILVER', 'WORLD_FEED', 'MATCH_NIGHT', 'TACTICAL_BLUE', 'ROYAL_GOLD'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', 'STADIUM_WHOOSH', 'BROADCAST_OUT'),
+    ],
+  },
+  {
+    id: 'template-football-var-alert',
+    templateId: 'template-football-var-alert',
+    name: 'كروي عالمي - تنبيه VAR',
+    type: OverlayType.EXCLUSIVE_ALERT,
+    isVisible: false,
+    templateIcon: 'VAR',
+    templateAccent: '#f97316',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'تنبيه حكم الفيديو أو قرار مهم بظهور قوي وصوت مميز دون الاعتماد على ملفات خارجية.',
+    theme: { primaryColor: '#f97316', secondaryColor: '#18181b', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'النص الرئيسي', type: 'text', value: 'VAR' },
+      { id: 'subHeadline', label: 'النص الفرعي', type: 'text', value: 'CHECKING POSSIBLE PENALTY' },
+      { id: 'position', label: 'الموقع', type: 'select', value: 'RIGHT', options: ['RIGHT', 'LEFT'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.25, min: 0.5, max: 3.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 40, min: -1000, max: 1000, step: 10 },
+      { id: 'useTTS', label: 'تفعيل النطق الصوتي', type: 'boolean', value: false },
+      { id: 'ttsText', label: 'نص النطق الصوتي', type: 'text', value: 'قرار من حكم الفيديو' },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'MATCH_NIGHT', options: ['MATCH_NIGHT', 'CLASSIC_RED', 'ROYAL_GOLD', 'TACTICAL_BLUE'] },
+      ...broadcastMotionPreset('SPOTLIGHT_POP', 'SPOTLIGHT_POP_OUT', 'VAR_BUZZ', 'BROADCAST_OUT'),
+    ],
+  },
+  {
+    id: 'template-football-broadcast-lower',
+    templateId: 'template-football-broadcast-lower',
+    name: 'كروي عالمي - تعريف محلل',
+    type: OverlayType.LOWER_THIRD,
+    isVisible: false,
+    templateIcon: 'LOW3',
+    templateAccent: '#22d3ee',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'Lower Third زجاجي لمحلل أو مراسل أو لاعب، مناسب للظهور السريع أثناء المباراة.',
+    theme: { primaryColor: '#14b8a6', secondaryColor: '#18181b', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'name', label: 'الاسم', type: 'text', value: 'سامي الجابر' },
+      { id: 'role', label: 'الدور', type: 'text', value: 'محلل تكتيكي' },
+      { id: 'strapline', label: 'الشريط العلوي', type: 'text', value: 'TACTICAL DESK' },
+      { id: 'teamBadge', label: 'شارة الفريق/القناة', type: 'image', value: 'https://ui-avatars.com/api/?name=TV&background=14b8a6&color=ffffff&size=256&bold=true' },
+      { id: 'designStyle', label: 'النمط', type: 'select', value: 'BROADCAST_GLASS', options: ['BROADCAST_GLASS', 'CLASSIC', 'MODERN', 'MINIMAL'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'MATCH_NIGHT', options: ['MATCH_NIGHT', 'WORLD_FEED', 'ELITE_SILVER', 'TACTICAL_BLUE', 'ROYAL_GOLD'] },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      ...broadcastMotionPreset('LOWER_THIRD_WIPE', 'LOWER_THIRD_WIPE_OUT', 'LOWER_THIRD_WIPE', 'SOFT_FADE'),
+    ],
+  },
+  {
+    id: 'template-football-match-ticker',
+    templateId: 'template-football-match-ticker',
+    name: 'كروي عالمي - Match Ticker',
+    type: OverlayType.TICKER,
+    isVisible: false,
+    templateIcon: 'TICK',
+    templateAccent: '#00a86b',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'شريط أخبار كروي سريع للأهداف والتبديلات والبطاقات وتصريحات ما بعد المباراة.',
+    theme: { primaryColor: '#00a86b', secondaryColor: '#101820', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'competition', label: 'اسم المركز', type: 'text', value: 'MATCH CENTER' },
+      { id: 'headline', label: 'عنوان الشريط', type: 'text', value: 'MATCH UPDATE' },
+      { id: 'content', label: 'نص الشريط', type: 'text', value: 'هدف رائع في الدقيقة 74 بعد هجمة منظمة من الجهة اليسرى، والجهاز الفني يجهز التبديل الأول.' },
+      { id: 'designStyle', label: 'النمط', type: 'select', value: 'MATCH_FEED', options: ['MATCH_FEED', 'CLASSIC'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'WORLD_FEED', options: ['WORLD_FEED', 'MATCH_NIGHT', 'CLASSIC_RED', 'TACTICAL_BLUE', 'ROYAL_GOLD'] },
+      { id: 'scrollSpeed', label: 'سرعة التمرير', type: 'range', value: 15, min: 1, max: 30, step: 1 },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+      ...broadcastMotionPreset('DATA_RUSH', 'DATA_RUSH_OUT', 'DATA_TICK', 'BROADCAST_OUT'),
+    ],
+  },
+];
+
+const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   {
     id: 'template-leaderboard-ribbon',
     name: 'شريط الداعمين (Stream Ribbon)',
@@ -364,7 +591,7 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
         label: 'تأثير الانتقال (Transition)', 
         type: 'select', 
         value: 'CINEMATIC',
-        options: ['CINEMATIC', 'PAGE_FLIP', 'NEWS_SLIDE', 'ZOOM_IMPACT', 'CUBE_ROTATE', 'GLITCH']
+        options: ['CINEMATIC', 'PAGE_FLIP', 'NEWS_SLIDE', 'ZOOM_IMPACT', 'CUBE_ROTATE', 'GLITCH', 'STADIUM_SWEEP', 'TACTICAL_REVEAL', 'SCORE_FLASH']
       },
 
       // --- الثيمات والألوان ---
@@ -863,5 +1090,8 @@ export const INITIAL_TEMPLATES: OverlayConfig[] = [
       ])
     ]
   },
+  ...FOOTBALL_BROADCAST_TEMPLATES,
   ...BARCELONA_ELECTION_TEMPLATES
 ];
+
+export const INITIAL_TEMPLATES: OverlayConfig[] = INITIAL_TEMPLATE_DEFINITIONS.map(withBroadcastControls);

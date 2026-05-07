@@ -54,6 +54,95 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.TOP_VIEWERS]:     'tv-slide-left-out',
 };
 
+const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
+  [OverlayType.SCOREBOARD]: 'SCOREBUG_SNAP',
+  [OverlayType.LOWER_THIRD]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TICKER]: 'DATA_RUSH',
+  [OverlayType.ALERT]: 'SPOTLIGHT_POP',
+  [OverlayType.EXCLUSIVE_ALERT]: 'SPOTLIGHT_POP',
+  [OverlayType.SMART_NEWS]: 'GLASS_SWEEP',
+  [OverlayType.LEADERBOARD]: 'VERTICAL_REVEAL',
+  [OverlayType.GUESTS]: 'STADIUM_SWEEP',
+  [OverlayType.UCL_DRAW]: 'STADIUM_SWEEP',
+  [OverlayType.ELECTION]: 'DATA_RUSH',
+  [OverlayType.SOCIAL_MEDIA]: 'GLASS_SWEEP',
+  [OverlayType.TODAYS_EPISODE]: 'STADIUM_SWEEP',
+  [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL',
+};
+
+const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
+  [OverlayType.SCOREBOARD]: 'SCOREBUG_SNAP_OUT',
+  [OverlayType.LOWER_THIRD]: 'LOWER_THIRD_WIPE_OUT',
+  [OverlayType.TICKER]: 'DATA_RUSH_OUT',
+  [OverlayType.ALERT]: 'SPOTLIGHT_POP_OUT',
+  [OverlayType.EXCLUSIVE_ALERT]: 'SPOTLIGHT_POP_OUT',
+  [OverlayType.SMART_NEWS]: 'GLASS_SWEEP_OUT',
+  [OverlayType.LEADERBOARD]: 'VERTICAL_REVEAL_OUT',
+  [OverlayType.GUESTS]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.UCL_DRAW]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.ELECTION]: 'DATA_RUSH_OUT',
+  [OverlayType.SOCIAL_MEDIA]: 'GLASS_SWEEP_OUT',
+  [OverlayType.TODAYS_EPISODE]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE_OUT',
+  [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL_OUT',
+};
+
+const ENTER_BY_KEY: Record<string, string> = {
+  SCOREBUG_SNAP: 'tv-scorebug-snap',
+  STADIUM_SWEEP: 'tv-stadium-sweep',
+  LOWER_THIRD_WIPE: 'tv-lower-third-wipe',
+  DATA_RUSH: 'tv-data-rush',
+  VERTICAL_REVEAL: 'tv-vertical-reveal',
+  SPOTLIGHT_POP: 'tv-spotlight-pop',
+  GLASS_SWEEP: 'tv-glass-sweep',
+  BROADCAST_FADE: 'tv-broadcast-fade',
+};
+
+const EXIT_BY_KEY: Record<string, string> = {
+  SCOREBUG_SNAP_OUT: 'tv-scorebug-snap-out',
+  STADIUM_SWEEP_OUT: 'tv-stadium-sweep-out',
+  LOWER_THIRD_WIPE_OUT: 'tv-lower-third-wipe-out',
+  DATA_RUSH_OUT: 'tv-data-rush-out',
+  VERTICAL_REVEAL_OUT: 'tv-vertical-reveal-out',
+  SPOTLIGHT_POP_OUT: 'tv-spotlight-pop-out',
+  GLASS_SWEEP_OUT: 'tv-glass-sweep-out',
+  BROADCAST_FADE_OUT: 'tv-broadcast-fade-out',
+};
+
+const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
+  [OverlayType.SCOREBOARD]: 'SCOREBUG_SNAP',
+  [OverlayType.LOWER_THIRD]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TICKER]: 'DATA_TICK',
+  [OverlayType.ALERT]: 'VAR_BUZZ',
+  [OverlayType.EXCLUSIVE_ALERT]: 'VAR_BUZZ',
+  [OverlayType.SMART_NEWS]: 'TACTICAL_PULSE',
+  [OverlayType.LEADERBOARD]: 'DATA_TICK',
+  [OverlayType.GUESTS]: 'STADIUM_WHOOSH',
+  [OverlayType.UCL_DRAW]: 'STADIUM_WHOOSH',
+  [OverlayType.SOCIAL_MEDIA]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TODAYS_EPISODE]: 'CROWD_RISE',
+  [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TOP_VIEWERS]: 'DATA_TICK',
+};
+
+const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
+  [OverlayType.SCOREBOARD]: 'BROADCAST_OUT',
+  [OverlayType.LOWER_THIRD]: 'SOFT_FADE',
+  [OverlayType.TICKER]: 'BROADCAST_OUT',
+  [OverlayType.ALERT]: 'BROADCAST_OUT',
+  [OverlayType.EXCLUSIVE_ALERT]: 'BROADCAST_OUT',
+  [OverlayType.SMART_NEWS]: 'SOFT_FADE',
+  [OverlayType.LEADERBOARD]: 'SOFT_FADE',
+  [OverlayType.GUESTS]: 'BROADCAST_OUT',
+  [OverlayType.UCL_DRAW]: 'BROADCAST_OUT',
+  [OverlayType.ELECTION]: 'SOFT_FADE',
+  [OverlayType.SOCIAL_MEDIA]: 'SOFT_FADE',
+  [OverlayType.TODAYS_EPISODE]: 'BROADCAST_OUT',
+  [OverlayType.PLAYER_PROFILE]: 'SOFT_FADE',
+  [OverlayType.TOP_VIEWERS]: 'SOFT_FADE',
+};
+
 const CSS = `
   @keyframes tvDropIn     { from{transform:translateY(-80px) scaleY(.6);opacity:0;filter:blur(6px)} 60%{transform:translateY(8px) scaleY(1.02);opacity:1;filter:blur(0)} to{transform:translateY(0) scaleY(1);opacity:1} }
   @keyframes tvSlideLeft  { from{transform:translateX(-120px) scale(.95);opacity:0;filter:blur(4px)} 70%{transform:translateX(6px) scale(1.01);opacity:1;filter:blur(0)} to{transform:translateX(0) scale(1);opacity:1} }
@@ -67,6 +156,24 @@ const CSS = `
   @keyframes tvSlideDownOut { from{transform:translateY(0);opacity:1}        to{transform:translateY(100px) scale(.94);opacity:0;filter:blur(4px)} }
   @keyframes tvZoomOut      { from{transform:scale(1);opacity:1;filter:brightness(1)} 40%{transform:scale(1.06);filter:brightness(1.5)} to{transform:scale(.5);opacity:0;filter:brightness(3) blur(8px)} }
 
+  @keyframes tvScorebugSnap      { 0%{transform:translateY(-42px) scale(.92);opacity:0;filter:blur(8px)} 62%{transform:translateY(4px) scale(1.015);opacity:1;filter:blur(0)} 100%{transform:translateY(0) scale(1);opacity:1} }
+  @keyframes tvStadiumSweep      { 0%{transform:translateX(18%) skewX(-8deg);opacity:0;filter:blur(10px) brightness(1.4)} 70%{transform:translateX(-1.5%) skewX(0);opacity:1;filter:blur(0) brightness(1.08)} 100%{transform:translateX(0);opacity:1;filter:brightness(1)} }
+  @keyframes tvLowerThirdWipe    { 0%{clip-path:inset(0 100% 0 0);transform:translateX(32px);opacity:.65} 100%{clip-path:inset(0 0 0 0);transform:translateX(0);opacity:1} }
+  @keyframes tvDataRush          { 0%{transform:translateY(64px) scaleX(.94);opacity:0;filter:blur(8px)} 55%{opacity:1} 100%{transform:translateY(0) scaleX(1);opacity:1;filter:blur(0)} }
+  @keyframes tvVerticalReveal    { 0%{clip-path:inset(100% 0 0 0);transform:translateY(20px);opacity:.35} 100%{clip-path:inset(0 0 0 0);transform:translateY(0);opacity:1} }
+  @keyframes tvSpotlightPop      { 0%{transform:scale(.82);opacity:0;filter:blur(16px) brightness(2.2)} 58%{transform:scale(1.045);opacity:1;filter:blur(0) brightness(1.35)} 100%{transform:scale(1);opacity:1;filter:brightness(1)} }
+  @keyframes tvGlassSweep        { 0%{transform:translateY(28px) scale(.985);opacity:0;backdrop-filter:blur(0);filter:blur(10px)} 100%{transform:translateY(0) scale(1);opacity:1;filter:blur(0)} }
+  @keyframes tvBroadcastFade     { 0%{opacity:0;filter:blur(8px)} 100%{opacity:1;filter:blur(0)} }
+
+  @keyframes tvScorebugSnapOut   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-40px) scale(.92);opacity:0;filter:blur(8px)} }
+  @keyframes tvStadiumSweepOut   { from{transform:translateX(0);opacity:1} to{transform:translateX(-18%) skewX(8deg);opacity:0;filter:blur(10px)} }
+  @keyframes tvLowerThirdWipeOut { from{clip-path:inset(0 0 0 0);transform:translateX(0);opacity:1} to{clip-path:inset(0 0 0 100%);transform:translateX(-36px);opacity:.2} }
+  @keyframes tvDataRushOut       { from{transform:translateY(0) scaleX(1);opacity:1} to{transform:translateY(64px) scaleX(.94);opacity:0;filter:blur(8px)} }
+  @keyframes tvVerticalRevealOut { from{clip-path:inset(0 0 0 0);transform:translateY(0);opacity:1} to{clip-path:inset(100% 0 0 0);transform:translateY(20px);opacity:0} }
+  @keyframes tvSpotlightPopOut   { from{transform:scale(1);opacity:1;filter:brightness(1)} 40%{transform:scale(1.04);filter:brightness(1.5)} to{transform:scale(.82);opacity:0;filter:blur(16px) brightness(2)} }
+  @keyframes tvGlassSweepOut     { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(28px) scale(.985);opacity:0;filter:blur(10px)} }
+  @keyframes tvBroadcastFadeOut  { from{opacity:1;filter:blur(0)} to{opacity:0;filter:blur(8px)} }
+
   .tv-drop-in        { animation: tvDropIn        .65s cubic-bezier(.22,1,.36,1) both }
   .tv-slide-left     { animation: tvSlideLeft     .65s cubic-bezier(.22,1,.36,1) both }
   .tv-slide-right    { animation: tvSlideRight    .65s cubic-bezier(.22,1,.36,1) both }
@@ -78,6 +185,24 @@ const CSS = `
   .tv-slide-right-out{ animation: tvSlideRightOut .55s ease-in both }
   .tv-slide-down-out { animation: tvSlideDownOut  .55s ease-in both }
   .tv-zoom-out       { animation: tvZoomOut       .55s ease-in both }
+
+  .tv-scorebug-snap      { animation: tvScorebugSnap      .52s cubic-bezier(.18,1,.32,1) both }
+  .tv-stadium-sweep      { animation: tvStadiumSweep      .72s cubic-bezier(.18,1,.32,1) both }
+  .tv-lower-third-wipe   { animation: tvLowerThirdWipe    .62s cubic-bezier(.22,1,.36,1) both }
+  .tv-data-rush          { animation: tvDataRush          .6s cubic-bezier(.22,1,.36,1) both }
+  .tv-vertical-reveal    { animation: tvVerticalReveal    .68s cubic-bezier(.22,1,.36,1) both }
+  .tv-spotlight-pop      { animation: tvSpotlightPop      .58s cubic-bezier(.18,1,.32,1) both }
+  .tv-glass-sweep        { animation: tvGlassSweep        .7s cubic-bezier(.22,1,.36,1) both }
+  .tv-broadcast-fade     { animation: tvBroadcastFade     .5s ease-out both }
+
+  .tv-scorebug-snap-out      { animation: tvScorebugSnapOut      .45s ease-in both }
+  .tv-stadium-sweep-out      { animation: tvStadiumSweepOut      .55s ease-in both }
+  .tv-lower-third-wipe-out   { animation: tvLowerThirdWipeOut    .5s ease-in both }
+  .tv-data-rush-out          { animation: tvDataRushOut          .48s ease-in both }
+  .tv-vertical-reveal-out    { animation: tvVerticalRevealOut    .5s ease-in both }
+  .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      .48s ease-in both }
+  .tv-glass-sweep-out        { animation: tvGlassSweepOut        .5s ease-in both }
+  .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     .42s ease-in both }
 `;
 
 interface OverlayRendererProps {
@@ -143,27 +268,47 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       return true;
   };
 
+  const resolveEnterClass = () => {
+      const selected = String(getField('transitionIn') || 'DEFAULT');
+      const key = selected === 'DEFAULT' ? DEFAULT_ENTER_KEY[config.type] : selected;
+      return (key && ENTER_BY_KEY[key]) || ENTER[config.type] || 'tv-slide-up';
+  };
+
+  const resolveExitClass = () => {
+      const selected = String(getField('transitionOut') || 'DEFAULT');
+      const key = selected === 'DEFAULT' ? DEFAULT_EXIT_KEY[config.type] : selected;
+      return (key && EXIT_BY_KEY[key]) || EXIT[config.type] || 'tv-slide-down-out';
+  };
+
+  const resolveSynthCue = (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
+      if (config.type === OverlayType.ELECTION) {
+          const designStyle = resolveElectionStyle(String(getField('designStyle') || 'RESULTS_BAR'));
+          const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
+          if (fieldCue !== 'DEFAULT') return fieldCue;
+          return type === 'EXIT'
+              ? ELECTION_SOUND_OUT_DEFAULTS[designStyle] || 'SOFT_FADE'
+              : ELECTION_SOUND_IN_DEFAULTS[designStyle] || 'RESULTS_STING';
+      }
+
+      const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
+      if (fieldCue !== 'DEFAULT') return fieldCue;
+      if (type === 'TRANSITION') return 'DATA_TICK';
+      return type === 'EXIT'
+          ? SOUND_OUT_DEFAULTS[config.type] || 'BROADCAST_OUT'
+          : SOUND_IN_DEFAULTS[config.type] || 'STADIUM_WHOOSH';
+  };
+
   const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
       if (isEditor) return; 
       if (!soundEnabled) return;
       try {
-          if (config.type === OverlayType.UCL_DRAW && type === 'ENTRY') {
-              if (!audioRef.current) return;
-              audioRef.current.src = "https://assets.mixkit.co/active_storage/sfx/1435/1435.wav";
-          } else if (config.type === OverlayType.ELECTION) {
-              const designStyle = resolveElectionStyle(String(getField('designStyle') || 'RESULTS_BAR'));
-              const soundInStyle = String(getField('soundInStyle') || ELECTION_SOUND_IN_DEFAULTS[designStyle] || 'RESULTS_STING');
-              const soundOutStyle = String(getField('soundOutStyle') || ELECTION_SOUND_OUT_DEFAULTS[designStyle] || 'SOFT_FADE');
-              if (type === 'ENTRY') {
-                  const played = await playElectionSynth(soundInStyle);
-                  if (played) return;
-              } else if (type === 'EXIT') {
-                  const played = await playElectionSynth(soundOutStyle);
-                  if (played) return;
-              } else if (audioRef.current) {
-                  audioRef.current.src = SOUND_EFFECTS[type];
-              } else return;
-          } else if (config.type === OverlayType.TODAYS_EPISODE && type === 'ENTRY') {
+          const cue = resolveSynthCue(type);
+          if (!(config.type === OverlayType.TODAYS_EPISODE && type === 'ENTRY' && String(getField('soundInStyle') || 'DEFAULT') === 'DEFAULT')) {
+              const played = await playElectionSynth(cue);
+              if (played) return;
+          }
+
+          if (config.type === OverlayType.TODAYS_EPISODE && type === 'ENTRY') {
               if (!audioRef.current) return;
               audioRef.current.src = "/sounds/before_the_kickoff.mp3";
               audioRef.current.currentTime = 19;
@@ -194,10 +339,10 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           clearTimeout(timer.current);
           playSound('ENTRY');
           setMounted(true);
-          requestAnimationFrame(() => setAnimCls(ENTER[config.type] || 'tv-slide-up'));
+          requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
       } else if (!isNowVisible && wasVisible) {
           playSound('EXIT');
-          setAnimCls(EXIT[config.type] || 'tv-slide-down-out');
+          setAnimCls(resolveExitClass());
           timer.current = setTimeout(() => {
               setMounted(false);
               setAnimCls('');

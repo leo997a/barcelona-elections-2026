@@ -15,6 +15,34 @@ export const LowerThirdRenderer: React.FC<RendererProps> = ({
     const designStyle = String(getField('designStyle') || 'CLASSIC');
     const themeKey = String(getField('themePreset') || 'TACTICAL_BLUE');
     const theme = THEMES[themeKey] || activeTheme;
+    const strapline = String(getField('strapline') || getField('channelName') || 'MATCH LIVE');
+    const teamBadge = String(getField('teamBadge') || '');
+
+    if (designStyle === 'BROADCAST_GLASS') {
+        return (
+            <div style={containerStyle}>
+                <div style={contentWrapperStyle} className="items-end justify-start pb-20 pr-20 subpixel-antialiased">
+                    <div className={`relative flex min-w-[780px] overflow-hidden rounded-md border border-white/10 bg-black/75 shadow-[0_28px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl ${animClass || 'animate-news-slide'}`}>
+                        <div className="w-3" style={{ background: `linear-gradient(180deg, ${theme.primary}, ${theme.accent})` }} />
+                        {teamBadge && (
+                            <div className="flex w-28 items-center justify-center bg-white/10 px-5">
+                                <img src={teamBadge} className="h-16 w-16 object-contain drop-shadow-lg" alt="" />
+                            </div>
+                        )}
+                        <div className="flex-1 px-8 py-5">
+                            <div className="mb-2 flex items-center gap-3">
+                                <span className="rounded-sm px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-black" style={{ backgroundColor: theme.accent }}>{strapline}</span>
+                                <span className="h-px flex-1 bg-white/10" />
+                            </div>
+                            <div className="text-5xl font-black leading-none text-white drop-shadow-lg">{name}</div>
+                            <div className="mt-2 text-2xl font-bold" style={{ color: theme.accent }}>{role}</div>
+                        </div>
+                        <div className="w-20 -skew-x-12 opacity-80" style={{ backgroundColor: theme.primary }} />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // STYLE 1: Classic Skewed (original)
     if (designStyle === 'CLASSIC') {

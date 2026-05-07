@@ -9,6 +9,9 @@ export const THEMES: Record<string, { primary: string, secondary: string, text: 
   'UCL_BLUE': { primary: '#001489', secondary: '#000836', text: '#ffffff', accent: '#00e5ff' },
   'BARCA_RED': { primary: '#a50044', secondary: '#000000', text: '#ffffff', accent: '#edb111' },
   'BARCA_BLUE': { primary: '#004d98', secondary: '#000000', text: '#ffffff', accent: '#edb111' },
+  'WORLD_FEED': { primary: '#00a86b', secondary: '#101820', text: '#f8fafc', accent: '#f5c518' },
+  'ELITE_SILVER': { primary: '#cbd5e1', secondary: '#111827', text: '#f8fafc', accent: '#22d3ee' },
+  'MATCH_NIGHT': { primary: '#14b8a6', secondary: '#18181b', text: '#ffffff', accent: '#f97316' },
 };
 
 export const TRANSITIONS: Record<string, string> = {
@@ -18,6 +21,9 @@ export const TRANSITIONS: Record<string, string> = {
     'ZOOM_IMPACT': 'animate-zoom-impact',
     'CUBE_ROTATE': 'animate-cube-rotate',
     'GLITCH': 'animate-glitch',
+    'STADIUM_SWEEP': 'animate-stadium-sweep',
+    'TACTICAL_REVEAL': 'animate-tactical-reveal',
+    'SCORE_FLASH': 'animate-score-flash',
 };
 
 export const SOUND_EFFECTS = {
@@ -25,6 +31,46 @@ export const SOUND_EFFECTS = {
     TRANSITION: "https://assets.mixkit.co/active_storage/sfx/3120/3120.wav", 
     EXIT: "https://assets.mixkit.co/active_storage/sfx/204/204.wav"
 };
+
+export const BROADCAST_TRANSITION_OPTIONS = [
+    { value: 'DEFAULT', label: 'تلقائي حسب نوع القالب' },
+    { value: 'SCOREBUG_SNAP', label: 'Scorebug Snap' },
+    { value: 'STADIUM_SWEEP', label: 'Stadium Sweep' },
+    { value: 'LOWER_THIRD_WIPE', label: 'Lower Third Wipe' },
+    { value: 'DATA_RUSH', label: 'Data Rush' },
+    { value: 'VERTICAL_REVEAL', label: 'Vertical Reveal' },
+    { value: 'SPOTLIGHT_POP', label: 'Spotlight Pop' },
+    { value: 'GLASS_SWEEP', label: 'Glass Sweep' },
+    { value: 'BROADCAST_FADE', label: 'Broadcast Fade' },
+];
+
+export const BROADCAST_EXIT_OPTIONS = [
+    { value: 'DEFAULT', label: 'تلقائي حسب نوع القالب' },
+    { value: 'SCOREBUG_SNAP_OUT', label: 'Scorebug Snap Out' },
+    { value: 'STADIUM_SWEEP_OUT', label: 'Stadium Sweep Out' },
+    { value: 'LOWER_THIRD_WIPE_OUT', label: 'Lower Third Wipe Out' },
+    { value: 'DATA_RUSH_OUT', label: 'Data Rush Out' },
+    { value: 'VERTICAL_REVEAL_OUT', label: 'Vertical Reveal Out' },
+    { value: 'SPOTLIGHT_POP_OUT', label: 'Spotlight Pop Out' },
+    { value: 'GLASS_SWEEP_OUT', label: 'Glass Sweep Out' },
+    { value: 'BROADCAST_FADE_OUT', label: 'Broadcast Fade Out' },
+];
+
+export const BROADCAST_SOUND_OPTIONS = [
+    { value: 'DEFAULT', label: 'تلقائي حسب نوع القالب' },
+    { value: 'SCOREBUG_SNAP', label: 'Scorebug Snap' },
+    { value: 'STADIUM_WHOOSH', label: 'Stadium Whoosh' },
+    { value: 'LOWER_THIRD_WIPE', label: 'Lower Third Wipe' },
+    { value: 'DATA_TICK', label: 'Data Tick' },
+    { value: 'VAR_BUZZ', label: 'VAR Buzz' },
+    { value: 'CROWD_RISE', label: 'Crowd Rise' },
+    { value: 'TACTICAL_PULSE', label: 'Tactical Pulse' },
+    { value: 'SOFT_FADE', label: 'Soft Fade' },
+    { value: 'BROADCAST_OUT', label: 'Broadcast Out' },
+    { value: 'RESULTS_STING', label: 'Results Sting' },
+    { value: 'QUOTE_SWEEP', label: 'Quote Sweep' },
+    { value: 'VERSUS_IMPACT', label: 'Versus Impact' },
+];
 
 export type ElectionSynthStep = {
     delay: number;
@@ -36,6 +82,44 @@ export type ElectionSynthStep = {
 };
 
 export const ELECTION_SOUND_PATTERNS: Record<string, ElectionSynthStep[]> = {
+    SCOREBUG_SNAP: [
+        { delay: 0, duration: 0.055, frequency: 180, toFrequency: 320, waveform: 'square', gain: 0.5 },
+        { delay: 0.055, duration: 0.09, frequency: 620, toFrequency: 980, waveform: 'triangle', gain: 0.45 },
+        { delay: 0.16, duration: 0.12, frequency: 1280, toFrequency: 1040, waveform: 'sine', gain: 0.18 },
+    ],
+    STADIUM_WHOOSH: [
+        { delay: 0, duration: 0.28, frequency: 180, toFrequency: 760, waveform: 'sawtooth', gain: 0.35 },
+        { delay: 0.1, duration: 0.34, frequency: 520, toFrequency: 1200, waveform: 'triangle', gain: 0.28 },
+        { delay: 0.36, duration: 0.14, frequency: 920, waveform: 'sine', gain: 0.16 },
+    ],
+    LOWER_THIRD_WIPE: [
+        { delay: 0, duration: 0.18, frequency: 360, toFrequency: 620, waveform: 'triangle', gain: 0.36 },
+        { delay: 0.12, duration: 0.18, frequency: 720, toFrequency: 860, waveform: 'sine', gain: 0.24 },
+    ],
+    DATA_TICK: [
+        { delay: 0, duration: 0.045, frequency: 820, waveform: 'square', gain: 0.16 },
+        { delay: 0.07, duration: 0.045, frequency: 980, waveform: 'square', gain: 0.16 },
+        { delay: 0.16, duration: 0.08, frequency: 540, toFrequency: 720, waveform: 'triangle', gain: 0.18 },
+    ],
+    VAR_BUZZ: [
+        { delay: 0, duration: 0.12, frequency: 130, toFrequency: 115, waveform: 'sawtooth', gain: 0.5 },
+        { delay: 0.11, duration: 0.12, frequency: 190, toFrequency: 170, waveform: 'square', gain: 0.25 },
+        { delay: 0.28, duration: 0.1, frequency: 740, waveform: 'triangle', gain: 0.18 },
+    ],
+    CROWD_RISE: [
+        { delay: 0, duration: 0.42, frequency: 220, toFrequency: 540, waveform: 'sawtooth', gain: 0.28 },
+        { delay: 0.18, duration: 0.34, frequency: 440, toFrequency: 880, waveform: 'triangle', gain: 0.2 },
+        { delay: 0.42, duration: 0.18, frequency: 1180, waveform: 'sine', gain: 0.12 },
+    ],
+    TACTICAL_PULSE: [
+        { delay: 0, duration: 0.08, frequency: 260, waveform: 'square', gain: 0.28 },
+        { delay: 0.13, duration: 0.08, frequency: 390, waveform: 'square', gain: 0.26 },
+        { delay: 0.26, duration: 0.15, frequency: 620, toFrequency: 780, waveform: 'triangle', gain: 0.2 },
+    ],
+    BROADCAST_OUT: [
+        { delay: 0, duration: 0.18, frequency: 760, toFrequency: 360, waveform: 'triangle', gain: 0.22 },
+        { delay: 0.12, duration: 0.18, frequency: 480, toFrequency: 180, waveform: 'sine', gain: 0.18 },
+    ],
     RESULTS_STING: [
         { delay: 0, duration: 0.14, frequency: 420, toFrequency: 560, waveform: 'triangle', gain: 0.7 },
         { delay: 0.1, duration: 0.22, frequency: 660, toFrequency: 940, waveform: 'sawtooth', gain: 0.9 },
