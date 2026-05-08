@@ -21,7 +21,7 @@ import {
   type Unsubscribe,
 } from 'firebase/database';
 import { ActionCommand, FirebaseWebConfig, OverlayConfig, SecureSyncConfig, SyncStatus } from '../types';
-import { decodeBase64UrlUtf8, encodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
+import { decodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
 import { normalizeElectionOverlay } from '../utils/election';
 import { firebaseConfig, isFirebaseConfigured } from './firebase';
 
@@ -413,6 +413,16 @@ class SyncManager {
     this.pushToLiveApi();
   }
 
+  private publishOverlaySnapshot(overlay: OverlayConfig, keepalive = true) {
+    const body = JSON.stringify({ state: overlay });
+    return fetch(`/api/live?id=${encodeURIComponent(overlay.id)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: keepalive && body.length < 60_000,
+    });
+  }
+
   private pushToLiveApi(specificOverlayId?: string) {
     if (this.liveApiDebounceTimer) clearTimeout(this.liveApiDebounceTimer);
 
@@ -422,24 +432,7 @@ class SyncManager {
         : this.currentState;
 
       for (const overlay of overlaysToSend) {
-        const streamPayload = JSON.stringify(overlay);
-        const livePayload = JSON.stringify({ state: overlay });
-
-        // Send to both endpoints. SSE gives instant updates; /api/live is a bootstrap
-        // cache for OBS/browser sources that connect after the SSE function warmed up.
-        fetch(`/api/stream?id=${overlay.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: streamPayload,
-          keepalive: true,
-        }).catch(() => { /* silent */ });
-
-        fetch(`/api/live?id=${overlay.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: livePayload,
-          keepalive: true,
-        }).catch(() => { /* silent */ });
+        this.publishOverlaySnapshot(overlay).catch(() => { /* silent */ });
       }
     }, 80); // 80ms — توازن بين سرعة الاستجابة وتجميع الضغطات
   }
@@ -587,25 +580,19 @@ class SyncManager {
   public buildOutputUrl(overlayId: string, embedData?: OverlayConfig) {
     const baseUrl = `${window.location.origin}${window.location.pathname}#/output/${overlayId}`;
 
-    // 1) إضافة بيانات القالب مباشرة في الرابط (fallback للـ OBS)
-    const params = new URLSearchParams();
-
     if (embedData) {
-      try {
-        const dataEncoded = encodeBase64UrlUtf8(JSON.stringify(embedData));
-        params.set('d', dataEncoded);
-      } catch { /* skip */ }
+      this.publishOverlaySnapshot(embedData).catch(() => { /* silent */ });
     }
 
-    // 2) إضافة Firebase sync bundle إن وُجد
-    const bundle = this.getViewerBundle();
-    if (bundle) {
-      const encoded = encodeBase64UrlUtf8(JSON.stringify(bundle));
-      params.set(OUTPUT_SYNC_PARAM, encoded);
+    return baseUrl;
+  }
+
+  public async prepareOutputUrl(overlayId: string, snapshot?: OverlayConfig) {
+    if (snapshot) {
+      await this.publishOverlaySnapshot(snapshot, false);
     }
 
-    const queryStr = params.toString();
-    return queryStr ? `${baseUrl}?${queryStr}` : baseUrl;
+    return this.buildOutputUrl(overlayId);
   }
 
   public getViewerBundle(): ViewerSyncBundle | null {

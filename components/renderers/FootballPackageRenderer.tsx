@@ -80,13 +80,15 @@ export const FootballPackageRenderer: React.FC<RendererProps> = ({
     .map(item => item.trim())
     .filter(Boolean);
 
-  const shell = (children: React.ReactNode) => (
+  const shell = (children: React.ReactNode, fullFrame = true) => (
     <div style={containerStyle}>
       <ProjectionStyle />
       <div style={contentWrapperStyle} className={`subpixel-antialiased ${animClass || ''}`}>
-        <ProjectionShell activeTheme={activeTheme} watermark={watermark}>
-          {children}
-        </ProjectionShell>
+        {fullFrame ? (
+          <ProjectionShell activeTheme={activeTheme} watermark={watermark}>
+            {children}
+          </ProjectionShell>
+        ) : children}
       </div>
     </div>
   );
@@ -171,11 +173,11 @@ export const FootballPackageRenderer: React.FC<RendererProps> = ({
           <div className="flex items-center justify-center border-l border-black/30 px-5 text-6xl font-black">{String(getField('time') || '55:34')}</div>
           <div className="grid grid-rows-2">
             {[
-              { logo: homeLogo, score: String(getField('homeScore') || 0), color: activeTheme.primary },
-              { logo: awayLogo, score: String(getField('awayScore') || 1), color: '#a50044' },
+              { logo: homeLogo, score: String(getField('homeScore') ?? 0), color: activeTheme.primary },
+              { logo: awayLogo, score: String(getField('awayScore') ?? 1), color: '#a50044' },
             ].map((row, index) => (
               <div key={index} className="grid grid-cols-[72px_20px_64px] border-b border-black/35">
-                <div className="flex items-center justify-center" style={{ backgroundColor: activeTheme.primary }}>
+                <div className="flex items-center justify-center" style={{ backgroundColor: row.color }}>
                   {row.logo ? <img src={row.logo} className="h-12 w-12 object-contain" alt="" /> : <span className="font-black text-white">{index + 1}</span>}
                 </div>
                 <div style={{ backgroundColor: row.color }} />
@@ -184,7 +186,8 @@ export const FootballPackageRenderer: React.FC<RendererProps> = ({
             ))}
           </div>
         </div>
-      </div>
+      </div>,
+      false
     );
   }
 

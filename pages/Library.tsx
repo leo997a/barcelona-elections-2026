@@ -257,12 +257,11 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
     } catch { alert('خطأ في النسخ'); }
   };
 
-  /** ★ الجديد: نسخ رابط OBS مع تضمين بيانات القالب كاملةً */
-  const handleCopyObsUrl = (overlay: OverlayConfig, e: React.MouseEvent) => {
+  /** Copy a short OBS URL after publishing the latest overlay snapshot. */
+  const handleCopyObsUrl = async (overlay: OverlayConfig, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      // buildOutputUrl يُضمّن بيانات القالب في ?d=...
-      const url = syncManager.buildOutputUrl(overlay.id, overlay);
+      const url = await syncManager.prepareOutputUrl(overlay.id, overlay);
       navigator.clipboard.writeText(url);
       const btn = e.currentTarget as HTMLElement;
       const orig = btn.innerHTML;

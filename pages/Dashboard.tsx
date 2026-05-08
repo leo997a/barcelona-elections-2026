@@ -54,8 +54,8 @@ const Dashboard: React.FC<DashboardProps> = ({ overlays, onSelect, onDelete, onC
                   <span>تعديل</span>
                 </button>
                  <button 
-                  onClick={() => {
-                     const url = syncManager.buildOutputUrl(overlay.id, overlay);
+                  onClick={async () => {
+                     const url = await syncManager.prepareOutputUrl(overlay.id, overlay);
                      navigator.clipboard.writeText(url);
                      alert('تم نسخ رابط المتصفح بنجاح! يمكنك لصقه الآن في OBS.');
                   }}

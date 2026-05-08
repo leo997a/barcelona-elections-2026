@@ -1,96 +1,99 @@
-// ─── /api/stream.ts ── Vercel Edge Function: Server-Sent Events ─────────────
-// يُبقى الاتصال مفتوحاً ويدفع التحديثات فور استلامها بدلاً من polling
-// لا يحتاج قاعدة بيانات — يعمل مع module-level state في Edge Runtime
+import {
+  readJsonBody,
+  sendJson,
+  type ServerlessRequest,
+  type ServerlessResponse,
+} from './_lib/http.js';
+import { getLiveState, setLiveState } from './_lib/liveStore.js';
 
-export const config = { runtime: 'edge' };
+type StreamRequest = ServerlessRequest & {
+  url?: string;
+  on?: (event: string, handler: (...args: unknown[]) => void) => void;
+};
 
-// ─── Global state store (Edge Runtime — single process per region) ───────────
-// تنبيه: هذا يعمل جيداً في edge runtime لأنه process واحد per region على Vercel
-const stateStore = new Map<string, { json: string; version: number }>();
-const listeners = new Map<string, Set<ReadableStreamDefaultController>>();
+type StreamResponse = ServerlessResponse & {
+  write?: (chunk: string) => boolean | void;
+  flushHeaders?: () => void;
+};
 
-export function pushState(id: string, json: string) {
-  const prev = stateStore.get(id);
-  const version = (prev?.version ?? 0) + 1;
-  stateStore.set(id, { json, version });
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // أبلغ كل المستمعين المتصلين بـ SSE
-  const set = listeners.get(id);
-  if (set) {
-    const msg = `data: ${json}\n\n`;
-    for (const ctrl of set) {
-      try { ctrl.enqueue(msg); } catch { set.delete(ctrl); }
-    }
+const getId = (req: StreamRequest) => {
+  const rawUrl = req.url ?? '';
+  const qIndex = rawUrl.indexOf('?');
+  const params = qIndex >= 0 ? new URLSearchParams(rawUrl.slice(qIndex + 1)) : new URLSearchParams();
+  return params.get('id');
+};
+
+const writeSse = (res: StreamResponse, value: string) => {
+  res.write?.(value);
+};
+
+export default async function handler(req: StreamRequest, res: StreamResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end('');
+    return;
   }
-}
 
-export function getState(id: string) {
-  return stateStore.get(id) ?? null;
-}
+  const id = getId(req);
+  if (!id) return sendJson(res, 400, { error: 'id is required' });
 
-export default async function handler(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' };
-
-  if (!id) return new Response('id مطلوب', { status: 400, headers: cors });
-
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-
-  // ── POST: push state update ─────────────────────────────────────────────────
   if (req.method === 'POST') {
-    try {
-      const body = await req.text();
-      pushState(id, body);
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { 'Content-Type': 'application/json', ...cors },
-      });
-    } catch {
-      return new Response('Error', { status: 500, headers: cors });
+    const body = await readJsonBody<{ state?: unknown } | unknown>(req).catch(() => null);
+    const state = body && typeof body === 'object' && 'state' in body ? (body as { state?: unknown }).state : body;
+    if (!state) return sendJson(res, 400, { error: 'state is required' });
+
+    const entry = await setLiveState(id, state);
+    return sendJson(res, 200, { ok: true, updatedAt: entry.updatedAt, version: entry.version });
+  }
+
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+
+  if (!res.write) {
+    const entry = await getLiveState(id);
+    return sendJson(res, entry ? 200 : 404, entry ?? { error: 'Streaming is unavailable in this runtime' });
+  }
+
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  let closed = false;
+  let lastVersion = -1;
+  let lastHeartbeat = Date.now();
+  req.on?.('close', () => {
+    closed = true;
+  });
+
+  writeSse(res, ': connected\n\n');
+
+  const startedAt = Date.now();
+  while (!closed && Date.now() - startedAt < 55_000) {
+    const entry = await getLiveState(id);
+    if (entry && entry.version !== lastVersion) {
+      lastVersion = entry.version;
+      writeSse(res, `data: ${JSON.stringify(entry.state)}\n\n`);
     }
+
+    const now = Date.now();
+    if (now - lastHeartbeat > 12_000) {
+      lastHeartbeat = now;
+      writeSse(res, ': ping\n\n');
+    }
+
+    await delay(220);
   }
 
-  // ── GET: SSE stream (stays open, pushes updates instantly) ──────────────────
-  if (req.method === 'GET') {
-    const stream = new ReadableStream({
-      start(controller) {
-        // أرسل الحالة الأخيرة فوراً (إن وُجدت)
-        const current = getState(id);
-        if (current) {
-          controller.enqueue(`data: ${current.json}\n\n`);
-        } else {
-          // أرسل heartbeat لتأكيد الاتصال
-          controller.enqueue(`: connected\n\n`);
-        }
-
-        // سجّل هذا المستمع
-        if (!listeners.has(id)) listeners.set(id, new Set());
-        listeners.get(id)!.add(controller);
-
-        // heartbeat كل 15 ثانية لإبقاء الاتصال حياً
-        const hb = setInterval(() => {
-          try { controller.enqueue(`: ping\n\n`); }
-          catch { clearInterval(hb); listeners.get(id)?.delete(controller); }
-        }, 15_000);
-
-        // تنظيف عند قطع الاتصال
-        req.signal.addEventListener('abort', () => {
-          clearInterval(hb);
-          listeners.get(id)?.delete(controller);
-          try { controller.close(); } catch { /* already closed */ }
-        });
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
-        ...cors,
-      },
-    });
-  }
-
-  return new Response('Method not allowed', { status: 405, headers: cors });
+  res.end('');
 }

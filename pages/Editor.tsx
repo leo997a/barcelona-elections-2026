@@ -381,19 +381,46 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const resizeImageForLiveState = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        const maxSide = 900;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/webp', 0.82));
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Image decode failed'));
+      };
+
+      img.src = url;
+    });
+
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeImageFieldId) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            handleDraftFieldChange(activeImageFieldId, base64String);
-            setActiveImageFieldId(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        };
-        reader.readAsDataURL(file);
+        const base64String = await resizeImageForLiveState(file).catch(() => readFileAsDataUrl(file));
+        handleDraftFieldChange(activeImageFieldId, base64String);
+        setActiveImageFieldId(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     }
   };
 
@@ -707,6 +734,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <button onClick={() => setActiveTab('position')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'position' ? 'text-cyan-400 border-b-2 border-cyan-500' : 'text-gray-400 hover:text-white'}`}>📐 الأبعاد</button>
           )}
 
+          {draftOverlay.type === OverlayType.FOOTBALL_PACKAGE && (
+            <>
+              <button onClick={() => setActiveTab('football-main')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>المباراة</button>
+              <button onClick={() => setActiveTab('football-lineup')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-lineup' ? 'text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-white'}`}>التشكيلة</button>
+              <button onClick={() => setActiveTab('football-score')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-score' ? 'text-yellow-400 border-b-2 border-yellow-500' : 'text-gray-400 hover:text-white'}`}>النتيجة</button>
+            </>
+          )}
+
           {/* ALWAYS for non-ELECTION: Sound tab if exists */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
             <button onClick={() => setActiveTab('sound')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sound' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>🔊 الصوت</button>
@@ -735,7 +770,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* FIELDS TAB */}
-          {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound'].includes(activeTab) && (
+          {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound', 'football-main', 'football-lineup', 'football-score'].includes(activeTab) && (
              <>
                {draftOverlay.fields.map((field) => {
                  if (field.type === 'hidden' || field.id === 'currentPage') return null;
@@ -789,6 +824,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);
                       const isImageField = field.type === 'image' || field.type === 'image-list';
+                      if (draftOverlay.type === OverlayType.FOOTBALL_PACKAGE) {
+                        const isFootballMain = ['title', 'subtitle', 'teamName', 'competition'].includes(field.id);
+                        const isFootballLineup = ['formation', 'playersCount', 'pitchNumbers'].includes(field.id) || /^player\d+(Name|Number)$/.test(field.id);
+                        const isFootballScore = ['brandMark', 'time', 'homeScore', 'awayScore'].includes(field.id);
+
+                        if (activeTab === 'fields' || activeTab === 'football-main') {
+                          if (!isFootballMain) return null;
+                        } else if (activeTab === 'football-lineup') {
+                          if (!isFootballLineup) return null;
+                        } else if (activeTab === 'football-score') {
+                          if (!isFootballScore) return null;
+                        } else if (['style', 'images', 'position', 'sound'].includes(activeTab)) {
+                          // Continue to the universal tab filters below.
+                        } else if (isFootballMain || isFootballLineup || isFootballScore) {
+                          return null;
+                        }
+                      }
                       if (activeTab === 'fields') { if (isPositionField || isSoundField || isAppearanceField || isImageField) return null; }
                       else if (activeTab === 'images') { if (!isImageField) return null; }
                       else if (activeTab === 'style') { if (!isAppearanceField) return null; }
@@ -1214,7 +1266,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`p-2.5 rounded-xl transition-colors border ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`} title="تفعيل الكروما الخضراء للاختبار">
                      <ImageIcon className="w-5 h-5" />
                  </button>
-                 <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id, liveOverlay), '_blank', 'width=1280,height=720') }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
+                 <button onClick={async () => {
+                    const popup = window.open('', '_blank', 'width=1280,height=720');
+                    const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);
+                    if (popup) popup.location.href = url;
+                    else window.open(url, '_blank', 'width=1280,height=720');
+                 }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
                      <Monitor className="w-4 h-4" />
                      <span>نافذة البث</span>
                  </button>

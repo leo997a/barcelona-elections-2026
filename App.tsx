@@ -62,6 +62,24 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
 
   useEffect(() => {
+    const previousHtmlBackground = document.documentElement.style.background;
+    const previousBodyBackground = document.body.style.background;
+    const previousRootBackground = document.getElementById('root')?.style.background;
+
+    document.documentElement.style.background = 'transparent';
+    document.body.style.background = 'transparent';
+    document.getElementById('root')?.style.setProperty('background', 'transparent');
+
+    return () => {
+      document.documentElement.style.background = previousHtmlBackground;
+      document.body.style.background = previousBodyBackground;
+      if (previousRootBackground !== undefined) {
+        document.getElementById('root')?.style.setProperty('background', previousRootBackground);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
     let sseActive = true;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
@@ -103,7 +121,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       void fetchLiveOnce();
       fallbackInterval = setInterval(() => {
         void fetchLiveOnce();
-      }, 750);
+      }, 300);
     };
 
     // ── SSE: اتصال مفتوح، تحديثات فورية ─────────────────────────────────
