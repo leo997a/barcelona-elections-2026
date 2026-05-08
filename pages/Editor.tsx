@@ -1214,7 +1214,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`p-2.5 rounded-xl transition-colors border ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`} title="تفعيل الكروما الخضراء للاختبار">
                      <ImageIcon className="w-5 h-5" />
                  </button>
-                 <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id), '_blank', 'width=1280,height=720') }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
+                 <button onClick={() => { window.open(syncManager.buildOutputUrl(liveOverlay.id, liveOverlay), '_blank', 'width=1280,height=720') }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
                      <Monitor className="w-4 h-4" />
                      <span>نافذة البث</span>
                  </button>

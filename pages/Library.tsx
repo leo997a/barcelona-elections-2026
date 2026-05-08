@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen } from 'lucide-react';
+import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
@@ -160,7 +160,8 @@ const MyCard: React.FC<{
   onDelete: (e: React.MouseEvent) => void;
   onToggleFavorite: (e: React.MouseEvent) => void;
   onCopyToken: (e: React.MouseEvent) => void;
-}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken }) => {
+  onCopyObsUrl: (e: React.MouseEvent) => void;
+}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl }) => {
   const accent = ACCENT[overlay.type] || '#888';
 
   return (
@@ -187,9 +188,15 @@ const MyCard: React.FC<{
       <div className="p-3.5 flex-1 flex flex-col gap-2">
         <h3 className="text-sm font-bold text-white truncate group-hover:text-blue-300 transition-colors">{overlay.name}</h3>
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+          {/* ★ زر نسخ رابط OBS — الجديد */}
+          <button onClick={onCopyObsUrl}
+            className="flex-1 flex items-center justify-center gap-1 bg-green-600/10 text-green-400 hover:bg-green-600/25 border border-green-600/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            title="نسخ رابط OBS / Browser Source">
+            <Tv className="w-3 h-3" /> OBS URL
+          </button>
           <button onClick={onCopyToken}
-            className="flex-1 flex items-center justify-center gap-1 bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 border border-yellow-600/20 py-1.5 rounded-lg text-[10px] font-bold transition-colors">
-            <Key className="w-3 h-3" /> Token
+            className="flex items-center justify-center gap-1 bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 border border-yellow-600/20 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-colors">
+            <Key className="w-3 h-3" />
           </button>
           <button onClick={e => { e.stopPropagation(); onSelect(); }}
             className="flex-1 flex items-center justify-center gap-1 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-600/20 py-1.5 rounded-lg text-[10px] font-bold transition-colors">
@@ -248,6 +255,21 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       btn.innerHTML = '✓ تم';
       setTimeout(() => { btn.innerHTML = orig; }, 2000);
     } catch { alert('خطأ في النسخ'); }
+  };
+
+  /** ★ الجديد: نسخ رابط OBS مع تضمين بيانات القالب كاملةً */
+  const handleCopyObsUrl = (overlay: OverlayConfig, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // buildOutputUrl يُضمّن بيانات القالب في ?d=...
+      const url = syncManager.buildOutputUrl(overlay.id, overlay);
+      navigator.clipboard.writeText(url);
+      const btn = e.currentTarget as HTMLElement;
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ نُسخ!';
+      btn.style.background = 'rgba(34,197,94,0.2)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
+    } catch { alert('خطأ في نسخ الرابط'); }
   };
 
   const activeList = mainTab === 'catalog' ? catalogList : myList;
@@ -397,6 +419,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                     onDelete={e => { e.stopPropagation(); onDelete(overlay.id); }}
                     onToggleFavorite={e => { e.stopPropagation(); onToggleFavorite(overlay.id); }}
                     onCopyToken={e => handleCopyToken(overlay, e)}
+                    onCopyObsUrl={e => handleCopyObsUrl(overlay, e)}
                   />
                 ))}
               </div>

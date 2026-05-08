@@ -48,6 +48,133 @@ const AudioUnlockOverlay = () => {
     );
 };
 
+// ─── LiveOutputView ─────────────────────────────────────────────────────────
+// SSE-based output view — يستقبل تحديثات فورية عبر Server-Sent Events
+// لا polling، لا تأخر، لا كراشات — الاتصال يبقى مفتوحاً دائماً
+const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
+  const id = hashPath.split('/output/')[1]?.split('?')[0];
+
+  // آخر حالة معروفة — لا تُمسح أبداً حتى عند انقطاع الاتصال
+  const lastGoodState = React.useRef<OverlayConfig | null>(
+    syncManager.extractEmbeddedOverlay(hashPath) ?? null
+  );
+  const [overlay, setOverlay] = useState<OverlayConfig | null>(lastGoodState.current);
+  const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
+
+  useEffect(() => {
+    if (!id) return;
+    let sseActive = true;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // ── تحديث الحالة بأمان (فقط عند التغيير الفعلي) ──────────────────────
+    const applyState = (newOverlay: OverlayConfig) => {
+      lastGoodState.current = newOverlay;
+      setOverlay(newOverlay);
+    };
+
+    const unsubscribe = syncManager.subscribe(nextOverlays => {
+      const nextOverlay = nextOverlays.find(candidate => candidate.id === id);
+      if (nextOverlay) applyState(nextOverlay);
+    });
+
+    const fetchLiveOnce = async () => {
+      try {
+        const r = await fetch(`/api/live?id=${id}`, { cache: 'no-store' });
+        if (!r.ok) return false;
+        const data = await r.json() as { state?: OverlayConfig };
+        if (data?.state?.id === id) {
+          applyState(data.state);
+          return true;
+        }
+      } catch { /* keep last state */ }
+      return false;
+    };
+
+    const stopFallback = () => {
+      if (!fallbackInterval) return;
+      clearInterval(fallbackInterval);
+      fallbackInterval = null;
+    };
+
+    const startFallback = () => {
+      if (fallbackInterval) return;
+      void fetchLiveOnce();
+      fallbackInterval = setInterval(() => {
+        void fetchLiveOnce();
+      }, 750);
+    };
+
+    // ── SSE: اتصال مفتوح، تحديثات فورية ─────────────────────────────────
+    const connectSSE = () => {
+      if (!sseActive) return;
+      try {
+        es = new EventSource(`/api/stream?id=${id}`);
+        setConnStatus('connecting');
+
+        es.onopen = () => {
+          setConnStatus('live');
+          if (lastGoodState.current) stopFallback();
+          else startFallback();
+        };
+
+        es.onmessage = (event) => {
+          if (!event.data || event.data.startsWith(':')) return; // heartbeat
+          try {
+            const parsed = JSON.parse(event.data) as OverlayConfig;
+            if (parsed?.id === id) {
+              applyState(parsed);
+              stopFallback();
+            }
+          } catch { /* ignore malformed */ }
+        };
+
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          setConnStatus('fallback');
+          startFallback(); // ابدأ polling احتياطي
+          // أعد الاتصال بـ SSE بعد 3 ثوانٍ
+          if (sseActive) reconnectTimer = setTimeout(connectSSE, 3000);
+        };
+      } catch {
+        setConnStatus('fallback');
+        startFallback();
+      }
+    };
+
+    startFallback();
+    connectSSE();
+
+    return () => {
+      sseActive = false;
+      unsubscribe();
+      es?.close();
+      stopFallback();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [id]);
+
+  // عرض آخر حالة معروفة — لا يُعرض "Connecting..." إلا إذا لم يُستلم أي شيء قط
+  if (!overlay) return (
+    <div className="flex flex-col items-center justify-center h-screen bg-transparent">
+      <div className="bg-black/60 px-5 py-3 rounded-full backdrop-blur-md animate-pulse flex items-center gap-3">
+        <CloudLightning className="w-4 h-4 text-blue-400" />
+        <span className="text-xs font-bold text-white font-mono">Connecting to RGE Cloud...</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-screen h-screen overflow-hidden bg-transparent relative" onClick={unlockAudio}>
+      <AudioUnlockOverlay />
+      <OverlayRenderer config={overlay} />
+    </div>
+  );
+};
+
+
 const App: React.FC = () => {
   const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
   const [route, setRoute] = useState<string>('home'); 
@@ -133,7 +260,14 @@ const App: React.FC = () => {
   };
 
   // ----------------------------------------------------
-  // RENDER: License Gate
+  // RENDER: Output View (Browser Source) — NO AUTH REQUIRED + LIVE SYNC
+  // ----------------------------------------------------
+  if (hashPath.startsWith('#/output/')) {
+    return <LiveOutputView hashPath={hashPath} />;
+  }
+
+  // ----------------------------------------------------
+  // RENDER: License Gate — للواجهة الرئيسية فقط
   // ----------------------------------------------------
   if (!license?.valid) {
     return (
@@ -235,34 +369,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </div>
-    );
-  }
-
-
-  // ----------------------------------------------------
-  // RENDER: Output View (Browser Source)
-  // ----------------------------------------------------
-  if (hashPath.startsWith('#/output/')) {
-    const id = hashPath.split('/output/')[1]?.split('?')[0];
-    const overlay = overlays.find(o => o.id === id);
-    
-    if (!overlay) return (
-      <div className="flex flex-col items-center justify-center h-screen bg-transparent text-gray-400 font-mono space-y-4">
-        <div className="bg-black/50 p-4 rounded-full backdrop-blur-md animate-pulse flex items-center gap-3">
-            <CloudLightning className="w-5 h-5 text-blue-400" />
-            <span className="text-sm font-bold text-white">Connecting to RGE Cloud...</span>
-        </div>
-      </div>
-    );
-
-    return (
-       <div
-         className="w-screen h-screen overflow-hidden bg-transparent relative"
-         onClick={unlockAudio}
-       >
-         <AudioUnlockOverlay />
-         <OverlayRenderer config={overlay} />
-       </div>
     );
   }
 

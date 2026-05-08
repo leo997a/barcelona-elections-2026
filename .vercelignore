@@ -1,0 +1,6 @@
+.env
+.env.*
+.env*
+.sixth
+node_modules
+dist

@@ -1,6 +1,7 @@
 import React from 'react';
 import { OverlayConfig } from '../types';
 import { Plus, Play, Edit3, Trash2, Copy } from 'lucide-react';
+import { syncManager } from '../services/syncManager';
 
 interface DashboardProps {
   overlays: OverlayConfig[];
@@ -54,7 +55,7 @@ const Dashboard: React.FC<DashboardProps> = ({ overlays, onSelect, onDelete, onC
                 </button>
                  <button 
                   onClick={() => {
-                     const url = `${window.location.origin}${window.location.pathname}#/output/${overlay.id}`;
+                     const url = syncManager.buildOutputUrl(overlay.id, overlay);
                      navigator.clipboard.writeText(url);
                      alert('تم نسخ رابط المتصفح بنجاح! يمكنك لصقه الآن في OBS.');
                   }}

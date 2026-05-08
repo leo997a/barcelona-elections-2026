@@ -23,6 +23,7 @@ import {
 import { ActionCommand, FirebaseWebConfig, OverlayConfig, SecureSyncConfig, SyncStatus } from '../types';
 import { decodeBase64UrlUtf8, encodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
 import { normalizeElectionOverlay } from '../utils/election';
+import { firebaseConfig, isFirebaseConfigured } from './firebase';
 
 const LOCAL_STATE_KEY = 'rge_overlays';
 const LOCAL_CONFIG_KEY = 'rge_secure_sync_config';
@@ -31,6 +32,9 @@ const LOCAL_CHANNEL_NAME = 'rge_local_sync_v1';
 const FIREBASE_ROOT = 'rgeSecure/v1/studios';
 const OUTPUT_SYNC_PARAM = 'sync';
 const APP_NAMESPACE = 'reo-live-secure';
+const DEFAULT_STUDIO_ID = 'reo-main';
+const DEFAULT_STATE_ACCESS_KEY = 'public-live-output';
+const DEFAULT_CONTROL_ACCESS_KEY = 'studio-live-control';
 
 interface ViewerSyncBundle {
   provider: 'firebase';
@@ -64,6 +68,7 @@ class SyncManager {
   private unsubscribeCommand: Unsubscribe | null = null;
   private latestCommandId: string | null = null;
   private hasSeenInitialCommand = false;
+  private liveApiDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.studioId = this.detectStudioId();
@@ -75,7 +80,18 @@ class SyncManager {
 
     this.initLocalBridge();
     void this.initSecureSync();
+
+    // ── دفع الحالة الأولية للـ API فور التحميل ──────────────────────────────
+    // هذا يضمن أن OBS يحصل على البيانات حتى لو لم يحدث أي تغيير
+    // نستثني نافذة OBS نفسها (التي تحتوي /output/ في الهاش)
+    if (!window.location.hash.includes('/output/') && this.currentState.length > 0) {
+      // دفع فوري بعد ثانية ونصف (انتظار اكتمال التحميل)
+      setTimeout(() => this.pushToLiveApi(), 1500);
+      // دفع دوري كل 30 ثانية لتحديث الـ API بعد cold restarts
+      setInterval(() => this.pushToLiveApi(), 30_000);
+    }
   }
+
 
   private normalizeOverlay(overlay: OverlayConfig, changedFieldId?: string) {
     return normalizeElectionOverlay(overlay, changedFieldId);
@@ -200,6 +216,7 @@ class SyncManager {
   }
 
   private getEffectiveConfig(): SecureSyncConfig | null {
+    // 1) أولوية: viewer bundle من الـ URL (OBS)
     const viewerBundle = this.detectViewerBundle();
     if (viewerBundle) {
       return {
@@ -212,7 +229,23 @@ class SyncManager {
       };
     }
 
-    return this.parseStoredConfig();
+    // 2) ثانياً: الإعداد المحفوظ في localStorage (إذا سبق للمستخدم إعداده يدوياً)
+    const storedConfig = this.parseStoredConfig();
+    if (storedConfig) return storedConfig;
+
+    // 3) افتراضي الإنتاج: يجعل روابط #/output/instance-id تعمل بدون token أو تسجيل دخول.
+    if (isFirebaseConfigured()) {
+      return {
+        provider: 'firebase',
+        ...firebaseConfig,
+        studioId: DEFAULT_STUDIO_ID,
+        stateAccessKey: DEFAULT_STATE_ACCESS_KEY,
+        controlAccessKey: window.location.hash.includes('/output/') ? '' : DEFAULT_CONTROL_ACCESS_KEY,
+        updatedAt: Date.now(),
+      };
+    }
+
+    return null;
   }
 
   private getStatePath() {
@@ -375,6 +408,40 @@ class SyncManager {
         console.error('Failed to push secure overlay state', error);
       });
     }
+
+    // دفع الحالة للـ API الحي لمزامنة OBS في الوقت الفعلي
+    this.pushToLiveApi();
+  }
+
+  private pushToLiveApi(specificOverlayId?: string) {
+    if (this.liveApiDebounceTimer) clearTimeout(this.liveApiDebounceTimer);
+
+    this.liveApiDebounceTimer = setTimeout(() => {
+      const overlaysToSend = specificOverlayId
+        ? this.currentState.filter(o => o.id === specificOverlayId)
+        : this.currentState;
+
+      for (const overlay of overlaysToSend) {
+        const streamPayload = JSON.stringify(overlay);
+        const livePayload = JSON.stringify({ state: overlay });
+
+        // Send to both endpoints. SSE gives instant updates; /api/live is a bootstrap
+        // cache for OBS/browser sources that connect after the SSE function warmed up.
+        fetch(`/api/stream?id=${overlay.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: streamPayload,
+          keepalive: true,
+        }).catch(() => { /* silent */ });
+
+        fetch(`/api/live?id=${overlay.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: livePayload,
+          keepalive: true,
+        }).catch(() => { /* silent */ });
+      }
+    }, 80); // 80ms — توازن بين سرعة الاستجابة وتجميع الضغطات
   }
 
   private processAction(command: ActionCommand, shouldBroadcast = true) {
@@ -454,6 +521,8 @@ class SyncManager {
 
     if (modified) {
       this.persist(shouldBroadcast);
+      // إرسال الـ overlay المتغير فقط — أسرع بكثير من إرسال الكل
+      this.pushToLiveApi(command.targetId);
       if (this.canWriteSecureState()) {
         void this.pushToSecureState().catch(error => {
           console.error('Failed to publish secure state after command', error);
@@ -511,14 +580,32 @@ class SyncManager {
     });
   }
 
-  public buildOutputUrl(overlayId: string) {
+  /**
+   * بناء رابط العرض — يُضمّن بيانات القالب كاملةً في الرابط كـ ?d=base64
+   * هذا يجعل الرابط self-contained ويعمل في OBS بدون localStorage أو Firebase
+   */
+  public buildOutputUrl(overlayId: string, embedData?: OverlayConfig) {
     const baseUrl = `${window.location.origin}${window.location.pathname}#/output/${overlayId}`;
+
+    // 1) إضافة بيانات القالب مباشرة في الرابط (fallback للـ OBS)
+    const params = new URLSearchParams();
+
+    if (embedData) {
+      try {
+        const dataEncoded = encodeBase64UrlUtf8(JSON.stringify(embedData));
+        params.set('d', dataEncoded);
+      } catch { /* skip */ }
+    }
+
+    // 2) إضافة Firebase sync bundle إن وُجد
     const bundle = this.getViewerBundle();
+    if (bundle) {
+      const encoded = encodeBase64UrlUtf8(JSON.stringify(bundle));
+      params.set(OUTPUT_SYNC_PARAM, encoded);
+    }
 
-    if (!bundle) return baseUrl;
-
-    const encoded = encodeURIComponent(encodeBase64UrlUtf8(JSON.stringify(bundle)));
-    return `${baseUrl}?${OUTPUT_SYNC_PARAM}=${encoded}`;
+    const queryStr = params.toString();
+    return queryStr ? `${baseUrl}?${queryStr}` : baseUrl;
   }
 
   public getViewerBundle(): ViewerSyncBundle | null {
@@ -530,6 +617,21 @@ class SyncManager {
       stateAccessKey: this.config.stateAccessKey,
       firebaseConfig: this.buildWebConfig(this.config),
     };
+  }
+
+  /** استخراج بيانات القالب المُضمَّنة في رابط العرض */
+  public extractEmbeddedOverlay(hashPath: string): OverlayConfig | null {
+    try {
+      // قراءة الـ query string من الهاش
+      const queryStr = hashPath.includes('?') ? hashPath.split('?')[1] : window.location.search.slice(1);
+      if (!queryStr) return null;
+      const params = new URLSearchParams(queryStr);
+      const raw = params.get('d');
+      if (!raw) return null;
+      return JSON.parse(decodeBase64UrlUtf8(raw)) as OverlayConfig;
+    } catch {
+      return null;
+    }
   }
 
   public getSmartTokenContext() {
