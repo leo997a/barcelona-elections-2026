@@ -12,6 +12,9 @@ export const THEMES: Record<string, { primary: string, secondary: string, text: 
   'WORLD_FEED': { primary: '#00a86b', secondary: '#101820', text: '#f8fafc', accent: '#f5c518' },
   'ELITE_SILVER': { primary: '#cbd5e1', secondary: '#111827', text: '#f8fafc', accent: '#22d3ee' },
   'MATCH_NIGHT': { primary: '#14b8a6', secondary: '#18181b', text: '#ffffff', accent: '#f97316' },
+  'PROJECTION_BLUE': { primary: '#0057ff', secondary: '#050712', text: '#ffffff', accent: '#c8aa63' },
+  'PROJECTION_RED': { primary: '#ff4b3e', secondary: '#050505', text: '#ffffff', accent: '#e8eef4' },
+  'PROJECTION_MONO': { primary: '#e8eef4', secondary: '#08090d', text: '#ffffff', accent: '#ff4b3e' },
 };
 
 export const TRANSITIONS: Record<string, string> = {
@@ -65,6 +68,10 @@ export const BROADCAST_SOUND_OPTIONS = [
     { value: 'VAR_BUZZ', label: 'VAR Buzz' },
     { value: 'CROWD_RISE', label: 'Crowd Rise' },
     { value: 'TACTICAL_PULSE', label: 'Tactical Pulse' },
+    { value: 'LUXURY_STING', label: 'Luxury Sting' },
+    { value: 'LUXURY_SWEEP', label: 'Luxury Sweep' },
+    { value: 'LUXURY_IMPACT', label: 'Luxury Impact' },
+    { value: 'LUXURY_OUT', label: 'Luxury Out' },
     { value: 'SOFT_FADE', label: 'Soft Fade' },
     { value: 'BROADCAST_OUT', label: 'Broadcast Out' },
     { value: 'RESULTS_STING', label: 'Results Sting' },
@@ -82,6 +89,26 @@ export type ElectionSynthStep = {
 };
 
 export const ELECTION_SOUND_PATTERNS: Record<string, ElectionSynthStep[]> = {
+    LUXURY_STING: [
+        { delay: 0, duration: 0.18, frequency: 62, toFrequency: 54, waveform: 'sine', gain: 0.7 },
+        { delay: 0.04, duration: 0.22, frequency: 196, toFrequency: 247, waveform: 'triangle', gain: 0.32 },
+        { delay: 0.08, duration: 0.3, frequency: 392, toFrequency: 494, waveform: 'sine', gain: 0.18 },
+        { delay: 0.22, duration: 0.42, frequency: 784, toFrequency: 988, waveform: 'sine', gain: 0.11 },
+    ],
+    LUXURY_SWEEP: [
+        { delay: 0, duration: 0.34, frequency: 80, toFrequency: 64, waveform: 'sine', gain: 0.48 },
+        { delay: 0.08, duration: 0.42, frequency: 240, toFrequency: 520, waveform: 'triangle', gain: 0.22 },
+        { delay: 0.18, duration: 0.36, frequency: 680, toFrequency: 1100, waveform: 'sine', gain: 0.1 },
+    ],
+    LUXURY_IMPACT: [
+        { delay: 0, duration: 0.22, frequency: 48, toFrequency: 38, waveform: 'sine', gain: 0.9 },
+        { delay: 0.02, duration: 0.12, frequency: 112, toFrequency: 76, waveform: 'triangle', gain: 0.42 },
+        { delay: 0.1, duration: 0.2, frequency: 330, toFrequency: 440, waveform: 'sine', gain: 0.16 },
+    ],
+    LUXURY_OUT: [
+        { delay: 0, duration: 0.24, frequency: 420, toFrequency: 220, waveform: 'triangle', gain: 0.16 },
+        { delay: 0.08, duration: 0.28, frequency: 180, toFrequency: 62, waveform: 'sine', gain: 0.24 },
+    ],
     SCOREBUG_SNAP: [
         { delay: 0, duration: 0.055, frequency: 180, toFrequency: 320, waveform: 'square', gain: 0.5 },
         { delay: 0.055, duration: 0.09, frequency: 620, toFrequency: 980, waveform: 'triangle', gain: 0.45 },

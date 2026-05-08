@@ -25,7 +25,7 @@ type GeminiContent = {
   parts: GeminiPart[];
 };
 
-const FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
 
 const uniqueModels = () => {
   const configured = process.env.GEMINI_MODEL?.trim();
@@ -82,6 +82,81 @@ const normalizeSmartNews = (payload: unknown, rawText: string, targetPages: numb
   };
 };
 
+const fallbackMatchData = (sport = 'football') => ({
+  homeTeam: sport.toLowerCase().includes('barcelona') ? 'Barcelona' : 'Home FC',
+  awayTeam: 'Away FC',
+  homeScore: 0,
+  awayScore: 0,
+  period: "45'",
+});
+
+const fallbackViewerBadges = (viewers: { name: string; rank: number }[]) => {
+  const badges = ['نجم البث', 'صانع التفاعل', 'قلب المدرج', 'صوت الجمهور', 'داعم اللحظة'];
+  return viewers.map((viewer, index) => ({
+    rank: clampInteger(viewer.rank, index + 1, 1, 999),
+    badge: badges[index % badges.length],
+  }));
+};
+
+const sendLocalFallback = (
+  response: ServerlessResponse,
+  body: AiRequestBody,
+  reason: string,
+): boolean => {
+  const warning = 'تم استخدام بديل محلي لأن خدمة Gemini غير متاحة حاليا.';
+
+  if (body.action === 'match-data') {
+    sendJson(response, 200, {
+      data: fallbackMatchData(body.sport),
+      fallback: true,
+      warning,
+    });
+    return true;
+  }
+
+  if (body.action === 'smart-text') {
+    const rawText = body.rawText?.trim();
+    if (!rawText) return false;
+    const targetPages = clampInteger(body.targetPages, 6, 1, 20);
+    sendJson(response, 200, {
+      data: normalizeSmartNews({ title: 'ملخص البث', pages: fallbackSlides(rawText, targetPages) }, rawText, targetPages),
+      fallback: true,
+      warning,
+    });
+    return true;
+  }
+
+  if (body.action === 'viewer-badges') {
+    const viewers = body.viewers || [];
+    if (!viewers.length) return false;
+    sendJson(response, 200, {
+      data: fallbackViewerBadges(viewers),
+      fallback: true,
+      warning,
+    });
+    return true;
+  }
+
+  if (body.action === 'extract-viewers') {
+    sendJson(response, 200, {
+      data: [],
+      fallback: true,
+      warning: `${warning} تعذر استخراج الأسماء من الصور بدون نموذج رؤية متاح.`,
+    });
+    return true;
+  }
+
+  console.warn('AI local fallback unavailable:', reason);
+  return false;
+};
+
+const getInputError = (body: AiRequestBody): string | null => {
+  if (body.action === 'smart-text' && !body.rawText?.trim()) return 'النص الخام مطلوب.';
+  if (body.action === 'viewer-badges' && !(body.viewers || []).length) return 'يلزم وجود قائمة متفاعلين.';
+  if (body.action === 'extract-viewers' && !(body.images || []).length) return 'يلزم إرسال صورة واحدة على الأقل.';
+  return null;
+};
+
 async function callGeminiRaw(apiKey: string, contents: GeminiContent[], jsonMode = true) {
   const errors: string[] = [];
 
@@ -134,15 +209,20 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     return sendMethodNotAllowed(res, 'POST', { error: 'الطريقة غير مدعومة.' });
   }
 
+  const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
+  if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
+
+  const inputError = getInputError(body);
+  if (inputError) return sendJson(res, 400, { error: inputError });
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    if (sendLocalFallback(res, body, 'GEMINI_API_KEY is not configured')) return;
+
     return sendJson(res, 503, {
       error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY في متغيرات البيئة.',
     });
   }
-
-  const body = await readJsonBody<AiRequestBody>(req).catch(() => null);
-  if (!body?.action) return sendJson(res, 400, { error: 'نوع الطلب غير موجود.' });
 
   try {
     if (body.action === 'match-data') {
@@ -256,6 +336,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
   } catch (err) {
     console.error('AI route error:', err);
+    if (sendLocalFallback(res, body, err instanceof Error ? err.message : 'Unknown AI error')) return;
+
     return sendJson(res, 500, {
       error: 'تعذر إكمال طلب الذكاء الاصطناعي: ' + (err instanceof Error ? err.message : 'خطأ غير معروف'),
     });

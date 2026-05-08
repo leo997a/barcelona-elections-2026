@@ -18,6 +18,7 @@ import { UclDrawRenderer } from './renderers/UclDrawRenderer';
 import { TodaysEpisodeRenderer } from './renderers/TodaysEpisodeRenderer';
 import { PlayerProfileRenderer } from './renderers/PlayerProfileRenderer';
 import { TopViewersRenderer } from './renderers/TopViewersRenderer';
+import { FootballPackageRenderer } from './renderers/FootballPackageRenderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -35,6 +36,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]:  'tv-zoom-flash',
   [OverlayType.PLAYER_PROFILE]:  'tv-slide-left',
   [OverlayType.TOP_VIEWERS]:     'tv-slide-left',
+  [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -52,6 +54,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]:  'tv-zoom-out',
   [OverlayType.PLAYER_PROFILE]:  'tv-slide-left-out',
   [OverlayType.TOP_VIEWERS]:     'tv-slide-left-out',
+  [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -69,6 +72,7 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]: 'STADIUM_SWEEP',
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
   [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL',
+  [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -86,6 +90,7 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]: 'STADIUM_SWEEP_OUT',
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE_OUT',
   [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL_OUT',
+  [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -124,6 +129,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]: 'CROWD_RISE',
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
   [OverlayType.TOP_VIEWERS]: 'DATA_TICK',
+  [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_SWEEP',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -141,6 +147,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.TODAYS_EPISODE]: 'BROADCAST_OUT',
   [OverlayType.PLAYER_PROFILE]: 'SOFT_FADE',
   [OverlayType.TOP_VIEWERS]: 'SOFT_FADE',
+  [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_OUT',
 };
 
 const CSS = `
@@ -230,9 +237,124 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const [wasVisible, setWasVisible] = useState(isEditor || config.isVisible);
 
+  const createNoiseBuffer = (ac: AudioContext, duration: number) => {
+      const buffer = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * duration)), ac.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) {
+          const fade = 1 - i / data.length;
+          data[i] = (Math.random() * 2 - 1) * fade;
+      }
+      return buffer;
+  };
+
+  const playLuxurySound = async (cue: string) => {
+      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextCtor) return false;
+
+      if (!sharedAudioContext) sharedAudioContext = new AudioContextCtor();
+      const ac = sharedAudioContext;
+      if (ac.state === 'suspended') await ac.resume();
+
+      const now = ac.currentTime;
+      const master = ac.createGain();
+      const compressor = ac.createDynamicsCompressor();
+      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.34, now);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+      compressor.threshold.value = -22;
+      compressor.knee.value = 28;
+      compressor.ratio.value = 5;
+      compressor.attack.value = 0.006;
+      compressor.release.value = 0.18;
+      master.connect(compressor);
+      compressor.connect(ac.destination);
+
+      const hit = (start: number, frequency: number, duration: number, gainValue: number) => {
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(frequency, start);
+          osc.frequency.exponentialRampToValueAtTime(Math.max(24, frequency * 0.58), start + duration);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+          osc.connect(gain);
+          gain.connect(master);
+          osc.start(start);
+          osc.stop(start + duration + 0.04);
+      };
+
+      const shimmer = (start: number, base: number, duration: number, gainValue: number) => {
+          [1, 1.5, 2, 2.5].forEach((ratio, index) => {
+              const osc = ac.createOscillator();
+              const gain = ac.createGain();
+              const pan = ac.createStereoPanner();
+              osc.type = index % 2 ? 'triangle' : 'sine';
+              osc.frequency.setValueAtTime(base * ratio, start);
+              osc.detune.setValueAtTime(index * 4 - 6, start);
+              pan.pan.setValueAtTime(index % 2 ? 0.35 : -0.3, start);
+              gain.gain.setValueAtTime(0.0001, start);
+              gain.gain.exponentialRampToValueAtTime(gainValue / (index + 1), start + 0.04 + index * 0.015);
+              gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+              osc.connect(gain);
+              gain.connect(pan);
+              pan.connect(master);
+              osc.start(start);
+              osc.stop(start + duration + 0.05);
+          });
+      };
+
+      const sweep = (start: number, duration: number, from: number, to: number, gainValue: number, type: BiquadFilterType) => {
+          const source = ac.createBufferSource();
+          const filter = ac.createBiquadFilter();
+          const gain = ac.createGain();
+          source.buffer = createNoiseBuffer(ac, duration);
+          filter.type = type;
+          filter.frequency.setValueAtTime(from, start);
+          filter.frequency.exponentialRampToValueAtTime(to, start + duration);
+          filter.Q.setValueAtTime(0.75, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.035);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+          source.connect(filter);
+          filter.connect(gain);
+          gain.connect(master);
+          source.start(start);
+          source.stop(start + duration + 0.02);
+      };
+
+      if (cue === 'LUXURY_IMPACT' || cue === 'VAR_BUZZ') {
+          hit(now, 52, 0.55, 0.95);
+          hit(now + 0.025, 104, 0.22, 0.35);
+          shimmer(now + 0.08, 196, 0.58, 0.18);
+          sweep(now + 0.02, 0.46, 1800, 180, 0.22, 'bandpass');
+      } else if (cue === 'LUXURY_OUT' || cue === 'BROADCAST_OUT' || cue === 'SOFT_FADE') {
+          hit(now, 110, 0.42, 0.3);
+          shimmer(now, 330, 0.38, 0.1);
+          sweep(now, 0.42, 900, 120, 0.12, 'lowpass');
+      } else if (cue === 'SCOREBUG_SNAP' || cue === 'DATA_TICK') {
+          hit(now, 72, 0.32, 0.5);
+          shimmer(now + 0.025, 440, 0.34, 0.16);
+          sweep(now + 0.005, 0.2, 2600, 620, 0.12, 'bandpass');
+      } else {
+          hit(now, 58, 0.62, 0.62);
+          shimmer(now + 0.06, 220, 0.72, 0.18);
+          sweep(now, 0.62, 420, 4200, 0.2, 'highpass');
+          sweep(now + 0.16, 0.52, 3600, 520, 0.14, 'bandpass');
+      }
+
+      window.setTimeout(() => {
+          try { master.disconnect(); compressor.disconnect(); } catch {}
+      }, 1800);
+      return true;
+  };
+
   const playElectionSynth = async (cue: string) => {
       const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextCtor) return false;
+
+      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT'].includes(cue)) {
+          return playLuxurySound(cue);
+      }
 
       if (!sharedAudioContext) sharedAudioContext = new AudioContextCtor();
       if (sharedAudioContext.state === 'suspended') await sharedAudioContext.resume();
@@ -420,6 +542,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.TODAYS_EPISODE && <TodaysEpisodeRenderer {...props} />}
                   {config.type === OverlayType.PLAYER_PROFILE && <PlayerProfileRenderer {...props} />}
                   {config.type === OverlayType.TOP_VIEWERS && <TopViewersRenderer {...props} />}
+                  {config.type === OverlayType.FOOTBALL_PACKAGE && <FootballPackageRenderer {...props} />}
                   {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay

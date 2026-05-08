@@ -34,10 +34,12 @@ const ACCENT: Record<string, string> = {
   [OverlayType.ELECTION]:        '#a50044',
   [OverlayType.SOCIAL_MEDIA]:    '#1da1f2',
   [OverlayType.TODAYS_EPISODE]:  '#f59e0b',
+  [OverlayType.FOOTBALL_PACKAGE]: '#c8aa63',
 };
 
 const TYPE_FILTERS = [
   { id: 'ALL', label: 'الكل' },
+  { id: OverlayType.FOOTBALL_PACKAGE, label: 'Projection' },
   { id: OverlayType.SCOREBOARD,      label: 'سكور بورد' },
   { id: OverlayType.LOWER_THIRD,     label: 'أسماء' },
   { id: OverlayType.TICKER,          label: 'شريط أخبار' },
@@ -58,6 +60,7 @@ const PreviewThumb: React.FC<{ overlay: OverlayConfig; height?: number }> = ({ o
   const [hovered, setHovered] = useState(false);
   const previewCfg = useMemo(() => ({ ...overlay, isVisible: true }), [overlay]);
   const accent = ACCENT[overlay.type] || '#888';
+  const placeholder = overlay.templateIcon || String(overlay.type).slice(0, 3);
   const W = 1920;
   const scale = (height * (16 / 9)) / W; // maintain 16:9
 
@@ -83,7 +86,7 @@ const PreviewThumb: React.FC<{ overlay: OverlayConfig; height?: number }> = ({ o
       {!hovered && (
         <div className="absolute inset-0 flex items-center justify-center opacity-25 pointer-events-none select-none">
           <span className="text-[64px] font-black leading-none" style={{ color: accent }}>
-            {String(overlay.type).slice(0, 3)}
+            {placeholder}
           </span>
         </div>
       )}

@@ -431,6 +431,178 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   },
 ];
 
+type ProjectionTemplateOptions = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  accent: string;
+  designStyle: string;
+  themePreset: string;
+  title: string;
+  subtitle: string;
+  teamName?: string;
+  competition?: string;
+  watermarkText?: string;
+  formation?: string;
+  playersCount?: number;
+  pitchNumbers?: string;
+  homeScore?: number;
+  awayScore?: number;
+  time?: string;
+  brandMark?: string;
+  soundInStyle?: string;
+};
+
+const projectionPlayerDefaults = [
+  ['10', 'MBAPPE'],
+  ['7', 'GRIEZMANN'],
+  ['11', 'DEMBELE'],
+  ['8', 'TCHOUAMENI'],
+  ['14', 'RABIOT'],
+  ['22', 'HERNANDEZ'],
+  ['4', 'KOUNDE'],
+  ['1', 'MAIGNAN'],
+];
+
+const createFootballProjectionTemplate = ({
+  id,
+  name,
+  description,
+  icon,
+  accent,
+  designStyle,
+  themePreset,
+  title,
+  subtitle,
+  teamName = 'FRANCE',
+  competition = 'COMPOSITION',
+  watermarkText = 'PROJECTION LIVE',
+  formation = '4 3 3',
+  playersCount = 5,
+  pitchNumbers = '11,7,10,8,14,22,4,5,2,13,1',
+  homeScore = 0,
+  awayScore = 1,
+  time = '55:34',
+  brandMark = 'V',
+  soundInStyle = 'LUXURY_SWEEP',
+}: ProjectionTemplateOptions): OverlayConfig => ({
+  id,
+  templateId: id,
+  name,
+  type: OverlayType.FOOTBALL_PACKAGE,
+  isVisible: false,
+  templateIcon: icon,
+  templateAccent: accent,
+  templateGroup: 'FOOTBALL_PROJECTION',
+  templateDescription: description,
+  theme: { primaryColor: accent, secondaryColor: '#050712', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+  slots: {},
+  fields: [
+    ...commonFields,
+    { id: 'designStyle', label: 'Projection style', type: 'select', value: designStyle, options: ['TITLE_STING', 'COMPOSITION_INTRO', 'LINEUP_BOARD', 'COMPACT_SCOREBUG', 'TUNNEL_REVEAL'] },
+    { id: 'themePreset', label: 'Projection theme', type: 'select', value: themePreset, options: ['PROJECTION_BLUE', 'PROJECTION_RED', 'PROJECTION_MONO', 'ELITE_SILVER', 'MATCH_NIGHT'] },
+    { id: 'watermarkText', label: 'Watermark loop', type: 'text', value: watermarkText },
+    { id: 'title', label: 'Main title', type: 'text', value: title },
+    { id: 'subtitle', label: 'Subtitle', type: 'text', value: subtitle },
+    { id: 'teamName', label: 'Team name', type: 'text', value: teamName },
+    { id: 'competition', label: 'Competition label', type: 'text', value: competition },
+    { id: 'teamLogo', label: 'Team logo', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=050712&color=ffffff&size=512&bold=true` },
+    { id: 'formation', label: 'Formation', type: 'text', value: formation },
+    { id: 'playersCount', label: 'Players shown', type: 'range', value: playersCount, min: 1, max: 8, step: 1 },
+    { id: 'pitchNumbers', label: 'Pitch numbers CSV', type: 'text', value: pitchNumbers },
+    { id: 'brandMark', label: 'Scorebug brand mark', type: 'text', value: brandMark },
+    { id: 'time', label: 'Match time', type: 'text', value: time },
+    { id: 'homeScore', label: 'Home score', type: 'number', value: homeScore },
+    { id: 'awayScore', label: 'Away score', type: 'number', value: awayScore },
+    { id: 'homeLogo', label: 'Home logo', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=0057ff&color=ffffff&size=256&bold=true` },
+    { id: 'awayLogo', label: 'Away logo', type: 'image', value: 'https://ui-avatars.com/api/?name=OPP&background=a50044&color=ffffff&size=256&bold=true' },
+    { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+    { id: 'positionY', label: 'Vertical offset (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+    { id: 'positionX', label: 'Horizontal offset (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+    ...projectionPlayerDefaults.flatMap(([number, playerName], index) => [
+      { id: `player${index + 1}Number`, label: `Player ${index + 1} number`, type: 'text' as const, value: number },
+      { id: `player${index + 1}Name`, label: `Player ${index + 1} name`, type: 'text' as const, value: playerName },
+      { id: `player${index + 1}Image`, label: `Player ${index + 1} image`, type: 'image' as const, value: '' },
+    ]),
+    ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', soundInStyle, 'LUXURY_OUT'),
+  ],
+});
+
+const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
+  createFootballProjectionTemplate({
+    id: 'template-football-projection-title-sting',
+    name: 'Projection Football - Title Sting',
+    description: 'Full-screen match sting with oversized typography, moving grid lines, premium sweep motion, and top/bottom broadcast loops.',
+    icon: 'PROJ',
+    accent: '#0057ff',
+    designStyle: 'TITLE_STING',
+    themePreset: 'PROJECTION_BLUE',
+    title: 'TEMPS',
+    subtitle: 'ADDITIONNEL',
+    competition: 'MATCH STING',
+    soundInStyle: 'LUXURY_SWEEP',
+  }),
+  createFootballProjectionTemplate({
+    id: 'template-football-projection-composition-intro',
+    name: 'Projection Football - Composition Intro',
+    description: 'Team composition opener inspired by arena projection packages with a central crest chamber and strong red/blue geometry.',
+    icon: 'COMP',
+    accent: '#ff4b3e',
+    designStyle: 'COMPOSITION_INTRO',
+    themePreset: 'PROJECTION_RED',
+    title: 'FRANCE',
+    subtitle: 'STARTING XI',
+    competition: 'COMPOSITION',
+    playersCount: 8,
+    soundInStyle: 'LUXURY_IMPACT',
+  }),
+  createFootballProjectionTemplate({
+    id: 'template-football-projection-lineup-board',
+    name: 'Projection Football - Lineup Board',
+    description: 'Integrated lineup board with player columns and tactical pitch, built for pre-match or halftime analysis packages.',
+    icon: 'LINE',
+    accent: '#c8aa63',
+    designStyle: 'LINEUP_BOARD',
+    themePreset: 'PROJECTION_MONO',
+    title: 'LINEUP',
+    subtitle: 'STARTERS',
+    competition: 'FRANCE',
+    playersCount: 5,
+    formation: '4 3 3',
+    soundInStyle: 'LUXURY_STING',
+  }),
+  createFootballProjectionTemplate({
+    id: 'template-football-projection-compact-scorebug',
+    name: 'Projection Football - Compact Scorebug',
+    description: 'Small premium scorebug for live match coverage, matching the projection package rather than the older generic scoreboard style.',
+    icon: 'SBUG',
+    accent: '#0057ff',
+    designStyle: 'COMPACT_SCOREBUG',
+    themePreset: 'PROJECTION_BLUE',
+    title: 'MATCH',
+    subtitle: 'LIVE',
+    competition: 'LIVE',
+    homeScore: 0,
+    awayScore: 1,
+    time: '55:34',
+    soundInStyle: 'SCOREBUG_SNAP',
+  }),
+  createFootballProjectionTemplate({
+    id: 'template-football-projection-tunnel-reveal',
+    name: 'Projection Football - Tunnel Reveal',
+    description: 'Tunnel-style reveal for substitutions, extra time, player entrances, or tactical reset moments.',
+    icon: 'TUNL',
+    accent: '#0057ff',
+    designStyle: 'TUNNEL_REVEAL',
+    themePreset: 'PROJECTION_BLUE',
+    title: 'ENTREE',
+    subtitle: 'DES JOUEURS',
+    competition: 'STADIUM LIVE',
+    soundInStyle: 'LUXURY_SWEEP',
+  }),
+];
+
 const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   {
     id: 'template-leaderboard-ribbon',
@@ -1090,6 +1262,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       ])
     ]
   },
+  ...FOOTBALL_PROJECTION_TEMPLATES,
   ...FOOTBALL_BROADCAST_TEMPLATES,
   ...BARCELONA_ELECTION_TEMPLATES
 ];

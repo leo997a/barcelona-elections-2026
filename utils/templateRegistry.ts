@@ -82,6 +82,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#f59e0b',
     description: 'قالب أبرز متفاعلي القناة مع مساعدة الذكاء الاصطناعي.',
   },
+  [OverlayType.FOOTBALL_PACKAGE]: {
+    icon: 'PROJ',
+    accent: '#c8aa63',
+    description: 'حزمة قوالب كروية كاملة بأسلوب Projection للبث المباشر.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {
@@ -110,6 +115,14 @@ export const getTemplateMeta = (overlay: OverlayConfig): TemplateMeta => {
 
 export const getVisibleTemplates = (): OverlayConfig[] =>
   INITIAL_TEMPLATES.filter(template => !LEGACY_HIDDEN_TEMPLATE_IDS.has(template.id)).sort((left, right) => {
+    if ((left.templateGroup || '') === 'FOOTBALL_PROJECTION' && (right.templateGroup || '') !== 'FOOTBALL_PROJECTION') {
+      return -1;
+    }
+
+    if ((left.templateGroup || '') !== 'FOOTBALL_PROJECTION' && (right.templateGroup || '') === 'FOOTBALL_PROJECTION') {
+      return 1;
+    }
+
     if ((left.templateGroup || '') === 'BARCELONA_2026' && (right.templateGroup || '') !== 'BARCELONA_2026') {
       return -1;
     }
