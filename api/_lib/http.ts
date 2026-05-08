@@ -20,7 +20,7 @@ const normalizeHeader = (value: HeaderValue): string | null => {
 
 export const sendJson = (response: ServerlessResponse, status: number, payload: unknown) => {
   response.statusCode = status;
-  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(payload));
 };
@@ -32,7 +32,7 @@ export const sendMethodNotAllowed = (
 ) => {
   response.statusCode = 405;
   response.setHeader('Allow', allow);
-  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   response.end(JSON.stringify(payload));
 };

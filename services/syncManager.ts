@@ -35,6 +35,7 @@ const APP_NAMESPACE = 'reo-live-secure';
 const DEFAULT_STUDIO_ID = 'reo-main';
 const DEFAULT_STATE_ACCESS_KEY = 'public-live-output';
 const DEFAULT_CONTROL_ACCESS_KEY = 'studio-live-control';
+const OBS_OUTPUT_URL_VERSION = 'obs-live-v3';
 
 interface ViewerSyncBundle {
   provider: 'firebase';
@@ -573,12 +574,17 @@ class SyncManager {
     });
   }
 
-  /**
-   * بناء رابط العرض — يُضمّن بيانات القالب كاملةً في الرابط كـ ?d=base64
-   * هذا يجعل الرابط self-contained ويعمل في OBS بدون localStorage أو Firebase
-   */
+  private buildOutputShellQuery() {
+    const params = new URLSearchParams({
+      obs: '1',
+      rgev: OBS_OUTPUT_URL_VERSION,
+    });
+
+    return params.toString();
+  }
+
   public buildOutputUrl(overlayId: string, embedData?: OverlayConfig) {
-    const baseUrl = `${window.location.origin}${window.location.pathname}#/output/${overlayId}`;
+    const baseUrl = `${window.location.origin}${window.location.pathname}?${this.buildOutputShellQuery()}#/output/${overlayId}`;
 
     if (embedData) {
       this.publishOverlaySnapshot(embedData).catch(() => { /* silent */ });

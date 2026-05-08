@@ -25,6 +25,14 @@ const getId = (req: StreamRequest) => {
   return params.get('id');
 };
 
+const applyNoCacheHeaders = (res: StreamResponse) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('CDN-Cache-Control', 'no-store');
+  res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+};
+
 const writeSse = (res: StreamResponse, value: string) => {
   res.write?.(value);
 };
@@ -33,7 +41,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 'no-store');
+  applyNoCacheHeaders(res);
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -64,7 +72,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
 
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Cache-Control', 'no-store, no-cache, no-transform, must-revalidate');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
@@ -76,6 +84,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
     closed = true;
   });
 
+  writeSse(res, 'retry: 1000\n\n');
   writeSse(res, ': connected\n\n');
 
   const startedAt = Date.now();
@@ -83,7 +92,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
     const entry = await getLiveState(id);
     if (entry && entry.version !== lastVersion) {
       lastVersion = entry.version;
-      writeSse(res, `data: ${JSON.stringify(entry.state)}\n\n`);
+      writeSse(res, `id: ${entry.version}\ndata: ${JSON.stringify(entry.state)}\n\n`);
     }
 
     const now = Date.now();

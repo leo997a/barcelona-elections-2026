@@ -83,11 +83,68 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     if (!id) return;
     let sseActive = true;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    let fallbackRaf: number | null = null;
+    let fallbackRafLastPoll = 0;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let requestCounter = 0;
+    let pollInFlight = false;
+    let lastAppliedVersion = 0;
+
+    const pageParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(hashPath.includes('?') ? hashPath.split('?')[1] : '');
+    const isObsBrowser = Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
+      || pageParams.get('obs') === '1'
+      || hashParams.get('obs') === '1';
+    const pollIntervalMs = isObsBrowser ? 250 : 500;
+    const noCacheHeaders = {
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    };
+
+    const liveUrl = (extra?: Record<string, string>) => {
+      const params = new URLSearchParams({
+        id,
+        _: `${Date.now()}-${requestCounter++}`,
+        ...(extra ?? {}),
+      });
+
+      return `/api/live?${params.toString()}`;
+    };
+
+    const streamUrl = () => {
+      const params = new URLSearchParams({
+        id,
+        _: `${Date.now()}-${requestCounter++}`,
+      });
+
+      return `/api/stream?${params.toString()}`;
+    };
+
+    const fetchNoCache = async (url: string) => {
+      const init: RequestInit = {
+        cache: 'no-store',
+        headers: noCacheHeaders,
+      };
+      let timeout: ReturnType<typeof setTimeout> | null = null;
+
+      if ('AbortController' in window) {
+        const controller = new AbortController();
+        init.signal = controller.signal;
+        timeout = setTimeout(() => controller.abort(), 4500);
+      }
+
+      try {
+        return await fetch(url, init);
+      } finally {
+        if (timeout) clearTimeout(timeout);
+      }
+    };
 
     // ── تحديث الحالة بأمان (فقط عند التغيير الفعلي) ──────────────────────
-    const applyState = (newOverlay: OverlayConfig) => {
+    const applyState = (newOverlay: OverlayConfig, version = 0) => {
+      if (version > 0 && version < lastAppliedVersion) return;
+      if (version > 0) lastAppliedVersion = version;
       lastGoodState.current = newOverlay;
       setOverlay(newOverlay);
     };
@@ -97,43 +154,83 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       if (nextOverlay) applyState(nextOverlay);
     });
 
-    const fetchLiveOnce = async () => {
+    const fetchLiveState = async () => {
       try {
-        const r = await fetch(`/api/live?id=${id}`, { cache: 'no-store' });
+        const r = await fetchNoCache(liveUrl({ full: '1' }));
         if (!r.ok) return false;
-        const data = await r.json() as { state?: OverlayConfig };
+        const data = await r.json() as { state?: OverlayConfig; version?: number };
         if (data?.state?.id === id) {
-          applyState(data.state);
+          applyState(data.state, Number(data.version || 0));
           return true;
         }
       } catch { /* keep last state */ }
       return false;
     };
 
+    const pollLiveMeta = async () => {
+      if (pollInFlight) return;
+      pollInFlight = true;
+
+      try {
+        const r = await fetchNoCache(liveUrl({ meta: '1' }));
+        if (!r.ok) {
+          if (!lastGoodState.current) await fetchLiveState();
+          return;
+        }
+
+        const meta = await r.json() as { version?: number };
+        const nextVersion = Number(meta.version || 0);
+        if (!lastGoodState.current || !nextVersion || nextVersion !== lastAppliedVersion) {
+          await fetchLiveState();
+        }
+
+        if (!es) setConnStatus('fallback');
+      } catch {
+        if (!lastGoodState.current) {
+          void fetchLiveState();
+        }
+      } finally {
+        pollInFlight = false;
+      }
+    };
+
     const stopFallback = () => {
-      if (!fallbackInterval) return;
-      clearInterval(fallbackInterval);
+      if (fallbackInterval) clearInterval(fallbackInterval);
       fallbackInterval = null;
+      if (fallbackRaf !== null) cancelAnimationFrame(fallbackRaf);
+      fallbackRaf = null;
     };
 
     const startFallback = () => {
       if (fallbackInterval) return;
-      void fetchLiveOnce();
+      void pollLiveMeta();
+      fallbackRafLastPoll = 0;
       fallbackInterval = setInterval(() => {
-        void fetchLiveOnce();
-      }, 300);
+        void pollLiveMeta();
+      }, pollIntervalMs);
+
+      const pollOnFrame = (now: number) => {
+        if (!sseActive) return;
+        if (now - fallbackRafLastPoll >= pollIntervalMs) {
+          fallbackRafLastPoll = now;
+          void pollLiveMeta();
+        }
+        fallbackRaf = requestAnimationFrame(pollOnFrame);
+      };
+
+      fallbackRaf = requestAnimationFrame(pollOnFrame);
     };
 
     // ── SSE: اتصال مفتوح، تحديثات فورية ─────────────────────────────────
     const connectSSE = () => {
       if (!sseActive) return;
       try {
-        es = new EventSource(`/api/stream?id=${id}`);
+        es = new EventSource(streamUrl());
         setConnStatus('connecting');
 
         es.onopen = () => {
           setConnStatus('live');
-          if (lastGoodState.current) stopFallback();
+          if (!isObsBrowser && lastGoodState.current) stopFallback();
           else startFallback();
         };
 
@@ -142,8 +239,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
           try {
             const parsed = JSON.parse(event.data) as OverlayConfig;
             if (parsed?.id === id) {
-              applyState(parsed);
-              stopFallback();
+              applyState(parsed, Number(event.lastEventId || 0));
+              if (!isObsBrowser) stopFallback();
             }
           } catch { /* ignore malformed */ }
         };
@@ -172,7 +269,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       stopFallback();
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, [id]);
+  }, [id, hashPath]);
 
   // عرض آخر حالة معروفة — لا يُعرض "Connecting..." إلا إذا لم يُستلم أي شيء قط
   if (!overlay) return (
