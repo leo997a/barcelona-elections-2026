@@ -8,6 +8,7 @@ export interface LiveStateEntry {
   state: unknown;
   updatedAt: number;
   version: number;
+  clientVersion: number;
 }
 
 const fallbackStore = new Map<string, LiveStateEntry>();
@@ -36,13 +37,22 @@ export const getLiveState = async (id: string): Promise<LiveStateEntry | null> =
   return fallbackStore.get(id) ?? null;
 };
 
-export const setLiveState = async (id: string, state: unknown): Promise<LiveStateEntry> => {
+export const setLiveState = async (
+  id: string,
+  state: unknown,
+  clientVersion = Date.now(),
+): Promise<LiveStateEntry> => {
   const previous = await getLiveState(id);
+  if (previous?.clientVersion && clientVersion <= previous.clientVersion) {
+    return previous;
+  }
+
   const entry: LiveStateEntry = {
     id,
     state,
     updatedAt: Date.now(),
     version: (previous?.version ?? 0) + 1,
+    clientVersion,
   };
 
   fallbackStore.set(id, entry);

@@ -57,8 +57,16 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
     const state = body && typeof body === 'object' && 'state' in body ? (body as { state?: unknown }).state : body;
     if (!state) return sendJson(res, 400, { error: 'state is required' });
 
-    const entry = await setLiveState(id, state);
-    return sendJson(res, 200, { ok: true, updatedAt: entry.updatedAt, version: entry.version });
+    const clientVersion = body && typeof body === 'object' && 'clientVersion' in body
+      ? Number((body as { clientVersion?: unknown }).clientVersion)
+      : Date.now();
+    const entry = await setLiveState(id, state, Number.isFinite(clientVersion) ? clientVersion : Date.now());
+    return sendJson(res, 200, {
+      ok: true,
+      updatedAt: entry.updatedAt,
+      version: entry.version,
+      clientVersion: entry.clientVersion,
+    });
   }
 
   if (req.method !== 'GET') {

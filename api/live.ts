@@ -46,6 +46,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         id: entry.id,
         updatedAt: entry.updatedAt,
         version: entry.version,
+        clientVersion: entry.clientVersion,
       });
     }
 
@@ -58,8 +59,16 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const state = body && typeof body === 'object' && 'state' in body ? (body as { state?: unknown }).state : body;
     if (!state) return sendJson(res, 400, { error: 'state is required' });
 
-    const entry = await setLiveState(id, state);
-    return sendJson(res, 200, { ok: true, updatedAt: entry.updatedAt, version: entry.version });
+    const clientVersion = body && typeof body === 'object' && 'clientVersion' in body
+      ? Number((body as { clientVersion?: unknown }).clientVersion)
+      : Date.now();
+    const entry = await setLiveState(id, state, Number.isFinite(clientVersion) ? clientVersion : Date.now());
+    return sendJson(res, 200, {
+      ok: true,
+      updatedAt: entry.updatedAt,
+      version: entry.version,
+      clientVersion: entry.clientVersion,
+    });
   }
 
   sendJson(res, 405, { error: 'Method not allowed' });

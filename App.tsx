@@ -149,11 +149,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       setOverlay(newOverlay);
     };
 
-    const unsubscribe = syncManager.subscribe(nextOverlays => {
-      const nextOverlay = nextOverlays.find(candidate => candidate.id === id);
-      if (nextOverlay) applyState(nextOverlay);
-    });
-
     const fetchLiveState = async () => {
       try {
         const r = await fetchNoCache(liveUrl({ full: '1' }));
@@ -230,8 +225,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
         es.onopen = () => {
           setConnStatus('live');
-          if (!isObsBrowser && lastGoodState.current) stopFallback();
-          else startFallback();
+          startFallback();
         };
 
         es.onmessage = (event) => {
@@ -240,7 +234,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
             const parsed = JSON.parse(event.data) as OverlayConfig;
             if (parsed?.id === id) {
               applyState(parsed, Number(event.lastEventId || 0));
-              if (!isObsBrowser) stopFallback();
             }
           } catch { /* ignore malformed */ }
         };
@@ -264,7 +257,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
     return () => {
       sseActive = false;
-      unsubscribe();
       es?.close();
       stopFallback();
       if (reconnectTimer) clearTimeout(reconnectTimer);

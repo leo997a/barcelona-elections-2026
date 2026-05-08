@@ -70,10 +70,15 @@ class SyncManager {
   private latestCommandId: string | null = null;
   private hasSeenInitialCommand = false;
   private liveApiDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingLiveSnapshots = new Map<string, OverlayConfig>();
+  private liveClientVersion = Date.now();
 
   constructor() {
     this.studioId = this.detectStudioId();
-    this.currentState = this.loadLocalState();
+    const isOutputWindow = this.isOutputRoute();
+    this.currentState = isOutputWindow ? [] : this.loadLocalState();
+
+    if (isOutputWindow) return;
 
     if (!localStorage.getItem(LOCAL_STUDIO_KEY)) {
       localStorage.setItem(LOCAL_STUDIO_KEY, this.studioId);
@@ -93,6 +98,10 @@ class SyncManager {
     }
   }
 
+
+  private isOutputRoute() {
+    return window.location.hash.includes('/output/');
+  }
 
   private normalizeOverlay(overlay: OverlayConfig, changedFieldId?: string) {
     return normalizeElectionOverlay(overlay, changedFieldId);
@@ -401,7 +410,7 @@ class SyncManager {
     await set(ref(this.db, commandPath), envelope);
   }
 
-  private pushState() {
+  private pushState(changedOverlay?: OverlayConfig) {
     this.persist();
 
     if (this.canWriteSecureState()) {
@@ -411,11 +420,19 @@ class SyncManager {
     }
 
     // دفع الحالة للـ API الحي لمزامنة OBS في الوقت الفعلي
-    this.pushToLiveApi();
+    this.pushToLiveApi(changedOverlay?.id, changedOverlay);
   }
 
-  private publishOverlaySnapshot(overlay: OverlayConfig, keepalive = true) {
-    const body = JSON.stringify({ state: overlay });
+  private nextLiveClientVersion() {
+    this.liveClientVersion = Math.max(this.liveClientVersion + 1, Date.now());
+    return this.liveClientVersion;
+  }
+
+  private publishOverlaySnapshot(overlay: OverlayConfig, keepalive = false) {
+    const body = JSON.stringify({
+      state: overlay,
+      clientVersion: this.nextLiveClientVersion(),
+    });
     return fetch(`/api/live?id=${encodeURIComponent(overlay.id)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -424,10 +441,32 @@ class SyncManager {
     });
   }
 
-  private pushToLiveApi(specificOverlayId?: string) {
+  private flushPendingLiveApi() {
+    const snapshots = [...this.pendingLiveSnapshots.values()];
+    this.pendingLiveSnapshots.clear();
+    this.liveApiDebounceTimer = null;
+
+    for (const overlay of snapshots) {
+      this.publishOverlaySnapshot(overlay, false).catch(() => { /* silent */ });
+    }
+  }
+
+  private pushToLiveApi(specificOverlayId?: string, explicitOverlay?: OverlayConfig) {
+    const snapshotsToSend = explicitOverlay
+      ? [explicitOverlay]
+      : specificOverlayId
+        ? this.currentState.filter(o => o.id === specificOverlayId)
+        : this.currentState;
+
+    for (const overlay of snapshotsToSend) {
+      this.pendingLiveSnapshots.set(overlay.id, overlay);
+    }
+
     if (this.liveApiDebounceTimer) clearTimeout(this.liveApiDebounceTimer);
 
     this.liveApiDebounceTimer = setTimeout(() => {
+      this.flushPendingLiveApi();
+      return;
       const overlaysToSend = specificOverlayId
         ? this.currentState.filter(o => o.id === specificOverlayId)
         : this.currentState;
@@ -440,6 +479,7 @@ class SyncManager {
 
   private processAction(command: ActionCommand, shouldBroadcast = true) {
     let modified = false;
+    let changedOverlay: OverlayConfig | null = null;
 
     this.currentState = this.currentState.map(overlay => {
       if (overlay.id !== command.targetId) return overlay;
@@ -507,16 +547,17 @@ class SyncManager {
           break;
       }
 
-      return this.normalizeOverlay(
+      changedOverlay = this.normalizeOverlay(
         nextOverlay,
         command.action === 'update_field' ? command.fieldId : undefined
       );
+      return changedOverlay;
     });
 
     if (modified) {
       this.persist(shouldBroadcast);
       // إرسال الـ overlay المتغير فقط — أسرع بكثير من إرسال الكل
-      this.pushToLiveApi(command.targetId);
+      this.pushToLiveApi(command.targetId, changedOverlay ?? undefined);
       if (this.canWriteSecureState()) {
         void this.pushToSecureState().catch(error => {
           console.error('Failed to publish secure state after command', error);
@@ -544,8 +585,9 @@ class SyncManager {
   }
 
   public addOverlay(overlay: OverlayConfig) {
-    this.currentState = [...this.currentState, this.normalizeOverlay(overlay)];
-    this.pushState();
+    const normalizedOverlay = this.normalizeOverlay(overlay);
+    this.currentState = [...this.currentState, normalizedOverlay];
+    this.pushState(normalizedOverlay);
   }
 
   public deleteOverlay(id: string) {
@@ -554,10 +596,11 @@ class SyncManager {
   }
 
   public updateOverlay(updatedOverlay: OverlayConfig) {
+    const normalizedOverlay = this.normalizeOverlay(updatedOverlay);
     this.currentState = this.currentState.map(overlay =>
-      overlay.id === updatedOverlay.id ? this.normalizeOverlay(updatedOverlay) : overlay
+      overlay.id === updatedOverlay.id ? normalizedOverlay : overlay
     );
-    this.pushState();
+    this.pushState(normalizedOverlay);
   }
 
   public updateLiveField(overlayId: string, fieldId: string | 'isVisible', value: unknown) {
