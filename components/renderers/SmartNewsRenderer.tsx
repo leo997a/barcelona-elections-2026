@@ -8,7 +8,8 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
   audioRef, 
   containerStyle, 
   contentWrapperStyle, 
-  activeTheme 
+  activeTheme,
+  playSound,
 }) => {
     let pages: any[] = [];
     try {
@@ -41,16 +42,16 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
     const activeTransitionClass = TRANSITIONS[transitionKey] || TRANSITIONS['CINEMATIC'];
 
     // --- NAVIGATION SOUND EFFECT ---
-    const lastPage = React.useRef(currentPageIndex);
+    // useRef/useEffect must be called unconditionally at top level
+    const lastPageRef = React.useRef(currentPageIndex);
     React.useEffect(() => {
-        if (currentPageIndex !== lastPage.current) {
-            lastPage.current = currentPageIndex;
-            // Play sound if not the first mount
-            if (typeof playSound === 'function') {
-                playSound('TRANSITION');
-            }
+        if (currentPageIndex !== lastPageRef.current) {
+            lastPageRef.current = currentPageIndex;
+            // playSound is always available from RendererProps
+            playSound('TRANSITION').catch(() => { /* silent */ });
         }
-    }, [currentPageIndex, playSound]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPageIndex]);
 
     return (
       <div style={containerStyle}>
@@ -68,7 +69,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
                       <div>
                            <div className="flex items-center gap-3 mb-6">
                                <div className="h-4 w-1 rounded-full" style={{ backgroundColor: activeTheme.accent }}></div>
-                               <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">{String(getField('channelName'))}</span>
+                               <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">{String(getField('channelName') || '')}</span>
                            </div>
                            <h1 className="font-black leading-[1.1] mb-6 tracking-tight drop-shadow-2xl" 
                                style={{ 
@@ -76,7 +77,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
                                    fontSize: `${headlineSize}px`,
                                    textShadow: '0 4px 30px rgba(0,0,0,0.4)' 
                                }}>
-                               {String(getField('headline'))}
+                               {String(getField('headline') || '')}
                            </h1>
                       </div>
                       
@@ -96,7 +97,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
 
                       <div className="border-t border-white/5 pt-8 mt-6 flex flex-col gap-4">
                            <div className="flex justify-between items-center text-[10px] font-black text-white/30 tracking-[0.2em]">
-                               <span>PAGE {currentPageIndex + 1} / {pages.length}</span>
+                               <span>PAGE {currentPageIndex + 1} / {pages.length || 1}</span>
                                <span className="uppercase">{themeKey.replace(/_/g, ' ')}</span>
                            </div>
                            <div className="w-full h-1.5 bg-white/5 rounded-full flex gap-1 overflow-hidden p-[2px]">
