@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward } from 'lucide-react';
+import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy } from 'lucide-react';
 import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -787,6 +787,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <button onClick={() => setActiveTab('sound')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sound' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>🔊 الصوت</button>
           )}
 
+          {/* Slots / Presets Tab */}
+          <button onClick={() => setActiveTab('slots')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'slots' ? 'text-indigo-400 border-b-2 border-indigo-500' : 'text-gray-400 hover:text-white'}`}>🗂️ النسخ</button>
+
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
              <button onClick={() => setActiveTab('sponsors')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sponsors' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>👥 الداعمين</button>
@@ -1018,6 +1021,92 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           )}
 
           {/* SPONSORS MANAGEMENT TAB (PROTECTED) */}
+          {/* SLOTS / PRESETS TAB */}
+          {activeTab === 'slots' && (
+              <div className="space-y-6 animate-fade-in-up">
+                   <div className="p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-4">
+                       <div className="flex items-center gap-2 text-indigo-400">
+                           <Layers className="w-5 h-5" />
+                           <h3 className="font-bold text-sm">إدارة النسخ (Presets)</h3>
+                       </div>
+                       <p className="text-[11px] text-gray-400 leading-relaxed">
+                           يمكنك حفظ الحالة الحالية بكافة نصوصها وصورها كـ "نسخة" للتبديل بينها بسرعة بضغطة زر واحدة.
+                       </p>
+                       <div className="flex gap-2">
+                           <input 
+                             type="text" 
+                             id="new-slot-input"
+                             placeholder="اسم النسخة (مثال: الشوط الأول)..."
+                             className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:border-indigo-500 transition-colors outline-none"
+                           />
+                           <button 
+                             onClick={() => {
+                                 const input = document.getElementById('new-slot-input') as HTMLInputElement;
+                                 const name = input.value.trim();
+                                 if (!name) return;
+                                 const nextSlots = { ...(draftOverlay.slots || {}), [name]: JSON.parse(JSON.stringify(draftOverlay.fields)) };
+                                 setDraftOverlay({ ...draftOverlay, slots: nextSlots, activeSlot: name });
+                                 input.value = '';
+                             }}
+                             className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-indigo-900/20 active:scale-95"
+                           >
+                               <Plus className="w-5 h-5" />
+                           </button>
+                       </div>
+                   </div>
+
+                   <div className="space-y-3">
+                       {Object.keys(draftOverlay.slots || {}).length === 0 ? (
+                           <div className="text-center py-16 border-2 border-dashed border-gray-800 rounded-3xl">
+                               <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                   <Layers className="w-6 h-6 text-gray-700" />
+                               </div>
+                               <p className="text-gray-600 text-xs font-medium">لا توجد نسخ محفوظة لهذا القالب.</p>
+                           </div>
+                       ) : (
+                           Object.entries(draftOverlay.slots).map(([name, fields]) => (
+                               <div key={name} className={`group relative p-4 rounded-2xl border transition-all duration-300 ${draftOverlay.activeSlot === name ? 'bg-indigo-600/10 border-indigo-500/50 shadow-lg shadow-indigo-900/10' : 'bg-gray-900/40 border-gray-800 hover:border-gray-700'}`}>
+                                   <div className="flex items-center justify-between">
+                                       <div className="flex items-center gap-3">
+                                           <div className={`w-2.5 h-2.5 rounded-full ${draftOverlay.activeSlot === name ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-700'}`} />
+                                           <div>
+                                               <p className="text-sm font-bold text-white mb-0.5">{name}</p>
+                                               <p className="text-[10px] text-gray-500">{fields.length} حقل مخزن</p>
+                                           </div>
+                                       </div>
+                                       <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                           <button 
+                                             onClick={() => {
+                                                 setDraftOverlay({ ...draftOverlay, fields: JSON.parse(JSON.stringify(fields)), activeSlot: name });
+                                             }}
+                                             className="p-2 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors"
+                                             title="تحميل النسخة"
+                                           >
+                                               <RotateCcw className="w-4 h-4" />
+                                           </button>
+                                           <button 
+                                             onClick={() => {
+                                                 const nextSlots = { ...draftOverlay.slots };
+                                                 delete nextSlots[name];
+                                                 setDraftOverlay({ ...draftOverlay, slots: nextSlots, activeSlot: draftOverlay.activeSlot === name ? undefined : draftOverlay.activeSlot });
+                                             }}
+                                             className="p-2 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
+                                             title="حذف النسخة"
+                                           >
+                                               <Trash2 className="w-4 h-4" />
+                                           </button>
+                                       </div>
+                                   </div>
+                                   {draftOverlay.activeSlot === name && (
+                                       <div className="absolute -top-2 -left-2 bg-indigo-600 text-[9px] font-black px-2 py-0.5 rounded-full text-white uppercase tracking-tighter shadow-lg shadow-indigo-900/40">Active</div>
+                                   )}
+                               </div>
+                           ))
+                       )}
+                   </div>
+              </div>
+          )}
+
           {activeTab === 'sponsors' && (
               <div className="space-y-4">
                   {!isAdminUnlocked ? (
