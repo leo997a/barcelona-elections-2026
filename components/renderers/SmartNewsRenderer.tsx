@@ -10,7 +10,15 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
   contentWrapperStyle, 
   activeTheme 
 }) => {
-    const pages = JSON.parse(String(getField('pagesData') || '["..."]'));
+    let pages: any[] = [];
+    try {
+        const raw = getField('pagesData');
+        pages = Array.isArray(raw) ? raw : JSON.parse(String(raw || '[]'));
+        if (!Array.isArray(pages)) pages = [];
+    } catch (e) {
+        pages = ["تحقق من تنسيق البيانات"];
+    }
+
     const containerHeight = Number(getField('containerHeight') || 550);
     const headlineSize = Number(getField('headlineFontSize') || 48);
     const contentSize = Number(getField('contentFontSize') || 30);
@@ -21,13 +29,28 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
     const watermarkText = String(getField('watermarkText') || 'REO LIVE');
     const themeKey = String(getField('themePreset') || 'CLASSIC_RED');
     const currentPageIndex = Number(getField('currentPage') || 0);
-    const currentText = pages[currentPageIndex] || "";
+    const pageContent = pages[currentPageIndex] || "";
+    const currentText = typeof pageContent === 'object' 
+        ? (pageContent.text || pageContent.content || JSON.stringify(pageContent))
+        : String(pageContent || "");
     
     const rawImages = getField('images');
     const images = Array.isArray(rawImages) ? rawImages : [];
     
     const transitionKey = String(getField('transitionEffect') || 'CINEMATIC');
     const activeTransitionClass = TRANSITIONS[transitionKey] || TRANSITIONS['CINEMATIC'];
+
+    // --- NAVIGATION SOUND EFFECT ---
+    const lastPage = React.useRef(currentPageIndex);
+    React.useEffect(() => {
+        if (currentPageIndex !== lastPage.current) {
+            lastPage.current = currentPageIndex;
+            // Play sound if not the first mount
+            if (typeof playSound === 'function') {
+                playSound('TRANSITION');
+            }
+        }
+    }, [currentPageIndex, playSound]);
 
     return (
       <div style={containerStyle}>

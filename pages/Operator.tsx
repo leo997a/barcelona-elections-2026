@@ -151,24 +151,26 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                   <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-gray-950 px-2 py-1 rounded border border-gray-800">Quick Switch</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                   {Object.keys(selectedOverlay.slots).map(name => (
-                     <button 
-                       key={name}
-                       onClick={() => syncManager.sendCommand({ 
-                         action: 'load_slot', 
-                         targetId: selectedOverlay.id, 
-                         slotName: name 
-                       })}
-                       className={`px-5 py-3 rounded-xl border text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
-                         selectedOverlay.activeSlot === name 
-                           ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/40 translate-y-[-2px]' 
-                           : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white hover:border-gray-600'
-                       }`}
-                     >
-                       <div className={`w-2 h-2 rounded-full ${selectedOverlay.activeSlot === name ? 'bg-white animate-pulse' : 'bg-gray-600'}`} />
-                       {name}
-                     </button>
-                   ))}
+                    {Object.keys(selectedOverlay.slots).map(name => (
+                      <button 
+                        key={name}
+                        onClick={() => {
+                          syncManager.sendCommand({ 
+                            action: 'load_slot', 
+                            targetId: selectedOverlay.id, 
+                            slotName: name 
+                          });
+                        }}
+                        className={`px-5 py-3 rounded-xl border text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
+                          selectedOverlay.activeSlot === name 
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/40 translate-y-[-2px]' 
+                            : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:text-white hover:border-gray-600'
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${selectedOverlay.activeSlot === name ? 'bg-white animate-pulse' : 'bg-gray-600'}`} />
+                        {name}
+                      </button>
+                    ))}
                 </div>
               </div>
             )}

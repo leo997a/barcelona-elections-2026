@@ -523,6 +523,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       animClass: innerAnimClass
   };
 
+  const activeSlot = String(getField('activeSlot') || '');
+
   return (
       <>
           <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -531,21 +533,22 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
               {!isEditor && <audio ref={audioRef} style={{ display: 'none' }} />}
               
               <div className="absolute inset-0 pointer-events-none" style={contentWrapperStyle}>
-                  {config.type === OverlayType.LEADERBOARD && <LeaderboardRenderer {...props} />}
-                  {config.type === OverlayType.SMART_NEWS && <SmartNewsRenderer {...props} />}
-                  {config.type === OverlayType.SCOREBOARD && <ScoreboardRenderer {...props} />}
-                  {config.type === OverlayType.TICKER && <TickerRenderer {...props} />}
-                  {config.type === OverlayType.LOWER_THIRD && <LowerThirdRenderer {...props} />}
-                  {config.type === OverlayType.EXCLUSIVE_ALERT && <ExclusiveAlertRenderer {...props} />}
-                  {config.type === OverlayType.GUESTS && <GuestsRenderer {...props} />}
-                  {config.type === OverlayType.SOCIAL_MEDIA && <SocialMediaRenderer {...props} />}
-                  {config.type === OverlayType.TODAYS_EPISODE && <TodaysEpisodeRenderer {...props} />}
-                  {config.type === OverlayType.PLAYER_PROFILE && <PlayerProfileRenderer {...props} />}
-                  {config.type === OverlayType.TOP_VIEWERS && <TopViewersRenderer {...props} />}
-                  {config.type === OverlayType.FOOTBALL_PACKAGE && <FootballPackageRenderer {...props} />}
-                  {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer {...props} />}
+                  {config.type === OverlayType.LEADERBOARD && <LeaderboardRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.SMART_NEWS && <SmartNewsRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.SCOREBOARD && <ScoreboardRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.TICKER && <TickerRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.LOWER_THIRD && <LowerThirdRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.EXCLUSIVE_ALERT && <ExclusiveAlertRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.GUESTS && <GuestsRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.SOCIAL_MEDIA && <SocialMediaRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.TODAYS_EPISODE && <TodaysEpisodeRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.PLAYER_PROFILE && <PlayerProfileRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.TOP_VIEWERS && <TopViewersRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.FOOTBALL_PACKAGE && <FootballPackageRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
+                          key={activeSlot}
                           config={config}
                           audioRef={audioRef}
                           containerStyle={{}}

@@ -1045,7 +1045,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                  const name = input.value.trim();
                                  if (!name) return;
                                  const nextSlots = { ...(draftOverlay.slots || {}), [name]: JSON.parse(JSON.stringify(draftOverlay.fields)) };
-                                 setDraftOverlay({ ...draftOverlay, slots: nextSlots, activeSlot: name });
+                                 const updatedOverlay = { ...draftOverlay, slots: nextSlots, activeSlot: name };
+                                 setDraftOverlay(updatedOverlay);
+                                 syncManager.updateOverlay(updatedOverlay);
                                  input.value = '';
                              }}
                              className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-all shadow-lg shadow-indigo-900/20 active:scale-95"
@@ -1077,7 +1079,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                            <button 
                                              onClick={() => {
-                                                 setDraftOverlay({ ...draftOverlay, fields: JSON.parse(JSON.stringify(fields)), activeSlot: name });
+                                                 const updatedFields = JSON.parse(JSON.stringify(fields));
+                                                 const updatedOverlay = { ...draftOverlay, fields: updatedFields, activeSlot: name };
+                                                 setDraftOverlay(updatedOverlay);
+                                                 syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors"
                                              title="تحميل النسخة"
@@ -1088,7 +1093,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                              onClick={() => {
                                                  const nextSlots = { ...draftOverlay.slots };
                                                  delete nextSlots[name];
-                                                 setDraftOverlay({ ...draftOverlay, slots: nextSlots, activeSlot: draftOverlay.activeSlot === name ? undefined : draftOverlay.activeSlot });
+                                                 const updatedOverlay = { ...draftOverlay, slots: nextSlots, activeSlot: draftOverlay.activeSlot === name ? undefined : draftOverlay.activeSlot };
+                                                 setDraftOverlay(updatedOverlay);
+                                                 syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
                                              title="حذف النسخة"

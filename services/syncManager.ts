@@ -21,7 +21,7 @@ import {
   type Unsubscribe,
 } from 'firebase/database';
 import { ActionCommand, FirebaseWebConfig, OverlayConfig, SecureSyncConfig, SyncStatus } from '../types';
-import { decodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
+import { decodeBase64UrlUtf8, encodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
 import { normalizeElectionOverlay } from '../utils/election';
 import { firebaseConfig, isFirebaseConfigured } from './firebase';
 
@@ -78,7 +78,11 @@ class SyncManager {
     const isOutputWindow = this.isOutputRoute();
     this.currentState = isOutputWindow ? [] : this.loadLocalState();
 
-    if (isOutputWindow) return;
+    if (isOutputWindow) {
+      // Output window: connect to Firebase in read-only mode for instant updates
+      void this.initSecureSync();
+      return;
+    }
 
     if (!localStorage.getItem(LOCAL_STUDIO_KEY)) {
       localStorage.setItem(LOCAL_STUDIO_KEY, this.studioId);
@@ -87,13 +91,8 @@ class SyncManager {
     this.initLocalBridge();
     void this.initSecureSync();
 
-    // ── دفع الحالة الأولية للـ API فور التحميل ──────────────────────────────
-    // هذا يضمن أن OBS يحصل على البيانات حتى لو لم يحدث أي تغيير
-    // نستثني نافذة OBS نفسها (التي تحتوي /output/ في الهاش)
     if (!window.location.hash.includes('/output/') && this.currentState.length > 0) {
-      // دفع فوري بعد ثانية ونصف (انتظار اكتمال التحميل)
       setTimeout(() => this.pushToLiveApi(), 1500);
-      // دفع دوري كل 30 ثانية لتحديث الـ API بعد cold restarts
       setInterval(() => this.pushToLiveApi(), 30_000);
     }
   }
@@ -226,7 +225,6 @@ class SyncManager {
   }
 
   private getEffectiveConfig(): SecureSyncConfig | null {
-    // 1) أولوية: viewer bundle من الـ URL (OBS)
     const viewerBundle = this.detectViewerBundle();
     if (viewerBundle) {
       return {
@@ -239,11 +237,9 @@ class SyncManager {
       };
     }
 
-    // 2) ثانياً: الإعداد المحفوظ في localStorage (إذا سبق للمستخدم إعداده يدوياً)
     const storedConfig = this.parseStoredConfig();
     if (storedConfig) return storedConfig;
 
-    // 3) افتراضي الإنتاج: يجعل روابط #/output/instance-id تعمل بدون token أو تسجيل دخول.
     if (isFirebaseConfigured()) {
       return {
         provider: 'firebase',
@@ -322,6 +318,7 @@ class SyncManager {
         return;
       }
 
+      // ── Listen to state (for Editor→Output sync via Firebase) ─────────────
       this.unsubscribeState = onValue(ref(this.db, statePath), snapshot => {
         const remoteValue = snapshot.val();
         if (Array.isArray(remoteValue)) {
@@ -337,7 +334,14 @@ class SyncManager {
         }
       });
 
-      const commandPath = this.getCommandPath();
+      // ── Listen to commands ────────────────────────────────────────────────
+      // For the Output window, controlAccessKey is '' so getCommandPath() returns null.
+      // We fall back to the DEFAULT_CONTROL_ACCESS_KEY to still receive commands.
+      const commandPath = this.getCommandPath() 
+        || (this.isOutputRoute() 
+          ? `${FIREBASE_ROOT}/${this.config.studioId}/commands/${DEFAULT_CONTROL_ACCESS_KEY}/latest`
+          : null);
+
       if (commandPath) {
         this.unsubscribeCommand = onValue(ref(this.db, commandPath), snapshot => {
           const command = snapshot.val() as CommandEnvelope | null;
@@ -346,11 +350,8 @@ class SyncManager {
             this.latestCommandId = command?.commandId || null;
             return;
           }
-
           if (!command?.commandId) return;
-
           if (command.commandId === this.latestCommandId) return;
-
           this.latestCommandId = command.commandId;
           this.processAction(command as ActionCommand, false);
         });
@@ -358,8 +359,9 @@ class SyncManager {
 
       this.status = 'secure';
     } catch (error) {
-      console.error('Secure sync failed, falling back to local mode', error);
-      this.lastError = error instanceof Error ? error.message : 'تعذر بدء الربط الآمن.';
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('Secure sync failed:', msg);
+      this.lastError = `خطأ في الربط: ${msg}`;
       this.status = 'error';
     }
   }
@@ -419,7 +421,6 @@ class SyncManager {
       });
     }
 
-    // دفع الحالة للـ API الحي لمزامنة OBS في الوقت الفعلي
     this.pushToLiveApi(changedOverlay?.id, changedOverlay);
   }
 
@@ -466,15 +467,7 @@ class SyncManager {
 
     this.liveApiDebounceTimer = setTimeout(() => {
       this.flushPendingLiveApi();
-      return;
-      const overlaysToSend = specificOverlayId
-        ? this.currentState.filter(o => o.id === specificOverlayId)
-        : this.currentState;
-
-      for (const overlay of overlaysToSend) {
-        this.publishOverlaySnapshot(overlay).catch(() => { /* silent */ });
-      }
-    }, 80); // 80ms — توازن بين سرعة الاستجابة وتجميع الضغطات
+    }, 80);
   }
 
   private processAction(command: ActionCommand, shouldBroadcast = true) {
@@ -537,13 +530,35 @@ class SyncManager {
           break;
 
         case 'load_slot':
-          nextOverlay = overlay.slots[command.slotName]
-            ? {
-                ...overlay,
-                activeSlot: command.slotName,
-                fields: overlay.slots[command.slotName].map(field => ({ ...field })),
-              }
-            : overlay;
+          // If slots data isn't loaded yet (output window cold start), try applying fields anyway
+          if (overlay.slots && overlay.slots[command.slotName]) {
+            nextOverlay = {
+              ...overlay,
+              activeSlot: command.slotName,
+              fields: overlay.slots[command.slotName].map(field => ({ ...field })),
+            };
+          } else {
+            // Slots not available locally → fetch full state from API and apply
+            if (this.isOutputRoute()) {
+              fetch(`/api/live?id=${encodeURIComponent(command.targetId)}&full=1&_=${Date.now()}`, { cache: 'no-store' })
+                .then(r => r.ok ? r.json() : null)
+                .then((data: { state?: OverlayConfig } | null) => {
+                  if (!data?.state) return;
+                  const fullOverlay = data.state;
+                  if (fullOverlay.slots && fullOverlay.slots[command.slotName]) {
+                    const slotOverlay = {
+                      ...fullOverlay,
+                      activeSlot: command.slotName,
+                      fields: fullOverlay.slots[command.slotName].map((f: any) => ({ ...f })),
+                    };
+                    this.currentState = this.currentState.map(o => o.id === slotOverlay.id ? slotOverlay : o);
+                    if (this.currentState.length === 0) this.currentState = [slotOverlay];
+                    this.notify();
+                  }
+                })
+                .catch(() => { /* silent */ });
+            }
+          }
           break;
       }
 
@@ -556,7 +571,6 @@ class SyncManager {
 
     if (modified) {
       this.persist(shouldBroadcast);
-      // إرسال الـ overlay المتغير فقط — أسرع بكثير من إرسال الكل
       this.pushToLiveApi(command.targetId, changedOverlay ?? undefined);
       if (this.canWriteSecureState()) {
         void this.pushToSecureState().catch(error => {
@@ -623,6 +637,16 @@ class SyncManager {
       rgev: OBS_OUTPUT_URL_VERSION,
     });
 
+    const bundle = this.getViewerBundle();
+    if (bundle) {
+      try {
+        const encoded = encodeBase64UrlUtf8(JSON.stringify(bundle));
+        params.set(OUTPUT_SYNC_PARAM, encoded);
+      } catch (e) {
+        console.error('Failed to encode sync bundle for URL', e);
+      }
+    }
+
     return params.toString();
   }
 
@@ -655,10 +679,8 @@ class SyncManager {
     };
   }
 
-  /** استخراج بيانات القالب المُضمَّنة في رابط العرض */
   public extractEmbeddedOverlay(hashPath: string): OverlayConfig | null {
     try {
-      // قراءة الـ query string من الهاش
       const queryStr = hashPath.includes('?') ? hashPath.split('?')[1] : window.location.search.slice(1);
       if (!queryStr) return null;
       const params = new URLSearchParams(queryStr);
