@@ -17,6 +17,10 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
     const themeKey = String(getField('themePreset') || 'CLASSIC_RED');
     const currentPageIndex = Number(getField('currentPage') || 0);
     const currentText = pages[currentPageIndex] || "";
+    
+    const rawImages = getField('images');
+    const images = Array.isArray(rawImages) ? rawImages : [];
+    
     const transitionKey = String(getField('transitionEffect') || 'CINEMATIC');
     const activeTransitionClass = TRANSITIONS[transitionKey] || TRANSITIONS['CINEMATIC'];
 
@@ -28,7 +32,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
           <div style={contentWrapperStyle} className="relative z-10 subpixel-antialiased">
               <div className="flex flex-row relative rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10" style={{ width: `${widthPercent}%`, height: '550px', background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(16px)', boxShadow: '0 0 0 1px rgba(255,255,255,0.05) inset' }}>
                   <div className="w-[40%] h-full relative border-l border-white/5 animate-cinematic-blur-in">
-                      <SmartGallery images={(getField('images') as string[]) || []} intervalSeconds={Number(getField('imageInterval') || 10)} />
+                      <SmartGallery images={images} intervalSeconds={Number(getField('imageInterval') || 10)} />
                   </div>
                   <div className="w-[60%] p-12 flex flex-col justify-between relative">
                       <div className="absolute top-0 right-0 w-32 h-1" style={{ backgroundColor: activeTheme.accent }}></div>

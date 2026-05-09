@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap } from 'lucide-react';
+import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward } from 'lucide-react';
 import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -416,7 +416,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const file = e.target.files?.[0];
     if (file && activeImageFieldId) {
         const base64String = await resizeImageForLiveState(file).catch(() => readFileAsDataUrl(file));
-        handleDraftFieldChange(activeImageFieldId, base64String);
+        const field = draftOverlay.fields.find(f => f.id === activeImageFieldId);
+        
+        if (field?.type === 'image-list') {
+            const currentImages = Array.isArray(field.value) ? field.value : [];
+            handleDraftFieldChange(activeImageFieldId, [...currentImages, base64String]);
+        } else {
+            handleDraftFieldChange(activeImageFieldId, base64String);
+        }
+        
         setActiveImageFieldId(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -481,18 +489,50 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         )}
 
         {draftOverlay.type === OverlayType.SMART_NEWS && (
-            <div className="p-4 bg-purple-950/30 border-b border-purple-900/50 space-y-2">
-                <label className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> توليد الشرائح من النص
-                </label>
-                <button
-                  onClick={handleGenerateSmartNewsSlides}
-                  disabled={isProcessingAI}
-                  className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors"
-                >
-                    {isProcessingAI ? 'جاري تجهيز الشرائح...' : 'تحويل النص إلى شرائح بث احترافية'}
-                </button>
-                {aiError && <div className="text-[11px] text-red-400">اكتب النص الكامل أولا، وتأكد من إعداد مفتاح Gemini في الخادم.</div>}
+            <div className="p-4 bg-purple-950/30 border-b border-purple-900/50 space-y-4">
+                <div className="space-y-2">
+                    <label className="text-xs text-purple-300 font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> توليد الشرائح من النص
+                    </label>
+                    <button
+                      onClick={handleGenerateSmartNewsSlides}
+                      disabled={isProcessingAI}
+                      className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors"
+                    >
+                        {isProcessingAI ? 'جاري تجهيز الشرائح...' : 'تحويل النص إلى شرائح بث احترافية'}
+                    </button>
+                    {aiError && <div className="text-[11px] text-red-400">اكتب النص الكامل أولا، وتأكد من إعداد مفتاح Gemini في الخادم.</div>}
+                </div>
+
+                <div className="pt-2 border-t border-purple-900/30">
+                    <label className="text-xs text-blue-300 font-bold flex items-center justify-between mb-2">
+                        <span>تحكم الشرائح</span>
+                        <span className="font-mono text-blue-400 bg-blue-950/50 px-2 py-0.5 rounded text-[10px]">
+                             {Number(getDraftValue('currentPage') || 0) + 1} / {JSON.parse(String(getDraftValue('pagesData') || '[]')).length || 1}
+                        </span>
+                    </label>
+                    <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                              const curr = Number(getDraftValue('currentPage') || 0);
+                              if (curr > 0) handleDraftFieldChange('currentPage', curr - 1);
+                          }}
+                          className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
+                        >
+                            <Rewind className="w-3 h-3" /> السابق
+                        </button>
+                        <button 
+                          onClick={() => {
+                              const curr = Number(getDraftValue('currentPage') || 0);
+                              const pages = JSON.parse(String(getDraftValue('pagesData') || '[]'));
+                              if (curr < pages.length - 1) handleDraftFieldChange('currentPage', curr + 1);
+                          }}
+                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
+                        >
+                            التالي <FastForward className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
             </div>
         )}
 
@@ -923,6 +963,53 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                              )}
                          </div>
                      )
+                 }
+                 if (field.type === 'image-list') {
+                     const images = Array.isArray(field.value) ? field.value : [];
+                     return (
+                         <div key={field.id} className="space-y-2">
+                             <label className="text-xs text-gray-400 block">{field.label}</label>
+                             <div className="grid grid-cols-2 gap-2">
+                                 {images.map((img, idx) => (
+                                     <div key={idx} className="relative group aspect-video bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                                         <img src={img} className="w-full h-full object-cover" alt="" />
+                                         <button 
+                                           onClick={() => {
+                                               const next = images.filter((_, i) => i !== idx);
+                                               handleDraftFieldChange(field.id, next);
+                                           }}
+                                           className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                         >
+                                             <X className="w-3 h-3" />
+                                         </button>
+                                     </div>
+                                 ))}
+                                 <button 
+                                   onClick={() => triggerFileUpload(field.id)}
+                                   className="aspect-video bg-gray-800/50 border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-900/10 rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-400 transition-all"
+                                 >
+                                     <Plus className="w-5 h-5" />
+                                     <span className="text-[10px]">إضافة صورة</span>
+                                 </button>
+                             </div>
+                             <div className="flex gap-2 mt-2">
+                                 <input 
+                                   type="text" 
+                                   placeholder="أو الصق رابط صورة..." 
+                                   className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-xs text-white focus:border-blue-500"
+                                   onKeyDown={(e) => {
+                                       if (e.key === 'Enter') {
+                                           const val = e.currentTarget.value.trim();
+                                           if (val) {
+                                               handleDraftFieldChange(field.id, [...images, val]);
+                                               e.currentTarget.value = '';
+                                           }
+                                       }
+                                   }}
+                                 />
+                             </div>
+                         </div>
+                     );
                  }
                  return null;
                })}
