@@ -784,6 +784,42 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
           'https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1920&q=100'
         ] 
       },
+      { 
+        id: 'containerHeight', 
+        label: 'ارتفاع البطاقة (px)', 
+        type: 'range', 
+        value: 550, 
+        min: 300, 
+        max: 1000, 
+        step: 50 
+      },
+      { 
+        id: 'headlineFontSize', 
+        label: 'حجم خط العنوان', 
+        type: 'range', 
+        value: 48, 
+        min: 24, 
+        max: 120, 
+        step: 2 
+      },
+      { 
+        id: 'contentFontSize', 
+        label: 'حجم خط المحتوى', 
+        type: 'range', 
+        value: 30, 
+        min: 14, 
+        max: 80, 
+        step: 2 
+      },
+      { 
+        id: 'contentPadding', 
+        label: 'هوامش المحتوى (Padding)', 
+        type: 'range', 
+        value: 48, 
+        min: 0, 
+        max: 150, 
+        step: 4 
+      },
       { id: 'imageInterval', label: 'مدة قلب الصورة (ثواني)', type: 'range', value: 10, min: 3, max: 60, step: 1 },
 
       // --- التحكم الحر بالأبعاد والموقع (Free Transform) ---
