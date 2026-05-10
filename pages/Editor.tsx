@@ -42,6 +42,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [newSlotName, setNewSlotName] = useState('');
 
   // --- SPONSORS MANAGEMENT STATE ---
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
@@ -432,20 +434,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
   };
 
-  // --- RENDER ---
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
       
-      {/* RIGHT PANEL */}
-      <div className="w-96 bg-gray-900 border-l border-gray-800 flex flex-col z-10 shadow-2xl">
-         <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900">
-           <button onClick={onBack} className="text-gray-400 hover:text-white text-sm flex items-center gap-1">
-             <ChevronRight className="w-4 h-4" /> عودة
+      {/* ══ RIGHT CONTROL PANEL (collapsible) ══ */}
+      <div className={`flex flex-col z-10 bg-[#13151f] border-r border-white/[0.06] shadow-2xl transition-all duration-300 overflow-hidden ${ panelOpen ? 'w-96' : 'w-0' }`}>
+       <div className="w-96 flex flex-col h-full">
+         <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-4 bg-[#13151f]">
+           <button onClick={onBack} className="text-gray-500 hover:text-white text-xs flex items-center gap-1.5 font-bold transition-colors">
+             <ChevronRight className="w-4 h-4" /> المكتبة
            </button>
            <div className="flex items-center gap-2">
-               <span className="text-[10px] text-gray-500 font-mono tracking-widest hidden lg:block border border-gray-700 px-2 rounded">SPACE = ON AIR</span>
-               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-green-500 bg-green-900/20 border border-green-500/20">
-                <Sparkles className="w-3 h-3" />
+               <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>حفظ تلقائي</span>
                </div>
            </div>
@@ -1073,7 +1074,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                            <div className={`w-2.5 h-2.5 rounded-full ${draftOverlay.activeSlot === name ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-700'}`} />
                                            <div>
                                                <p className="text-sm font-bold text-white mb-0.5">{name}</p>
-                                               <p className="text-[10px] text-gray-500">{fields.length} حقل مخزن</p>
+                                               <p className="text-[10px] text-gray-500">{(fields as any[]).length} حقل مخزن</p>
                                            </div>
                                        </div>
                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1428,57 +1429,61 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              </div>
           )}
         </div>
-      </div>
+       </div>{/* end w-96 inner */}
+      </div>{/* end right panel transition wrapper */}
 
-      {/* CENTER PANEL (PREVIEW MONITOR) */}
-      <div className="flex-1 flex flex-col bg-[#0f1115] relative overflow-hidden">
+      {/* ══ CENTER PANEL (PREVIEW MONITOR) ══ */}
+      <div className="flex-1 flex flex-col bg-[#0c0d10] relative overflow-hidden">
          {/* Top Control Bar */}
-         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-8 bg-[#15181e] shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-20">
-             <div className="flex items-center gap-6">
-                 <h2 className="text-xl font-black text-white tracking-wider flex items-center gap-3">
-                     <Monitor className="w-6 h-6 text-blue-500" />
-                     شاشة المراقبة <span className="text-gray-500 text-sm font-normal">| Live Preview</span>
-                 </h2>
-                 <div className="h-6 w-[1px] bg-gray-700"></div>
-                 <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-6 py-2 rounded-xl font-black transition-all shadow-lg ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-red-900/50 hover:bg-red-500' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}`}>
-                     {liveOverlay.isVisible ? <Eye className="w-4 h-4 animate-pulse" /> : <EyeOff className="w-4 h-4" />}
-                     <span>{liveOverlay.isVisible ? 'ON AIR' : 'TAKE LIVE'}</span>
+         <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-5 bg-[#10121a] z-20">
+             <div className="flex items-center gap-3">
+                 <button onClick={() => setPanelOpen(p => !p)} className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors" title={panelOpen ? 'إخفاء الإعدادات' : 'إظهار الإعدادات'}>
+                   <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${panelOpen ? '' : 'rotate-180'}`} />
+                 </button>
+                 <div className="h-4 w-px bg-white/10" />
+                 <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
+                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">● ON AIR</span>}
+                 <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black transition-all ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'}`}>
+                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" />إيقاف البث</> : <><EyeOff className="w-3.5 h-3.5" />إظهار على البث</>}
                  </button>
              </div>
-             <div className="flex items-center gap-3">
-                 <button onClick={() => setPreviewChroma(!previewChroma)} className={`p-2.5 rounded-xl transition-colors border ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'}`} title="تفعيل الكروما الخضراء للاختبار">
-                     <ImageIcon className="w-5 h-5" />
-                 </button>
+             <div className="flex items-center gap-2">
+                 <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>Chroma</button>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
                     const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);
                     if (popup) popup.location.href = url;
                     else window.open(url, '_blank', 'width=1280,height=720');
-                 }} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-900/30">
-                     <Monitor className="w-4 h-4" />
+                 }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors">
+                     <Monitor className="w-3.5 h-3.5" />
                      <span>نافذة البث</span>
                  </button>
              </div>
          </div>
 
          {/* Monitor Area */}
-         <div className="flex-1 overflow-hidden flex items-center justify-center p-8 relative">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
-            
-            {/* Transparency Grid (OBS Style) */}
-            <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-lg overflow-hidden border-2 border-gray-700 shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-300 transform scale-95 hover:scale-100 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgvwMDwnxE8Z0AxioEYMFqA0UCA0UAEYQzMjCwMzH+QZIBJGBqGUQAAyEcf4V8+BIAAAAAASUVORK5CYII=')]">
-                 {/* Dark Overlay for Chroma test if not active */}
-                 {!previewChroma && <div className="absolute inset-0 bg-black/40"></div>}
+         <div className="flex-1 overflow-hidden flex items-center justify-center p-6 relative">
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+            <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
                  <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
-                 
-                 {/* Safe Margins overlay (optional, broadcast standard) */}
-                 <div className="absolute inset-[5%] border border-white/10 border-dashed pointer-events-none rounded"></div>
-                 <div className="absolute inset-[10%] border border-red-500/20 border-dashed pointer-events-none rounded"></div>
+                 <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
             </div>
          </div>
-      </div>
-    </div>
+
+         {/* ── Slot Quick-Bar ── */}
+         <div className="shrink-0 border-t border-white/[0.06] bg-[#10121a] px-4 py-2 flex items-center gap-2 overflow-x-auto">
+           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 shrink-0">PRESETS</span>
+           <div className="w-px h-3 bg-white/10 shrink-0" />
+           {Object.keys(draftOverlay.slots || {}).map(name => (
+             <button key={name} onClick={() => { const upd = { ...draftOverlay, activeSlot: name, fields: JSON.parse(JSON.stringify(draftOverlay.slots[name])) }; setDraftOverlay(upd); syncManager.updateOverlay(upd); }}
+               className={`shrink-0 px-3 py-1 rounded-lg text-xs font-bold border transition-all ${ draftOverlay.activeSlot === name ? 'bg-indigo-600 border-indigo-400 text-white shadow shadow-indigo-900/30' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20' }`}>
+               {draftOverlay.activeSlot === name && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 align-middle" />}{name}
+             </button>
+           ))}
+           <input value={newSlotName} onChange={e => setNewSlotName(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newSlotName.trim()){ const n=newSlotName.trim(); const upd={...draftOverlay,slots:{...draftOverlay.slots,[n]:JSON.parse(JSON.stringify(draftOverlay.fields))},activeSlot:n}; setDraftOverlay(upd); syncManager.updateOverlay(upd); setNewSlotName(''); }}} placeholder="+ نسخة جديدة..." className="bg-transparent text-xs text-gray-400 placeholder-gray-700 focus:outline-none focus:text-white w-28 shrink-0 border-b border-transparent focus:border-indigo-500 pb-0.5 transition-colors" />
+         </div>
+       </div>
+     </div>
   );
 };
 
