@@ -756,44 +756,44 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         })()}
 
 
-        <div className="flex border-b border-gray-800 overflow-x-auto no-scrollbar">
+        <div className="flex border-b border-white/[0.06] overflow-x-auto scrollbar-hide bg-[#13151f]">
           {/* ALWAYS: Main data tab */}
-          <button onClick={() => setActiveTab('fields')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>📝 البيانات</button>
+          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>📝 البيانات</button>
 
           {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
-            <button onClick={() => setActiveTab('images')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'images' ? 'text-amber-400 border-b-2 border-amber-500' : 'text-gray-400 hover:text-white'}`}>🖼️ الصور</button>
+            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🖼️ الصور</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Appearance tab */}
           {draftOverlay.type !== OverlayType.ELECTION && (
-            <button onClick={() => setActiveTab('style')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'style' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>🎨 المظهر</button>
+            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🎨 المظهر</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Position/Size tab */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale','positionX','positionY','containerWidth','sidebarWidth'].includes(f.id)) && (
-            <button onClick={() => setActiveTab('position')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'position' ? 'text-cyan-400 border-b-2 border-cyan-500' : 'text-gray-400 hover:text-white'}`}>📐 الأبعاد</button>
+            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>📐 الأبعاد</button>
           )}
 
           {draftOverlay.type === OverlayType.FOOTBALL_PACKAGE && (
             <>
-              <button onClick={() => setActiveTab('football-main')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>المباراة</button>
-              <button onClick={() => setActiveTab('football-lineup')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-lineup' ? 'text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-white'}`}>التشكيلة</button>
-              <button onClick={() => setActiveTab('football-score')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'football-score' ? 'text-yellow-400 border-b-2 border-yellow-500' : 'text-gray-400 hover:text-white'}`}>النتيجة</button>
+              <button onClick={() => setActiveTab('football-main')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المباراة</button>
+              <button onClick={() => setActiveTab('football-lineup')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-lineup' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>التشكيلة</button>
+              <button onClick={() => setActiveTab('football-score')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-score' ? 'text-yellow-400 border-yellow-500 bg-yellow-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>النتيجة</button>
             </>
           )}
 
           {/* ALWAYS for non-ELECTION: Sound tab if exists */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
-            <button onClick={() => setActiveTab('sound')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sound' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>🔊 الصوت</button>
+            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🔊 الصوت</button>
           )}
 
           {/* Slots / Presets Tab */}
-          <button onClick={() => setActiveTab('slots')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'slots' ? 'text-indigo-400 border-b-2 border-indigo-500' : 'text-gray-400 hover:text-white'}`}>🗂️ النسخ</button>
+          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🗂️ النسخ</button>
 
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
-             <button onClick={() => setActiveTab('sponsors')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'sponsors' ? 'text-green-400 border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}>👥 الداعمين</button>
+             <button onClick={() => setActiveTab('sponsors')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sponsors' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>👥 الداعمين</button>
           )}
 
           {/* ELECTION: specialized tabs */}
@@ -801,18 +801,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
               return (
                   <>
-                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'candidates' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>المرشحون</button>}
-                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'time' ? 'text-orange-400 border-b-2 border-orange-500' : 'text-gray-400 hover:text-white'}`}>الوقت</button>}
-                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'content' ? 'text-pink-400 border-b-2 border-pink-500' : 'text-gray-400 hover:text-white'}`}>المحتوى</button>}
-                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'camera' ? 'text-teal-400 border-b-2 border-teal-500' : 'text-gray-400 hover:text-white'}`}>الكاميرا</button>}
-                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'turnout' ? 'text-emerald-400 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-white'}`}>الإقبال</button>}
-                      <button onClick={() => setActiveTab('style')} className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'style' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}>🎨 المظهر</button>
+                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'candidates' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المرشحون</button>}
+                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'time' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الوقت</button>}
+                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'content' ? 'text-pink-400 border-pink-500 bg-pink-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المحتوى</button>}
+                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'camera' ? 'text-teal-400 border-teal-500 bg-teal-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الكاميرا</button>}
+                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'turnout' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الإقبال</button>}
+                      <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🎨 المظهر</button>
                   </>
               );
           })()}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {/* FIELDS TAB */}
           {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound', 'football-main', 'football-lineup', 'football-score'].includes(activeTab) && (
              <>
