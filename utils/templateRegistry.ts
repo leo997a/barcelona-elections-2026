@@ -87,6 +87,21 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#c8aa63',
     description: 'حزمة قوالب كروية كاملة بأسلوب Projection للبث المباشر.',
   },
+  [OverlayType.H2H_STATS]: {
+    icon: 'H2H',
+    accent: '#00E5FF',
+    description: 'مقارنة إحصائيات بين لاعبين بأشرطة متوهجة — أسلوب Sky Sports / NSL.',
+  },
+  [OverlayType.TRANSFER_NEWS]: {
+    icon: '⚡',
+    accent: '#E9FF00',
+    description: 'خبر انتقال حصري بتصميم جريء DAZN مع مؤشر نسبة التأكد.',
+  },
+  [OverlayType.BARCA_PREMIUM]: {
+    icon: 'FCB',
+    accent: '#EDBB00',
+    description: 'حزمة برشلونة الخاصة بألوان البلوغرانا وأسلوب La Liga المحترف.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

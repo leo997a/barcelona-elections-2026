@@ -35,6 +35,9 @@ const ACCENT: Record<string, string> = {
   [OverlayType.SOCIAL_MEDIA]:    '#1da1f2',
   [OverlayType.TODAYS_EPISODE]:  '#f59e0b',
   [OverlayType.FOOTBALL_PACKAGE]: '#c8aa63',
+  [OverlayType.H2H_STATS]:        '#00E5FF',
+  [OverlayType.TRANSFER_NEWS]:    '#E9FF00',
+  [OverlayType.BARCA_PREMIUM]:    '#EDBB00',
 };
 
 const TYPE_FILTERS = [
