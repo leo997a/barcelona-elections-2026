@@ -22,6 +22,7 @@ import { FootballPackageRenderer } from './renderers/FootballPackageRenderer';
 import { H2HStatsRenderer } from './renderers/H2HStatsRenderer';
 import { TransferNewsRenderer } from './renderers/TransferNewsRenderer';
 import { BarcaPremiumRenderer } from './renderers/BarcaPremiumRenderer';
+import { MatchStatsRenderer } from './renderers/MatchStatsRenderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -549,6 +550,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.TOP_VIEWERS && <TopViewersRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.FOOTBALL_PACKAGE && <FootballPackageRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.H2H_STATS && <H2HStatsRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MATCH_STATS && <MatchStatsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.TRANSFER_NEWS && <TransferNewsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.BARCA_PREMIUM && <BarcaPremiumRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer key={activeSlot} {...props} />}

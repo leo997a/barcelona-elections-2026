@@ -429,6 +429,30 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       ...broadcastMotionPreset('DATA_RUSH', 'DATA_RUSH_OUT', 'DATA_TICK', 'BROADCAST_OUT'),
     ],
   },
+  {
+    id: 'template-football-smart-match-stats',
+    templateId: 'template-football-smart-match-stats',
+    name: 'استوديو التحليلات الذكي (Match Stats)',
+    type: OverlayType.MATCH_STATS,
+    isVisible: false,
+    templateIcon: '📊',
+    templateAccent: '#3b82f6',
+    templateGroup: 'FOOTBALL_WORLD_FEED',
+    templateDescription: 'استوديو بيانات ذكي يعتمد على JSON من WhoScored، يحسب تلقائياً مؤشر الهيمنة، رجل المباراة والمواجهات الثنائية.',
+    theme: { primaryColor: '#3b82f6', secondaryColor: '#ef4444', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      { id: 'apiUrl', label: 'رابط خادم الجسر المحلي', type: 'text', value: 'http://localhost:3005/api/match' },
+      { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },
+      { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#ef4444' },
+      { id: 'showDominance', label: 'إظهار مؤشر الهيمنة', type: 'boolean', value: true },
+      { id: 'showMotm', label: 'إظهار نجم المباراة', type: 'boolean', value: true },
+      { id: 'showTopStats', label: 'إظهار أفضل 5 (ممرين/قاطعين)', type: 'boolean', value: true },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+    ],
+  },
 ];
 
 type ProjectionTemplateOptions = {
@@ -1315,13 +1339,15 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     theme: { primaryColor: '#00E5FF', secondaryColor: '#0B132B', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'matchTitle',   label: 'عنوان المقارنة', type: 'text',  value: 'مقارنة النجوم' },
-      { id: 'player1Name', label: 'اسم اللاعب الأول', type: 'text',  value: 'لامين يامال' },
+            { id: 'player1Name', label: 'اسم اللاعب الأول', type: 'text',  value: 'لامين يامال' },
       { id: 'player1Image',label: 'صورة اللاعب الأول', type: 'image', value: '' },
       { id: 'player1Color',label: 'لون اللاعب الأول', type: 'color', value: '#004D98' },
       { id: 'player2Name', label: 'اسم اللاعب الثاني', type: 'text',  value: 'فينيسيوس' },
       { id: 'player2Image',label: 'صورة اللاعب الثاني', type: 'image', value: '' },
-      { id: 'player2Color',label: 'لون اللاعب الثاني', type: 'color', value: '#FFFFFF' },
+      { id: 'player2Color',label: 'لون اللاعب الثاني', type: 'color', value: '#C00000' },
+      { id: 'player1Club',  label: 'نادي اللاعب الأول', type: 'text', value: 'FC BARCELONA' },
+      { id: 'player2Club',  label: 'نادي اللاعب الثاني', type: 'text', value: 'REAL MADRID' },
+      { id: 'matchLabel',   label: 'تسمية المقارنة', type: 'text', value: 'HEAD TO HEAD' },
       { id: 'statsData', label: 'الإحصائيات (JSON)', type: 'textarea', value: '[{"label":"الأهداف","v1":15,"v2":18},{"label":"التمريرات","v1":12,"v2":9},{"label":"الدريبلات","v1":88,"v2":91},{"label":"التقييم","v1":89,"v2":92}]' },
       { id: 'bgColor',     label: 'لون الخلفية', type: 'color', value: '#0B132B' },
       { id: 'scale',       label: 'الحجم',  type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
@@ -1351,6 +1377,8 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'headline',    label: 'العنوان الرئيسي', type: 'text', value: 'DONE DEAL' },
       { id: 'source',      label: 'المصدر',         type: 'text',  value: 'Reo Show Exclusive' },
       { id: 'accentColor', label: 'لون التمييز',    type: 'color', value: '#E9FF00' },
+      { id: 'fromColor',   label: 'لون نادي المصدر', type: 'color', value: '#A50044' },
+      { id: 'toColor',     label: 'لون النادي الجديد', type: 'color', value: '#000000' },
       { id: 'isUrgent',    label: 'شريط عاجل',      type: 'boolean', value: true },
       { id: 'scale',       label: 'الحجم',  type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
       { id: 'positionY',   label: 'موضع Y', type: 'range', value: 0, min: -500, max: 500, step: 5 },
@@ -1370,11 +1398,20 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     theme: { primaryColor: '#EDBB00', secondaryColor: '#06001a', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'headline',    label: 'العنوان الرئيسي',  type: 'text',     value: 'FC Barcelona' },
-      { id: 'subheadline', label: 'العنوان الفرعي',   type: 'text',     value: 'النتيجة النهائية' },
-      { id: 'bodyText',    label: 'النص',             type: 'textarea', value: 'معلومات حول هذا الخبر.' },
-      { id: 'playerImage', label: 'صورة اللاعب',      type: 'image',    value: '' },
-      { id: 'badgeMode',   label: 'نمط العرض', type: 'select', value: 'news', options: [{value:'news',label:'خبر'},{value:'stats',label:'إحصائيات'}] },
+      { id: 'firstName',  label: 'الاسم الأول', type: 'text',  value: 'LAMINE' },
+      { id: 'lastName',   label: 'اسم العائلة', type: 'text',  value: 'YAMAL' },
+      { id: 'position',   label: 'المركز', type: 'text', value: 'RW' },
+      { id: 'jerseyNum',  label: 'رقم القميص', type: 'text', value: '27' },
+      { id: 'playerImage',label: 'صورة اللاعب', type: 'image', value: '' },
+      { id: 'teamColor',  label: 'لون الفريق', type: 'color', value: '#004D98' },
+      { id: 'badgeMode',  label: 'نمط العرض', type: 'select', value: 'player', options: [
+          {value:'player',label:'بطاقة لاعب'},
+          {value:'news',  label:'خبر'},
+          {value:'stats', label:'إحصائيات'}
+        ] },
+      { id: 'headline',   label: 'العنوان (للخبر/الإحصائيات)', type: 'text', value: 'FC BARCELONA' },
+      { id: 'subline',    label: 'السطر الفرعي', type: 'text', value: 'LA LIGA 2024/25' },
+      { id: 'bodyText',   label: 'النص', type: 'textarea', value: '' },
       { id: 'stat1Label',  label: 'إحصائية 1 اسم',  type: 'text',  value: 'الأهداف' },
       { id: 'stat1Value',  label: 'إحصائية 1 رقم',  type: 'text',  value: '25' },
       { id: 'stat2Label',  label: 'إحصائية 2 اسم',  type: 'text',  value: 'المباريات' },
@@ -1389,4 +1426,9 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
 ];
 
-export const INITIAL_TEMPLATES: OverlayConfig[] = INITIAL_TEMPLATE_DEFINITIONS.map(withBroadcastControls);
+export const INITIAL_TEMPLATES: OverlayConfig[] = [
+  ...INITIAL_TEMPLATE_DEFINITIONS,
+  ...BARCELONA_ELECTION_TEMPLATES,
+  ...FOOTBALL_BROADCAST_TEMPLATES,
+  ...FOOTBALL_PROJECTION_TEMPLATES,
+].map(withBroadcastControls);

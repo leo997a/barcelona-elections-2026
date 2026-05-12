@@ -1,136 +1,174 @@
 import React, { useEffect, useRef } from 'react';
 import { RendererProps } from './SharedComponents';
 
-// ─── Barca Premium Renderer ──────────────────────────────────────────────────
-// Inspired by: FC Barcelona official identity + La Liga EA Sports visual language
-// Design: Blaugrana (wine red + dark blue), gold accents, wireframe Spotify Camp Nou
+// ─── Barca Premium Renderer v2 ───────────────────────────────────────────────
+// Reference: NSL player card (nsl_7 = Mégane Sauvé) + La Liga EA Sports
+// Design Language:
+//   - Full-bleed player photo with team color overlay (deep blue/crimson)
+//   - Massive player surname in ultra-condensed black font
+//   - Smaller first name above
+//   - Bottom info bar: club badge area | stat boxes | context info
+//   - Vertical side repeat text watermark on both edges (like NSL)
+//   - Black horizontal bar at bottom 30% for text readability
+//   - Accent: Barca gold #EDBB00
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BARCA_RED    = '#A50044';
-const BARCA_BLUE   = '#004D98';
-const BARCA_GOLD   = '#EDBB00';
+const BARCA_RED  = '#A50044';
+const BARCA_BLUE = '#004D98';
+const BARCA_GOLD = '#EDBB00';
 
 export const BarcaPremiumRenderer: React.FC<RendererProps> = ({
   getField, containerStyle, contentWrapperStyle, playSound, wasVisible,
 }) => {
-  const headline     = String(getField('headline')    || 'قضية برشلونة');
-  const subheadline  = String(getField('subheadline') || 'النتيجة النهائية');
-  const bodyText     = String(getField('bodyText')    || 'معلومات إضافية حول هذا الخبر المهم المتعلق بنادي برشلونة.');
-  const playerImage  = String(getField('playerImage') || '');
-  const badgeMode    = String(getField('badgeMode')   || 'news'); // 'news' | 'stats' | 'lineup'
-  const stat1Label   = String(getField('stat1Label')  || 'الأهداف');
-  const stat1Value   = String(getField('stat1Value')  || '25');
-  const stat2Label   = String(getField('stat2Label')  || 'المباريات');
-  const stat2Value   = String(getField('stat2Value')  || '38');
-  const stat3Label   = String(getField('stat3Label')  || 'التمريرات');
-  const stat3Value   = String(getField('stat3Value')  || '143');
-  const showBadge    = Boolean(getField('showBadge')  ?? true);
+  const firstName   = String(getField('firstName')    || 'LAMINE');
+  const lastName    = String(getField('lastName')     || 'YAMAL');
+  const playerImage = String(getField('playerImage')  || '');
+  const position    = String(getField('position')     || 'RW');
+  const jerseyNum   = String(getField('jerseyNum')    || '27');
+  const badgeMode   = String(getField('badgeMode')    || 'player'); // player | news | stats
+  const headline    = String(getField('headline')     || 'FC BARCELONA');
+  const subline     = String(getField('subline')      || 'LA LIGA • 2024/25');
+  const bodyText    = String(getField('bodyText')     || '');
+  const stat1L      = String(getField('stat1Label')   || 'GOALS');
+  const stat1V      = String(getField('stat1Value')   || '15');
+  const stat2L      = String(getField('stat2Label')   || 'APPS');
+  const stat2V      = String(getField('stat2Value')   || '38');
+  const stat3L      = String(getField('stat3Label')   || 'ASSISTS');
+  const stat3V      = String(getField('stat3Value')   || '12');
+  const teamColor   = String(getField('teamColor')    || BARCA_BLUE);
+  const showBadge   = Boolean(getField('showBadge')   ?? true);
 
   const didPlay = useRef(false);
   useEffect(() => {
-    if (!wasVisible && !didPlay.current) {
-      didPlay.current = true;
-      playSound('ENTRY').catch(() => {});
-    }
+    if (!wasVisible && !didPlay.current) { didPlay.current = true; playSound('ENTRY').catch(() => {}); }
   }, [wasVisible, playSound]);
+
+  const isPlayerMode = badgeMode === 'player';
+  const isNewsMode   = badgeMode === 'news';
+  const isStatsMode  = badgeMode === 'stats';
 
   return (
     <div style={containerStyle}>
-      <div style={contentWrapperStyle}>
-        {/* Deep dark blaugrana background */}
-        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, #0a0016 0%, #06001a 40%, #000d20 100%)` }} />
+      <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,900;1,900&family=Oswald:wght@700&family=Tajawal:wght@700;900&display=swap" rel="stylesheet" />
+      <div style={contentWrapperStyle} className="overflow-hidden">
 
-        {/* Subtle Camp Nou wireframe silhouette */}
-        <div className="absolute inset-0 opacity-[0.03] flex items-center justify-center overflow-hidden">
-          <svg viewBox="0 0 800 400" className="w-full h-auto" fill="none" stroke="white" strokeWidth="1">
-            <ellipse cx="400" cy="200" rx="380" ry="180" />
-            <ellipse cx="400" cy="200" rx="300" ry="140" />
-            <ellipse cx="400" cy="200" rx="220" ry="100" />
-            <line x1="20" y1="200" x2="780" y2="200" />
-            <line x1="400" y1="20" x2="400" y2="380" />
-          </svg>
-        </div>
+        {/* ── FULL BLEED PHOTO ── */}
+        {playerImage ? (
+          <div className="absolute inset-0">
+            <img src={playerImage} alt="" className="w-full h-full object-cover object-top" />
+            {/* Team color wash */}
+            <div className="absolute inset-0" style={{ background: `${teamColor}40`, mixBlendMode: 'multiply' }} />
+          </div>
+        ) : (
+          <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${teamColor} 0%, ${BARCA_RED}88 50%, #050010 100%)` }} />
+        )}
 
-        {/* Left blaugrana stripe column */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="flex-1" style={{ background: i % 2 === 0 ? BARCA_RED : BARCA_BLUE, opacity: 0.85 }} />
-          ))}
-        </div>
+        {/* ── BOTTOM gradient for text ── */}
+        <div className="absolute inset-x-0 bottom-0"
+          style={{ height: '55%', background: 'linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)' }} />
 
-        {/* Top gold border */}
-        <div className="absolute top-0 inset-x-16 h-0.5" style={{ background: `linear-gradient(90deg, ${BARCA_GOLD}, transparent)` }} />
+        {/* ── TOP gradient ── */}
+        <div className="absolute inset-x-0 top-0"
+          style={{ height: '25%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)' }} />
 
-        {/* Main content */}
-        <div className="absolute inset-0 flex" style={{ paddingLeft: '76px' }}>
-          
-          {/* Left column: Text info */}
-          <div className="flex-1 flex flex-col justify-center p-8 gap-5">
-            
-            {/* Barca badge */}
-            {showBadge && (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-lg" style={{ background: `linear-gradient(135deg, ${BARCA_RED}, ${BARCA_BLUE})`, color: BARCA_GOLD, border: `2px solid ${BARCA_GOLD}` }}>
-                  FCB
-                </div>
-                <div className="h-px flex-1 opacity-20" style={{ background: BARCA_GOLD }} />
-                <span className="text-[9px] font-black tracking-[0.4em] uppercase" style={{ color: BARCA_GOLD }}>FC BARCELONA</span>
+        {/* ── BLAUGRANA stripe top bar ── */}
+        {showBadge && (
+          <div className="absolute top-0 inset-x-0 h-1.5 flex">
+            {[BARCA_RED, BARCA_GOLD, BARCA_BLUE, BARCA_RED, BARCA_GOLD, BARCA_BLUE, BARCA_RED, BARCA_GOLD, BARCA_BLUE].map((c, i) => (
+              <div key={i} className="flex-1" style={{ background: c }} />
+            ))}
+          </div>
+        )}
+
+        {/* ── PLAYER NUMBER — top right ── */}
+        {isPlayerMode && (
+          <div className="absolute top-6 right-8 text-right">
+            <p className="leading-none font-black text-white/15"
+              style={{ fontSize: 'clamp(60px, 12vw, 160px)', fontFamily: 'Barlow Condensed, sans-serif', lineHeight: 1 }}>
+              {jerseyNum}
+            </p>
+            <div className="w-8 h-0.5 ml-auto" style={{ background: BARCA_GOLD }} />
+          </div>
+        )}
+
+        {/* ── MAIN TEXT ── */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-8 pb-6">
+
+          {isPlayerMode && (
+            <>
+              {/* Position label */}
+              <p className="font-bold tracking-[0.4em] uppercase mb-1" style={{ fontSize: '10px', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>
+                {position} • FC BARCELONA
+              </p>
+              {/* First name */}
+              <p className="text-white/70 font-black uppercase leading-none mb-0" style={{ fontSize: 'clamp(18px, 3vw, 36px)', fontFamily: 'Barlow Condensed, sans-serif' }}>
+                {firstName}
+              </p>
+              {/* Last name — HUGE */}
+              <div className="relative mb-4">
+                <h1 className="text-white font-black uppercase leading-none"
+                  style={{ fontSize: 'clamp(52px, 9vw, 120px)', fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: '-0.02em' }}>
+                  {lastName}
+                </h1>
+                {/* Underline in gold */}
+                <div className="absolute -bottom-1 left-0 h-0.5 w-24" style={{ background: BARCA_GOLD }} />
               </div>
-            )}
 
-            {/* Headline */}
-            <div>
-              <h1 className="text-3xl font-black text-white leading-tight">{headline}</h1>
-              <p className="text-sm font-bold mt-1" style={{ color: BARCA_GOLD }}>{subheadline}</p>
-            </div>
-
-            {/* Body text */}
-            {badgeMode === 'news' && (
-              <p className="text-sm text-white/60 leading-relaxed max-w-sm">{bodyText}</p>
-            )}
-
-            {/* Stats grid for 'stats' mode */}
-            {badgeMode === 'stats' && (
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: stat1Label, value: stat1Value },
-                  { label: stat2Label, value: stat2Value },
-                  { label: stat3Label, value: stat3Value },
-                ].map((s, i) => (
-                  <div key={i} className="text-center p-3 rounded-xl border" style={{ borderColor: `${BARCA_GOLD}30`, background: `${BARCA_GOLD}08` }}>
-                    <p className="text-2xl font-black" style={{ color: BARCA_GOLD }}>{s.value}</p>
-                    <p className="text-[10px] text-white/50 uppercase tracking-wider mt-0.5">{s.label}</p>
+              {/* Stats row */}
+              <div className="flex gap-0 mt-4">
+                {[{ l: stat1L, v: stat1V }, { l: stat2L, v: stat2V }, { l: stat3L, v: stat3V }].map((s, i) => (
+                  <div key={i} className="px-4 py-2 text-center" style={{ borderRight: i < 2 ? `1px solid ${BARCA_GOLD}30` : 'none' }}>
+                    <p className="font-black leading-none" style={{ fontSize: 'clamp(24px, 4vw, 48px)', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>{s.v}</p>
+                    <p className="uppercase tracking-widest text-white/40" style={{ fontSize: '8px', fontFamily: 'Barlow Condensed, sans-serif' }}>{s.l}</p>
                   </div>
                 ))}
               </div>
-            )}
+            </>
+          )}
 
-            {/* REO watermark */}
-            <div className="flex items-center gap-2 mt-auto">
-              <div className="w-4 h-0.5 rounded" style={{ background: BARCA_GOLD }} />
-              <span className="text-[9px] font-black tracking-[0.3em] uppercase" style={{ color: `${BARCA_GOLD}60` }}>REO SHOW EXCLUSIVE</span>
-            </div>
-          </div>
+          {isNewsMode && (
+            <>
+              <p className="font-bold tracking-[0.35em] uppercase mb-2" style={{ fontSize: '10px', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>FC BARCELONA NEWS</p>
+              <h1 className="text-white font-black uppercase leading-none mb-2"
+                style={{ fontSize: 'clamp(40px, 7vw, 90px)', fontFamily: 'Barlow Condensed, sans-serif' }}>{headline}</h1>
+              <p className="font-bold uppercase mb-3" style={{ fontSize: '14px', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>{subline}</p>
+              {bodyText && <p className="text-white/60 text-sm leading-relaxed max-w-xl">{bodyText}</p>}
+            </>
+          )}
 
-          {/* Right column: Player image */}
-          {playerImage && (
-            <div className="relative w-2/5 h-full overflow-hidden" style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0 100%)' }}>
-              <img src={playerImage} className="w-full h-full object-cover object-top" alt="" />
-              {/* Gradient overlay */}
-              <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, #000d20 0%, transparent 40%, transparent 70%, #000d20 100%)` }} />
-              <div className="absolute bottom-0 inset-x-0 h-1/3" style={{ background: `linear-gradient(to top, #000d20, transparent)` }} />
-            </div>
+          {isStatsMode && (
+            <>
+              <p className="font-bold tracking-[0.35em] uppercase mb-2" style={{ fontSize: '10px', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>SEASON STATS</p>
+              <h1 className="text-white font-black uppercase leading-none mb-4"
+                style={{ fontSize: 'clamp(36px, 5.5vw, 72px)', fontFamily: 'Barlow Condensed, sans-serif' }}>{headline}</h1>
+              <div className="grid grid-cols-3 gap-3 max-w-lg">
+                {[{ l: stat1L, v: stat1V }, { l: stat2L, v: stat2V }, { l: stat3L, v: stat3V }].map((s, i) => (
+                  <div key={i} style={{ background: 'rgba(0,0,0,0.6)', border: `1px solid ${BARCA_GOLD}30`, padding: '12px 16px' }}>
+                    <p className="font-black leading-none" style={{ fontSize: 'clamp(28px, 5vw, 56px)', color: BARCA_GOLD, fontFamily: 'Barlow Condensed, sans-serif' }}>{s.v}</p>
+                    <p className="uppercase tracking-widest text-white/40 mt-1" style={{ fontSize: '8px', fontFamily: 'Barlow Condensed, sans-serif' }}>{s.l}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
 
-        {/* Bottom blaugrana stripe */}
-        <div className="absolute bottom-0 inset-x-0 h-1.5 flex">
-          <div className="flex-1" style={{ background: BARCA_RED }} />
-          <div className="flex-1" style={{ background: BARCA_BLUE }} />
-          <div className="flex-1" style={{ background: BARCA_RED }} />
-          <div className="flex-1" style={{ background: BARCA_BLUE }} />
-          <div className="flex-1" style={{ background: BARCA_RED }} />
-          <div className="flex-1" style={{ background: BARCA_BLUE }} />
+        {/* ── LEFT EDGE vertical repeat ── */}
+        <div className="absolute left-0 top-0 bottom-0 w-7 z-20 flex items-center justify-center overflow-hidden"
+          style={{ borderRight: `1px solid rgba(255,255,255,0.06)` }}>
+          <span className="font-black whitespace-nowrap uppercase text-white/10"
+            style={{ fontSize: '7px', transform: 'rotate(-90deg)', fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: '0.4em' }}>
+            FC BARCELONA ⊕ REO SHOW ⊕ FC BARCELONA ⊕ REO SHOW ⊕ FC BARCELONA ⊕ REO SHOW ⊕
+          </span>
+        </div>
+
+        {/* ── RIGHT EDGE vertical repeat ── */}
+        <div className="absolute right-0 top-0 bottom-0 w-7 z-20 flex items-center justify-center overflow-hidden"
+          style={{ borderLeft: `1px solid rgba(255,255,255,0.06)` }}>
+          <span className="font-black whitespace-nowrap uppercase text-white/10"
+            style={{ fontSize: '7px', transform: 'rotate(90deg)', fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: '0.4em' }}>
+            FC BARCELONA ⊕ REO SHOW ⊕ FC BARCELONA ⊕ REO SHOW ⊕ FC BARCELONA ⊕ REO SHOW ⊕
+          </span>
         </div>
       </div>
     </div>
