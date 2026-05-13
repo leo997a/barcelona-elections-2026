@@ -1,24 +1,43 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RendererProps } from './SharedComponents';
 
 type TeamStats = {
   possession: number;
   shots: number;
   shotsOnTarget: number;
+  shotsOffTarget: number;
+  blockedShots: number;
+  shotAccuracy: number;
+  goals: number;
   passes: number;
   passesAccurate: number;
   passAccuracy: number;
   corners: number;
-  fouls: number;
-  offsides: number;
-  cards: number;
+  crosses: number;
+  longBalls: number;
+  throughBalls: number;
+  keyPasses: number;
+  finalThirdEntries: number;
+  boxTouches: number;
+  dribbles: number;
+  dribbleSuccessRate: number;
   tackles: number;
   interceptions: number;
   clearances: number;
+  blocks: number;
   aerialWon: number;
-  keyPasses: number;
-  dribbles: number;
+  aerialLost: number;
+  aerialWinRate: number;
   saves: number;
+  saveRate: number;
+  fouls: number;
+  offsides: number;
+  yellowCards: number;
+  redCards: number;
+  cards: number;
+  dispossessed: number;
+  turnovers: number;
+  ballRecoveries: number;
 };
 
 type PlayerStats = {
@@ -51,11 +70,19 @@ type MatchEvent = {
 };
 
 type MatchViewData = {
+  meta?: {
+    extractedAt?: string;
+    sourceUrl?: string;
+  };
   match: {
     homeTeam: string;
     awayTeam: string;
     homeScore: number;
     awayScore: number;
+    homeTeamId?: string | number;
+    awayTeamId?: string | number;
+    homeLogo?: string;
+    awayLogo?: string;
     status?: string;
     competition?: string;
     venue?: string;
@@ -69,30 +96,73 @@ type MatchViewData = {
   topCreators: PlayerStats[];
 };
 
-const emptyTeamStats = (): TeamStats => ({
-  possession: 0,
-  shots: 0,
-  shotsOnTarget: 0,
-  passes: 0,
-  passesAccurate: 0,
-  passAccuracy: 0,
-  corners: 0,
-  fouls: 0,
-  offsides: 0,
-  cards: 0,
-  tackles: 0,
-  interceptions: 0,
-  clearances: 0,
-  aerialWon: 0,
-  keyPasses: 0,
-  dribbles: 0,
-  saves: 0,
-});
+type StatItem = {
+  id: string;
+  label: string;
+  home: number;
+  away: number;
+  suffix?: string;
+  decimals?: number;
+};
+
+type StatGroup = {
+  id: string;
+  title: string;
+  subtitle: string;
+  items: StatItem[];
+};
+
+const numberKeys: Array<keyof TeamStats> = [
+  'possession',
+  'shots',
+  'shotsOnTarget',
+  'shotsOffTarget',
+  'blockedShots',
+  'shotAccuracy',
+  'goals',
+  'passes',
+  'passesAccurate',
+  'passAccuracy',
+  'corners',
+  'crosses',
+  'longBalls',
+  'throughBalls',
+  'keyPasses',
+  'finalThirdEntries',
+  'boxTouches',
+  'dribbles',
+  'dribbleSuccessRate',
+  'tackles',
+  'interceptions',
+  'clearances',
+  'blocks',
+  'aerialWon',
+  'aerialLost',
+  'aerialWinRate',
+  'saves',
+  'saveRate',
+  'fouls',
+  'offsides',
+  'yellowCards',
+  'redCards',
+  'cards',
+  'dispossessed',
+  'turnovers',
+  'ballRecoveries',
+];
+
+const emptyTeamStats = (): TeamStats => numberKeys.reduce((acc, key) => {
+  acc[key] = 0;
+  return acc;
+}, {} as TeamStats);
 
 const DEMO_MATCH_DATA = {
+  meta: { extractedAt: new Date().toISOString() },
   match: {
     homeTeam: 'Barcelona',
     awayTeam: 'Real Madrid',
+    homeTeamId: 65,
+    awayTeamId: 52,
     homeScore: 2,
     awayScore: 1,
     status: 'LIVE',
@@ -102,47 +172,90 @@ const DEMO_MATCH_DATA = {
     possession: 58,
     shots: 14,
     shotsOnTarget: 6,
+    shotsOffTarget: 5,
+    blockedShots: 3,
     passes: 522,
+    passesAccurate: 475,
     passAccuracy: 91,
     corners: 7,
-    fouls: 9,
+    crosses: 18,
+    longBalls: 31,
+    throughBalls: 4,
+    keyPasses: 12,
+    finalThirdEntries: 42,
+    boxTouches: 24,
+    dribbles: 16,
+    dribbleSuccessRate: 64,
     tackles: 18,
     interceptions: 11,
-    keyPasses: 12,
-    dribbles: 16,
+    clearances: 13,
+    blocks: 4,
+    aerialWon: 9,
+    aerialLost: 8,
+    aerialWinRate: 53,
     saves: 2,
+    saveRate: 67,
+    fouls: 9,
+    offsides: 2,
+    yellowCards: 1,
+    redCards: 0,
+    cards: 1,
+    dispossessed: 8,
+    turnovers: 6,
+    ballRecoveries: 47,
   },
   awayStats: {
     possession: 42,
     shots: 9,
     shotsOnTarget: 4,
+    shotsOffTarget: 3,
+    blockedShots: 2,
     passes: 391,
+    passesAccurate: 336,
     passAccuracy: 86,
     corners: 4,
-    fouls: 13,
+    crosses: 13,
+    longBalls: 42,
+    throughBalls: 2,
+    keyPasses: 7,
+    finalThirdEntries: 31,
+    boxTouches: 17,
+    dribbles: 10,
+    dribbleSuccessRate: 56,
     tackles: 21,
     interceptions: 9,
-    keyPasses: 7,
-    dribbles: 10,
+    clearances: 18,
+    blocks: 7,
+    aerialWon: 8,
+    aerialLost: 9,
+    aerialWinRate: 47,
     saves: 4,
+    saveRate: 67,
+    fouls: 13,
+    offsides: 1,
+    yellowCards: 3,
+    redCards: 0,
+    cards: 3,
+    dispossessed: 11,
+    turnovers: 9,
+    ballRecoveries: 39,
   },
   goalEvents: [
-    { minute: 24, player: 'Pedri', teamId: 'home' },
-    { minute: 51, player: 'Vinicius Junior', teamId: 'away' },
-    { minute: 77, player: 'Lamine Yamal', teamId: 'home' },
+    { minute: 24, player: 'Pedri', teamId: 65 },
+    { minute: 51, player: 'Vinicius Junior', teamId: 52 },
+    { minute: 77, player: 'Lamine Yamal', teamId: 65 },
   ],
   cardEvents: [
-    { minute: 63, player: 'Aurelien Tchouameni', teamId: 'away', cardType: 'YellowCard' },
+    { minute: 63, player: 'Aurelien Tchouameni', teamId: 52, cardType: 'YellowCard' },
   ],
   homePlayers: [
-    { name: 'Pedri', teamId: 'home', passes: 82, keyPasses: 4, tackles: 3, interceptions: 2, dribbles: 3, shots: 2, rating: 8.5 },
-    { name: 'Lamine Yamal', teamId: 'home', passes: 46, keyPasses: 5, tackles: 1, interceptions: 1, dribbles: 7, shots: 4, rating: 8.8 },
-    { name: 'Frenkie de Jong', teamId: 'home', passes: 91, keyPasses: 2, tackles: 4, interceptions: 3, dribbles: 2, shots: 1, rating: 7.7 },
+    { id: '1', name: 'Pedri', teamId: 65, passes: 82, keyPasses: 4, tackles: 3, interceptions: 2, dribbles: 3, shots: 2, rating: 8.5 },
+    { id: '2', name: 'Lamine Yamal', teamId: 65, passes: 46, keyPasses: 5, tackles: 1, interceptions: 1, dribbles: 7, shots: 4, rating: 8.8 },
+    { id: '3', name: 'Frenkie de Jong', teamId: 65, passes: 91, keyPasses: 2, tackles: 4, interceptions: 3, dribbles: 2, shots: 1, rating: 7.7 },
   ],
   awayPlayers: [
-    { name: 'Jude Bellingham', teamId: 'away', passes: 55, keyPasses: 3, tackles: 4, interceptions: 2, dribbles: 4, shots: 3, rating: 7.9 },
-    { name: 'Federico Valverde', teamId: 'away', passes: 62, keyPasses: 2, tackles: 5, interceptions: 3, dribbles: 2, shots: 2, rating: 7.5 },
-    { name: 'Antonio Rudiger', teamId: 'away', passes: 48, keyPasses: 0, tackles: 6, interceptions: 4, clearances: 7, shots: 0, rating: 7.2 },
+    { id: '4', name: 'Jude Bellingham', teamId: 52, passes: 55, keyPasses: 3, tackles: 4, interceptions: 2, dribbles: 4, shots: 3, rating: 7.9 },
+    { id: '5', name: 'Federico Valverde', teamId: 52, passes: 62, keyPasses: 2, tackles: 5, interceptions: 3, dribbles: 2, shots: 2, rating: 7.5 },
   ],
 };
 
@@ -167,6 +280,11 @@ const boolField = (value: unknown, fallback = true): boolean => {
   return fallback;
 };
 
+const teamLogoUrl = (teamId: unknown) => {
+  const id = String(teamId || '').trim();
+  return id ? `https://d2zywfiolv4f83.cloudfront.net/img/teams/${id}.png` : '';
+};
+
 const displayName = (value: unknown): string => {
   if (!value) return '';
   if (typeof value === 'string') return value;
@@ -181,9 +299,7 @@ const shortTeam = (name: string) => {
   const trimmed = name.trim();
   if (!trimmed) return '---';
   const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length >= 2 && words[0].length <= 5) {
-    return `${words[0][0]}${words[1][0]}`.toUpperCase();
-  }
+  if (words.length >= 2) return words.map(word => word[0]).join('').slice(0, 3).toUpperCase();
   return trimmed.slice(0, 3).toUpperCase();
 };
 
@@ -206,10 +322,7 @@ const collectNumbers = (value: unknown): number[] => {
 const sumMetric = (stats: unknown, aliases: string[]): number => {
   if (!stats || typeof stats !== 'object') return 0;
   const source = stats as Record<string, unknown>;
-  return aliases.reduce((sum, key) => {
-    const values = collectNumbers(source[key]);
-    return sum + values.reduce((inner, item) => inner + item, 0);
-  }, 0);
+  return aliases.reduce((sum, key) => sum + collectNumbers(source[key]).reduce((inner, item) => inner + item, 0), 0);
 };
 
 const latestMetric = (stats: unknown, aliases: string[]): number => {
@@ -220,37 +333,6 @@ const latestMetric = (stats: unknown, aliases: string[]): number => {
     if (values.length) return values[values.length - 1];
   }
   return 0;
-};
-
-const normalizeTeamStats = (source: unknown): TeamStats => {
-  const data = (source || {}) as Record<string, unknown>;
-  const yellowCards = toNumber(data.yellowCards);
-  const redCards = toNumber(data.redCards);
-  const passes = toNumber(data.passes);
-  const passAccuracy = toNumber(data.passAccuracy);
-  const passesAccurate = toNumber(
-    data.passesAccurate,
-    passes && passAccuracy ? Math.round((passes * passAccuracy) / 100) : 0,
-  );
-  return {
-    possession: toNumber(data.possession),
-    shots: toNumber(data.shots),
-    shotsOnTarget: toNumber(data.shotsOnTarget),
-    passes,
-    passesAccurate,
-    passAccuracy: passAccuracy || (passes ? Math.round((passesAccurate / passes) * 100) : 0),
-    corners: toNumber(data.corners),
-    fouls: toNumber(data.fouls),
-    offsides: toNumber(data.offsides),
-    cards: toNumber(data.cards, yellowCards + redCards),
-    tackles: toNumber(data.tackles),
-    interceptions: toNumber(data.interceptions),
-    clearances: toNumber(data.clearances),
-    aerialWon: toNumber(data.aerialWon),
-    keyPasses: toNumber(data.keyPasses),
-    dribbles: toNumber(data.dribbles),
-    saves: toNumber(data.saves),
-  };
 };
 
 const emptyPlayer = (id: string, name: string, teamId: string, isHome: boolean): PlayerStats => ({
@@ -272,32 +354,47 @@ const emptyPlayer = (id: string, name: string, teamId: string, isHome: boolean):
   rating: 0,
 });
 
-const parseScore = (raw: Record<string, unknown>) => {
-  const score = String(raw.score || '');
-  if (score.includes('-')) {
-    const [homeScore, awayScore] = score.split('-').map(part => toNumber(part.trim()));
-    return { homeScore, awayScore };
-  }
+const normalizeTeamStats = (source: unknown): TeamStats => {
+  const stats = emptyTeamStats();
+  if (!source || typeof source !== 'object') return stats;
+  const raw = source as Record<string, unknown>;
+  numberKeys.forEach(key => {
+    stats[key] = toNumber(raw[key]);
+  });
+  stats.cards = toNumber(raw.cards, stats.yellowCards + stats.redCards);
+  stats.shotsOffTarget = toNumber(raw.shotsOffTarget, Math.max(0, stats.shots - stats.shotsOnTarget - stats.blockedShots));
+  stats.shotAccuracy = toNumber(raw.shotAccuracy, stats.shots ? (stats.shotsOnTarget / stats.shots) * 100 : 0);
+  stats.passAccuracy = toNumber(raw.passAccuracy, stats.passes ? (stats.passesAccurate / stats.passes) * 100 : 0);
+  stats.aerialWinRate = toNumber(raw.aerialWinRate, stats.aerialWon + stats.aerialLost ? (stats.aerialWon / (stats.aerialWon + stats.aerialLost)) * 100 : 0);
+  return stats;
+};
+
+const buildTopLists = (players: PlayerStats[]) => {
+  const byRating = (a: PlayerStats, b: PlayerStats) => b.rating - a.rating;
+  const byPasses = (a: PlayerStats, b: PlayerStats) => b.passes - a.passes || byRating(a, b);
+  const byCreators = (a: PlayerStats, b: PlayerStats) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || byRating(a, b);
+  const byDefenders = (a: PlayerStats, b: PlayerStats) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || byRating(a, b);
   return {
-    homeScore: toNumber(raw.homeScore ?? (raw.home as Record<string, unknown> | undefined)?.score),
-    awayScore: toNumber(raw.awayScore ?? (raw.away as Record<string, unknown> | undefined)?.score),
+    topPassers: [...players].sort(byPasses).slice(0, 4),
+    topCreators: [...players].sort(byCreators).slice(0, 4),
+    topInterceptors: [...players].sort(byDefenders).slice(0, 4),
   };
 };
 
-const buildTopLists = (players: PlayerStats[]) => ({
-  topPassers: [...players].sort((a, b) => b.passes - a.passes).slice(0, 5),
-  topInterceptors: [...players]
-    .sort((a, b) => (b.interceptions + b.tackles + b.clearances) - (a.interceptions + a.tackles + a.clearances))
-    .slice(0, 5),
-  topCreators: [...players]
-    .sort((a, b) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists))
-    .slice(0, 5),
-});
+const parseScore = (raw: Record<string, unknown>) => {
+  const score = String(raw.score || '');
+  if (score.includes('-')) {
+    const [home, away] = score.split('-').map(part => toNumber(part.trim()));
+    return { home, away };
+  }
+  return {
+    home: toNumber(raw.homeScore),
+    away: toNumber(raw.awayScore),
+  };
+};
 
-const normalizeStructuredOutput = (raw: Record<string, unknown>): MatchViewData | null => {
+const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData => {
   const matchRaw = (raw.match || {}) as Record<string, unknown>;
-  if (!raw.homeStats && !raw.awayStats && !matchRaw.homeTeam && !matchRaw.awayTeam) return null;
-
   const homeId = String(matchRaw.homeTeamId || 'home');
   const awayId = String(matchRaw.awayTeamId || 'away');
   const homeTeam = String(matchRaw.homeTeam || raw.homeTeamName || 'Home');
@@ -305,32 +402,36 @@ const normalizeStructuredOutput = (raw: Record<string, unknown>): MatchViewData 
   const hStats = normalizeTeamStats(raw.homeStats);
   const aStats = normalizeTeamStats(raw.awayStats);
 
+  if (!hStats.saveRate && aStats.shotsOnTarget) hStats.saveRate = (hStats.saves / Math.max(1, aStats.shotsOnTarget)) * 100;
+  if (!aStats.saveRate && hStats.shotsOnTarget) aStats.saveRate = (aStats.saves / Math.max(1, hStats.shotsOnTarget)) * 100;
+
   const normalizePlayerList = (list: unknown, isHome: boolean): PlayerStats[] => {
     if (!Array.isArray(list)) return [];
     return list.map((player, index) => {
       const source = (player || {}) as Record<string, unknown>;
       const teamId = String(source.teamId || (isHome ? homeId : awayId));
-      const normalized = emptyPlayer(
-        String(source.id || source.playerId || `${teamId}-${index}`),
-        String(source.name || source.playerName || `Player ${index + 1}`),
-        teamId,
-        isHome,
-      );
-      normalized.position = source.position ? String(source.position) : undefined;
-      normalized.shirtNo = source.shirtNo as string | number | undefined;
-      normalized.shots = toNumber(source.shots);
-      normalized.passes = toNumber(source.passes);
-      normalized.passesAccurate = toNumber(source.passesAccurate);
-      normalized.keyPasses = toNumber(source.keyPasses);
-      normalized.tackles = toNumber(source.tackles);
-      normalized.interceptions = toNumber(source.interceptions);
-      normalized.dribbles = toNumber(source.dribbles);
-      normalized.saves = toNumber(source.saves);
-      normalized.clearances = toNumber(source.clearances);
-      normalized.goals = toNumber(source.goals);
-      normalized.assists = toNumber(source.assists);
-      normalized.rating = toNumber(source.rating);
-      return normalized;
+      return {
+        ...emptyPlayer(
+          String(source.id || source.playerId || `${teamId}-${index}`),
+          String(source.name || source.playerName || `Player ${index + 1}`),
+          teamId,
+          isHome,
+        ),
+        position: source.position ? String(source.position) : undefined,
+        shirtNo: source.shirtNo as string | number | undefined,
+        shots: toNumber(source.shots),
+        passes: toNumber(source.passes),
+        passesAccurate: toNumber(source.passesAccurate),
+        keyPasses: toNumber(source.keyPasses),
+        tackles: toNumber(source.tackles),
+        interceptions: toNumber(source.interceptions),
+        dribbles: toNumber(source.dribbles),
+        saves: toNumber(source.saves),
+        clearances: toNumber(source.clearances),
+        goals: toNumber(source.goals),
+        assists: toNumber(source.assists),
+        rating: toNumber(source.rating),
+      };
     });
   };
 
@@ -361,11 +462,15 @@ const normalizeStructuredOutput = (raw: Record<string, unknown>): MatchViewData 
     }),
   ].sort((a, b) => a.minute - b.minute);
 
-  const topLists = buildTopLists(players);
   return {
+    meta: raw.meta as MatchViewData['meta'],
     match: {
       homeTeam,
       awayTeam,
+      homeTeamId: matchRaw.homeTeamId as string | number | undefined,
+      awayTeamId: matchRaw.awayTeamId as string | number | undefined,
+      homeLogo: String(matchRaw.homeLogo || matchRaw.homeLogoUrl || teamLogoUrl(matchRaw.homeTeamId)),
+      awayLogo: String(matchRaw.awayLogo || matchRaw.awayLogoUrl || teamLogoUrl(matchRaw.awayTeamId)),
       homeScore: toNumber(matchRaw.homeScore),
       awayScore: toNumber(matchRaw.awayScore),
       status: String(matchRaw.status || ''),
@@ -376,7 +481,7 @@ const normalizeStructuredOutput = (raw: Record<string, unknown>): MatchViewData 
     aStats,
     players,
     events,
-    ...topLists,
+    ...buildTopLists(players),
   };
 };
 
@@ -417,10 +522,15 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
     const type = displayName(event.type);
     const outcome = displayName(event.outcomeType);
     const success = ['Successful', 'Success', 'SuccessInPlay', 'SuccessOut'].includes(outcome);
+    const qualifiers = Array.isArray(event.qualifiers) ? event.qualifiers.map((q: any) => displayName(q.type || q)).join(' ') : '';
 
     if (type === 'Pass') {
       stats.passes += 1;
       if (success) stats.passesAccurate += 1;
+      if (qualifiers.includes('Cross')) stats.crosses += 1;
+      if (qualifiers.includes('Longball') || qualifiers.includes('LongBall')) stats.longBalls += 1;
+      if (qualifiers.includes('Throughball') || qualifiers.includes('ThroughBall')) stats.throughBalls += 1;
+      if (toNumber(event.endX) >= 66 && toNumber(event.x) < 66) stats.finalThirdEntries += 1;
       if (player) {
         player.passes += 1;
         if (success) player.passesAccurate += 1;
@@ -429,6 +539,8 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       stats.shots += 1;
       if (player) player.shots += 1;
       if (type === 'SavedShot' || type === 'Goal') stats.shotsOnTarget += 1;
+      if (type === 'MissedShots' || type === 'ShotOnPost') stats.shotsOffTarget += 1;
+      if (type === 'BlockedShot') stats.blockedShots += 1;
       if (type === 'Goal' && player) player.goals += 1;
     } else if (type === 'CornerAwarded') {
       stats.corners += 1;
@@ -445,19 +557,38 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
     } else if (type === 'Clearance') {
       stats.clearances += 1;
       if (player) player.clearances += 1;
-    } else if (type === 'Aerial' && success) {
-      stats.aerialWon += 1;
+    } else if (type === 'Aerial') {
+      if (success) stats.aerialWon += 1;
+      else stats.aerialLost += 1;
     } else if (type === 'KeyPass') {
       stats.keyPasses += 1;
       if (player) player.keyPasses += 1;
-    } else if (['TakeOn', 'Dribble'].includes(type) && success) {
-      stats.dribbles += 1;
-      if (player) player.dribbles += 1;
+    } else if (['TakeOn', 'Dribble'].includes(type)) {
+      if (success) {
+        stats.dribbles += 1;
+        if (player) player.dribbles += 1;
+      } else {
+        stats.dispossessed += 1;
+      }
     } else if (type === 'Save') {
       stats.saves += 1;
       if (player) player.saves += 1;
+    } else if (type === 'BallRecovery') {
+      stats.ballRecoveries += 1;
+    } else if (type === 'Dispossessed') {
+      stats.dispossessed += 1;
+    } else if (type === 'Turnover') {
+      stats.turnovers += 1;
+    } else if (type === 'BlockedPass' || type === 'Block') {
+      stats.blocks += 1;
     } else if (['YellowCard', 'RedCard', 'YellowRedCard'].includes(type)) {
+      if (type === 'YellowCard') stats.yellowCards += 1;
+      else stats.redCards += 1;
       stats.cards += 1;
+    }
+
+    if (toNumber(event.x) >= 83 && toNumber(event.y) >= 20 && toNumber(event.y) <= 80) {
+      stats.boxTouches += 1;
     }
 
     if (type === 'Goal') {
@@ -510,35 +641,29 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
   hydratePlayers(away, awayId, false);
 
   const players = Object.values(playersById);
-  const applyPlayerTotals = (stats: TeamStats, isHome: boolean) => {
-    const sidePlayers = players.filter(player => player.isHome === isHome);
-    stats.passes = Math.max(stats.passes, sidePlayers.reduce((sum, player) => sum + player.passes, 0));
-    stats.passesAccurate = Math.max(stats.passesAccurate, sidePlayers.reduce((sum, player) => sum + player.passesAccurate, 0));
-    stats.keyPasses = Math.max(stats.keyPasses, sidePlayers.reduce((sum, player) => sum + player.keyPasses, 0));
-    stats.tackles = Math.max(stats.tackles, sidePlayers.reduce((sum, player) => sum + player.tackles, 0));
-    stats.interceptions = Math.max(stats.interceptions, sidePlayers.reduce((sum, player) => sum + player.interceptions, 0));
-    stats.dribbles = Math.max(stats.dribbles, sidePlayers.reduce((sum, player) => sum + player.dribbles, 0));
-    stats.shots = Math.max(stats.shots, sidePlayers.reduce((sum, player) => sum + player.shots, 0));
-    stats.saves = Math.max(stats.saves, sidePlayers.reduce((sum, player) => sum + player.saves, 0));
-    stats.clearances = Math.max(stats.clearances, sidePlayers.reduce((sum, player) => sum + player.clearances, 0));
+  const finalizeStats = (stats: TeamStats, opponent: TeamStats) => {
+    stats.possession = stats.passes + opponent.passes ? (stats.passes / (stats.passes + opponent.passes)) * 100 : 50;
+    stats.passAccuracy = stats.passes ? (stats.passesAccurate / stats.passes) * 100 : 0;
+    stats.shotAccuracy = stats.shots ? (stats.shotsOnTarget / stats.shots) * 100 : 0;
+    stats.aerialWinRate = stats.aerialWon + stats.aerialLost ? (stats.aerialWon / (stats.aerialWon + stats.aerialLost)) * 100 : 0;
+    stats.saveRate = opponent.shotsOnTarget ? (stats.saves / Math.max(1, opponent.shotsOnTarget)) * 100 : 0;
+    stats.cards = stats.yellowCards + stats.redCards;
   };
+  finalizeStats(hStats, aStats);
+  finalizeStats(aStats, hStats);
 
-  applyPlayerTotals(hStats, true);
-  applyPlayerTotals(aStats, false);
-  const totalPasses = hStats.passes + aStats.passes;
-  hStats.possession = toNumber(raw.homePossession, totalPasses ? Math.round((hStats.passes / totalPasses) * 100) : 50);
-  aStats.possession = toNumber(raw.awayPossession, 100 - hStats.possession);
-  hStats.passAccuracy = hStats.passes ? Math.round((hStats.passesAccurate / hStats.passes) * 100) : hStats.passAccuracy;
-  aStats.passAccuracy = aStats.passes ? Math.round((aStats.passesAccurate / aStats.passes) * 100) : aStats.passAccuracy;
-
-  const topLists = buildTopLists(players);
   return {
+    meta: { extractedAt: new Date().toISOString() },
     match: {
       homeTeam: String(home.name || raw.homeTeamName || 'Home'),
       awayTeam: String(away.name || raw.awayTeamName || 'Away'),
-      homeScore: score.homeScore,
-      awayScore: score.awayScore,
-      status: String(raw.statusCode || raw.period || ''),
+      homeTeamId: homeId,
+      awayTeamId: awayId,
+      homeLogo: String(home.logo || home.logoUrl || teamLogoUrl(homeId)),
+      awayLogo: String(away.logo || away.logoUrl || teamLogoUrl(awayId)),
+      homeScore: score.home,
+      awayScore: score.away,
+      status: String(raw.statusCode || raw.status || ''),
       competition: String(raw.competitionName || ''),
       venue: String(raw.venueName || ''),
     },
@@ -546,86 +671,110 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
     aStats,
     players,
     events: events.sort((a, b) => a.minute - b.minute),
-    ...topLists,
+    ...buildTopLists(players),
   };
 };
 
-const normalizeMatchData = (rawJson: unknown): MatchViewData | null => {
-  if (!rawJson || typeof rawJson !== 'object') return null;
-  const raw = rawJson as Record<string, unknown>;
-  return normalizeStructuredOutput(raw) || normalizeWhoScoredRaw(raw);
+const normalizeMatchData = (raw: unknown): MatchViewData | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const source = raw as Record<string, unknown>;
+  if (source.match && source.homeStats && source.awayStats) return normalizeExtractorOutput(source);
+  return normalizeWhoScoredRaw(source);
+};
+
+const formatStat = (value: number, suffix = '', decimals = 0) => {
+  const safe = Number.isFinite(value) ? value : 0;
+  const fixed = decimals > 0 ? safe.toFixed(decimals) : Math.round(safe).toString();
+  return `${fixed}${suffix}`;
+};
+
+const makeStat = (id: string, label: string, home: number, away: number, suffix = '', decimals = 0): StatItem => ({
+  id,
+  label,
+  home: Number.isFinite(home) ? home : 0,
+  away: Number.isFinite(away) ? away : 0,
+  suffix,
+  decimals,
+});
+
+const TeamCrest: React.FC<{ src?: string; name: string; color: string; side: 'home' | 'away' }> = ({ src, name, color, side }) => {
+  const [failed, setFailed] = useState(false);
+  const initials = shortTeam(name);
+  return (
+    <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/45 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+      <div className="absolute inset-0 opacity-25" style={{ background: `linear-gradient(135deg, ${color}, transparent 70%)` }} />
+      {src && !failed ? (
+        <img
+          src={src}
+          alt={name}
+          className="relative z-10 h-12 w-12 object-contain"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="relative z-10 font-['Barlow_Condensed'] text-2xl font-black text-white">{initials}</span>
+      )}
+      <div className={`absolute bottom-1 h-1.5 w-7 rounded-full ${side === 'home' ? 'left-4' : 'right-4'}`} style={{ background: color }} />
+    </div>
+  );
 };
 
 export const MatchStatsRenderer: React.FC<RendererProps> = ({
-  getField, containerStyle, playSound, wasVisible,
+  getField,
+  containerStyle,
+  activeTheme,
 }) => {
   const dataMode = String(getField('dataMode') || 'BRIDGE');
   const apiUrl = String(getField('apiUrl') || 'http://127.0.0.1:3005/api/match');
   const manualJson = String(getField('manualJson') || '');
   const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 10), 3, 60);
-  const homeColor = String(getField('homeColor') || '#3b82f6');
-  const awayColor = String(getField('awayColor') || '#ef4444');
+  const statsRotateSec = clamp(toNumber(getField('statsRotateSec'), 30), 10, 90);
+  const homeColor = String(getField('homeColor') || activeTheme.primary || '#2563eb');
+  const awayColor = String(getField('awayColor') || activeTheme.secondary || '#ef4444');
   const showScorebug = boolField(getField('showScorebug'), true);
+  const showEvents = boolField(getField('showEvents'), true);
+  const showKeyBattle = boolField(getField('showKeyBattle'), true);
   const showDominance = boolField(getField('showDominance'), true);
   const showMotm = boolField(getField('showMotm'), true);
   const showTopStats = boolField(getField('showTopStats'), true);
-  const showEvents = boolField(getField('showEvents'), true);
-  const showKeyBattle = boolField(getField('showKeyBattle'), true);
   const showAdvancedStats = boolField(getField('showAdvancedStats'), true);
   const panelSide = String(getField('panelSide') || 'RIGHT');
 
-  const [rawJson, setRawJson] = useState<unknown>(null);
+  const [rawJson, setRawJson] = useState<unknown>(dataMode === 'DEMO' ? DEMO_MATCH_DATA : null);
   const [errorStatus, setErrorStatus] = useState<string>('');
-
-  const didPlay = useRef(false);
-  useEffect(() => {
-    if (!wasVisible && !didPlay.current) {
-      didPlay.current = true;
-      playSound('ENTRY').catch(() => { });
-    }
-  }, [wasVisible, playSound]);
+  const [activeGroupIndex, setActiveGroupIndex] = useState(0);
 
   useEffect(() => {
-    if (dataMode === 'DEMO') {
-      setRawJson(DEMO_MATCH_DATA);
-      setErrorStatus('');
-      return undefined;
-    }
-
-    if (dataMode === 'PASTE_JSON') {
-      if (!manualJson.trim()) {
-        setRawJson(null);
-        setErrorStatus('الصق JSON المباراة أو استورد ملف extractor من لوحة التحرير.');
-        return undefined;
-      }
-
-      try {
-        setRawJson(JSON.parse(manualJson));
-        setErrorStatus('');
-      } catch {
-        setRawJson(null);
-        setErrorStatus('JSON المباراة غير صالح. تأكد من نسخ الملف كاملا بدون حذف الأقواس.');
-      }
-      return undefined;
-    }
-
     let cancelled = false;
-    const fetchData = async () => {
-      try {
-        const res = await fetch(apiUrl, { cache: 'no-store' });
-        if (!res.ok) {
-          if (!cancelled) setErrorStatus('لم تصل بيانات من الجسر المحلي بعد. شغل تطبيق Match Stats ثم ابدأ السحب.');
-          return;
-        }
 
-        const data = await res.json();
+    const fetchData = async () => {
+      if (dataMode === 'DEMO') {
+        setRawJson(DEMO_MATCH_DATA);
+        setErrorStatus('');
+        return;
+      }
+
+      if (dataMode === 'PASTE_JSON') {
+        try {
+          setRawJson(JSON.parse(manualJson));
+          setErrorStatus('');
+        } catch {
+          setErrorStatus('ملف JSON غير صالح');
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(apiUrl, { cache: 'no-store', mode: 'cors' });
+        if (!res.ok) throw new Error(`Bridge ${res.status}`);
+        const json = await res.json();
         if (!cancelled) {
-          setRawJson(data);
+          setRawJson(json);
           setErrorStatus('');
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setErrorStatus('تعذر الاتصال بـ Live Bridge. استخدم زر استيراد JSON كمسار احتياطي مضمون.');
+          setErrorStatus(`لا توجد بيانات مباشرة من الجسر المحلي: ${error instanceof Error ? error.message : 'unknown error'}`);
         }
       }
     };
@@ -640,12 +789,19 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
 
   const parsedData = useMemo(() => normalizeMatchData(rawJson), [rawJson]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveGroupIndex(index => index + 1);
+    }, statsRotateSec * 1000);
+    return () => window.clearInterval(interval);
+  }, [statsRotateSec]);
+
   if (!parsedData) {
     return (
       <div style={containerStyle}>
         <div className="flex h-full w-full items-center justify-center p-8">
-          <div className="flex max-w-[520px] flex-col items-center gap-4 rounded-xl border border-red-500/50 bg-black/80 p-8 text-center text-xl font-bold text-white">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
+          <div className="flex max-w-[560px] flex-col items-center gap-4 rounded-lg border border-red-500/45 bg-black/85 p-7 text-center font-['Cairo'] text-lg font-bold text-white shadow-2xl">
+            <div className="h-11 w-11 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
             <div>{errorStatus || 'جاري تجهيز بيانات المباراة...'}</div>
           </div>
         </div>
@@ -653,237 +809,282 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     );
   }
 
-  const { match, hStats, aStats, players, topPassers, topInterceptors, topCreators, events } = parsedData;
-  const totalPasses = hStats.passes + aStats.passes;
-  const possHome = clamp(Math.round(hStats.possession || (totalPasses ? (hStats.passes / totalPasses) * 100 : 50)), 0, 100);
-  const shotTotal = hStats.shots + aStats.shots;
-  const shotShare = shotTotal > 0 ? hStats.shots / shotTotal : 0.5;
-  const keyTotal = hStats.keyPasses + aStats.keyPasses;
-  const keyShare = keyTotal > 0 ? hStats.keyPasses / keyTotal : 0.5;
-  const domHome = clamp(Math.round((possHome / 100 * 0.5 + shotShare * 0.3 + keyShare * 0.2) * 100), 0, 100);
+  const { match, hStats, aStats, players, topPassers, topInterceptors, topCreators, events, meta } = parsedData;
+  const possHome = clamp(Math.round(hStats.possession || 50), 0, 100);
+  const shotShare = hStats.shots + aStats.shots > 0 ? hStats.shots / (hStats.shots + aStats.shots) : 0.5;
+  const keyShare = hStats.keyPasses + aStats.keyPasses > 0 ? hStats.keyPasses / (hStats.keyPasses + aStats.keyPasses) : 0.5;
+  const territoryShare = hStats.finalThirdEntries + aStats.finalThirdEntries > 0 ? hStats.finalThirdEntries / (hStats.finalThirdEntries + aStats.finalThirdEntries) : 0.5;
+  const domHome = clamp(Math.round((possHome / 100 * 0.38 + shotShare * 0.27 + keyShare * 0.2 + territoryShare * 0.15) * 100), 0, 100);
   const motm = [...players].filter(player => player.rating > 0).sort((a, b) => b.rating - a.rating)[0];
-  const latestEvents = [...events].slice(-4).reverse();
+  const latestEvents = [...events].slice(-3).reverse();
   const keyCreator = topCreators.find(player => player.keyPasses > 0 || player.assists > 0);
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const panelJustify = panelSide === 'LEFT' ? 'justify-start' : 'justify-end';
-  const advancedStats = [
-    { label: 'دقة التمرير', home: hStats.passAccuracy, away: aStats.passAccuracy, suffix: '%' },
-    { label: 'ركنيات', home: hStats.corners, away: aStats.corners },
-    { label: 'مراوغات ناجحة', home: hStats.dribbles, away: aStats.dribbles },
-    { label: 'تصديات', home: hStats.saves, away: aStats.saves },
-    { label: 'أخطاء', home: hStats.fouls, away: aStats.fouls },
-    { label: 'تسلل', home: hStats.offsides, away: aStats.offsides },
-    { label: 'بطاقات', home: hStats.cards, away: aStats.cards },
-    { label: 'إبعادات', home: hStats.clearances, away: aStats.clearances },
-    { label: 'التحامات هوائية', home: hStats.aerialWon, away: aStats.aerialWon },
+  const totalMetrics = 31;
+
+  const groups: StatGroup[] = [
+    {
+      id: 'control',
+      title: 'السيطرة والنسق',
+      subtitle: 'استحواذ، إيقاع، وتقدم للمناطق الخطرة',
+      items: [
+        makeStat('possession', 'الاستحواذ', possHome, 100 - possHome, '%'),
+        makeStat('dominance', 'مؤشر الهيمنة', domHome, 100 - domHome, '%'),
+        makeStat('passes', 'التمريرات', hStats.passes, aStats.passes),
+        makeStat('passAccuracy', 'دقة التمرير', hStats.passAccuracy, aStats.passAccuracy, '%'),
+        makeStat('finalThird', 'دخول الثلث الأخير', hStats.finalThirdEntries, aStats.finalThirdEntries),
+        makeStat('recoveries', 'استرجاع الكرة', hStats.ballRecoveries, aStats.ballRecoveries),
+      ],
+    },
+    {
+      id: 'attack',
+      title: 'الإنتاج الهجومي',
+      subtitle: 'تسديد، صناعة فرص، ولمسات داخل المنطقة',
+      items: [
+        makeStat('shots', 'إجمالي التسديدات', hStats.shots, aStats.shots),
+        makeStat('onTarget', 'على المرمى', hStats.shotsOnTarget, aStats.shotsOnTarget),
+        makeStat('offTarget', 'خارج المرمى', hStats.shotsOffTarget, aStats.shotsOffTarget),
+        makeStat('blockedShots', 'تسديدات محجوبة', hStats.blockedShots, aStats.blockedShots),
+        makeStat('shotAccuracy', 'دقة التسديد', hStats.shotAccuracy, aStats.shotAccuracy, '%'),
+        makeStat('keyPasses', 'تمريرات مفتاحية', hStats.keyPasses, aStats.keyPasses),
+        makeStat('boxTouches', 'لمسات داخل المنطقة', hStats.boxTouches, aStats.boxTouches),
+      ],
+    },
+    {
+      id: 'passing',
+      title: 'جودة البناء',
+      subtitle: 'تنويع التمرير والكرات العرضية والطويلة',
+      items: [
+        makeStat('accuratePasses', 'تمريرات صحيحة', hStats.passesAccurate, aStats.passesAccurate),
+        makeStat('corners', 'ركنيات', hStats.corners, aStats.corners),
+        makeStat('crosses', 'كرات عرضية', hStats.crosses, aStats.crosses),
+        makeStat('longBalls', 'كرات طويلة', hStats.longBalls, aStats.longBalls),
+        makeStat('throughBalls', 'كرات بينية', hStats.throughBalls, aStats.throughBalls),
+        makeStat('dribbles', 'مراوغات ناجحة', hStats.dribbles, aStats.dribbles),
+        makeStat('dribbleRate', 'نجاح المراوغة', hStats.dribbleSuccessRate, aStats.dribbleSuccessRate, '%'),
+      ],
+    },
+    {
+      id: 'defense',
+      title: 'العمل الدفاعي',
+      subtitle: 'ضغط، افتكاك، وتنظيف مناطق الخطورة',
+      items: [
+        makeStat('tackles', 'تدخلات', hStats.tackles, aStats.tackles),
+        makeStat('interceptions', 'اعتراضات', hStats.interceptions, aStats.interceptions),
+        makeStat('clearances', 'إبعادات', hStats.clearances, aStats.clearances),
+        makeStat('blocks', 'تصديات دفاعية', hStats.blocks, aStats.blocks),
+        makeStat('aerialWon', 'التحامات هوائية ناجحة', hStats.aerialWon, aStats.aerialWon),
+        makeStat('aerialRate', 'نسبة الفوز هوائيا', hStats.aerialWinRate, aStats.aerialWinRate, '%'),
+      ],
+    },
+    {
+      id: 'discipline',
+      title: 'الانضباط والحراسة',
+      subtitle: 'أخطاء، بطاقات، وتصديات الحراس',
+      items: [
+        makeStat('saves', 'تصديات الحارس', hStats.saves, aStats.saves),
+        makeStat('saveRate', 'نسبة التصدي', hStats.saveRate, aStats.saveRate, '%'),
+        makeStat('fouls', 'أخطاء', hStats.fouls, aStats.fouls),
+        makeStat('offsides', 'تسللات', hStats.offsides, aStats.offsides),
+        makeStat('yellowCards', 'بطاقات صفراء', hStats.yellowCards, aStats.yellowCards),
+        makeStat('redCards', 'بطاقات حمراء', hStats.redCards, aStats.redCards),
+        makeStat('turnovers', 'فقدان الكرة', hStats.dispossessed + hStats.turnovers, aStats.dispossessed + aStats.turnovers),
+      ],
+    },
   ];
 
-  const SimpleStatBar = ({
-    label,
-    v1,
-    v2,
-    display1,
-    display2,
-    suffix = '',
-  }: {
-    label: string;
-    v1: number;
-    v2: number;
-    display1?: React.ReactNode;
-    display2?: React.ReactNode;
-    suffix?: string;
-  }) => {
-    const total = Math.max(1, Math.abs(v1) + Math.abs(v2));
-    const pct1 = clamp((v1 / total) * 100, 0, 100);
+  const activeGroup = groups[activeGroupIndex % groups.length];
+
+  const StatRow: React.FC<{ item: StatItem; index: number }> = ({ item, index }) => {
+    const max = Math.max(1, Math.abs(item.home), Math.abs(item.away));
+    const homeWidth = clamp((item.home / max) * 100, 4, 100);
+    const awayWidth = clamp((item.away / max) * 100, 4, 100);
+    const homeLead = item.home > item.away;
+    const awayLead = item.away > item.home;
     return (
-      <div className="mb-2.5">
-        <div className="mb-1.5 flex justify-between text-[11px] text-white/70">
-          <span className="text-sm font-bold" style={{ color: homeColor, fontFamily: 'Barlow Condensed' }}>{display1 ?? v1}{suffix}</span>
-          <span className="font-bold uppercase tracking-widest text-white/55">{label}</span>
-          <span className="text-sm font-bold" style={{ color: awayColor, fontFamily: 'Barlow Condensed' }}>{display2 ?? v2}{suffix}</span>
+      <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2.5" style={{ animation: `reoStatIn 420ms ease ${index * 55}ms both` }}>
+        <div className="mb-1.5 grid grid-cols-[54px_1fr_54px] items-center gap-2">
+          <div className="font-['Barlow_Condensed'] text-2xl font-black text-left" style={{ color: homeLead ? homeColor : 'rgba(255,255,255,0.72)' }}>
+            {formatStat(item.home, item.suffix, item.decimals)}
+          </div>
+          <div className="truncate text-center text-[11px] font-black text-white/75">{item.label}</div>
+          <div className="font-['Barlow_Condensed'] text-2xl font-black text-right" style={{ color: awayLead ? awayColor : 'rgba(255,255,255,0.72)' }}>
+            {formatStat(item.away, item.suffix, item.decimals)}
+          </div>
         </div>
-        <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full transition-all duration-1000" style={{ width: `${pct1}%`, background: homeColor }} />
-          <div className="h-full transition-all duration-1000" style={{ width: `${100 - pct1}%`, background: awayColor }} />
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="flex justify-end">
+            <div className="h-1.5 rounded-full" style={{ width: `${homeWidth}%`, background: homeColor }} />
+          </div>
+          <div>
+            <div className="h-1.5 rounded-full" style={{ width: `${awayWidth}%`, background: awayColor }} />
+          </div>
         </div>
       </div>
     );
   };
 
-  const TopList = ({ title, data, valKey }: { title: string; data: PlayerStats[]; valKey: keyof PlayerStats }) => (
-    <div className="flex-1 rounded-xl border border-white/5 bg-black/40 p-3">
-      <h3 className="mb-2 border-b border-white/5 pb-1.5 text-center text-[9px] uppercase tracking-widest text-white/40">{title}</h3>
-      <div className="flex flex-col gap-1.5">
-        {data.length ? data.slice(0, 3).map((player, index) => (
-          <div key={`${player.id}-${index}`} className="flex items-center justify-between rounded bg-white/5 px-2 py-1.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="h-4 w-1.5 shrink-0 rounded-sm" style={{ background: player.isHome ? homeColor : awayColor }} />
-              <span className="max-w-[100px] truncate text-xs font-bold text-white" title={player.name}>{playerShortName(player.name)}</span>
-            </div>
-            <span className="font-['Barlow_Condensed'] text-sm font-black" style={{ color: player.isHome ? homeColor : awayColor }}>
-              {Number(player[valKey]) || 0}
-            </span>
-          </div>
-        )) : (
-          <div className="rounded bg-white/5 px-2 py-3 text-center text-[11px] text-white/35">لا توجد بيانات كافية</div>
-        )}
+  const PlayerLine: React.FC<{ player: PlayerStats; value: number; label: string }> = ({ player, value, label }) => (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/40 px-2.5 py-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="h-7 w-1.5 shrink-0 rounded-full" style={{ background: player.isHome ? homeColor : awayColor }} />
+        <div className="min-w-0">
+          <div className="truncate text-xs font-bold text-white">{playerShortName(player.name)}</div>
+          <div className="truncate text-[9px] font-semibold text-white/35">{label}</div>
+        </div>
+      </div>
+      <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: player.isHome ? homeColor : awayColor }}>
+        {Math.round(value)}
       </div>
     </div>
   );
 
-  const AdvancedStatTile: React.FC<{ label: string; home: number; away: number; suffix?: string }> = ({ label, home, away, suffix = '' }) => {
-    const homeWins = home > away;
-    const awayWins = away > home;
-    return (
-      <div className="rounded-lg border border-white/5 bg-white/[0.045] px-2.5 py-2">
-        <div className="mb-1 text-center text-[9px] font-black uppercase tracking-widest text-white/40">{label}</div>
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 font-['Barlow_Condensed'] text-xl font-black">
-          <div className="text-left" style={{ color: homeWins ? homeColor : 'rgba(255,255,255,0.55)' }}>{home}{suffix}</div>
-          <div className="h-1.5 w-10 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full" style={{ width: `${clamp((home / Math.max(1, home + away)) * 100, 0, 100)}%`, background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
-          </div>
-          <div className="text-right" style={{ color: awayWins ? awayColor : 'rgba(255,255,255,0.55)' }}>{away}{suffix}</div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={containerStyle}>
-      <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Cairo:wght@600;700&display=swap" rel="stylesheet" />
-      <div className={`flex h-full w-full ${panelJustify} overflow-hidden p-8`} style={{ direction: 'ltr' }}>
-        <div dir="rtl" className="flex h-full w-[480px] flex-col gap-3 font-['Cairo']">
+      <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes reoStatIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className={`flex h-full w-full ${panelJustify} overflow-hidden p-6`} style={{ direction: 'ltr' }}>
+        <div dir="rtl" className="flex h-full w-[540px] max-w-[calc(100vw-48px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white">
           {showScorebug && (
-            <div className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-white/10 bg-black/60 shadow-2xl backdrop-blur-xl">
-              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-50" />
-              <div className="absolute right-2 top-1 flex items-center gap-1">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-                <span className="text-[8px] font-black uppercase tracking-widest text-red-500">{dataMode === 'BRIDGE' ? 'LIVE DATA' : 'JSON DATA'}</span>
+            <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+              <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
+              <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                <span>{dataMode === 'BRIDGE' ? 'LIVE BRIDGE' : dataMode}</span>
+                <span>{meta?.extractedAt ? new Date(meta.extractedAt).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' }) : 'LIVE'}</span>
               </div>
-
-              <div className="relative mt-2 flex h-16 min-w-0 flex-1 flex-col justify-center pl-4">
-                <div className="absolute bottom-0 left-0 top-0 w-1.5" style={{ background: homeColor }} />
-                <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{shortTeam(match.homeTeam)}</div>
-                <div className="max-w-[130px] truncate text-[9px] font-bold uppercase tracking-widest text-white/40">{match.homeTeam}</div>
-              </div>
-              <div className="mt-2 flex h-16 items-center justify-center bg-black/80 px-6 font-['Barlow_Condensed'] text-4xl font-black text-white">
-                {match.homeScore} <span className="mx-2 text-2xl text-white/30">:</span> {match.awayScore}
-              </div>
-              <div className="relative mt-2 flex h-16 min-w-0 flex-1 flex-col items-end justify-center pr-4">
-                <div className="absolute bottom-0 right-0 top-0 w-1.5" style={{ background: awayColor }} />
-                <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{shortTeam(match.awayTeam)}</div>
-                <div className="max-w-[130px] truncate text-[9px] font-bold uppercase tracking-widest text-white/40">{match.awayTeam}</div>
+              <div dir="ltr" className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <TeamCrest src={match.homeLogo} name={match.homeTeam} color={homeColor} side="home" />
+                  <div dir="ltr" className="min-w-0 text-left">
+                    <div className="text-[15px] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{match.homeTeam}</div>
+                    <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: homeColor }}>{shortTeam(match.homeTeam)}</div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/55 px-5 py-2 text-center shadow-inner">
+                  <div className="font-['Barlow_Condensed'] text-5xl font-black leading-none">
+                    {match.homeScore}<span className="mx-2 text-white/30">:</span>{match.awayScore}
+                  </div>
+                  <div className="mt-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">{match.competition || match.venue || 'MATCH CENTER'}</div>
+                </div>
+                <div className="flex min-w-0 items-center justify-end gap-2">
+                  <div dir="ltr" className="min-w-0 text-right">
+                    <div className="text-[15px] font-black leading-tight" style={{ overflowWrap: 'anywhere' }}>{match.awayTeam}</div>
+                    <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: awayColor }}>{shortTeam(match.awayTeam)}</div>
+                  </div>
+                  <TeamCrest src={match.awayLogo} name={match.awayTeam} color={awayColor} side="away" />
+                </div>
               </div>
             </div>
           )}
 
           {showDominance && (
-            <div className="rounded-2xl border border-white/10 bg-black/60 p-4 shadow-2xl backdrop-blur-xl">
-              <div className="mb-3 rounded-xl border border-white/5 bg-black/40 p-3">
-                <div className="mb-2 text-center text-[10px] uppercase tracking-widest text-white/50">Live Dominance Index</div>
-                <div className="flex items-center gap-3 font-['Barlow_Condensed'] text-2xl font-black">
-                  <div style={{ color: homeColor }}>{domHome}%</div>
-                  <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-white/10 shadow-inner">
-                    <div className="absolute bottom-0 left-0 top-0 transition-all duration-1000" style={{ width: `${domHome}%`, background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
-                    <div className="absolute bottom-0 left-1/2 top-0 z-10 w-0.5 bg-white" />
-                  </div>
-                  <div style={{ color: awayColor }}>{100 - domHome}%</div>
+            <div className="rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Momentum</div>
+                  <div className="text-sm font-black text-white/85">مؤشر السيطرة المباشر</div>
+                </div>
+                <div className="font-['Barlow_Condensed'] text-3xl font-black">
+                  <span style={{ color: homeColor }}>{domHome}</span>
+                  <span className="text-white/30"> / </span>
+                  <span style={{ color: awayColor }}>{100 - domHome}</span>
                 </div>
               </div>
-
-              <SimpleStatBar label="الاستحواذ" v1={possHome} v2={100 - possHome} suffix="%" />
-              <SimpleStatBar
-                label="التسديدات (على المرمى)"
-                v1={hStats.shots}
-                v2={aStats.shots}
-                display1={`${hStats.shots} (${hStats.shotsOnTarget})`}
-                display2={`${aStats.shots} (${aStats.shotsOnTarget})`}
-              />
-              <SimpleStatBar label="التمريرات" v1={hStats.passes} v2={aStats.passes} />
-              <SimpleStatBar label="الفرص المفتاحية" v1={hStats.keyPasses} v2={aStats.keyPasses} />
-              <SimpleStatBar label="التدخلات والقطع" v1={hStats.tackles + hStats.interceptions} v2={aStats.tackles + aStats.interceptions} />
+              <div className="relative h-4 overflow-hidden rounded-full bg-white/10">
+                <div className="absolute inset-y-0 left-0 transition-all duration-1000" style={{ width: `${domHome}%`, background: homeColor }} />
+                <div className="absolute inset-y-0 right-0 transition-all duration-1000" style={{ width: `${100 - domHome}%`, background: awayColor }} />
+                <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/75" />
+              </div>
             </div>
           )}
 
           {showAdvancedStats && (
-            <div className="rounded-2xl border border-white/10 bg-black/60 p-3 shadow-2xl backdrop-blur-xl">
-              <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
-                <span>Advanced Match Data</span>
-                <span>{dataMode === 'BRIDGE' ? 'AUTO 60S' : 'SNAPSHOT'}</span>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-base font-black">{activeGroup.title}</div>
+                  <div className="truncate text-[10px] font-bold text-white/45">{activeGroup.subtitle}</div>
+                </div>
+                <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
+                  <div className="font-['Barlow_Condensed'] text-xl font-black">{totalMetrics}+</div>
+                  <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/40">STATS</div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {advancedStats.map(stat => (
-                  <AdvancedStatTile key={stat.label} {...stat} />
+              <div key={activeGroup.id} className="grid min-h-0 flex-1 auto-rows-fr grid-cols-1 gap-2 overflow-hidden">
+                {activeGroup.items.map((item, index) => <StatRow key={item.id} item={item} index={index} />)}
+              </div>
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                {groups.map((group, index) => (
+                  <div
+                    key={group.id}
+                    className="h-1.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: index === activeGroupIndex % groups.length ? 28 : 7,
+                      background: index === activeGroupIndex % groups.length ? `linear-gradient(90deg, ${homeColor}, ${awayColor})` : 'rgba(255,255,255,0.18)',
+                    }}
+                  />
                 ))}
               </div>
             </div>
           )}
 
-          {showEvents && latestEvents.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-black/60 p-3 shadow-2xl backdrop-blur-xl">
-              <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
-                <span>Match Events</span>
-                <span>{match.status || match.competition || 'LIVE'}</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                {latestEvents.map((event, index) => (
-                  <div key={`${event.minute}-${event.player}-${index}`} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.04] px-3 py-1.5">
-                    <div className="w-9 text-center font-['Barlow_Condensed'] text-xl font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
-                    <div className={`rounded px-2 py-0.5 text-[9px] font-black ${event.tone === 'goal' ? 'bg-emerald-500/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-500/15 text-red-300' : 'bg-amber-500/15 text-amber-300'}`}>
-                      {event.label}
-                    </div>
-                    <div className="min-w-0 flex-1 truncate text-xs font-bold text-white">{event.player}</div>
+          {(showEvents || showTopStats || showKeyBattle || showMotm) && (
+            <div className="grid grid-cols-2 gap-3">
+              {showEvents && (
+                <div className="min-h-[132px] rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">أحداث المباراة</div>
+                  <div className="flex flex-col gap-1.5">
+                    {latestEvents.length ? latestEvents.map((event, index) => (
+                      <div key={`${event.minute}-${event.player}-${index}`} className="grid grid-cols-[34px_auto_1fr] items-center gap-2 rounded-md bg-white/10 px-2 py-1.5">
+                        <div className="font-['Barlow_Condensed'] text-xl font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
+                        <div className={`rounded px-1.5 py-0.5 text-[8px] font-black ${event.tone === 'goal' ? 'bg-emerald-400/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-400/15 text-red-300' : 'bg-amber-400/15 text-amber-300'}`}>{event.label}</div>
+                        <div className="min-w-0 truncate text-[11px] font-bold text-white/85">{event.player}</div>
+                      </div>
+                    )) : (
+                      <div className="rounded-md bg-white/10 px-3 py-5 text-center text-xs font-bold text-white/40">لا توجد أحداث حاسمة بعد</div>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {showMotm && motm ? (
+                <div className="relative min-h-[132px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE MOTM</div>
+                  <div className="mt-2 min-w-0">
+                    <div className="truncate text-lg font-black">{motm.name}</div>
+                    <div className="truncate text-[10px] font-bold text-white/45">{motm.isHome ? match.homeTeam : match.awayTeam}</div>
+                  </div>
+                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-5xl font-black text-amber-300">{motm.rating.toFixed(1)}</div>
+                </div>
+              ) : showKeyBattle && keyCreator && keyDefender ? (
+                <div className="min-h-[132px] rounded-lg border border-cyan-300/20 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Key Battle</div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <div className="min-w-0 text-right">
+                      <div className="truncate text-sm font-black">{playerShortName(keyCreator.name)}</div>
+                      <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: keyCreator.isHome ? homeColor : awayColor }}>{keyCreator.keyPasses + keyCreator.assists}</div>
+                    </div>
+                    <div className="rounded-full border border-white/10 px-2 py-1 font-['Barlow_Condensed'] text-sm font-black text-white/45">VS</div>
+                    <div className="min-w-0 text-left">
+                      <div className="truncate text-sm font-black">{playerShortName(keyDefender.name)}</div>
+                      <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: keyDefender.isHome ? homeColor : awayColor }}>{keyDefender.tackles + keyDefender.interceptions + keyDefender.clearances}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
           {showTopStats && (
-            <div className="flex gap-3 rounded-2xl border border-white/10 bg-black/60 p-3 shadow-2xl backdrop-blur-xl">
-              <TopList title="صناع الفرص" data={topCreators} valKey="keyPasses" />
-              <TopList title="قاطعي الكرات" data={topInterceptors} valKey="interceptions" />
-            </div>
-          )}
-
-          {showKeyBattle && keyCreator && keyDefender && (
-            <div className="rounded-2xl border border-cyan-400/20 bg-black/60 p-3 shadow-2xl backdrop-blur-xl">
-              <div className="mb-2 text-center text-[10px] font-black uppercase tracking-widest text-cyan-300/70">Key Battle</div>
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                <div className="min-w-0 text-left">
-                  <div className="truncate text-sm font-bold text-white">{keyCreator.name}</div>
-                  <div className="font-['Barlow_Condensed'] text-xl font-black" style={{ color: keyCreator.isHome ? homeColor : awayColor }}>
-                    {keyCreator.keyPasses + keyCreator.assists}
-                  </div>
-                  <div className="text-[10px] text-white/40">فرص</div>
-                </div>
-                <div className="rounded-full border border-white/10 px-3 py-1 font-['Barlow_Condensed'] text-sm font-black text-white/50">VS</div>
-                <div className="min-w-0 text-right">
-                  <div className="truncate text-sm font-bold text-white">{keyDefender.name}</div>
-                  <div className="font-['Barlow_Condensed'] text-xl font-black" style={{ color: keyDefender.isHome ? homeColor : awayColor }}>
-                    {keyDefender.tackles + keyDefender.interceptions + keyDefender.clearances}
-                  </div>
-                  <div className="text-[10px] text-white/40">افتكاكات</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showMotm && motm && (
-            <div className="relative mt-1">
-              <div className="absolute -top-3 left-4 z-10 rounded-t-lg bg-gradient-to-r from-amber-400 to-amber-600 px-4 py-0.5 font-['Barlow_Condensed'] text-[10px] font-black tracking-widest text-black">
-                LIVE MOTM
-              </div>
-              <div className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 p-3 shadow-[0_0_20px_rgba(245,158,11,0.1)] backdrop-blur-xl">
-                <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl" />
-                <div className="relative z-10 flex flex-col">
-                  <h1 className="text-base font-bold leading-tight text-white">{motm.name}</h1>
-                  <h3 className="text-[10px] uppercase tracking-widest text-white/50">{motm.isHome ? match.homeTeam : match.awayTeam}</h3>
-                </div>
-                <div className="relative z-10 font-['Barlow_Condensed'] text-4xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                  {motm.rating.toFixed(1)}
-                </div>
-              </div>
+            <div className="grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
+              {topCreators[0] && <PlayerLine player={topCreators[0]} value={topCreators[0].keyPasses + topCreators[0].assists} label="صناعة" />}
+              {topPassers[0] && <PlayerLine player={topPassers[0]} value={topPassers[0].passes} label="تمرير" />}
+              {topInterceptors[0] && <PlayerLine player={topInterceptors[0]} value={topInterceptors[0].tackles + topInterceptors[0].interceptions + topInterceptors[0].clearances} label="دفاع" />}
             </div>
           )}
         </div>

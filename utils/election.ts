@@ -224,6 +224,15 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
     value: true,
   },
   {
+    id: 'statsRotateSec',
+    label: 'تبديل مجموعات الإحصائيات كل ثانية',
+    type: 'range',
+    value: 30,
+    min: 10,
+    max: 90,
+    step: 5,
+  },
+  {
     id: 'panelSide',
     label: 'مكان الشريط الجانبي',
     type: 'select',

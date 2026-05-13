@@ -449,6 +449,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       ] },
       { id: 'manualJson', label: 'JSON المباراة المستورد', type: 'textarea', value: '' },
       { id: 'pollIntervalSec', label: 'تحديث الجسر كل ثانية', type: 'range', value: 10, min: 3, max: 60, step: 1 },
+      { id: 'statsRotateSec', label: 'تبديل مجموعات الإحصائيات كل ثانية', type: 'range', value: 30, min: 10, max: 90, step: 5 },
       { id: 'showScorebug', label: 'إظهار شريط النتيجة', type: 'boolean', value: true },
       { id: 'showEvents', label: 'إظهار أحداث المباراة', type: 'boolean', value: true },
       { id: 'showKeyBattle', label: 'إظهار المواجهة الأبرز', type: 'boolean', value: true },
