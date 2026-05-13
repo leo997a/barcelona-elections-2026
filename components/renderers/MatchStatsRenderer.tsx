@@ -861,8 +861,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   containerStyle,
   activeTheme,
 }) => {
-  const dataMode = String(getField('dataMode') || 'BRIDGE');
-  const apiUrl = String(getField('apiUrl') || 'http://127.0.0.1:3005/api/match');
+  const dataMode = String(getField('dataMode') || 'CLOUD_BRIDGE');
+  const apiUrl = String(getField('apiUrl') || (dataMode === 'CLOUD_BRIDGE' ? '/api/reo-match/match' : 'http://127.0.0.1:3005/api/match'));
   const manualJson = String(getField('manualJson') || '');
   const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 10), 3, 60);
   const statsRotateSec = clamp(toNumber(getField('statsRotateSec'), 30), 10, 90);
@@ -876,8 +876,13 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const showTopStats = boolField(getField('showTopStats'), true);
   const showAdvancedStats = boolField(getField('showAdvancedStats'), true);
   const showPlayerTicker = boolField(getField('showPlayerTicker'), true);
-  const playerRotateSec = clamp(toNumber(getField('playerRotateSec'), 60), 20, 120);
-  const panelSide = String(getField('panelSide') || 'RIGHT');
+  const playerRotateSec = clamp(toNumber(getField('playerRotateSec'), 30), 15, 120);
+  const panelSide = String(getField('panelSide') || 'LEFT');
+  const requestedPlayerSide = String(getField('playerPanelSide') || 'RIGHT');
+  const playerPanelSide = requestedPlayerSide === panelSide ? (panelSide === 'LEFT' ? 'RIGHT' : 'LEFT') : requestedPlayerSide;
+  const visualStyle = String(getField('visualStyle') || 'DUAL_RAIL');
+  const playerMetricPreset = String(getField('playerMetricPreset') || 'ALL');
+  const dataSourceName = String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'REO Cloud Bridge' : 'REO Live Bridge'));
 
   const [rawJson, setRawJson] = useState<unknown>(dataMode === 'DEMO' ? DEMO_MATCH_DATA : null);
   const [errorStatus, setErrorStatus] = useState<string>('');
@@ -914,7 +919,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorStatus(`لا توجد بيانات مباشرة من الجسر المحلي: ${error instanceof Error ? error.message : 'unknown error'}`);
+          setErrorStatus(`لا توجد بيانات مباشرة من ${dataSourceName}: ${error instanceof Error ? error.message : 'unknown error'}`);
         }
       }
     };
@@ -925,7 +930,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [apiUrl, dataMode, manualJson, pollIntervalSec]);
+  }, [apiUrl, dataMode, dataSourceName, manualJson, pollIntervalSec]);
 
   const parsedData = useMemo(() => normalizeMatchData(rawJson), [rawJson]);
 
@@ -969,7 +974,15 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const latestEvents = [...events].slice(-3).reverse();
   const keyCreator = topCreators.find(player => player.keyPasses > 0 || player.assists > 0);
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
-  const panelJustify = panelSide === 'LEFT' ? 'justify-start' : 'justify-end';
+  const matchSideClass = panelSide === 'LEFT' ? 'left-6' : 'right-6';
+  const playerSideClass = playerPanelSide === 'LEFT' ? 'left-6' : 'right-6';
+  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[470px]' : visualStyle === 'DATA_TOWER' ? 'w-[500px]' : 'w-[540px]';
+  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[430px]' : visualStyle === 'DATA_TOWER' ? 'w-[460px]' : 'w-[500px]';
+  const panelSurface = visualStyle === 'TACTICAL_SPLIT'
+    ? 'border-white/15 bg-slate-950/92'
+    : visualStyle === 'DATA_TOWER'
+      ? 'border-cyan-300/20 bg-black/92'
+      : 'border-white/10 bg-black/90';
   const totalMetrics = 31;
   const playerValue = (player: PlayerStats, key: keyof PlayerStats) => {
     const value = player[key];
@@ -980,39 +993,50 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     subtitle: string;
     key: keyof PlayerStats;
     suffix: string;
+    category: 'PASSING' | 'ATTACK' | 'DEFENSE';
     players: PlayerStats[];
   };
-  const makePlayerGroup = (title: string, subtitle: string, key: keyof PlayerStats, suffix: string): PlayerGroup => ({
+  const makePlayerGroup = (
+    title: string,
+    subtitle: string,
+    key: keyof PlayerStats,
+    suffix: string,
+    category: PlayerGroup['category'],
+  ): PlayerGroup => ({
     title,
     subtitle,
     key,
     suffix,
+    category,
     players: [...players]
       .sort((a, b) => playerValue(b, key) - playerValue(a, key) || playerImpactScore(b) - playerImpactScore(a) || a.name.localeCompare(b.name))
       .slice(0, 5),
   });
-  const playerGroups = [
-    makePlayerGroup('أفضل الممرين', 'أعلى حجم تمرير في المباراة', 'passes', 'تمريرة'),
-    makePlayerGroup('أدق الممرين', 'نسبة التمريرات الصحيحة لكل لاعب', 'passAccuracy', '%'),
-    makePlayerGroup('تمريرات صحيحة', 'أكثر تمريرات وصلت للزميل', 'passesAccurate', 'صحيحة'),
-    makePlayerGroup('تمريرات مفتاحية', 'أكثر صناعة للفرص المباشرة', 'keyPasses', 'مفتاحية'),
-    makePlayerGroup('أكثر صناعة', 'تمريرات حاسمة مسجلة', 'assists', 'أسيست'),
-    makePlayerGroup('أكثر تسديدا', 'إجمالي محاولات التسديد', 'shots', 'تسديدة'),
-    makePlayerGroup('على المرمى', 'التسديدات بين القائمين', 'shotsOnTarget', 'على المرمى'),
-    makePlayerGroup('دقة التسديد', 'نسبة التسديدات على المرمى', 'shotAccuracy', '%'),
-    makePlayerGroup('الهدافون', 'الأهداف المسجلة من اللاعبين', 'goals', 'هدف'),
-    makePlayerGroup('مراوغات ناجحة', 'تجاوزات ناجحة بالكرة', 'dribbles', 'مراوغة'),
-    makePlayerGroup('نجاح المراوغة', 'نسبة نجاح محاولات المراوغة', 'dribbleSuccessRate', '%'),
-    makePlayerGroup('كرات عرضية', 'أكثر إرسالا للعرضيات', 'crosses', 'عرضية'),
-    makePlayerGroup('كرات طويلة', 'تمريرات طويلة نحو الأمام', 'longBalls', 'طويلة'),
-    makePlayerGroup('كرات بينية', 'تمريرات تخترق الخطوط', 'throughBalls', 'بينية'),
-    makePlayerGroup('للثلث الأخير', 'تمريرات أو دخول لمنطقة الخطورة', 'finalThirdPasses', 'تمريرة'),
-    makePlayerGroup('لمسات في المنطقة', 'لمسات داخل منطقة الجزاء', 'boxTouches', 'لمسة'),
-    makePlayerGroup('أفضل المتدخلين', 'أكثر تدخلات دفاعية', 'tackles', 'تدخل'),
-    makePlayerGroup('قاطعو الكرات', 'أكثر اعتراضا لمسار اللعب', 'interceptions', 'اعتراض'),
-    makePlayerGroup('الإبعادات', 'إبعاد الخطر من المناطق الدفاعية', 'clearances', 'إبعاد'),
-    makePlayerGroup('استرجاع الكرة', 'أكثر لاعبين استعادوا الاستحواذ', 'ballRecoveries', 'استرجاع'),
-  ].filter(group => group.players.length > 0);
+  const allPlayerGroups = [
+    makePlayerGroup('أفضل الممرين', 'أعلى حجم تمرير في المباراة', 'passes', 'تمريرة', 'PASSING'),
+    makePlayerGroup('أدق الممرين', 'نسبة التمريرات الصحيحة لكل لاعب', 'passAccuracy', '%', 'PASSING'),
+    makePlayerGroup('تمريرات صحيحة', 'أكثر تمريرات وصلت للزميل', 'passesAccurate', 'صحيحة', 'PASSING'),
+    makePlayerGroup('تمريرات مفتاحية', 'أكثر صناعة للفرص المباشرة', 'keyPasses', 'مفتاحية', 'PASSING'),
+    makePlayerGroup('أكثر صناعة', 'تمريرات حاسمة مسجلة', 'assists', 'أسيست', 'PASSING'),
+    makePlayerGroup('أكثر تسديدا', 'إجمالي محاولات التسديد', 'shots', 'تسديدة', 'ATTACK'),
+    makePlayerGroup('على المرمى', 'التسديدات بين القائمين', 'shotsOnTarget', 'على المرمى', 'ATTACK'),
+    makePlayerGroup('دقة التسديد', 'نسبة التسديدات على المرمى', 'shotAccuracy', '%', 'ATTACK'),
+    makePlayerGroup('الهدافون', 'الأهداف المسجلة من اللاعبين', 'goals', 'هدف', 'ATTACK'),
+    makePlayerGroup('مراوغات ناجحة', 'تجاوزات ناجحة بالكرة', 'dribbles', 'مراوغة', 'ATTACK'),
+    makePlayerGroup('نجاح المراوغة', 'نسبة نجاح محاولات المراوغة', 'dribbleSuccessRate', '%', 'ATTACK'),
+    makePlayerGroup('كرات عرضية', 'أكثر إرسالا للعرضيات', 'crosses', 'عرضية', 'PASSING'),
+    makePlayerGroup('كرات طويلة', 'تمريرات طويلة نحو الأمام', 'longBalls', 'طويلة', 'PASSING'),
+    makePlayerGroup('كرات بينية', 'تمريرات تخترق الخطوط', 'throughBalls', 'بينية', 'PASSING'),
+    makePlayerGroup('للثلث الأخير', 'تمريرات أو دخول لمنطقة الخطورة', 'finalThirdPasses', 'تمريرة', 'PASSING'),
+    makePlayerGroup('لمسات في المنطقة', 'لمسات داخل منطقة الجزاء', 'boxTouches', 'لمسة', 'ATTACK'),
+    makePlayerGroup('أفضل المتدخلين', 'أكثر تدخلات دفاعية', 'tackles', 'تدخل', 'DEFENSE'),
+    makePlayerGroup('قاطعو الكرات', 'أكثر اعتراضا لمسار اللعب', 'interceptions', 'اعتراض', 'DEFENSE'),
+    makePlayerGroup('الإبعادات', 'إبعاد الخطر من المناطق الدفاعية', 'clearances', 'إبعاد', 'DEFENSE'),
+    makePlayerGroup('استرجاع الكرة', 'أكثر لاعبين استعادوا الاستحواذ', 'ballRecoveries', 'استرجاع', 'DEFENSE'),
+  ];
+  const playerGroups = allPlayerGroups.filter(group =>
+    (playerMetricPreset === 'ALL' || group.category === playerMetricPreset) && group.players.length > 0
+  );
   const activePlayerGroup = playerGroups[activePlayerGroupIndex % Math.max(1, playerGroups.length)];
 
   const groups: StatGroup[] = [
@@ -1132,42 +1156,82 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     </div>
   );
 
-  const PlayerTicker = () => {
+  const PlayerStatsPanel = () => {
     if (!showPlayerTicker || !activePlayerGroup) return null;
     return (
-      <div dir="rtl" className="absolute bottom-6 left-6 right-6 z-20 h-[88px] overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl">
-        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
-        <div className="grid h-full grid-cols-[190px_1fr] items-center gap-4">
-          <div className="min-w-0 border-l border-white/10 pl-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">20 PLAYER STATS</div>
-            <div className="truncate text-xl font-black">{activePlayerGroup.title}</div>
+      <div dir="rtl" className={`absolute inset-y-6 ${playerSideClass} z-20 flex ${playerPanelWidth} max-w-[calc(50vw-42px)] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl`}>
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${awayColor}, ${homeColor})` }} />
+        <div className="mb-3 flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">PLAYER COMMAND</div>
+            <div className="truncate text-2xl font-black">{activePlayerGroup.title}</div>
             <div className="truncate text-[10px] font-bold text-white/45">{activePlayerGroup.subtitle}</div>
           </div>
-          <div key={activePlayerGroup.title} className="grid h-full grid-cols-5 gap-2">
-            {activePlayerGroup.players.map((player, index) => {
-              const value = playerValue(player, activePlayerGroup.key);
-              const color = player.isHome ? homeColor : awayColor;
-              return (
-                <div
-                  key={`${activePlayerGroup.title}-${player.id}-${index}`}
-                  className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-white/10 bg-white/10 px-3"
-                  style={{ animation: `reoStatIn 420ms ease ${index * 65}ms both` }}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-black text-white">{playerShortName(player.name)}</div>
-                    <div className="truncate text-[9px] font-bold text-white/40">{player.isHome ? match.homeTeam : match.awayTeam}</div>
+          <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
+            <div className="font-['Barlow_Condensed'] text-xl font-black">{allPlayerGroups.length}</div>
+            <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/40">PLAYER STATS</div>
+          </div>
+        </div>
+        <div key={activePlayerGroup.title} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          {activePlayerGroup.players.map((player, index) => {
+            const value = playerValue(player, activePlayerGroup.key);
+            const maxValue = Math.max(1, ...activePlayerGroup.players.map(item => playerValue(item, activePlayerGroup.key)));
+            const color = player.isHome ? homeColor : awayColor;
+            return (
+              <div
+                key={`${activePlayerGroup.title}-${player.id}-${index}`}
+                className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-white/10 bg-white/10 px-3 py-2"
+                style={{ animation: `reoStatIn 420ms ease ${index * 65}ms both` }}
+              >
+                <div className="absolute bottom-0 right-0 top-0 opacity-15 transition-all duration-700" style={{ width: `${clamp((value / maxValue) * 100, 3, 100)}%`, background: color }} />
+                <div className="relative z-10 flex h-full items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/35 font-['Barlow_Condensed'] text-xl font-black" style={{ color }}>
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-white">{playerShortName(player.name)}</div>
+                      <div className="truncate text-[9px] font-bold text-white/40">{player.isHome ? match.homeTeam : match.awayTeam}</div>
+                    </div>
                   </div>
                   <div className="text-left">
-                    <div className="font-['Barlow_Condensed'] text-3xl font-black leading-none" style={{ color }}>
-                      {Math.round(value)}
-                    </div>
+                    <div className="font-['Barlow_Condensed'] text-4xl font-black leading-none" style={{ color }}>{Math.round(value)}</div>
                     <div className="text-[8px] font-black text-white/40">{activePlayerGroup.suffix}</div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+          <div className="min-w-0">
+            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">SOURCE</div>
+            <div className="truncate text-xs font-black text-white/70">{dataSourceName}</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {playerGroups.map((group, index) => (
+              <div
+                key={group.title}
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: index === activePlayerGroupIndex % playerGroups.length ? 28 : 7,
+                  background: index === activePlayerGroupIndex % playerGroups.length ? `linear-gradient(90deg, ${homeColor}, ${awayColor})` : 'rgba(255,255,255,0.18)',
+                }}
+              />
+            ))}
           </div>
         </div>
+        {impactPlayer ? (
+          <div className="mt-2 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE IMPACT</div>
+                <div className="truncate text-sm font-black">{impactPlayer.player.name}</div>
+              </div>
+              <div className="font-['Barlow_Condensed'] text-3xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -1181,10 +1245,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <div className={`flex h-full w-full ${panelJustify} overflow-hidden p-6 ${showPlayerTicker ? 'pb-[116px]' : ''}`} style={{ direction: 'ltr' }}>
-        <div dir="rtl" className="flex h-full w-[540px] max-w-[calc(100vw-48px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white">
+      <div className="relative h-full w-full overflow-hidden p-6" style={{ direction: 'ltr' }}>
+        <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white`}>
           {showScorebug && (
-            <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+            <div className={`relative overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
               <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
                 <span>{dataMode === 'BRIDGE' ? 'LIVE BRIDGE' : dataMode}</span>
@@ -1216,7 +1280,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           )}
 
           {showDominance && (
-            <div className="rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+            <div className={`rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Momentum</div>
@@ -1237,7 +1301,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           )}
 
           {showAdvancedStats && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+            <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-base font-black">{activeGroup.title}</div>
@@ -1269,7 +1333,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           {(showEvents || showTopStats || showKeyBattle || showMotm) && (
             <div className="grid grid-cols-2 gap-3">
               {showEvents && (
-                <div className="min-h-[132px] rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">أحداث المباراة</div>
                   <div className="flex flex-col gap-1.5">
                     {latestEvents.length ? latestEvents.map((event, index) => (
@@ -1295,7 +1359,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-5xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
                 </div>
               ) : showKeyBattle && keyCreator && keyDefender ? (
-                <div className="min-h-[132px] rounded-lg border border-cyan-300/20 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Key Battle</div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <div className="min-w-0 text-right">
@@ -1314,15 +1378,15 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           )}
 
           {showTopStats && (
-            <div className="grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
+            <div className={`grid grid-cols-3 gap-2 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
               {topCreators[0] && <PlayerLine player={topCreators[0]} value={topCreators[0].keyPasses + topCreators[0].assists} label="صناعة" />}
               {topPassers[0] && <PlayerLine player={topPassers[0]} value={topPassers[0].passes} label="تمرير" />}
               {topInterceptors[0] && <PlayerLine player={topInterceptors[0]} value={topInterceptors[0].tackles + topInterceptors[0].interceptions + topInterceptors[0].clearances} label="دفاع" />}
             </div>
           )}
         </div>
+        <PlayerStatsPanel />
       </div>
-      <PlayerTicker />
     </div>
   );
 };

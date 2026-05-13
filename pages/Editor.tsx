@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy } from 'lucide-react';
+import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square } from 'lucide-react';
 import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -33,6 +33,29 @@ const CURRENCY_OPTIONS = [
 ];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
+const CLOUD_MATCH_API_URL = '/api/reo-match/match';
+
+type BridgeStatusSnapshot = {
+  ok?: boolean;
+  hasData?: boolean;
+  currentUrl?: string;
+  pollingActive?: boolean;
+  workerAlive?: boolean;
+  isFetching?: boolean;
+  intervalSec?: number;
+  lastUpdatedAt?: string | null;
+  nextPollAt?: string | null;
+  lastError?: string | null;
+  errorCount?: number;
+  stoppedReason?: string | null;
+  provider?: string;
+  match?: {
+    homeTeam?: string;
+    awayTeam?: string;
+    homeScore?: number;
+    awayScore?: number;
+  } | null;
+};
 
 const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'dataMode') {
@@ -42,6 +65,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
       type: 'select',
       value,
       options: [
+        { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
         { value: 'BRIDGE', label: 'Live Bridge - localhost:3005' },
         { value: 'PASTE_JSON', label: 'JSON يدوي / ملف extractor' },
         { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
@@ -83,6 +107,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [viewerAiError, setViewerAiError] = useState<string | null>(null);
   const [isImportingMatchStats, setIsImportingMatchStats] = useState(false);
   const [matchStatsImportMessage, setMatchStatsImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isBridgeActionRunning, setIsBridgeActionRunning] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatusSnapshot | null>(null);
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -538,11 +564,112 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
   };
 
+  const getMatchStatsApiUrl = () => {
+    const configuredUrl = String(getDraftValue('apiUrl') || '').trim();
+    return configuredUrl || CLOUD_MATCH_API_URL;
+  };
+
+  const getAdminAuthHeaders = () => {
+    const session = adminSessionService.getStoredSession();
+    if (!session) {
+      throw new Error('افتح قفل المسؤول أولا لتشغيل أو إيقاف جسر المباراة.');
+    }
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.token}`,
+    };
+  };
+
+  const callMatchStatsControl = async (
+    action: 'set-match' | 'start' | 'stop',
+    body: Record<string, unknown> = {},
+    signal?: AbortSignal,
+  ) => {
+    const response = await fetch(`/api/reo-match/control?action=${encodeURIComponent(action)}`, {
+      method: 'POST',
+      headers: getAdminAuthHeaders(),
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      signal,
+    });
+    const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
+    if (!response.ok) {
+      throw new Error(typeof payload.error === 'string' ? payload.error : 'تعذر تنفيذ أمر جسر المباراة.');
+    }
+    setBridgeStatus(payload);
+    return payload;
+  };
+
+  const handleRefreshMatchStatsStatus = async () => {
+    setIsBridgeActionRunning(true);
+    setMatchStatsImportMessage(null);
+    try {
+      const response = await fetch('/api/reo-match/status', { cache: 'no-store' });
+      const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
+      if (!response.ok) {
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'تعذر قراءة حالة جسر المباراة.');
+      }
+      setBridgeStatus(payload);
+      const statusText = payload.pollingActive || payload.workerAlive ? 'الجسر يعمل الآن.' : 'الجسر متوقف حاليا.';
+      setMatchStatsImportMessage({ type: 'success', text: statusText });
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر قراءة حالة جسر المباراة.',
+      });
+    } finally {
+      setIsBridgeActionRunning(false);
+    }
+  };
+
+  const handleSetMatchStatsBridgeUrl = async () => {
+    const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
+    if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
+      setMatchStatsImportMessage({ type: 'error', text: 'أدخل رابط مباراة صحيح من WhoScored أولا.' });
+      return;
+    }
+
+    setIsBridgeActionRunning(true);
+    setMatchStatsImportMessage(null);
+    try {
+      await callMatchStatsControl('set-match', { url: sourceUrl });
+      handleDraftFieldChanges({
+        dataMode: 'CLOUD_BRIDGE',
+        apiUrl: CLOUD_MATCH_API_URL,
+        sourceMatchUrl: sourceUrl,
+      });
+      setMatchStatsImportMessage({ type: 'success', text: 'تم حفظ رابط المباراة في جسر Google Cloud.' });
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر حفظ رابط المباراة في الجسر.',
+      });
+    } finally {
+      setIsBridgeActionRunning(false);
+    }
+  };
+
+  const handleStopMatchStatsBridge = async () => {
+    setIsBridgeActionRunning(true);
+    setMatchStatsImportMessage(null);
+    try {
+      await callMatchStatsControl('stop');
+      setMatchStatsImportMessage({ type: 'success', text: 'تم إيقاف جسر المباراة ومتصفح الاستخراج.' });
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر إيقاف جسر المباراة.',
+      });
+    } finally {
+      setIsBridgeActionRunning(false);
+    }
+  };
+
   const handleImportMatchStatsFromBridge = async () => {
     setIsImportingMatchStats(true);
     setMatchStatsImportMessage(null);
     try {
-      const url = String(getDraftValue('apiUrl') || 'http://127.0.0.1:3005/api/match');
+      const url = getMatchStatsApiUrl();
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('لم تصل بيانات من الجسر المحلي. شغل START_APP.bat وابدأ السحب أولا.');
@@ -568,21 +695,21 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
 
     setIsImportingMatchStats(true);
+    setIsBridgeActionRunning(true);
     setMatchStatsImportMessage(null);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 75_000);
 
     try {
-      const apiUrl = String(getDraftValue('apiUrl') || 'http://127.0.0.1:3005/api/match');
-      const startUrl = apiUrl.replace(/\/api\/match(?:\?.*)?$/, `/api/fetch?url=${encodeURIComponent(sourceUrl)}`);
-      const response = await fetch(startUrl, { cache: 'no-store', signal: controller.signal });
-      const payload = await response.json().catch(() => ({}));
+      const payload = await callMatchStatsControl('start', { url: sourceUrl, intervalSec: 60 }, controller.signal);
+      const response = { ok: true };
       if (!response.ok) {
         throw new Error(payload.error || 'تعذر تشغيل الجسر على هذا الرابط.');
       }
 
-      handleDraftFieldChanges({ dataMode: 'BRIDGE' });
-      const teams = payload.homeTeam && payload.awayTeam ? ` (${payload.homeTeam} - ${payload.awayTeam})` : '';
+      handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL, sourceMatchUrl: sourceUrl });
+      const bridgeMatch = payload.match || {};
+      const teams = bridgeMatch.homeTeam && bridgeMatch.awayTeam ? ` (${bridgeMatch.homeTeam} - ${bridgeMatch.awayTeam})` : '';
       setMatchStatsImportMessage({ type: 'success', text: `تم تشغيل الجسر المباشر والتحديث كل دقيقة${teams}.` });
     } catch (error) {
       setMatchStatsImportMessage({
@@ -594,8 +721,26 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     } finally {
       window.clearTimeout(timeout);
       setIsImportingMatchStats(false);
+      setIsBridgeActionRunning(false);
     }
   };
+
+  const bridgeMatch = bridgeStatus?.match;
+  const bridgeStatusTone = bridgeStatus?.pollingActive || bridgeStatus?.workerAlive
+    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+    : bridgeStatus?.stoppedReason === 'match_final'
+      ? 'bg-amber-500/10 text-amber-200 border-amber-500/25'
+      : 'bg-gray-800 text-gray-300 border-gray-700';
+  const bridgeStatusLabel = bridgeStatus
+    ? bridgeStatus.pollingActive || bridgeStatus.workerAlive
+      ? 'يعمل الآن'
+      : bridgeStatus.stoppedReason === 'match_final'
+        ? 'انتهت المباراة'
+        : 'متوقف'
+    : 'غير مفحوص';
+  const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
+    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}`
+    : null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
@@ -666,7 +811,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <ArrowDownUp className="w-3 h-3" /> إدخال Match Stats
                     </label>
                     <span className="text-[10px] font-mono text-blue-300/70 bg-blue-950/50 px-2 py-0.5 rounded">
-                        {String(getDraftValue('dataMode') || 'BRIDGE')}
+                        {String(getDraftValue('dataMode') || 'CLOUD_BRIDGE')}
                     </span>
                 </div>
                 <input
@@ -677,14 +822,50 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   placeholder="https://www.whoscored.com/matches/.../live/..."
                   className="w-full bg-gray-900 border border-blue-900/50 rounded-lg px-3 py-2 text-white text-[11px] font-mono focus:outline-none focus:border-blue-500"
                 />
+                <div className={`rounded-lg border px-3 py-2 ${bridgeStatusTone}`}>
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-[0.16em]">Cloud Bridge</span>
+                        <span className="text-[10px] font-bold">{bridgeStatusLabel}</span>
+                    </div>
+                    <div className="mt-1 truncate text-[11px] font-bold text-white/80">
+                        {bridgeScore || bridgeStatus?.currentUrl || 'اضغط فحص الحالة أو شغل مباراة جديدة.'}
+                    </div>
+                    {bridgeStatus?.lastError && (
+                        <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={handleStartMatchStatsBridge}
-                      disabled={isImportingMatchStats}
+                      disabled={isImportingMatchStats || isBridgeActionRunning}
                       className="col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                         <Zap className="w-3 h-3" /> تشغيل الجسر من رابط المباراة
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSetMatchStatsBridgeUrl}
+                      disabled={isImportingMatchStats || isBridgeActionRunning}
+                      className="bg-indigo-600/80 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Monitor className="w-3 h-3" /> حفظ الرابط
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStopMatchStatsBridge}
+                      disabled={isImportingMatchStats || isBridgeActionRunning}
+                      className="bg-red-600/80 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Square className="w-3 h-3" /> إيقاف
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRefreshMatchStatsStatus}
+                      disabled={isBridgeActionRunning}
+                      className="col-span-2 bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <RefreshCw className="w-3 h-3" /> فحص حالة Google Cloud
                     </button>
                     <button
                       type="button"
@@ -705,7 +886,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        handleDraftFieldChanges({ dataMode: 'BRIDGE' });
+                        handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL });
                         setMatchStatsImportMessage({ type: 'success', text: 'تم تفعيل الجسر المباشر.' });
                       }}
                       className="col-span-2 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"

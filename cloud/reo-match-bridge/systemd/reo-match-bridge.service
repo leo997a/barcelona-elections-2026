@@ -1,0 +1,21 @@
+[Unit]
+Description=REO Match Bridge cloud extractor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=reo-bridge
+Group=reo-bridge
+WorkingDirectory=/opt/reo-match-bridge
+EnvironmentFile=/etc/reo-match-bridge.env
+ExecStart=/usr/bin/xvfb-run -a /opt/reo-match-bridge/venv/bin/python /opt/reo-match-bridge/app.py
+ExecStopPost=/usr/bin/pkill -u reo-bridge -f "chrome|chromedriver" || true
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
