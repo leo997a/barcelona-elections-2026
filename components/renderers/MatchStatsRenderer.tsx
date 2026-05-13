@@ -48,17 +48,35 @@ type PlayerStats = {
   position?: string;
   shirtNo?: string | number;
   shots: number;
+  shotsOnTarget: number;
+  shotsOffTarget: number;
+  blockedShots: number;
+  shotAccuracy: number;
   passes: number;
   passesAccurate: number;
+  passAccuracy: number;
   keyPasses: number;
+  crosses: number;
+  longBalls: number;
+  throughBalls: number;
+  finalThirdPasses: number;
+  boxTouches: number;
   tackles: number;
   interceptions: number;
   dribbles: number;
+  dribbleSuccess: number;
+  dribbleSuccessRate: number;
+  aerialWon: number;
+  aerialLost: number;
+  blocks: number;
+  ballRecoveries: number;
+  dispossessed: number;
+  turnovers: number;
+  foulsCommitted: number;
   saves: number;
   clearances: number;
   goals: number;
   assists: number;
-  rating: number;
 };
 
 type MatchEvent = {
@@ -250,13 +268,13 @@ const DEMO_MATCH_DATA = {
     { minute: 63, player: 'Aurelien Tchouameni', teamId: 52, cardType: 'YellowCard' },
   ],
   homePlayers: [
-    { id: '1', name: 'Pedri', teamId: 65, passes: 82, keyPasses: 4, tackles: 3, interceptions: 2, dribbles: 3, shots: 2, rating: 8.5 },
-    { id: '2', name: 'Lamine Yamal', teamId: 65, passes: 46, keyPasses: 5, tackles: 1, interceptions: 1, dribbles: 7, shots: 4, rating: 8.8 },
-    { id: '3', name: 'Frenkie de Jong', teamId: 65, passes: 91, keyPasses: 2, tackles: 4, interceptions: 3, dribbles: 2, shots: 1, rating: 7.7 },
+    { id: '1', name: 'Pedri', teamId: 65, passes: 82, passesAccurate: 74, passAccuracy: 90, keyPasses: 4, tackles: 3, interceptions: 2, dribbles: 3, dribbleSuccess: 3, shots: 2, shotsOnTarget: 1, ballRecoveries: 6 },
+    { id: '2', name: 'Lamine Yamal', teamId: 65, passes: 46, passesAccurate: 38, passAccuracy: 83, keyPasses: 5, crosses: 7, tackles: 1, interceptions: 1, dribbles: 7, dribbleSuccess: 7, shots: 4, shotsOnTarget: 2, boxTouches: 5 },
+    { id: '3', name: 'Frenkie de Jong', teamId: 65, passes: 91, passesAccurate: 84, passAccuracy: 92, keyPasses: 2, tackles: 4, interceptions: 3, dribbles: 2, dribbleSuccess: 2, shots: 1, shotsOnTarget: 0, ballRecoveries: 8 },
   ],
   awayPlayers: [
-    { id: '4', name: 'Jude Bellingham', teamId: 52, passes: 55, keyPasses: 3, tackles: 4, interceptions: 2, dribbles: 4, shots: 3, rating: 7.9 },
-    { id: '5', name: 'Federico Valverde', teamId: 52, passes: 62, keyPasses: 2, tackles: 5, interceptions: 3, dribbles: 2, shots: 2, rating: 7.5 },
+    { id: '4', name: 'Jude Bellingham', teamId: 52, passes: 55, passesAccurate: 48, passAccuracy: 87, keyPasses: 3, tackles: 4, interceptions: 2, dribbles: 4, dribbleSuccess: 4, shots: 3, shotsOnTarget: 2, boxTouches: 4 },
+    { id: '5', name: 'Federico Valverde', teamId: 52, passes: 62, passesAccurate: 54, passAccuracy: 87, keyPasses: 2, longBalls: 5, tackles: 5, interceptions: 3, dribbles: 2, dribbleSuccess: 2, shots: 2, shotsOnTarget: 1, ballRecoveries: 7 },
   ],
 };
 
@@ -342,18 +360,70 @@ const emptyPlayer = (id: string, name: string, teamId: string, isHome: boolean):
   teamId,
   isHome,
   shots: 0,
+  shotsOnTarget: 0,
+  shotsOffTarget: 0,
+  blockedShots: 0,
+  shotAccuracy: 0,
   passes: 0,
   passesAccurate: 0,
+  passAccuracy: 0,
   keyPasses: 0,
+  crosses: 0,
+  longBalls: 0,
+  throughBalls: 0,
+  finalThirdPasses: 0,
+  boxTouches: 0,
   tackles: 0,
   interceptions: 0,
   dribbles: 0,
+  dribbleSuccess: 0,
+  dribbleSuccessRate: 0,
+  aerialWon: 0,
+  aerialLost: 0,
+  blocks: 0,
+  ballRecoveries: 0,
+  dispossessed: 0,
+  turnovers: 0,
+  foulsCommitted: 0,
   saves: 0,
   clearances: 0,
   goals: 0,
   assists: 0,
-  rating: 0,
 });
+
+const finalizePlayerStats = (player: PlayerStats) => {
+  if (!player.passesAccurate && player.passAccuracy && player.passes) {
+    player.passesAccurate = Math.round((player.passAccuracy / 100) * player.passes);
+  }
+  if (!player.passAccuracy && player.passes) {
+    player.passAccuracy = (player.passesAccurate / player.passes) * 100;
+  }
+  if (!player.shotAccuracy && player.shots) {
+    player.shotAccuracy = (player.shotsOnTarget / player.shots) * 100;
+  }
+  const dribbleAttempts = player.dribbles + player.dispossessed;
+  if (!player.dribbleSuccess && player.dribbles) {
+    player.dribbleSuccess = player.dribbles;
+  }
+  if (!player.dribbleSuccessRate && dribbleAttempts) {
+    player.dribbleSuccessRate = (player.dribbleSuccess / Math.max(1, dribbleAttempts)) * 100;
+  }
+};
+
+const playerImpactScore = (player: PlayerStats) => (
+  player.goals * 12
+  + player.assists * 8
+  + player.shotsOnTarget * 4
+  + player.keyPasses * 3
+  + player.dribbles * 2
+  + player.boxTouches
+  + player.tackles * 2
+  + player.interceptions * 2
+  + player.clearances
+  + player.blocks * 2
+  + player.ballRecoveries
+  + player.saves * 5
+);
 
 const normalizeTeamStats = (source: unknown): TeamStats => {
   const stats = emptyTeamStats();
@@ -371,10 +441,10 @@ const normalizeTeamStats = (source: unknown): TeamStats => {
 };
 
 const buildTopLists = (players: PlayerStats[]) => {
-  const byRating = (a: PlayerStats, b: PlayerStats) => b.rating - a.rating;
-  const byPasses = (a: PlayerStats, b: PlayerStats) => b.passes - a.passes || byRating(a, b);
-  const byCreators = (a: PlayerStats, b: PlayerStats) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || byRating(a, b);
-  const byDefenders = (a: PlayerStats, b: PlayerStats) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || byRating(a, b);
+  const byName = (a: PlayerStats, b: PlayerStats) => a.name.localeCompare(b.name);
+  const byPasses = (a: PlayerStats, b: PlayerStats) => b.passes - a.passes || byName(a, b);
+  const byCreators = (a: PlayerStats, b: PlayerStats) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || byPasses(a, b);
+  const byDefenders = (a: PlayerStats, b: PlayerStats) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || byName(a, b);
   return {
     topPassers: [...players].sort(byPasses).slice(0, 4),
     topCreators: [...players].sort(byCreators).slice(0, 4),
@@ -421,17 +491,34 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
         position: source.position ? String(source.position) : undefined,
         shirtNo: source.shirtNo as string | number | undefined,
         shots: toNumber(source.shots),
+        shotsOnTarget: toNumber(source.shotsOnTarget),
+        shotsOffTarget: toNumber(source.shotsOffTarget),
+        blockedShots: toNumber(source.blockedShots),
         passes: toNumber(source.passes),
         passesAccurate: toNumber(source.passesAccurate),
+        passAccuracy: toNumber(source.passAccuracy),
         keyPasses: toNumber(source.keyPasses),
+        crosses: toNumber(source.crosses),
+        longBalls: toNumber(source.longBalls),
+        throughBalls: toNumber(source.throughBalls),
+        finalThirdPasses: toNumber(source.finalThirdPasses),
+        boxTouches: toNumber(source.boxTouches),
         tackles: toNumber(source.tackles),
         interceptions: toNumber(source.interceptions),
         dribbles: toNumber(source.dribbles),
+        dribbleSuccess: toNumber(source.dribbleSuccess),
+        dribbleSuccessRate: toNumber(source.dribbleSuccessRate),
+        aerialWon: toNumber(source.aerialWon),
+        aerialLost: toNumber(source.aerialLost),
+        blocks: toNumber(source.blocks),
+        ballRecoveries: toNumber(source.ballRecoveries),
+        dispossessed: toNumber(source.dispossessed),
+        turnovers: toNumber(source.turnovers),
+        foulsCommitted: toNumber(source.foulsCommitted),
         saves: toNumber(source.saves),
         clearances: toNumber(source.clearances),
         goals: toNumber(source.goals),
         assists: toNumber(source.assists),
-        rating: toNumber(source.rating),
       };
     });
   };
@@ -440,6 +527,7 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
     ...normalizePlayerList(raw.homePlayers, true),
     ...normalizePlayerList(raw.awayPlayers, false),
   ];
+  players.forEach(finalizePlayerStats);
 
   const goalEvents = Array.isArray(raw.goalEvents) ? raw.goalEvents : [];
   const cardEvents = Array.isArray(raw.cardEvents) ? raw.cardEvents : [];
@@ -535,13 +623,26 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       if (player) {
         player.passes += 1;
         if (success) player.passesAccurate += 1;
+        if (qualifiers.includes('Cross')) player.crosses += 1;
+        if (qualifiers.includes('Longball') || qualifiers.includes('LongBall')) player.longBalls += 1;
+        if (qualifiers.includes('Throughball') || qualifiers.includes('ThroughBall')) player.throughBalls += 1;
+        if (toNumber(event.endX) >= 66 && toNumber(event.x) < 66) player.finalThirdPasses += 1;
       }
     } else if (['SavedShot', 'MissedShots', 'BlockedShot', 'ShotOnPost', 'Goal'].includes(type)) {
       stats.shots += 1;
       if (player) player.shots += 1;
-      if (type === 'SavedShot' || type === 'Goal') stats.shotsOnTarget += 1;
-      if (type === 'MissedShots' || type === 'ShotOnPost') stats.shotsOffTarget += 1;
-      if (type === 'BlockedShot') stats.blockedShots += 1;
+      if (type === 'SavedShot' || type === 'Goal') {
+        stats.shotsOnTarget += 1;
+        if (player) player.shotsOnTarget += 1;
+      }
+      if (type === 'MissedShots' || type === 'ShotOnPost') {
+        stats.shotsOffTarget += 1;
+        if (player) player.shotsOffTarget += 1;
+      }
+      if (type === 'BlockedShot') {
+        stats.blockedShots += 1;
+        if (player) player.blockedShots += 1;
+      }
       if (type === 'Goal' && player) player.goals += 1;
     } else if (type === 'CornerAwarded') {
       stats.corners += 1;
@@ -559,29 +660,42 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       stats.clearances += 1;
       if (player) player.clearances += 1;
     } else if (type === 'Aerial') {
-      if (success) stats.aerialWon += 1;
-      else stats.aerialLost += 1;
+      if (success) {
+        stats.aerialWon += 1;
+        if (player) player.aerialWon += 1;
+      } else {
+        stats.aerialLost += 1;
+        if (player) player.aerialLost += 1;
+      }
     } else if (type === 'KeyPass') {
       stats.keyPasses += 1;
       if (player) player.keyPasses += 1;
     } else if (['TakeOn', 'Dribble'].includes(type)) {
       if (success) {
         stats.dribbles += 1;
-        if (player) player.dribbles += 1;
+        if (player) {
+          player.dribbles += 1;
+          player.dribbleSuccess += 1;
+        }
       } else {
         stats.dispossessed += 1;
+        if (player) player.dispossessed += 1;
       }
     } else if (type === 'Save') {
       stats.saves += 1;
       if (player) player.saves += 1;
     } else if (type === 'BallRecovery') {
       stats.ballRecoveries += 1;
+      if (player) player.ballRecoveries += 1;
     } else if (type === 'Dispossessed') {
       stats.dispossessed += 1;
+      if (player) player.dispossessed += 1;
     } else if (type === 'Turnover') {
       stats.turnovers += 1;
+      if (player) player.turnovers += 1;
     } else if (type === 'BlockedPass' || type === 'Block') {
       stats.blocks += 1;
+      if (player) player.blocks += 1;
     } else if (['YellowCard', 'RedCard', 'YellowRedCard'].includes(type)) {
       if (type === 'YellowCard') stats.yellowCards += 1;
       else stats.redCards += 1;
@@ -590,6 +704,7 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
 
     if (toNumber(event.x) >= 83 && toNumber(event.y) >= 20 && toNumber(event.y) <= 80) {
       stats.boxTouches += 1;
+      if (player) player.boxTouches += 1;
     }
 
     if (type === 'Goal') {
@@ -627,14 +742,34 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       const stats = player.stats || {};
       item.passes = Math.max(item.passes, sumMetric(stats, ['passes', 'totalPasses']));
       item.passesAccurate = Math.max(item.passesAccurate, sumMetric(stats, ['passesAccurate', 'accuratePasses', 'accuratePass']));
+      item.passAccuracy = Math.max(item.passAccuracy, latestMetric(stats, ['passAccuracy', 'passSuccess', 'passSuccessRate']));
       item.keyPasses = Math.max(item.keyPasses, sumMetric(stats, ['keyPasses', 'keyPass']));
+      item.assists = Math.max(item.assists, sumMetric(stats, ['assists', 'goalAssist']));
       item.tackles = Math.max(item.tackles, sumMetric(stats, ['tackles', 'totalTackles']));
       item.interceptions = Math.max(item.interceptions, sumMetric(stats, ['interceptions']));
       item.dribbles = Math.max(item.dribbles, sumMetric(stats, ['dribbles', 'successfulDribbles', 'dribbleWon']));
+      item.dribbleSuccess = Math.max(item.dribbleSuccess, sumMetric(stats, ['dribbleSuccess', 'successfulDribbles', 'dribbleWon']));
+      item.dribbleSuccessRate = Math.max(item.dribbleSuccessRate, latestMetric(stats, ['dribbleSuccessRate', 'dribbleSuccess']));
       item.shots = Math.max(item.shots, sumMetric(stats, ['shots', 'shotsTotal', 'totalShots']));
+      item.shotsOnTarget = Math.max(item.shotsOnTarget, sumMetric(stats, ['shotsOnTarget', 'shotsOnTargetTotal', 'ontargetScoringAtt']));
+      item.shotsOffTarget = Math.max(item.shotsOffTarget, sumMetric(stats, ['shotsOffTarget', 'shotOffTarget', 'offTarget']));
+      item.blockedShots = Math.max(item.blockedShots, sumMetric(stats, ['blockedShots', 'shotsBlocked']));
+      item.shotAccuracy = Math.max(item.shotAccuracy, latestMetric(stats, ['shotAccuracy', 'shotsOnTargetAccuracy']));
+      item.crosses = Math.max(item.crosses, sumMetric(stats, ['crosses', 'totalCrosses', 'accurateCrosses']));
+      item.longBalls = Math.max(item.longBalls, sumMetric(stats, ['longBalls', 'accurateLongBalls', 'longBall']));
+      item.throughBalls = Math.max(item.throughBalls, sumMetric(stats, ['throughBalls', 'throughBall']));
+      item.finalThirdPasses = Math.max(item.finalThirdPasses, sumMetric(stats, ['finalThirdPasses', 'passesToFinalThird', 'finalThirdEntries']));
+      item.boxTouches = Math.max(item.boxTouches, sumMetric(stats, ['boxTouches', 'touchesInBox', 'penaltyAreaTouches']));
+      item.aerialWon = Math.max(item.aerialWon, sumMetric(stats, ['aerialWon', 'aerialsWon']));
+      item.aerialLost = Math.max(item.aerialLost, sumMetric(stats, ['aerialLost', 'aerialsLost']));
+      item.blocks = Math.max(item.blocks, sumMetric(stats, ['blocks', 'blockedPass', 'blockedPasses']));
+      item.ballRecoveries = Math.max(item.ballRecoveries, sumMetric(stats, ['ballRecoveries', 'recoveries']));
+      item.dispossessed = Math.max(item.dispossessed, sumMetric(stats, ['dispossessed']));
+      item.turnovers = Math.max(item.turnovers, sumMetric(stats, ['turnovers', 'unsuccessfulTouches']));
+      item.foulsCommitted = Math.max(item.foulsCommitted, sumMetric(stats, ['foulsCommitted', 'fouls']));
       item.clearances = Math.max(item.clearances, sumMetric(stats, ['clearances']));
       item.saves = Math.max(item.saves, sumMetric(stats, ['saves']));
-      item.rating = Math.max(item.rating, latestMetric(stats, ['ratings', 'rating']), toNumber(player.rating));
+      item.goals = Math.max(item.goals, sumMetric(stats, ['goals']));
     });
   };
 
@@ -642,6 +777,7 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
   hydratePlayers(away, awayId, false);
 
   const players = Object.values(playersById);
+  players.forEach(finalizePlayerStats);
   const finalizeStats = (stats: TeamStats, opponent: TeamStats) => {
     stats.possession = stats.passes + opponent.passes ? (stats.passes / (stats.passes + opponent.passes)) * 100 : 50;
     stats.passAccuracy = stats.passes ? (stats.passesAccurate / stats.passes) * 100 : 0;
@@ -826,53 +962,56 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const keyShare = hStats.keyPasses + aStats.keyPasses > 0 ? hStats.keyPasses / (hStats.keyPasses + aStats.keyPasses) : 0.5;
   const territoryShare = hStats.finalThirdEntries + aStats.finalThirdEntries > 0 ? hStats.finalThirdEntries / (hStats.finalThirdEntries + aStats.finalThirdEntries) : 0.5;
   const domHome = clamp(Math.round((possHome / 100 * 0.38 + shotShare * 0.27 + keyShare * 0.2 + territoryShare * 0.15) * 100), 0, 100);
-  const motm = [...players].filter(player => player.rating > 0).sort((a, b) => b.rating - a.rating)[0];
+  const impactPlayer = players
+    .map(player => ({ player, score: playerImpactScore(player) }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.player.name.localeCompare(b.player.name))[0];
   const latestEvents = [...events].slice(-3).reverse();
   const keyCreator = topCreators.find(player => player.keyPasses > 0 || player.assists > 0);
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const panelJustify = panelSide === 'LEFT' ? 'justify-start' : 'justify-end';
   const totalMetrics = 31;
-  const playerValue = (player: PlayerStats, key: 'rating' | 'shots' | 'passes' | 'creative' | 'defensive' | 'dribbles' | 'saves') => {
-    if (key === 'creative') return player.keyPasses + player.assists;
-    if (key === 'defensive') return player.tackles + player.interceptions + player.clearances;
-    return Number(player[key]) || 0;
+  const playerValue = (player: PlayerStats, key: keyof PlayerStats) => {
+    const value = player[key];
+    return typeof value === 'number' ? value : 0;
   };
+  type PlayerGroup = {
+    title: string;
+    subtitle: string;
+    key: keyof PlayerStats;
+    suffix: string;
+    players: PlayerStats[];
+  };
+  const makePlayerGroup = (title: string, subtitle: string, key: keyof PlayerStats, suffix: string): PlayerGroup => ({
+    title,
+    subtitle,
+    key,
+    suffix,
+    players: [...players]
+      .sort((a, b) => playerValue(b, key) - playerValue(a, key) || playerImpactScore(b) - playerImpactScore(a) || a.name.localeCompare(b.name))
+      .slice(0, 5),
+  });
   const playerGroups = [
-    {
-      title: 'نجوم المباراة',
-      subtitle: 'تقييم مباشر من WhoScored',
-      key: 'rating' as const,
-      suffix: '',
-      players: [...players].filter(player => player.rating > 0).sort((a, b) => b.rating - a.rating).slice(0, 5),
-    },
-    {
-      title: 'تهديد المرمى',
-      subtitle: 'أكثر اللاعبين تسديدا',
-      key: 'shots' as const,
-      suffix: 'تسديدة',
-      players: [...players].filter(player => player.shots > 0).sort((a, b) => b.shots - a.shots || b.rating - a.rating).slice(0, 5),
-    },
-    {
-      title: 'محرك اللعب',
-      subtitle: 'أعلى حجم تمرير',
-      key: 'passes' as const,
-      suffix: 'تمريرة',
-      players: [...players].filter(player => player.passes > 0).sort((a, b) => b.passes - a.passes || b.rating - a.rating).slice(0, 5),
-    },
-    {
-      title: 'صناعة الفرص',
-      subtitle: 'تمريرات مفتاحية ومساهمات',
-      key: 'creative' as const,
-      suffix: 'فرصة',
-      players: [...players].filter(player => player.keyPasses + player.assists > 0).sort((a, b) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || b.rating - a.rating).slice(0, 5),
-    },
-    {
-      title: 'العمل الدفاعي',
-      subtitle: 'تدخلات واعتراضات وإبعادات',
-      key: 'defensive' as const,
-      suffix: 'إجراء',
-      players: [...players].filter(player => player.tackles + player.interceptions + player.clearances > 0).sort((a, b) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || b.rating - a.rating).slice(0, 5),
-    },
+    makePlayerGroup('أفضل الممرين', 'أعلى حجم تمرير في المباراة', 'passes', 'تمريرة'),
+    makePlayerGroup('أدق الممرين', 'نسبة التمريرات الصحيحة لكل لاعب', 'passAccuracy', '%'),
+    makePlayerGroup('تمريرات صحيحة', 'أكثر تمريرات وصلت للزميل', 'passesAccurate', 'صحيحة'),
+    makePlayerGroup('تمريرات مفتاحية', 'أكثر صناعة للفرص المباشرة', 'keyPasses', 'مفتاحية'),
+    makePlayerGroup('أكثر صناعة', 'تمريرات حاسمة مسجلة', 'assists', 'أسيست'),
+    makePlayerGroup('أكثر تسديدا', 'إجمالي محاولات التسديد', 'shots', 'تسديدة'),
+    makePlayerGroup('على المرمى', 'التسديدات بين القائمين', 'shotsOnTarget', 'على المرمى'),
+    makePlayerGroup('دقة التسديد', 'نسبة التسديدات على المرمى', 'shotAccuracy', '%'),
+    makePlayerGroup('الهدافون', 'الأهداف المسجلة من اللاعبين', 'goals', 'هدف'),
+    makePlayerGroup('مراوغات ناجحة', 'تجاوزات ناجحة بالكرة', 'dribbles', 'مراوغة'),
+    makePlayerGroup('نجاح المراوغة', 'نسبة نجاح محاولات المراوغة', 'dribbleSuccessRate', '%'),
+    makePlayerGroup('كرات عرضية', 'أكثر إرسالا للعرضيات', 'crosses', 'عرضية'),
+    makePlayerGroup('كرات طويلة', 'تمريرات طويلة نحو الأمام', 'longBalls', 'طويلة'),
+    makePlayerGroup('كرات بينية', 'تمريرات تخترق الخطوط', 'throughBalls', 'بينية'),
+    makePlayerGroup('للثلث الأخير', 'تمريرات أو دخول لمنطقة الخطورة', 'finalThirdPasses', 'تمريرة'),
+    makePlayerGroup('لمسات في المنطقة', 'لمسات داخل منطقة الجزاء', 'boxTouches', 'لمسة'),
+    makePlayerGroup('أفضل المتدخلين', 'أكثر تدخلات دفاعية', 'tackles', 'تدخل'),
+    makePlayerGroup('قاطعو الكرات', 'أكثر اعتراضا لمسار اللعب', 'interceptions', 'اعتراض'),
+    makePlayerGroup('الإبعادات', 'إبعاد الخطر من المناطق الدفاعية', 'clearances', 'إبعاد'),
+    makePlayerGroup('استرجاع الكرة', 'أكثر لاعبين استعادوا الاستحواذ', 'ballRecoveries', 'استرجاع'),
   ].filter(group => group.players.length > 0);
   const activePlayerGroup = playerGroups[activePlayerGroupIndex % Math.max(1, playerGroups.length)];
 
@@ -1000,7 +1139,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
         <div className="grid h-full grid-cols-[190px_1fr] items-center gap-4">
           <div className="min-w-0 border-l border-white/10 pl-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">PLAYER LIVE INDEX</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">20 PLAYER STATS</div>
             <div className="truncate text-xl font-black">{activePlayerGroup.title}</div>
             <div className="truncate text-[10px] font-bold text-white/45">{activePlayerGroup.subtitle}</div>
           </div>
@@ -1020,7 +1159,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   </div>
                   <div className="text-left">
                     <div className="font-['Barlow_Condensed'] text-3xl font-black leading-none" style={{ color }}>
-                      {activePlayerGroup.key === 'rating' ? value.toFixed(1) : Math.round(value)}
+                      {Math.round(value)}
                     </div>
                     <div className="text-[8px] font-black text-white/40">{activePlayerGroup.suffix}</div>
                   </div>
@@ -1146,14 +1285,14 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                 </div>
               )}
 
-              {showMotm && motm ? (
+              {showMotm && impactPlayer ? (
                 <div className="relative min-h-[132px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE MOTM</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE IMPACT</div>
                   <div className="mt-2 min-w-0">
-                    <div className="truncate text-lg font-black">{motm.name}</div>
-                    <div className="truncate text-[10px] font-bold text-white/45">{motm.isHome ? match.homeTeam : match.awayTeam}</div>
+                    <div className="truncate text-lg font-black">{impactPlayer.player.name}</div>
+                    <div className="truncate text-[10px] font-bold text-white/45">{impactPlayer.player.isHome ? match.homeTeam : match.awayTeam}</div>
                   </div>
-                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-5xl font-black text-amber-300">{motm.rating.toFixed(1)}</div>
+                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-5xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
                 </div>
               ) : showKeyBattle && keyCreator && keyDefender ? (
                 <div className="min-h-[132px] rounded-lg border border-cyan-300/20 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">

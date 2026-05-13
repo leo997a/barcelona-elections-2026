@@ -438,7 +438,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     templateIcon: '📊',
     templateAccent: '#3b82f6',
     templateGroup: 'FOOTBALL_WORLD_FEED',
-    templateDescription: 'استوديو بيانات ذكي يعتمد على JSON من WhoScored، يحسب تلقائياً مؤشر الهيمنة، رجل المباراة والمواجهات الثنائية.',
+    templateDescription: 'استوديو بيانات ذكي يعتمد على JSON من WhoScored، يحسب تلقائياً مؤشر الهيمنة، اللاعب المؤثر والمواجهات الثنائية.',
     theme: { primaryColor: '#3b82f6', secondaryColor: '#ef4444', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -465,7 +465,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },
       { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#ef4444' },
       { id: 'showDominance', label: 'إظهار مؤشر الهيمنة', type: 'boolean', value: true },
-      { id: 'showMotm', label: 'إظهار نجم المباراة', type: 'boolean', value: true },
+      { id: 'showMotm', label: 'إظهار اللاعب المؤثر', type: 'boolean', value: true },
       { id: 'showTopStats', label: 'إظهار أفضل 5 (ممرين/قاطعين)', type: 'boolean', value: true },
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
