@@ -1,183 +1,686 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { RendererProps } from './SharedComponents';
 
-// ─── Match Stats Renderer (Smart Studio - Live Edition) ────────────────────────
-// Design Language:
-//   - Dark Glassmorphism (bg-black/40 with backdrop-blur)
-//   - Neon glow accents based on team colors
-//   - Barlow Condensed typography
-// ─────────────────────────────────────────────────────────────────────────────
+type TeamStats = {
+  possession: number;
+  shots: number;
+  shotsOnTarget: number;
+  passes: number;
+  passAccuracy: number;
+  corners: number;
+  fouls: number;
+  offsides: number;
+  cards: number;
+  tackles: number;
+  interceptions: number;
+  keyPasses: number;
+  dribbles: number;
+  saves: number;
+};
+
+type PlayerStats = {
+  id: string;
+  name: string;
+  teamId: string;
+  isHome: boolean;
+  position?: string;
+  shirtNo?: string | number;
+  shots: number;
+  passes: number;
+  keyPasses: number;
+  tackles: number;
+  interceptions: number;
+  dribbles: number;
+  saves: number;
+  clearances: number;
+  goals: number;
+  assists: number;
+  rating: number;
+};
+
+type MatchEvent = {
+  minute: number;
+  label: string;
+  player: string;
+  isHome: boolean;
+  tone: 'goal' | 'card' | 'red' | 'event';
+};
+
+type MatchViewData = {
+  match: {
+    homeTeam: string;
+    awayTeam: string;
+    homeScore: number;
+    awayScore: number;
+    status?: string;
+    competition?: string;
+    venue?: string;
+  };
+  hStats: TeamStats;
+  aStats: TeamStats;
+  players: PlayerStats[];
+  events: MatchEvent[];
+  topPassers: PlayerStats[];
+  topInterceptors: PlayerStats[];
+  topCreators: PlayerStats[];
+};
+
+const emptyTeamStats = (): TeamStats => ({
+  possession: 0,
+  shots: 0,
+  shotsOnTarget: 0,
+  passes: 0,
+  passAccuracy: 0,
+  corners: 0,
+  fouls: 0,
+  offsides: 0,
+  cards: 0,
+  tackles: 0,
+  interceptions: 0,
+  keyPasses: 0,
+  dribbles: 0,
+  saves: 0,
+});
+
+const DEMO_MATCH_DATA = {
+  match: {
+    homeTeam: 'Barcelona',
+    awayTeam: 'Real Madrid',
+    homeScore: 2,
+    awayScore: 1,
+    status: 'LIVE',
+    competition: 'Match Center',
+  },
+  homeStats: {
+    possession: 58,
+    shots: 14,
+    shotsOnTarget: 6,
+    passes: 522,
+    passAccuracy: 91,
+    corners: 7,
+    fouls: 9,
+    tackles: 18,
+    interceptions: 11,
+    keyPasses: 12,
+    dribbles: 16,
+    saves: 2,
+  },
+  awayStats: {
+    possession: 42,
+    shots: 9,
+    shotsOnTarget: 4,
+    passes: 391,
+    passAccuracy: 86,
+    corners: 4,
+    fouls: 13,
+    tackles: 21,
+    interceptions: 9,
+    keyPasses: 7,
+    dribbles: 10,
+    saves: 4,
+  },
+  goalEvents: [
+    { minute: 24, player: 'Pedri', teamId: 'home' },
+    { minute: 51, player: 'Vinicius Junior', teamId: 'away' },
+    { minute: 77, player: 'Lamine Yamal', teamId: 'home' },
+  ],
+  cardEvents: [
+    { minute: 63, player: 'Aurelien Tchouameni', teamId: 'away', cardType: 'YellowCard' },
+  ],
+  homePlayers: [
+    { name: 'Pedri', teamId: 'home', passes: 82, keyPasses: 4, tackles: 3, interceptions: 2, dribbles: 3, shots: 2, rating: 8.5 },
+    { name: 'Lamine Yamal', teamId: 'home', passes: 46, keyPasses: 5, tackles: 1, interceptions: 1, dribbles: 7, shots: 4, rating: 8.8 },
+    { name: 'Frenkie de Jong', teamId: 'home', passes: 91, keyPasses: 2, tackles: 4, interceptions: 3, dribbles: 2, shots: 1, rating: 7.7 },
+  ],
+  awayPlayers: [
+    { name: 'Jude Bellingham', teamId: 'away', passes: 55, keyPasses: 3, tackles: 4, interceptions: 2, dribbles: 4, shots: 3, rating: 7.9 },
+    { name: 'Federico Valverde', teamId: 'away', passes: 62, keyPasses: 2, tackles: 5, interceptions: 3, dribbles: 2, shots: 2, rating: 7.5 },
+    { name: 'Antonio Rudiger', teamId: 'away', passes: 48, keyPasses: 0, tackles: 6, interceptions: 4, clearances: 7, shots: 0, rating: 7.2 },
+  ],
+};
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace('%', '').trim());
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  return fallback;
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const boolField = (value: unknown, fallback = true): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+  }
+  return fallback;
+};
+
+const displayName = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return String(record.displayName || record.name || record.value || '');
+  }
+  return String(value);
+};
+
+const shortTeam = (name: string) => {
+  const trimmed = name.trim();
+  if (!trimmed) return '---';
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length >= 2 && words[0].length <= 5) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+  return trimmed.slice(0, 3).toUpperCase();
+};
+
+const playerShortName = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : name;
+};
+
+const collectNumbers = (value: unknown): number[] => {
+  if (typeof value === 'number' && Number.isFinite(value)) return [value];
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace('%', '').trim());
+    return Number.isFinite(parsed) ? [parsed] : [];
+  }
+  if (Array.isArray(value)) return value.flatMap(collectNumbers);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectNumbers);
+  return [];
+};
+
+const sumMetric = (stats: unknown, aliases: string[]): number => {
+  if (!stats || typeof stats !== 'object') return 0;
+  const source = stats as Record<string, unknown>;
+  return aliases.reduce((sum, key) => {
+    const values = collectNumbers(source[key]);
+    return sum + values.reduce((inner, item) => inner + item, 0);
+  }, 0);
+};
+
+const latestMetric = (stats: unknown, aliases: string[]): number => {
+  if (!stats || typeof stats !== 'object') return 0;
+  const source = stats as Record<string, unknown>;
+  for (const key of aliases) {
+    const values = collectNumbers(source[key]);
+    if (values.length) return values[values.length - 1];
+  }
+  return 0;
+};
+
+const normalizeTeamStats = (source: unknown): TeamStats => {
+  const data = (source || {}) as Record<string, unknown>;
+  const yellowCards = toNumber(data.yellowCards);
+  const redCards = toNumber(data.redCards);
+  return {
+    possession: toNumber(data.possession),
+    shots: toNumber(data.shots),
+    shotsOnTarget: toNumber(data.shotsOnTarget),
+    passes: toNumber(data.passes),
+    passAccuracy: toNumber(data.passAccuracy),
+    corners: toNumber(data.corners),
+    fouls: toNumber(data.fouls),
+    offsides: toNumber(data.offsides),
+    cards: toNumber(data.cards, yellowCards + redCards),
+    tackles: toNumber(data.tackles),
+    interceptions: toNumber(data.interceptions),
+    keyPasses: toNumber(data.keyPasses),
+    dribbles: toNumber(data.dribbles),
+    saves: toNumber(data.saves),
+  };
+};
+
+const emptyPlayer = (id: string, name: string, teamId: string, isHome: boolean): PlayerStats => ({
+  id,
+  name,
+  teamId,
+  isHome,
+  shots: 0,
+  passes: 0,
+  keyPasses: 0,
+  tackles: 0,
+  interceptions: 0,
+  dribbles: 0,
+  saves: 0,
+  clearances: 0,
+  goals: 0,
+  assists: 0,
+  rating: 0,
+});
+
+const parseScore = (raw: Record<string, unknown>) => {
+  const score = String(raw.score || '');
+  if (score.includes('-')) {
+    const [homeScore, awayScore] = score.split('-').map(part => toNumber(part.trim()));
+    return { homeScore, awayScore };
+  }
+  return {
+    homeScore: toNumber(raw.homeScore ?? (raw.home as Record<string, unknown> | undefined)?.score),
+    awayScore: toNumber(raw.awayScore ?? (raw.away as Record<string, unknown> | undefined)?.score),
+  };
+};
+
+const buildTopLists = (players: PlayerStats[]) => ({
+  topPassers: [...players].sort((a, b) => b.passes - a.passes).slice(0, 5),
+  topInterceptors: [...players]
+    .sort((a, b) => (b.interceptions + b.tackles + b.clearances) - (a.interceptions + a.tackles + a.clearances))
+    .slice(0, 5),
+  topCreators: [...players]
+    .sort((a, b) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists))
+    .slice(0, 5),
+});
+
+const normalizeStructuredOutput = (raw: Record<string, unknown>): MatchViewData | null => {
+  const matchRaw = (raw.match || {}) as Record<string, unknown>;
+  if (!raw.homeStats && !raw.awayStats && !matchRaw.homeTeam && !matchRaw.awayTeam) return null;
+
+  const homeId = String(matchRaw.homeTeamId || 'home');
+  const awayId = String(matchRaw.awayTeamId || 'away');
+  const homeTeam = String(matchRaw.homeTeam || raw.homeTeamName || 'Home');
+  const awayTeam = String(matchRaw.awayTeam || raw.awayTeamName || 'Away');
+  const hStats = normalizeTeamStats(raw.homeStats);
+  const aStats = normalizeTeamStats(raw.awayStats);
+
+  const normalizePlayerList = (list: unknown, isHome: boolean): PlayerStats[] => {
+    if (!Array.isArray(list)) return [];
+    return list.map((player, index) => {
+      const source = (player || {}) as Record<string, unknown>;
+      const teamId = String(source.teamId || (isHome ? homeId : awayId));
+      const normalized = emptyPlayer(
+        String(source.id || source.playerId || `${teamId}-${index}`),
+        String(source.name || source.playerName || `Player ${index + 1}`),
+        teamId,
+        isHome,
+      );
+      normalized.position = source.position ? String(source.position) : undefined;
+      normalized.shirtNo = source.shirtNo as string | number | undefined;
+      normalized.shots = toNumber(source.shots);
+      normalized.passes = toNumber(source.passes);
+      normalized.keyPasses = toNumber(source.keyPasses);
+      normalized.tackles = toNumber(source.tackles);
+      normalized.interceptions = toNumber(source.interceptions);
+      normalized.dribbles = toNumber(source.dribbles);
+      normalized.saves = toNumber(source.saves);
+      normalized.clearances = toNumber(source.clearances);
+      normalized.goals = toNumber(source.goals);
+      normalized.assists = toNumber(source.assists);
+      normalized.rating = toNumber(source.rating);
+      return normalized;
+    });
+  };
+
+  const players = [
+    ...normalizePlayerList(raw.homePlayers, true),
+    ...normalizePlayerList(raw.awayPlayers, false),
+  ];
+
+  const goalEvents = Array.isArray(raw.goalEvents) ? raw.goalEvents : [];
+  const cardEvents = Array.isArray(raw.cardEvents) ? raw.cardEvents : [];
+  const events: MatchEvent[] = [
+    ...goalEvents.map((event: any) => ({
+      minute: toNumber(event.minute),
+      label: 'GOAL',
+      player: String(event.player || 'Unknown'),
+      isHome: String(event.teamId || homeId) === homeId,
+      tone: 'goal' as const,
+    })),
+    ...cardEvents.map((event: any) => {
+      const cardType = String(event.cardType || 'YellowCard');
+      return {
+        minute: toNumber(event.minute),
+        label: cardType === 'RedCard' || cardType === 'YellowRedCard' ? 'RED CARD' : 'YELLOW CARD',
+        player: String(event.player || 'Unknown'),
+        isHome: String(event.teamId || homeId) === homeId,
+        tone: (cardType === 'RedCard' || cardType === 'YellowRedCard' ? 'red' : 'card') as MatchEvent['tone'],
+      };
+    }),
+  ].sort((a, b) => a.minute - b.minute);
+
+  const topLists = buildTopLists(players);
+  return {
+    match: {
+      homeTeam,
+      awayTeam,
+      homeScore: toNumber(matchRaw.homeScore),
+      awayScore: toNumber(matchRaw.awayScore),
+      status: String(matchRaw.status || ''),
+      competition: String(matchRaw.competition || ''),
+      venue: String(matchRaw.venue || ''),
+    },
+    hStats,
+    aStats,
+    players,
+    events,
+    ...topLists,
+  };
+};
+
+const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | null => {
+  const home = (raw.home || {}) as Record<string, unknown>;
+  const away = (raw.away || {}) as Record<string, unknown>;
+  if (!raw.events || !home) return null;
+
+  const homeId = String(home.teamId || raw.homeTeamId || 'home');
+  const awayId = String(away.teamId || raw.awayTeamId || 'away');
+  const score = parseScore(raw);
+  const hStats = emptyTeamStats();
+  const aStats = emptyTeamStats();
+  const teamStatsById: Record<string, TeamStats> = { [homeId]: hStats, [awayId]: aStats };
+  const playerDict: Record<string, string> = {};
+  const playersById: Record<string, PlayerStats> = {};
+  const events: MatchEvent[] = [];
+
+  Object.entries((raw.playerIdNameDictionary || {}) as Record<string, unknown>).forEach(([id, name]) => {
+    playerDict[String(id)] = String(name);
+  });
+
+  const ensurePlayer = (id: string, teamId: string, fallbackName?: string) => {
+    const isHome = teamId === homeId;
+    if (!playersById[id]) {
+      playersById[id] = emptyPlayer(id, fallbackName || playerDict[id] || `Player ${id}`, teamId, isHome);
+    }
+    return playersById[id];
+  };
+
+  (Array.isArray(raw.events) ? raw.events : []).forEach((event: any) => {
+    const teamId = String(event.teamId || '');
+    const stats = teamStatsById[teamId];
+    if (!stats) return;
+
+    const playerId = event.playerId ? String(event.playerId) : '';
+    const player = playerId ? ensurePlayer(playerId, teamId) : null;
+    const type = displayName(event.type);
+    const outcome = displayName(event.outcomeType);
+    const success = ['Successful', 'Success', 'SuccessInPlay', 'SuccessOut'].includes(outcome);
+
+    if (type === 'Pass') {
+      stats.passes += 1;
+      if (player) player.passes += 1;
+    } else if (['SavedShot', 'MissedShots', 'BlockedShot', 'ShotOnPost', 'Goal'].includes(type)) {
+      stats.shots += 1;
+      if (player) player.shots += 1;
+      if (type === 'SavedShot' || type === 'Goal') stats.shotsOnTarget += 1;
+      if (type === 'Goal' && player) player.goals += 1;
+    } else if (type === 'CornerAwarded') {
+      stats.corners += 1;
+    } else if (type === 'Foul') {
+      stats.fouls += 1;
+    } else if (type === 'Offside') {
+      stats.offsides += 1;
+    } else if (type === 'Tackle') {
+      stats.tackles += 1;
+      if (player) player.tackles += 1;
+    } else if (type === 'Interception') {
+      stats.interceptions += 1;
+      if (player) player.interceptions += 1;
+    } else if (type === 'KeyPass') {
+      stats.keyPasses += 1;
+      if (player) player.keyPasses += 1;
+    } else if (['TakeOn', 'Dribble'].includes(type) && success) {
+      stats.dribbles += 1;
+      if (player) player.dribbles += 1;
+    } else if (type === 'Save') {
+      stats.saves += 1;
+      if (player) player.saves += 1;
+    } else if (['YellowCard', 'RedCard', 'YellowRedCard'].includes(type)) {
+      stats.cards += 1;
+    }
+
+    if (type === 'Goal') {
+      events.push({
+        minute: toNumber(event.minute),
+        label: 'GOAL',
+        player: player?.name || playerDict[playerId] || 'Unknown',
+        isHome: teamId === homeId,
+        tone: 'goal',
+      });
+    }
+
+    if (['YellowCard', 'RedCard', 'YellowRedCard'].includes(type)) {
+      events.push({
+        minute: toNumber(event.minute),
+        label: type === 'YellowCard' ? 'YELLOW CARD' : 'RED CARD',
+        player: player?.name || playerDict[playerId] || 'Unknown',
+        isHome: teamId === homeId,
+        tone: type === 'YellowCard' ? 'card' : 'red',
+      });
+    }
+  });
+
+  const hydratePlayers = (side: Record<string, unknown>, sideTeamId: string, isHome: boolean) => {
+    const sidePlayers = Array.isArray(side.players) ? side.players : [];
+    sidePlayers.forEach((player: any, index: number) => {
+      const playerId = String(player.playerId || player.id || `${sideTeamId}-${index}`);
+      const name = String(player.name || playerDict[playerId] || `Player ${index + 1}`);
+      const item = ensurePlayer(playerId, sideTeamId, name);
+      item.name = name;
+      item.teamId = sideTeamId;
+      item.isHome = isHome;
+      item.position = player.position || player.field || item.position;
+      item.shirtNo = player.shirtNo ?? item.shirtNo;
+      const stats = player.stats || {};
+      item.passes = Math.max(item.passes, sumMetric(stats, ['passes', 'totalPasses']));
+      item.keyPasses = Math.max(item.keyPasses, sumMetric(stats, ['keyPasses', 'keyPass']));
+      item.tackles = Math.max(item.tackles, sumMetric(stats, ['tackles', 'totalTackles']));
+      item.interceptions = Math.max(item.interceptions, sumMetric(stats, ['interceptions']));
+      item.dribbles = Math.max(item.dribbles, sumMetric(stats, ['dribbles', 'successfulDribbles', 'dribbleWon']));
+      item.shots = Math.max(item.shots, sumMetric(stats, ['shots', 'shotsTotal', 'totalShots']));
+      item.clearances = Math.max(item.clearances, sumMetric(stats, ['clearances']));
+      item.saves = Math.max(item.saves, sumMetric(stats, ['saves']));
+      item.rating = Math.max(item.rating, latestMetric(stats, ['ratings', 'rating']), toNumber(player.rating));
+    });
+  };
+
+  hydratePlayers(home, homeId, true);
+  hydratePlayers(away, awayId, false);
+
+  const players = Object.values(playersById);
+  const applyPlayerTotals = (stats: TeamStats, isHome: boolean) => {
+    const sidePlayers = players.filter(player => player.isHome === isHome);
+    stats.passes = Math.max(stats.passes, sidePlayers.reduce((sum, player) => sum + player.passes, 0));
+    stats.keyPasses = Math.max(stats.keyPasses, sidePlayers.reduce((sum, player) => sum + player.keyPasses, 0));
+    stats.tackles = Math.max(stats.tackles, sidePlayers.reduce((sum, player) => sum + player.tackles, 0));
+    stats.interceptions = Math.max(stats.interceptions, sidePlayers.reduce((sum, player) => sum + player.interceptions, 0));
+    stats.dribbles = Math.max(stats.dribbles, sidePlayers.reduce((sum, player) => sum + player.dribbles, 0));
+    stats.shots = Math.max(stats.shots, sidePlayers.reduce((sum, player) => sum + player.shots, 0));
+    stats.saves = Math.max(stats.saves, sidePlayers.reduce((sum, player) => sum + player.saves, 0));
+  };
+
+  applyPlayerTotals(hStats, true);
+  applyPlayerTotals(aStats, false);
+  const totalPasses = hStats.passes + aStats.passes;
+  hStats.possession = toNumber(raw.homePossession, totalPasses ? Math.round((hStats.passes / totalPasses) * 100) : 50);
+  aStats.possession = toNumber(raw.awayPossession, 100 - hStats.possession);
+
+  const topLists = buildTopLists(players);
+  return {
+    match: {
+      homeTeam: String(home.name || raw.homeTeamName || 'Home'),
+      awayTeam: String(away.name || raw.awayTeamName || 'Away'),
+      homeScore: score.homeScore,
+      awayScore: score.awayScore,
+      status: String(raw.statusCode || raw.period || ''),
+      competition: String(raw.competitionName || ''),
+      venue: String(raw.venueName || ''),
+    },
+    hStats,
+    aStats,
+    players,
+    events: events.sort((a, b) => a.minute - b.minute),
+    ...topLists,
+  };
+};
+
+const normalizeMatchData = (rawJson: unknown): MatchViewData | null => {
+  if (!rawJson || typeof rawJson !== 'object') return null;
+  const raw = rawJson as Record<string, unknown>;
+  return normalizeStructuredOutput(raw) || normalizeWhoScoredRaw(raw);
+};
 
 export const MatchStatsRenderer: React.FC<RendererProps> = ({
-  getField, containerStyle, contentWrapperStyle, playSound, wasVisible,
+  getField, containerStyle, playSound, wasVisible,
 }) => {
-  const apiUrl = String(getField('apiUrl') || 'http://localhost:3005/api/match');
+  const dataMode = String(getField('dataMode') || 'BRIDGE');
+  const apiUrl = String(getField('apiUrl') || 'http://127.0.0.1:3005/api/match');
+  const manualJson = String(getField('manualJson') || '');
+  const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 10), 3, 60);
   const homeColor = String(getField('homeColor') || '#3b82f6');
   const awayColor = String(getField('awayColor') || '#ef4444');
-  const showDominance = Boolean(getField('showDominance') ?? true);
-  const showMotm = Boolean(getField('showMotm') ?? true);
-  const showTopStats = Boolean(getField('showTopStats') ?? true);
+  const showScorebug = boolField(getField('showScorebug'), true);
+  const showDominance = boolField(getField('showDominance'), true);
+  const showMotm = boolField(getField('showMotm'), true);
+  const showTopStats = boolField(getField('showTopStats'), true);
+  const showEvents = boolField(getField('showEvents'), true);
+  const showKeyBattle = boolField(getField('showKeyBattle'), true);
 
-  const [rawJson, setRawJson] = useState<any>(null);
+  const [rawJson, setRawJson] = useState<unknown>(null);
   const [errorStatus, setErrorStatus] = useState<string>('');
 
   const didPlay = useRef(false);
   useEffect(() => {
-    if (!wasVisible && !didPlay.current) { didPlay.current = true; playSound('ENTRY').catch(() => { }); }
+    if (!wasVisible && !didPlay.current) {
+      didPlay.current = true;
+      playSound('ENTRY').catch(() => { });
+    }
   }, [wasVisible, playSound]);
 
-  // ── Live Polling ──
   useEffect(() => {
+    if (dataMode === 'DEMO') {
+      setRawJson(DEMO_MATCH_DATA);
+      setErrorStatus('');
+      return undefined;
+    }
+
+    if (dataMode === 'PASTE_JSON') {
+      if (!manualJson.trim()) {
+        setRawJson(null);
+        setErrorStatus('الصق JSON المباراة أو استورد ملف extractor من لوحة التحرير.');
+        return undefined;
+      }
+
+      try {
+        setRawJson(JSON.parse(manualJson));
+        setErrorStatus('');
+      } catch {
+        setRawJson(null);
+        setErrorStatus('JSON المباراة غير صالح. تأكد من نسخ الملف كاملا بدون حذف الأقواس.');
+      }
+      return undefined;
+    }
+
+    let cancelled = false;
     const fetchData = async () => {
       try {
-        const res = await fetch(apiUrl);
-        if (res.ok) {
-          const data = await res.json();
+        const res = await fetch(apiUrl, { cache: 'no-store' });
+        if (!res.ok) {
+          if (!cancelled) setErrorStatus('لم تصل بيانات من الجسر المحلي بعد. شغل تطبيق Match Stats ثم ابدأ السحب.');
+          return;
+        }
+
+        const data = await res.json();
+        if (!cancelled) {
           setRawJson(data);
           setErrorStatus('');
-        } else {
-          setErrorStatus('لم يتم العثور على بيانات في الجسر.');
         }
-      } catch (err) {
-        setErrorStatus('تعذر الاتصال بـ Live Bridge. تأكد من تشغيل تطبيق الإحصائيات المحلي.');
+      } catch {
+        if (!cancelled) {
+          setErrorStatus('تعذر الاتصال بـ Live Bridge. استخدم زر استيراد JSON كمسار احتياطي مضمون.');
+        }
       }
     };
 
-    fetchData(); // Initial fetch
-    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
-  }, [apiUrl]);
-
-  // ── Smart Data Processing ──
-  const parsedData = useMemo(() => {
-    if (!rawJson || !rawJson.events || !rawJson.home) return null;
-
-    const raw = rawJson;
-    const home = raw.home || {};
-    const away = raw.away || {};
-    const hId = home.teamId || raw.homeTeamId;
-    const aId = away.teamId || raw.awayTeamId;
-    const score = String(raw.score || '0-0').split('-');
-    
-    const playerDict: Record<string, string> = {};
-    Object.entries(raw.playerIdNameDictionary || {}).forEach(([k,v]) => { playerDict[String(k)] = String(v); });
-
-    const teamStats: Record<string, any> = {};
-    const playerStats: Record<string, any> = {};
-
-    (raw.events || []).forEach((evt: any) => {
-      const tid = evt.teamId;
-      const pid = evt.playerId ? String(evt.playerId) : null;
-      const etype = (evt.type && evt.type.displayName) ? evt.type.displayName : String(evt.type || '');
-      const outcome = (evt.outcomeType && evt.outcomeType.displayName) ? evt.outcomeType.displayName : String(evt.outcomeType || '');
-      const ok = ['Successful','Success','SuccessInPlay','SuccessOut'].includes(outcome);
-      if (!tid) return;
-
-      if (!teamStats[tid]) teamStats[tid] = {shots:0,shotsOnTarget:0,goals:0,passes:0,keyPasses:0,tackles:0,interceptions:0,dribbles:0};
-      if (pid && !playerStats[pid]) playerStats[pid] = {id:pid, name:playerDict[pid]||('P'+pid), teamId:tid, shots:0, passes:0, keyPasses:0, tackles:0, interceptions:0, dribbles:0, rating:0, isHome: tid===hId};
-
-      const ts = teamStats[tid];
-      const ps = pid ? playerStats[pid] : null;
-
-      if (etype==='Pass') { ts.passes++; if(ps)ps.passes++; }
-      else if (['SavedShot','MissedShots','BlockedShot','ShotOnPost','Goal'].includes(etype)) { ts.shots++; if(ps)ps.shots++; if(etype==='SavedShot'||etype==='Goal'){ts.shotsOnTarget++;} }
-      else if (etype==='Tackle') { ts.tackles++; if(ps)ps.tackles++; }
-      else if (etype==='Interception') { ts.interceptions++; if(ps)ps.interceptions++; }
-      else if (etype==='KeyPass') { ts.keyPasses++; if(ps)ps.keyPasses++; }
-      else if (['TakeOn','Dribble'].includes(etype) && ok) { ts.dribbles++; if(ps)ps.dribbles++; }
-    });
-
-    ['home','away'].forEach((side: 'home'|'away') => {
-      (((raw[side]||{}).players)||[]).forEach((p: any) => {
-        const pid = String(p.playerId||'');
-        if (!pid) return;
-        const ratings = ((p.stats||{}).ratings)||{};
-        const rvals = Object.values(ratings).filter(v=>v!=null) as number[];
-        if (rvals.length && playerStats[pid]) playerStats[pid].rating = Math.round(rvals[rvals.length-1]*100)/100;
-      });
-    });
-
-    const playersArr = Object.values(playerStats);
-
-    return {
-      match: {
-        homeTeam: home.name || raw.homeTeamName || 'Home',
-        awayTeam: away.name || raw.awayTeamName || 'Away',
-        homeScore: parseInt(score[0])||0,
-        awayScore: parseInt(score[1])||0,
-      },
-      hStats: teamStats[hId] || {passes:1, shots:0, shotsOnTarget:0, keyPasses:0},
-      aStats: teamStats[aId] || {passes:1, shots:0, shotsOnTarget:0, keyPasses:0},
-      players: playersArr,
-      topPassers: [...playersArr].sort((a:any, b:any) => b.passes - a.passes).slice(0, 5),
-      topInterceptors: [...playersArr].sort((a:any, b:any) => (b.interceptions+b.tackles) - (a.interceptions+a.tackles)).slice(0, 5),
-      topCreators: [...playersArr].sort((a:any, b:any) => b.keyPasses - a.keyPasses).slice(0, 5)
+    fetchData();
+    const interval = window.setInterval(fetchData, pollIntervalSec * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [rawJson]);
+  }, [apiUrl, dataMode, manualJson, pollIntervalSec]);
+
+  const parsedData = useMemo(() => normalizeMatchData(rawJson), [rawJson]);
 
   if (!parsedData) {
     return (
       <div style={containerStyle}>
-        <div style={contentWrapperStyle} className="flex items-center justify-center p-8">
-          <div className="bg-black/80 text-white font-bold p-8 text-xl rounded-xl border border-red-500/50 flex flex-col items-center gap-4">
-             <div className="animate-pulse w-12 h-12 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />
-             {errorStatus || 'جارٍ الاتصال بالجسر للحصول على البيانات المباشرة...'}
+        <div className="flex h-full w-full items-center justify-center p-8">
+          <div className="flex max-w-[520px] flex-col items-center gap-4 rounded-xl border border-red-500/50 bg-black/80 p-8 text-center text-xl font-bold text-white">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
+            <div>{errorStatus || 'جاري تجهيز بيانات المباراة...'}</div>
           </div>
         </div>
       </div>
     );
   }
 
-  const { match, hStats, aStats, players, topPassers, topInterceptors, topCreators } = parsedData;
+  const { match, hStats, aStats, players, topPassers, topInterceptors, topCreators, events } = parsedData;
+  const totalPasses = hStats.passes + aStats.passes;
+  const possHome = clamp(Math.round(hStats.possession || (totalPasses ? (hStats.passes / totalPasses) * 100 : 50)), 0, 100);
+  const shotTotal = hStats.shots + aStats.shots;
+  const shotShare = shotTotal > 0 ? hStats.shots / shotTotal : 0.5;
+  const keyTotal = hStats.keyPasses + aStats.keyPasses;
+  const keyShare = keyTotal > 0 ? hStats.keyPasses / keyTotal : 0.5;
+  const domHome = clamp(Math.round((possHome / 100 * 0.5 + shotShare * 0.3 + keyShare * 0.2) * 100), 0, 100);
+  const motm = [...players].filter(player => player.rating > 0).sort((a, b) => b.rating - a.rating)[0];
+  const latestEvents = [...events].slice(-5).reverse();
+  const keyCreator = topCreators.find(player => player.keyPasses > 0 || player.assists > 0);
+  const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
 
-  // Dominance
-  const hp = hStats.passes, ap = aStats.passes;
-  const possHome = Math.round(hp/(hp+ap)*100) || 50;
-  const hs = hStats.shots, as = aStats.shots;
-  const shotShare = hs+as > 0 ? (hs/(hs+as)) : 0.5;
-  const hk = hStats.keyPasses, ak = aStats.keyPasses;
-  const keyShare = hk+ak > 0 ? (hk/(hk+ak)) : 0.5;
-  let domHome = Math.round((possHome/100 * 0.5 + shotShare * 0.3 + keyShare * 0.2) * 100);
-  if(isNaN(domHome)) domHome = 50;
-
-  // MOTM
-  const validPlayers = players.filter((p:any) => p.rating > 0);
-  validPlayers.sort((a:any, b:any) => b.rating - a.rating);
-  const motm = validPlayers[0];
-
-  const SimpleStatBar = ({ label, v1, v2, suffix='' }: any) => {
-    const tot = v1 + v2 || 1;
-    const pct1 = (v1 / tot) * 100;
+  const SimpleStatBar = ({
+    label,
+    v1,
+    v2,
+    display1,
+    display2,
+    suffix = '',
+  }: {
+    label: string;
+    v1: number;
+    v2: number;
+    display1?: React.ReactNode;
+    display2?: React.ReactNode;
+    suffix?: string;
+  }) => {
+    const total = Math.max(1, Math.abs(v1) + Math.abs(v2));
+    const pct1 = clamp((v1 / total) * 100, 0, 100);
     return (
       <div className="mb-4">
-        <div className="flex justify-between text-[11px] mb-1.5 text-white/70">
-          <span className="font-bold text-sm" style={{color: homeColor, fontFamily: 'Barlow Condensed'}}>{v1}{suffix}</span>
-          <span className="uppercase tracking-widest font-bold">{label}</span>
-          <span className="font-bold text-sm" style={{color: awayColor, fontFamily: 'Barlow Condensed'}}>{v2}{suffix}</span>
+        <div className="mb-1.5 flex justify-between text-[11px] text-white/70">
+          <span className="text-sm font-bold" style={{ color: homeColor, fontFamily: 'Barlow Condensed' }}>{display1 ?? v1}{suffix}</span>
+          <span className="font-bold uppercase tracking-widest">{label}</span>
+          <span className="text-sm font-bold" style={{ color: awayColor, fontFamily: 'Barlow Condensed' }}>{display2 ?? v2}{suffix}</span>
         </div>
-        <div className="flex h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full transition-all duration-1000" style={{width: `${pct1}%`, background: homeColor}} />
-          <div className="h-full transition-all duration-1000" style={{width: `${100-pct1}%`, background: awayColor}} />
+        <div className="flex h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full transition-all duration-1000" style={{ width: `${pct1}%`, background: homeColor }} />
+          <div className="h-full transition-all duration-1000" style={{ width: `${100 - pct1}%`, background: awayColor }} />
         </div>
       </div>
     );
   };
 
-  const TopList = ({ title, data, valKey }: any) => (
-    <div className="flex-1 bg-black/40 border border-white/5 rounded-xl p-4">
-      <h3 className="text-white/40 text-[10px] tracking-widest uppercase mb-3 text-center border-b border-white/5 pb-2">{title}</h3>
+  const TopList = ({ title, data, valKey }: { title: string; data: PlayerStats[]; valKey: keyof PlayerStats }) => (
+    <div className="flex-1 rounded-xl border border-white/5 bg-black/40 p-4">
+      <h3 className="mb-3 border-b border-white/5 pb-2 text-center text-[10px] uppercase tracking-widest text-white/40">{title}</h3>
       <div className="flex flex-col gap-2">
-        {data.map((p: any, i: number) => (
-          <div key={i} className="flex items-center justify-between bg-white/5 rounded px-2 py-1.5">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-4 rounded-sm" style={{background: p.isHome ? homeColor : awayColor}} />
-              <span className="text-xs font-bold text-white truncate max-w-[100px]" title={p.name}>{p.name.split(' ').pop()}</span>
+        {data.length ? data.map((player, index) => (
+          <div key={`${player.id}-${index}`} className="flex items-center justify-between rounded bg-white/5 px-2 py-1.5">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="h-4 w-1.5 shrink-0 rounded-sm" style={{ background: player.isHome ? homeColor : awayColor }} />
+              <span className="max-w-[100px] truncate text-xs font-bold text-white" title={player.name}>{playerShortName(player.name)}</span>
             </div>
-            <span className="font-['Barlow_Condensed'] font-black text-sm" style={{color: p.isHome ? homeColor : awayColor}}>
-              {p[valKey]}
+            <span className="font-['Barlow_Condensed'] text-sm font-black" style={{ color: player.isHome ? homeColor : awayColor }}>
+              {Number(player[valKey]) || 0}
             </span>
           </div>
-        ))}
+        )) : (
+          <div className="rounded bg-white/5 px-2 py-3 text-center text-[11px] text-white/35">لا توجد بيانات كافية</div>
+        )}
       </div>
     </div>
   );
@@ -185,86 +688,126 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   return (
     <div style={containerStyle}>
       <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Cairo:wght@600;700&display=swap" rel="stylesheet" />
-      <div style={contentWrapperStyle} className="overflow-hidden p-8 flex justify-end">
-
-        {/* SIDEBAR CONTAINER */}
-        <div className="w-[450px] h-full flex flex-col gap-4 font-['Cairo']">
-          
-          {/* SCOREBUG LIVE */}
-          <div className="flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-50" />
-            <div className="absolute top-1 right-2 flex items-center gap-1">
-               <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-               <span className="text-[8px] text-red-500 tracking-widest font-black uppercase">LIVE DATA</span>
-            </div>
-
-            <div className="flex items-center h-16 relative flex-1 pl-4 mt-2">
-              <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{background: homeColor}} />
-              <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{match.homeTeam.substring(0,3).toUpperCase()}</div>
-            </div>
-            <div className="bg-black/80 h-16 mt-2 flex items-center justify-center px-6 font-['Barlow_Condensed'] text-4xl font-black text-white">
-              {match.homeScore} <span className="text-white/30 mx-2 text-2xl">:</span> {match.awayScore}
-            </div>
-            <div className="flex items-center justify-end h-16 relative flex-1 pr-4 mt-2">
-              <div className="absolute right-0 top-0 bottom-0 w-1.5" style={{background: awayColor}} />
-              <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{match.awayTeam.substring(0,3).toUpperCase()}</div>
-            </div>
-          </div>
-
-          {/* DOMINANCE */}
-          {showDominance && (
-            <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">
-              <div className="bg-black/40 border border-white/5 rounded-xl p-4 mb-5">
-                <div className="text-center text-[10px] tracking-widest text-white/50 mb-2 uppercase">Live Dominance Index</div>
-                <div className="flex items-center gap-3 font-['Barlow_Condensed'] text-3xl font-black">
-                  <div style={{color: homeColor}}>{domHome}%</div>
-                  <div className="flex-1 h-3 bg-white/10 rounded-full relative overflow-hidden shadow-inner">
-                    <div className="absolute left-0 top-0 bottom-0 transition-all duration-1000" style={{width: `${domHome}%`, background: `linear-gradient(90deg, ${homeColor}, ${awayColor})`}} />
-                    <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white z-10" />
-                  </div>
-                  <div style={{color: awayColor}}>{100-domHome}%</div>
-                </div>
+      <div className="flex h-full w-full justify-end overflow-hidden p-8">
+        <div className="flex h-full w-[450px] flex-col gap-4 font-['Cairo']">
+          {showScorebug && (
+            <div className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-white/10 bg-black/60 shadow-2xl backdrop-blur-xl">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-50" />
+              <div className="absolute right-2 top-1 flex items-center gap-1">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-red-500">{dataMode === 'BRIDGE' ? 'LIVE DATA' : 'JSON DATA'}</span>
               </div>
 
-              <div>
-                <SimpleStatBar label="الاستحواذ" v1={possHome} v2={100-possHome} suffix="%" />
-                <SimpleStatBar label="التسديدات (على المرمى)" v1={`${hStats.shots} (${hStats.shotsOnTarget})`} v2={`${aStats.shots} (${aStats.shotsOnTarget})`} />
-                <SimpleStatBar label="التمريرات" v1={hStats.passes} v2={aStats.passes} />
+              <div className="relative mt-2 flex h-16 flex-1 items-center pl-4">
+                <div className="absolute bottom-0 left-0 top-0 w-1.5" style={{ background: homeColor }} />
+                <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{shortTeam(match.homeTeam)}</div>
+              </div>
+              <div className="mt-2 flex h-16 items-center justify-center bg-black/80 px-6 font-['Barlow_Condensed'] text-4xl font-black text-white">
+                {match.homeScore} <span className="mx-2 text-2xl text-white/30">:</span> {match.awayScore}
+              </div>
+              <div className="relative mt-2 flex h-16 flex-1 items-center justify-end pr-4">
+                <div className="absolute bottom-0 right-0 top-0 w-1.5" style={{ background: awayColor }} />
+                <div className="font-['Barlow_Condensed'] text-3xl font-black text-white">{shortTeam(match.awayTeam)}</div>
               </div>
             </div>
           )}
 
-          {/* TOP 5 STATS (NEW LIVE FEATURE) */}
+          {showDominance && (
+            <div className="rounded-2xl border border-white/10 bg-black/60 p-5 shadow-2xl backdrop-blur-xl">
+              <div className="mb-5 rounded-xl border border-white/5 bg-black/40 p-4">
+                <div className="mb-2 text-center text-[10px] uppercase tracking-widest text-white/50">Live Dominance Index</div>
+                <div className="flex items-center gap-3 font-['Barlow_Condensed'] text-3xl font-black">
+                  <div style={{ color: homeColor }}>{domHome}%</div>
+                  <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-white/10 shadow-inner">
+                    <div className="absolute bottom-0 left-0 top-0 transition-all duration-1000" style={{ width: `${domHome}%`, background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
+                    <div className="absolute bottom-0 left-1/2 top-0 z-10 w-0.5 bg-white" />
+                  </div>
+                  <div style={{ color: awayColor }}>{100 - domHome}%</div>
+                </div>
+              </div>
+
+              <SimpleStatBar label="الاستحواذ" v1={possHome} v2={100 - possHome} suffix="%" />
+              <SimpleStatBar
+                label="التسديدات (على المرمى)"
+                v1={hStats.shots}
+                v2={aStats.shots}
+                display1={`${hStats.shots} (${hStats.shotsOnTarget})`}
+                display2={`${aStats.shots} (${aStats.shotsOnTarget})`}
+              />
+              <SimpleStatBar label="التمريرات" v1={hStats.passes} v2={aStats.passes} />
+              <SimpleStatBar label="الفرص المفتاحية" v1={hStats.keyPasses} v2={aStats.keyPasses} />
+              <SimpleStatBar label="التدخلات والقطع" v1={hStats.tackles + hStats.interceptions} v2={aStats.tackles + aStats.interceptions} />
+            </div>
+          )}
+
+          {showEvents && latestEvents.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-black/60 p-4 shadow-2xl backdrop-blur-xl">
+              <div className="mb-3 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
+                <span>Match Events</span>
+                <span>{match.status || match.competition || 'LIVE'}</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {latestEvents.map((event, index) => (
+                  <div key={`${event.minute}-${event.player}-${index}`} className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.04] px-3 py-2">
+                    <div className="w-9 text-center font-['Barlow_Condensed'] text-xl font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
+                    <div className={`rounded px-2 py-0.5 text-[9px] font-black ${event.tone === 'goal' ? 'bg-emerald-500/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-500/15 text-red-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                      {event.label}
+                    </div>
+                    <div className="min-w-0 flex-1 truncate text-xs font-bold text-white">{event.player}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {showTopStats && (
-            <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex gap-3">
+            <div className="flex gap-3 rounded-2xl border border-white/10 bg-black/60 p-4 shadow-2xl backdrop-blur-xl">
               <TopList title="صناع الفرص" data={topCreators} valKey="keyPasses" />
               <TopList title="قاطعي الكرات" data={topInterceptors} valKey="interceptions" />
             </div>
           )}
 
-          {/* MOTM */}
-          {showMotm && motm && (
-            <div className="relative mt-1">
-              <div className="absolute -top-3 left-4 bg-gradient-to-r from-amber-400 to-amber-600 text-black font-['Barlow_Condensed'] font-black px-4 py-0.5 text-[10px] rounded-t-lg z-10 tracking-widest">
-                LIVE MOTM
-              </div>
-              <div className="bg-black/60 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-4 shadow-[0_0_20px_rgba(245,158,11,0.1)] relative overflow-hidden flex items-center justify-between">
-                <div className="absolute -top-10 -left-10 w-32 h-32 bg-amber-500/10 blur-3xl rounded-full" />
-                
-                <div className="relative z-10 flex flex-col">
-                    <h1 className="text-lg font-bold text-white leading-tight">{motm.name}</h1>
-                    <h3 className="text-[10px] text-white/50 uppercase tracking-widest">{motm.isHome ? match.homeTeam : match.awayTeam}</h3>
+          {showKeyBattle && keyCreator && keyDefender && (
+            <div className="rounded-2xl border border-cyan-400/20 bg-black/60 p-4 shadow-2xl backdrop-blur-xl">
+              <div className="mb-3 text-center text-[10px] font-black uppercase tracking-widest text-cyan-300/70">Key Battle</div>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="min-w-0 text-left">
+                  <div className="truncate text-sm font-bold text-white">{keyCreator.name}</div>
+                  <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: keyCreator.isHome ? homeColor : awayColor }}>
+                    {keyCreator.keyPasses + keyCreator.assists}
+                  </div>
+                  <div className="text-[10px] text-white/40">فرص</div>
                 </div>
-                
-                <div className="font-['Barlow_Condensed'] text-5xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)] relative z-10">
-                  {motm.rating.toFixed(1)}
+                <div className="rounded-full border border-white/10 px-3 py-1 font-['Barlow_Condensed'] text-sm font-black text-white/50">VS</div>
+                <div className="min-w-0 text-right">
+                  <div className="truncate text-sm font-bold text-white">{keyDefender.name}</div>
+                  <div className="font-['Barlow_Condensed'] text-2xl font-black" style={{ color: keyDefender.isHome ? homeColor : awayColor }}>
+                    {keyDefender.tackles + keyDefender.interceptions + keyDefender.clearances}
+                  </div>
+                  <div className="text-[10px] text-white/40">افتكاكات</div>
                 </div>
               </div>
             </div>
           )}
 
+          {showMotm && motm && (
+            <div className="relative mt-1">
+              <div className="absolute -top-3 left-4 z-10 rounded-t-lg bg-gradient-to-r from-amber-400 to-amber-600 px-4 py-0.5 font-['Barlow_Condensed'] text-[10px] font-black tracking-widest text-black">
+                LIVE MOTM
+              </div>
+              <div className="relative flex items-center justify-between overflow-hidden rounded-2xl border border-amber-500/30 bg-black/60 p-4 shadow-[0_0_20px_rgba(245,158,11,0.1)] backdrop-blur-xl">
+                <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl" />
+                <div className="relative z-10 flex flex-col">
+                  <h1 className="text-lg font-bold leading-tight text-white">{motm.name}</h1>
+                  <h3 className="text-[10px] uppercase tracking-widest text-white/50">{motm.isHome ? match.homeTeam : match.awayTeam}</h3>
+                </div>
+                <div className="relative z-10 font-['Barlow_Condensed'] text-5xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                  {motm.rating.toFixed(1)}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
       </div>
     </div>
   );

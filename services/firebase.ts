@@ -14,4 +14,6 @@ export const firebaseConfig = {
   measurementId:     "G-L97QDYFPVZ",
 };
 
-export const isFirebaseConfigured = () => true;
+const ENABLE_BUNDLED_FIREBASE_SYNC = false;
+
+export const isFirebaseConfigured = () => ENABLE_BUNDLED_FIREBASE_SYNC;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { OverlayConfig, OverlayType, Sponsor } from '../types';
+import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy } from 'lucide-react';
 import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
@@ -32,13 +32,57 @@ const CURRENCY_OPTIONS = [
     { code: 'AUD', label: '🇦🇺 دولار أسترالي (AUD)' },
 ];
 
+const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
+
+const createFallbackDraftField = (id: string, value: any): OverlayField => {
+  if (id === 'dataMode') {
+    return {
+      id,
+      label: 'مصدر بيانات المباراة',
+      type: 'select',
+      value,
+      options: [
+        { value: 'BRIDGE', label: 'Live Bridge - localhost:3005' },
+        { value: 'PASTE_JSON', label: 'JSON يدوي / ملف extractor' },
+        { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
+      ],
+    };
+  }
+
+  if (id === 'manualJson') {
+    return { id, label: 'JSON المباراة المستورد', type: 'textarea', value };
+  }
+
+  if (id === 'sourceMatchUrl') {
+    return { id, label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value };
+  }
+
+  if (id === 'apiUrl') {
+    return { id, label: 'رابط خادم الجسر المحلي', type: 'text', value };
+  }
+
+  return {
+    id,
+    label: id,
+    type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'text',
+    value,
+  };
+};
+
 const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [activeTab, setActiveTab] = useState<string>('fields');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiError, setAiError] = useState(false);
   const [previewChroma, setPreviewChroma] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
+  const matchStatsJsonInputRef = useRef<HTMLInputElement>(null);
   const [activeImageFieldId, setActiveImageFieldId] = useState<string | null>(null);
+  const [isExtractingViewers, setIsExtractingViewers] = useState(false);
+  const [isGeneratingViewerBadges, setIsGeneratingViewerBadges] = useState(false);
+  const [viewerAiError, setViewerAiError] = useState<string | null>(null);
+  const [isImportingMatchStats, setIsImportingMatchStats] = useState(false);
+  const [matchStatsImportMessage, setMatchStatsImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -135,9 +179,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // --- HANDLERS ---
   const handleDraftFieldChange = (id: string, value: any) => {
-    const updatedFields = draftOverlay.fields.map(f => 
-      f.id === id ? { ...f, value } : f
-    );
+    const fieldExists = draftOverlay.fields.some(field => field.id === id);
+    const updatedFields = fieldExists
+      ? draftOverlay.fields.map(f => f.id === id ? { ...f, value } : f)
+      : [...draftOverlay.fields, createFallbackDraftField(id, value)];
     const newOverlay = normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, id);
     setDraftOverlay(newOverlay);
     syncManager.updateOverlay(newOverlay);
@@ -147,6 +192,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const updatedFields = draftOverlay.fields.map(field =>
       Object.prototype.hasOwnProperty.call(updates, field.id) ? { ...field, value: updates[field.id] } : field
     );
+    Object.entries(updates).forEach(([id, value]) => {
+      if (!updatedFields.some(field => field.id === id)) {
+        updatedFields.push(createFallbackDraftField(id, value));
+      }
+    });
     const firstChangedId = Object.keys(updates)[0];
     const newOverlay = normalizeElectionOverlay({ ...draftOverlay, fields: updatedFields }, firstChangedId);
     setDraftOverlay(newOverlay);
@@ -434,6 +484,119 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
   };
 
+  const validateMatchStatsJson = (parsed: unknown) => {
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('الملف لا يحتوي JSON صالح.');
+    }
+
+    const data = parsed as Record<string, unknown>;
+    const hasStructuredOutput = Boolean(data.match && (data.homeStats || data.awayStats));
+    const hasWhoScoredRaw = Boolean(data.events && data.home && data.away);
+
+    if (!hasStructuredOutput && !hasWhoScoredRaw) {
+      throw new Error('هذا الملف لا يبدو كبيانات Match Stats أو WhoScored.');
+    }
+  };
+
+  const applyMatchStatsJson = (parsed: unknown, successText: string) => {
+    validateMatchStatsJson(parsed);
+    const text = JSON.stringify(parsed, null, 2);
+    if (text.length > MAX_MATCH_STATS_JSON_LENGTH) {
+      throw new Error('حجم JSON كبير للتخزين داخل الموقع. استخدم وضع Live Bridge أو ملف extractor المنظم.');
+    }
+
+    handleDraftFieldChanges({
+      dataMode: 'PASTE_JSON',
+      manualJson: text,
+    });
+    setMatchStatsImportMessage({ type: 'success', text: successText });
+  };
+
+  const handleMatchStatsJsonFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setIsImportingMatchStats(true);
+    setMatchStatsImportMessage(null);
+    try {
+      if (file.size > MAX_MATCH_STATS_JSON_LENGTH) {
+        throw new Error('ملف JSON كبير جدا. استخدم ملف extractor المنظم أو وضع Live Bridge.');
+      }
+
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      applyMatchStatsJson(parsed, 'تم استيراد ملف JSON وربطه بالقالب.');
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر استيراد ملف JSON.',
+      });
+    } finally {
+      setIsImportingMatchStats(false);
+      input.value = '';
+    }
+  };
+
+  const handleImportMatchStatsFromBridge = async () => {
+    setIsImportingMatchStats(true);
+    setMatchStatsImportMessage(null);
+    try {
+      const url = String(getDraftValue('apiUrl') || 'http://127.0.0.1:3005/api/match');
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('لم تصل بيانات من الجسر المحلي. شغل START_APP.bat وابدأ السحب أولا.');
+      }
+
+      const parsed = await response.json();
+      applyMatchStatsJson(parsed, 'تم أخذ نسخة ثابتة من Live Bridge داخل القالب.');
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر الاتصال بالجسر المحلي.',
+      });
+    } finally {
+      setIsImportingMatchStats(false);
+    }
+  };
+
+  const handleStartMatchStatsBridge = async () => {
+    const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
+    if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
+      setMatchStatsImportMessage({ type: 'error', text: 'أدخل رابط مباراة صحيح من WhoScored أولا.' });
+      return;
+    }
+
+    setIsImportingMatchStats(true);
+    setMatchStatsImportMessage(null);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 75_000);
+
+    try {
+      const apiUrl = String(getDraftValue('apiUrl') || 'http://127.0.0.1:3005/api/match');
+      const startUrl = apiUrl.replace(/\/api\/match(?:\?.*)?$/, `/api/fetch?url=${encodeURIComponent(sourceUrl)}`);
+      const response = await fetch(startUrl, { cache: 'no-store', signal: controller.signal });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'تعذر تشغيل الجسر على هذا الرابط.');
+      }
+
+      handleDraftFieldChanges({ dataMode: 'BRIDGE' });
+      const teams = payload.homeTeam && payload.awayTeam ? ` (${payload.homeTeam} - ${payload.awayTeam})` : '';
+      setMatchStatsImportMessage({ type: 'success', text: `تم تشغيل الجسر المباشر والتحديث كل دقيقة${teams}.` });
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error && error.name === 'AbortError'
+          ? 'انتهت مهلة تشغيل الجسر. غالبا الصفحة بطيئة أو محمية. جرّب مرة أخرى أو استخدم EXTRACT_NOW.'
+          : error instanceof Error ? error.message : 'تعذر تشغيل الجسر المباشر.',
+      });
+    } finally {
+      window.clearTimeout(timeout);
+      setIsImportingMatchStats(false);
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
       
@@ -486,6 +649,79 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     {isProcessingAI ? 'جاري توليد بيانات المباراة...' : 'ملء بيانات مباراة بالذكاء الاصطناعي'}
                 </button>
                 {aiError && <div className="text-[11px] text-red-400 text-center">تعذر تشغيل الذكاء الاصطناعي. تحقق من GEMINI_API_KEY أو جرّب لاحقا.</div>}
+            </div>
+        )}
+
+        {draftOverlay.type === OverlayType.MATCH_STATS && (
+            <div className="p-4 bg-blue-950/25 border-b border-blue-900/40 space-y-3">
+                <input
+                  ref={matchStatsJsonInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={handleMatchStatsJsonFileChange}
+                />
+                <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs text-blue-300 font-bold flex items-center gap-1.5">
+                        <ArrowDownUp className="w-3 h-3" /> إدخال Match Stats
+                    </label>
+                    <span className="text-[10px] font-mono text-blue-300/70 bg-blue-950/50 px-2 py-0.5 rounded">
+                        {String(getDraftValue('dataMode') || 'BRIDGE')}
+                    </span>
+                </div>
+                <input
+                  type="url"
+                  dir="ltr"
+                  value={String(getDraftValue('sourceMatchUrl') || '')}
+                  onChange={(event) => handleDraftFieldChange('sourceMatchUrl', event.target.value)}
+                  placeholder="https://www.whoscored.com/matches/.../live/..."
+                  className="w-full bg-gray-900 border border-blue-900/50 rounded-lg px-3 py-2 text-white text-[11px] font-mono focus:outline-none focus:border-blue-500"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleStartMatchStatsBridge}
+                      disabled={isImportingMatchStats}
+                      className="col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Zap className="w-3 h-3" /> تشغيل الجسر من رابط المباراة
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => matchStatsJsonInputRef.current?.click()}
+                      disabled={isImportingMatchStats}
+                      className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Copy className="w-3 h-3" /> استيراد JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportMatchStatsFromBridge}
+                      disabled={isImportingMatchStats}
+                      className="bg-cyan-600/80 hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Zap className="w-3 h-3" /> سحب الجسر
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleDraftFieldChanges({ dataMode: 'BRIDGE' });
+                        setMatchStatsImportMessage({ type: 'success', text: 'تم تفعيل الجسر المباشر.' });
+                      }}
+                      className="col-span-2 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <Monitor className="w-3 h-3" /> وضع Live Bridge المباشر
+                    </button>
+                </div>
+                {matchStatsImportMessage && (
+                    <div className={`text-[11px] text-center rounded-lg px-3 py-2 border ${
+                      matchStatsImportMessage.type === 'success'
+                        ? 'text-emerald-300 bg-emerald-950/30 border-emerald-700/30'
+                        : 'text-red-300 bg-red-950/30 border-red-700/30'
+                    }`}>
+                        {matchStatsImportMessage.text}
+                    </div>
+                )}
             </div>
         )}
 
@@ -621,18 +857,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
             // ── resize image to max 512px and return base64 ──────────────────
             const resizeToBase64 = (file: File): Promise<string> =>
-              new Promise(resolve => {
+              new Promise((resolve, reject) => {
                 const img = new Image();
                 const url = URL.createObjectURL(file);
                 img.onload = () => {
                   const MAX = 512;
                   const scale = Math.min(1, MAX / Math.max(img.width, img.height));
                   const c = document.createElement('canvas');
-                  c.width = img.width * scale;
-                  c.height = img.height * scale;
+                  c.width = Math.max(1, Math.round(img.width * scale));
+                  c.height = Math.max(1, Math.round(img.height * scale));
                   c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height);
                   URL.revokeObjectURL(url);
                   resolve(c.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => {
+                  URL.revokeObjectURL(url);
+                  reject(new Error('تعذر قراءة إحدى الصور. جرّب صورة JPG أو PNG أو WEBP واضحة.'));
                 };
                 img.src = url;
               });
@@ -656,38 +896,65 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP — حجم أقصى 5MB لكل صورة</span>
                   </label>
                   <input
+                    ref={screenshotInputRef}
                     id="screenshot-upload"
                     type="file"
                     accept="image/*"
                     multiple
                     className="hidden"
                     onChange={async e => {
-                      const files = Array.from(e.target.files || []).slice(0, 3);
+                      const input = e.currentTarget;
+                      const files = input.files ? Array.from(input.files as ArrayLike<File>).slice(0, 3) : [];
                       if (!files.length) return;
-                      const btn = document.getElementById('ai-extract-btn') as HTMLButtonElement;
-                      if (btn) { btn.textContent = '🔍 جاري الاستخراج...'; btn.disabled = true; }
+                      const oversized = files.find(file => file.size > 5 * 1024 * 1024);
+                      if (oversized) {
+                        setViewerAiError('حجم كل صورة يجب ألا يتجاوز 5MB.');
+                        input.value = '';
+                        return;
+                      }
+
+                      setIsExtractingViewers(true);
+                      setViewerAiError(null);
                       try {
                         const base64s = await Promise.all(files.map(resizeToBase64));
                         const results = await extractViewersFromScreenshots(base64s);
-                        if (results && Array.isArray(results)) {
-                          results.slice(0, count).forEach(v => {
-                            handleDraftFieldChange(`viewer${v.rank}Name`, v.name);
-                            handleDraftFieldChange(`viewer${v.rank}Badge`, v.badge);
+                        if (results && Array.isArray(results) && results.length) {
+                          const updates: Record<string, string> = {};
+                          results.slice(0, count).forEach((viewer, index) => {
+                            const rawRank = Number(viewer.rank);
+                            const rank = Number.isFinite(rawRank)
+                              ? Math.min(Math.max(Math.round(rawRank), 1), count)
+                              : index + 1;
+                            if (viewer.name?.trim()) updates[`viewer${rank}Name`] = viewer.name.trim();
+                            if (viewer.badge?.trim()) updates[`viewer${rank}Badge`] = viewer.badge.trim();
                           });
+
+                          if (Object.keys(updates).length) {
+                            handleDraftFieldChanges(updates);
+                          } else {
+                            setViewerAiError('لم يتم العثور على أسماء واضحة داخل الصور.');
+                          }
+                        } else {
+                          setViewerAiError('لم يتم العثور على أسماء واضحة داخل الصور.');
                         }
+                      } catch (error) {
+                        setViewerAiError(error instanceof Error ? error.message : 'تعذر استخراج المتفاعلين من الصور.');
                       } finally {
-                        if (btn) { btn.textContent = '🤖 استخراج المتفاعلين من الصور'; btn.disabled = false; }
-                        e.target.value = '';
+                        setIsExtractingViewers(false);
+                        input.value = '';
                       }
                     }}
                   />
                   <button
                     id="ai-extract-btn"
-                    disabled
+                    type="button"
+                    onClick={() => screenshotInputRef.current?.click()}
+                    disabled={isExtractingViewers}
                     className="w-full mt-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors disabled:opacity-40"
                   >
-                    🤖 استخراج المتفاعلين من الصور
+                    {isExtractingViewers ? '🔍 جاري الاستخراج...' : '🤖 استخراج المتفاعلين من الصور'}
                   </button>
+                  {viewerAiError && <div className="text-[11px] text-red-400 text-center mt-2">{viewerAiError}</div>}
                 </div>
 
                 {/* ── Quick name+image entry table ── */}
@@ -735,20 +1002,44 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 const name = String(draftOverlay.fields.find(f => f.id === `viewer${i}Name`)?.value || '').trim();
                                 if (name) viewers.push({ name, rank: i });
                             }
-                            if (viewers.length === 0) { alert('أدخل أسماء المتفاعلين أولاً'); return; }
-                            const btn = document.getElementById('ai-badges-btn') as HTMLButtonElement;
-                            if (btn) { btn.textContent = '✨ جاري التوليد...'; btn.disabled = true; }
+                            if (viewers.length === 0) {
+                                setViewerAiError('أدخل أسماء المتفاعلين أولاً.');
+                                return;
+                            }
+
+                            setIsGeneratingViewerBadges(true);
+                            setViewerAiError(null);
                             try {
                                 const badges = await generateViewerBadges(viewers, channelName);
-                                if (badges && Array.isArray(badges)) badges.forEach(b => handleDraftFieldChange(`viewer${b.rank}Badge`, b.badge));
+                                if (badges && Array.isArray(badges) && badges.length) {
+                                    const updates: Record<string, string> = {};
+                                    badges.forEach(badge => {
+                                        const rank = Math.min(Math.max(Math.round(Number(badge.rank)), 1), count);
+                                        if (Number.isFinite(rank) && badge.badge?.trim()) {
+                                            updates[`viewer${rank}Badge`] = badge.badge.trim();
+                                        }
+                                    });
+
+                                    if (Object.keys(updates).length) {
+                                        handleDraftFieldChanges(updates);
+                                    } else {
+                                        setViewerAiError('لم يرجع الذكاء الاصطناعي أوسمة قابلة للاستخدام.');
+                                    }
+                                } else {
+                                    setViewerAiError('لم يرجع الذكاء الاصطناعي أوسمة قابلة للاستخدام.');
+                                }
+                            } catch (error) {
+                                setViewerAiError(error instanceof Error ? error.message : 'تعذر توليد الأوسمة.');
                             } finally {
-                                if (btn) { btn.textContent = '⚡ توليد الأوسمة بالذكاء الاصطناعي'; btn.disabled = false; }
+                                setIsGeneratingViewerBadges(false);
                             }
                         }}
                         id="ai-badges-btn"
+                        type="button"
+                        disabled={isGeneratingViewerBadges}
                         className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
                     >
-                        ⚡ توليد الأوسمة بالذكاء الاصطناعي (للأسماء المدخلة)
+                        {isGeneratingViewerBadges ? '✨ جاري التوليد...' : '⚡ توليد الأوسمة بالذكاء الاصطناعي (للأسماء المدخلة)'}
                     </button>
                 </div>
             </div>

@@ -102,6 +102,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#EDBB00',
     description: 'حزمة برشلونة الخاصة بألوان البلوغرانا وأسلوب La Liga المحترف.',
   },
+  [OverlayType.MATCH_STATS]: {
+    icon: 'DATA',
+    accent: '#3b82f6',
+    description: 'استوديو إحصائيات مباراة مباشر يعتمد على بيانات Live Bridge ويعرض الهيمنة، رجل المباراة، وأفضل الأرقام.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

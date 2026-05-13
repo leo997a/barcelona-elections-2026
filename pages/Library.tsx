@@ -36,6 +36,7 @@ const ACCENT: Record<string, string> = {
   [OverlayType.TODAYS_EPISODE]:  '#f59e0b',
   [OverlayType.FOOTBALL_PACKAGE]: '#c8aa63',
   [OverlayType.H2H_STATS]:        '#00E5FF',
+  [OverlayType.MATCH_STATS]:      '#3b82f6',
   [OverlayType.TRANSFER_NEWS]:    '#E9FF00',
   [OverlayType.BARCA_PREMIUM]:    '#EDBB00',
 };
@@ -44,6 +45,10 @@ const TYPE_FILTERS = [
   { id: 'ALL', label: 'الكل' },
   { id: OverlayType.FOOTBALL_PACKAGE, label: 'Projection' },
   { id: OverlayType.SCOREBOARD,      label: 'سكور بورد' },
+  { id: OverlayType.MATCH_STATS,     label: 'Match Stats' },
+  { id: OverlayType.H2H_STATS,       label: 'H2H' },
+  { id: OverlayType.TRANSFER_NEWS,   label: 'Transfers' },
+  { id: OverlayType.BARCA_PREMIUM,   label: 'Barca' },
   { id: OverlayType.LOWER_THIRD,     label: 'أسماء' },
   { id: OverlayType.TICKER,          label: 'شريط أخبار' },
   { id: OverlayType.GUESTS,          label: 'ضيوف' },

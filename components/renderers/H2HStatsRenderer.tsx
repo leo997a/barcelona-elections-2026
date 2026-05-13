@@ -43,7 +43,7 @@ export const H2HStatsRenderer: React.FC<RendererProps> = ({
     if (!wasVisible && !didPlay.current) { didPlay.current = true; playSound('ENTRY').catch(() => { }); }
   }, [wasVisible, playSound]);
 
-  const StatBar = ({ v1, v2, label }: { v1: number; v2: number; label: string }) => {
+  const StatBar: React.FC<{ v1: number; v2: number; label: string }> = ({ v1, v2, label }) => {
     const total = v1 + v2 || 1;
     const pct1 = Math.round((v1 / total) * 100);
     const pct2 = 100 - pct1;

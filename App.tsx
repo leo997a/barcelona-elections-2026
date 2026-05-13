@@ -53,12 +53,16 @@ const AudioUnlockOverlay = () => {
 // لا polling، لا تأخر، لا كراشات — الاتصال يبقى مفتوحاً دائماً
 const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   const id = hashPath.split('/output/')[1]?.split('?')[0];
+  const embeddedOverlay = React.useMemo(
+    () => syncManager.extractEmbeddedOverlay(hashPath) ?? null,
+    [hashPath]
+  );
 
   // آخر حالة معروفة — لا تُمسح أبداً حتى عند انقطاع الاتصال
   const lastGoodState = React.useRef<OverlayConfig | null>(
-    syncManager.extractEmbeddedOverlay(hashPath) ?? null
+    embeddedOverlay
   );
-  const [overlay, setOverlay] = useState<OverlayConfig | null>(lastGoodState.current);
+  const [overlay, setOverlay] = useState<OverlayConfig | null>(embeddedOverlay);
   const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
 
   useEffect(() => {
@@ -80,6 +84,13 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   }, []);
 
   useEffect(() => {
+    if (embeddedOverlay) {
+      lastGoodState.current = embeddedOverlay;
+      setOverlay(embeddedOverlay);
+      setConnStatus('fallback');
+      return;
+    }
+
     if (!id) return;
     let sseActive = true;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
@@ -276,7 +287,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       fbUnsubscribe();
     };
-  }, [id, hashPath]);
+  }, [id, hashPath, embeddedOverlay]);
 
   // عرض آخر حالة معروفة — لا يُعرض "Connecting..." إلا إذا لم يُستلم أي شيء قط
   if (!overlay) return (
