@@ -358,7 +358,9 @@ const App: React.FC = () => {
   
   // Actions delegated to SyncManager
   const handleCreateOverlay = (templateId: string) => {
-    syncManager.addOverlay(createOverlayFromTemplate(templateId, overlays));
+    const nextOverlay = createOverlayFromTemplate(templateId, overlays);
+    syncManager.addOverlay(nextOverlay);
+    setSelectedOverlayId(nextOverlay.id);
     setRoute('library');
   };
 

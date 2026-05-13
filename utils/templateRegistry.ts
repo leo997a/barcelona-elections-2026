@@ -135,6 +135,14 @@ export const getTemplateMeta = (overlay: OverlayConfig): TemplateMeta => {
 
 export const getVisibleTemplates = (): OverlayConfig[] =>
   INITIAL_TEMPLATES.filter(template => !LEGACY_HIDDEN_TEMPLATE_IDS.has(template.id)).sort((left, right) => {
+    if (left.type === OverlayType.MATCH_STATS && right.type !== OverlayType.MATCH_STATS) {
+      return -1;
+    }
+
+    if (left.type !== OverlayType.MATCH_STATS && right.type === OverlayType.MATCH_STATS) {
+      return 1;
+    }
+
     if ((left.templateGroup || '') === 'FOOTBALL_PROJECTION' && (right.templateGroup || '') !== 'FOOTBALL_PROJECTION') {
       return -1;
     }

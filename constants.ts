@@ -452,6 +452,11 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'showScorebug', label: 'إظهار شريط النتيجة', type: 'boolean', value: true },
       { id: 'showEvents', label: 'إظهار أحداث المباراة', type: 'boolean', value: true },
       { id: 'showKeyBattle', label: 'إظهار المواجهة الأبرز', type: 'boolean', value: true },
+      { id: 'showAdvancedStats', label: 'إظهار الإحصائيات المتقدمة', type: 'boolean', value: true },
+      { id: 'panelSide', label: 'مكان الشريط الجانبي', type: 'select', value: 'RIGHT', options: [
+        { value: 'RIGHT', label: 'يمين الشاشة' },
+        { value: 'LEFT', label: 'يسار الشاشة' },
+      ] },
       { id: 'sourceMatchUrl', label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
       { id: 'apiUrl', label: 'رابط خادم الجسر المحلي', type: 'text', value: 'http://127.0.0.1:3005/api/match' },
       { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },

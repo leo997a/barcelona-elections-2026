@@ -216,6 +216,41 @@ const ensureElectionSmartFields = (fields: OverlayField[]) => {
   createElectionStatementFields(inferredStatementSource).forEach(field => appendMissingField(fields, field));
 };
 
+const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
+  {
+    id: 'showAdvancedStats',
+    label: 'إظهار الإحصائيات المتقدمة',
+    type: 'boolean',
+    value: true,
+  },
+  {
+    id: 'panelSide',
+    label: 'مكان الشريط الجانبي',
+    type: 'select',
+    value: 'RIGHT',
+    options: [
+      { value: 'RIGHT', label: 'يمين الشاشة' },
+      { value: 'LEFT', label: 'يسار الشاشة' },
+    ],
+  },
+  {
+    id: 'sourceMatchUrl',
+    label: 'رابط مباراة WhoScored للتشغيل المباشر',
+    type: 'text',
+    value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla',
+  },
+  {
+    id: 'apiUrl',
+    label: 'رابط خادم الجسر المحلي',
+    type: 'text',
+    value: 'http://127.0.0.1:3005/api/match',
+  },
+];
+
+const ensureMatchStatsFields = (fields: OverlayField[]) => {
+  MATCH_STATS_DEFAULT_FIELDS.forEach(field => appendMissingField(fields, { ...field }));
+};
+
 const syncCandidatePreset = (
   fields: OverlayField[],
   candidateIndex: 1 | 2,
@@ -258,6 +293,12 @@ const syncCandidatePreset = (
 };
 
 export const normalizeElectionOverlay = (overlay: OverlayConfig, changedFieldId?: string): OverlayConfig => {
+  if (overlay.type === OverlayType.MATCH_STATS) {
+    const fields = overlay.fields.map(field => ({ ...field }));
+    ensureMatchStatsFields(fields);
+    return { ...overlay, fields };
+  }
+
   if (overlay.type !== OverlayType.ELECTION) return overlay;
 
   const fields = overlay.fields.map(field => ({ ...field }));

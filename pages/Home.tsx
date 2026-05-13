@@ -81,7 +81,14 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
         <Layers className="w-5 h-5 text-blue-500" />
         <span>قوالب سريعة (Quick Launch)</span>
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+        <QuickLaunchCard
+          title="Live Match Stats"
+          desc="شريط جانبي مباشر من WhoScored مع إحصائيات متقدمة"
+          color="from-cyan-500 to-blue-700"
+          icon="DATA"
+          onClick={() => onCreate('template-football-smart-match-stats')}
+        />
         <QuickLaunchCard
           title="لوحة الداعمين"
           desc="عرض قائمة الداعمين (Top Donors)"
