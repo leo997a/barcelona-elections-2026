@@ -1426,9 +1426,18 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
 ];
 
-export const INITIAL_TEMPLATES: OverlayConfig[] = [
+// Deduplicate by id to prevent any accidental duplicates
+const _allTemplates: OverlayConfig[] = [
   ...INITIAL_TEMPLATE_DEFINITIONS,
   ...BARCELONA_ELECTION_TEMPLATES,
   ...FOOTBALL_BROADCAST_TEMPLATES,
   ...FOOTBALL_PROJECTION_TEMPLATES,
-].map(withBroadcastControls);
+];
+const _seenIds = new Set<string>();
+export const INITIAL_TEMPLATES: OverlayConfig[] = _allTemplates
+  .filter(t => {
+    if (_seenIds.has(t.id)) return false;
+    _seenIds.add(t.id);
+    return true;
+  })
+  .map(withBroadcastControls);
