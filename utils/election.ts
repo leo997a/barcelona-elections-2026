@@ -233,6 +233,21 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
     step: 5,
   },
   {
+    id: 'showPlayerTicker',
+    label: 'إظهار شريط إحصائيات اللاعبين',
+    type: 'boolean',
+    value: true,
+  },
+  {
+    id: 'playerRotateSec',
+    label: 'تبديل شريط اللاعبين كل ثانية',
+    type: 'range',
+    value: 60,
+    min: 20,
+    max: 120,
+    step: 10,
+  },
+  {
     id: 'panelSide',
     label: 'مكان الشريط الجانبي',
     type: 'select',

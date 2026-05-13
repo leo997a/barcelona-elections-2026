@@ -73,6 +73,7 @@ type MatchViewData = {
   meta?: {
     extractedAt?: string;
     sourceUrl?: string;
+    scoreSource?: string;
   };
   match: {
     homeTeam: string;
@@ -738,11 +739,14 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const showMotm = boolField(getField('showMotm'), true);
   const showTopStats = boolField(getField('showTopStats'), true);
   const showAdvancedStats = boolField(getField('showAdvancedStats'), true);
+  const showPlayerTicker = boolField(getField('showPlayerTicker'), true);
+  const playerRotateSec = clamp(toNumber(getField('playerRotateSec'), 60), 20, 120);
   const panelSide = String(getField('panelSide') || 'RIGHT');
 
   const [rawJson, setRawJson] = useState<unknown>(dataMode === 'DEMO' ? DEMO_MATCH_DATA : null);
   const [errorStatus, setErrorStatus] = useState<string>('');
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
+  const [activePlayerGroupIndex, setActivePlayerGroupIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -796,6 +800,13 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     return () => window.clearInterval(interval);
   }, [statsRotateSec]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActivePlayerGroupIndex(index => index + 1);
+    }, playerRotateSec * 1000);
+    return () => window.clearInterval(interval);
+  }, [playerRotateSec]);
+
   if (!parsedData) {
     return (
       <div style={containerStyle}>
@@ -821,6 +832,49 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const panelJustify = panelSide === 'LEFT' ? 'justify-start' : 'justify-end';
   const totalMetrics = 31;
+  const playerValue = (player: PlayerStats, key: 'rating' | 'shots' | 'passes' | 'creative' | 'defensive' | 'dribbles' | 'saves') => {
+    if (key === 'creative') return player.keyPasses + player.assists;
+    if (key === 'defensive') return player.tackles + player.interceptions + player.clearances;
+    return Number(player[key]) || 0;
+  };
+  const playerGroups = [
+    {
+      title: 'نجوم المباراة',
+      subtitle: 'تقييم مباشر من WhoScored',
+      key: 'rating' as const,
+      suffix: '',
+      players: [...players].filter(player => player.rating > 0).sort((a, b) => b.rating - a.rating).slice(0, 5),
+    },
+    {
+      title: 'تهديد المرمى',
+      subtitle: 'أكثر اللاعبين تسديدا',
+      key: 'shots' as const,
+      suffix: 'تسديدة',
+      players: [...players].filter(player => player.shots > 0).sort((a, b) => b.shots - a.shots || b.rating - a.rating).slice(0, 5),
+    },
+    {
+      title: 'محرك اللعب',
+      subtitle: 'أعلى حجم تمرير',
+      key: 'passes' as const,
+      suffix: 'تمريرة',
+      players: [...players].filter(player => player.passes > 0).sort((a, b) => b.passes - a.passes || b.rating - a.rating).slice(0, 5),
+    },
+    {
+      title: 'صناعة الفرص',
+      subtitle: 'تمريرات مفتاحية ومساهمات',
+      key: 'creative' as const,
+      suffix: 'فرصة',
+      players: [...players].filter(player => player.keyPasses + player.assists > 0).sort((a, b) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || b.rating - a.rating).slice(0, 5),
+    },
+    {
+      title: 'العمل الدفاعي',
+      subtitle: 'تدخلات واعتراضات وإبعادات',
+      key: 'defensive' as const,
+      suffix: 'إجراء',
+      players: [...players].filter(player => player.tackles + player.interceptions + player.clearances > 0).sort((a, b) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || b.rating - a.rating).slice(0, 5),
+    },
+  ].filter(group => group.players.length > 0);
+  const activePlayerGroup = playerGroups[activePlayerGroupIndex % Math.max(1, playerGroups.length)];
 
   const groups: StatGroup[] = [
     {
@@ -939,6 +993,46 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     </div>
   );
 
+  const PlayerTicker = () => {
+    if (!showPlayerTicker || !activePlayerGroup) return null;
+    return (
+      <div dir="rtl" className="absolute bottom-6 left-6 right-6 z-20 h-[88px] overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl">
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
+        <div className="grid h-full grid-cols-[190px_1fr] items-center gap-4">
+          <div className="min-w-0 border-l border-white/10 pl-4">
+            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">PLAYER LIVE INDEX</div>
+            <div className="truncate text-xl font-black">{activePlayerGroup.title}</div>
+            <div className="truncate text-[10px] font-bold text-white/45">{activePlayerGroup.subtitle}</div>
+          </div>
+          <div key={activePlayerGroup.title} className="grid h-full grid-cols-5 gap-2">
+            {activePlayerGroup.players.map((player, index) => {
+              const value = playerValue(player, activePlayerGroup.key);
+              const color = player.isHome ? homeColor : awayColor;
+              return (
+                <div
+                  key={`${activePlayerGroup.title}-${player.id}-${index}`}
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-white/10 bg-white/10 px-3"
+                  style={{ animation: `reoStatIn 420ms ease ${index * 65}ms both` }}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black text-white">{playerShortName(player.name)}</div>
+                    <div className="truncate text-[9px] font-bold text-white/40">{player.isHome ? match.homeTeam : match.awayTeam}</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-['Barlow_Condensed'] text-3xl font-black leading-none" style={{ color }}>
+                      {activePlayerGroup.key === 'rating' ? value.toFixed(1) : Math.round(value)}
+                    </div>
+                    <div className="text-[8px] font-black text-white/40">{activePlayerGroup.suffix}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={containerStyle}>
       <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -948,7 +1042,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <div className={`flex h-full w-full ${panelJustify} overflow-hidden p-6`} style={{ direction: 'ltr' }}>
+      <div className={`flex h-full w-full ${panelJustify} overflow-hidden p-6 ${showPlayerTicker ? 'pb-[116px]' : ''}`} style={{ direction: 'ltr' }}>
         <div dir="rtl" className="flex h-full w-[540px] max-w-[calc(100vw-48px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white">
           {showScorebug && (
             <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
@@ -1089,6 +1183,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           )}
         </div>
       </div>
+      <PlayerTicker />
     </div>
   );
 };
