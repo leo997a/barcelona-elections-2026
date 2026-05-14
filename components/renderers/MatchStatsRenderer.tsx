@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { RendererProps } from './SharedComponents';
 
 type TeamStats = {
@@ -864,7 +864,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const dataMode = String(getField('dataMode') || 'CLOUD_BRIDGE');
   const apiUrl = String(getField('apiUrl') || (dataMode === 'CLOUD_BRIDGE' ? '/api/reo-match/match' : 'http://127.0.0.1:3005/api/match'));
   const manualJson = String(getField('manualJson') || '');
-  const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 10), 3, 60);
+  const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 30), 10, 60);
   const statsRotateSec = clamp(toNumber(getField('statsRotateSec'), 30), 10, 90);
   const homeColor = String(getField('homeColor') || activeTheme.primary || '#2563eb');
   const awayColor = String(getField('awayColor') || activeTheme.secondary || '#ef4444');
@@ -888,20 +888,27 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const [errorStatus, setErrorStatus] = useState<string>('');
   const [activeGroupIndex, setActiveGroupIndex] = useState(0);
   const [activePlayerGroupIndex, setActivePlayerGroupIndex] = useState(0);
+  const lastPayloadFingerprint = useRef('__unset__');
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchData = async () => {
       if (dataMode === 'DEMO') {
-        setRawJson(DEMO_MATCH_DATA);
+        if (lastPayloadFingerprint.current !== 'DEMO') {
+          lastPayloadFingerprint.current = 'DEMO';
+          setRawJson(DEMO_MATCH_DATA);
+        }
         setErrorStatus('');
         return;
       }
 
       if (dataMode === 'PASTE_JSON') {
         try {
-          setRawJson(JSON.parse(manualJson));
+          if (lastPayloadFingerprint.current !== manualJson) {
+            lastPayloadFingerprint.current = manualJson;
+            setRawJson(JSON.parse(manualJson));
+          }
           setErrorStatus('');
         } catch {
           setErrorStatus('ملف JSON غير صالح');
@@ -914,7 +921,11 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         if (!res.ok) throw new Error(`Bridge ${res.status}`);
         const json = await res.json();
         if (!cancelled) {
-          setRawJson(json);
+          const fingerprint = JSON.stringify(json);
+          if (lastPayloadFingerprint.current !== fingerprint) {
+            lastPayloadFingerprint.current = fingerprint;
+            setRawJson(json);
+          }
           setErrorStatus('');
         }
       } catch (error) {
@@ -976,13 +987,22 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const matchSideClass = panelSide === 'LEFT' ? 'left-6' : 'right-6';
   const playerSideClass = playerPanelSide === 'LEFT' ? 'left-6' : 'right-6';
-  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[470px]' : visualStyle === 'DATA_TOWER' ? 'w-[500px]' : 'w-[540px]';
-  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[430px]' : visualStyle === 'DATA_TOWER' ? 'w-[460px]' : 'w-[500px]';
+  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[470px]' : visualStyle === 'DATA_TOWER' ? 'w-[500px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[560px]' : 'w-[540px]';
+  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[430px]' : visualStyle === 'DATA_TOWER' ? 'w-[460px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[520px]' : 'w-[500px]';
   const panelSurface = visualStyle === 'TACTICAL_SPLIT'
     ? 'border-white/15 bg-slate-950/92'
     : visualStyle === 'DATA_TOWER'
       ? 'border-cyan-300/20 bg-black/92'
-      : 'border-white/10 bg-black/90';
+      : visualStyle === 'GLASS_STUDIO'
+        ? 'border-white/25 bg-white/12'
+        : visualStyle === 'NEON_TOUCHLINE'
+          ? 'border-lime-300/25 bg-[#03120d]/92'
+          : 'border-white/10 bg-black/90';
+  const backdropClass = visualStyle === 'NEON_TOUCHLINE'
+    ? 'bg-[linear-gradient(90deg,rgba(34,197,94,0.10),transparent_35%,rgba(59,130,246,0.08)_65%,transparent)]'
+    : visualStyle === 'GLASS_STUDIO'
+      ? 'bg-[linear-gradient(135deg,rgba(255,255,255,0.10),transparent_42%,rgba(255,255,255,0.06))]'
+      : '';
   const totalMetrics = 31;
   const playerValue = (player: PlayerStats, key: keyof PlayerStats) => {
     const value = player[key];
@@ -1246,6 +1266,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         }
       `}</style>
       <div className="relative h-full w-full overflow-hidden p-6" style={{ direction: 'ltr' }}>
+        {backdropClass ? <div className={`pointer-events-none absolute inset-0 ${backdropClass}`} /> : null}
         <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white`}>
           {showScorebug && (
             <div className={`relative overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>

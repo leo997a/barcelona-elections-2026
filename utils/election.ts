@@ -239,10 +239,10 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
     id: 'pollIntervalSec',
     label: 'Template refresh seconds',
     type: 'range',
-    value: 10,
-    min: 3,
+    value: 30,
+    min: 10,
     max: 60,
-    step: 1,
+    step: 5,
   },
   {
     id: 'showAdvancedStats',
@@ -340,6 +340,8 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
       { value: 'TACTICAL_SPLIT', label: 'Tactical Split' },
       { value: 'DATA_TOWER', label: 'Data Tower' },
       { value: 'COMPACT_BROADCAST', label: 'Compact Broadcast' },
+      { value: 'GLASS_STUDIO', label: 'Glass Studio' },
+      { value: 'NEON_TOUCHLINE', label: 'Neon Touchline' },
     ],
   },
   {

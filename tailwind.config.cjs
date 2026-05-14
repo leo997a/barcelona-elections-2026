@@ -1,0 +1,160 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './index.html',
+    './App.tsx',
+    './constants.ts',
+    './types.ts',
+    './components/**/*.{ts,tsx}',
+    './pages/**/*.{ts,tsx}',
+    './services/**/*.{ts,tsx}',
+    './utils/**/*.{ts,tsx}',
+  ],
+  safelist: [
+    'animate-marquee',
+    'animate-slide-in-right',
+    'animate-fade-in-up',
+    'animate-cinematic-fade-up',
+    'animate-cinematic-blur-in',
+    'animate-page-flip',
+    'animate-news-slide',
+    'animate-zoom-impact',
+    'animate-cube-rotate',
+    'animate-glitch',
+    'animate-stadium-sweep',
+    'animate-tactical-reveal',
+    'animate-score-flash',
+    'animate-pan-diagonal',
+    'animate-slide-in-from-left',
+    'animate-slide-out-to-left',
+    'animate-modern-slide-up',
+    'animate-modern-slide-right',
+    'animate-modern-pop',
+    'animate-modern-fade',
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Tajawal', 'sans-serif'],
+      },
+      colors: {
+        primary: '#3b82f6',
+        secondary: '#10b981',
+        dark: '#111827',
+        darker: '#0b0f19',
+      },
+      animation: {
+        marquee: 'marquee 20s linear infinite',
+        'slide-in-right': 'slideInRight 0.6s ease-out forwards',
+        'fade-in-up': 'fadeInUp 1s ease-out forwards',
+        'cinematic-fade-up': 'cinematicFadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+        'cinematic-blur-in': 'cinematicBlurIn 0.6s cubic-bezier(0.4, 0.0, 0.2, 1) forwards',
+        'page-flip': 'pageFlip 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards',
+        'news-slide': 'newsSlide 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+        'zoom-impact': 'zoomImpact 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+        'cube-rotate': 'cubeRotate 0.8s ease-in-out forwards',
+        glitch: 'glitch 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite',
+        'stadium-sweep': 'stadiumSweep 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'tactical-reveal': 'tacticalReveal 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'score-flash': 'scoreFlash 0.5s cubic-bezier(0.18, 1, 0.32, 1) forwards',
+        'pan-diagonal': 'panDiagonal 200s linear infinite',
+        'slide-in-from-left': 'slideInFromLeft 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'slide-out-to-left': 'slideOutToLeft 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'modern-slide-up': 'modernSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'modern-slide-right': 'modernSlideRight 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'modern-pop': 'modernPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'modern-fade': 'modernFade 0.4s ease-out forwards',
+      },
+      keyframes: {
+        marquee: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        panDiagonal: {
+          '0%': { transform: 'translate(-10%, -10%)' },
+          '50%': { transform: 'translate(5%, 5%)' },
+          '100%': { transform: 'translate(-10%, -10%)' },
+        },
+        slideInFromLeft: {
+          '0%': { transform: 'translateX(-120%)', opacity: '0', filter: 'blur(10px)' },
+          '100%': { transform: 'translateX(0)', opacity: '1', filter: 'blur(0)' },
+        },
+        slideOutToLeft: {
+          '0%': { transform: 'translateX(0)', opacity: '1', filter: 'blur(0)' },
+          '100%': { transform: 'translateX(-120%)', opacity: '0', filter: 'blur(10px)' },
+        },
+        modernSlideUp: {
+          '0%': { opacity: '0', transform: 'translateY(40px) scale(0.95)', filter: 'blur(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)', filter: 'blur(0px)' },
+        },
+        modernSlideRight: {
+          '0%': { opacity: '0', transform: 'translateX(-40px)', filter: 'blur(10px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)', filter: 'blur(0px)' },
+        },
+        modernPop: {
+          '0%': { opacity: '0', transform: 'scale(0.8)', filter: 'blur(10px)' },
+          '50%': { transform: 'scale(1.02)' },
+          '100%': { opacity: '1', transform: 'scale(1)', filter: 'blur(0px)' },
+        },
+        modernFade: {
+          '0%': { opacity: '0', filter: 'blur(10px)' },
+          '100%': { opacity: '1', filter: 'blur(0px)' },
+        },
+        cinematicFadeUp: {
+          '0%': { transform: 'translateY(30px)', opacity: '0', filter: 'blur(10px)' },
+          '100%': { transform: 'translateY(0)', opacity: '1', filter: 'blur(0)' },
+        },
+        cinematicBlurIn: {
+          '0%': { opacity: '0', filter: 'blur(20px)', transform: 'scale(1.02)' },
+          '100%': { opacity: '1', filter: 'blur(0)', transform: 'scale(1)' },
+        },
+        pageFlip: {
+          '0%': { transform: 'perspective(2000px) rotateY(90deg)', opacity: '0', transformOrigin: 'right center' },
+          '100%': { transform: 'perspective(2000px) rotateY(0deg)', opacity: '1', transformOrigin: 'right center' },
+        },
+        newsSlide: {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        zoomImpact: {
+          '0%': { transform: 'scale(2)', opacity: '0', filter: 'blur(20px)' },
+          '100%': { transform: 'scale(1)', opacity: '1', filter: 'blur(0)' },
+        },
+        cubeRotate: {
+          '0%': { transform: 'perspective(1000px) rotateX(-90deg) translateY(50%)', opacity: '0' },
+          '100%': { transform: 'perspective(1000px) rotateX(0deg) translateY(0)', opacity: '1' },
+        },
+        glitch: {
+          '0%': { transform: 'translate(0)', opacity: '0' },
+          '20%': { transform: 'translate(-2px, 2px)', opacity: '1' },
+          '40%': { transform: 'translate(-2px, -2px)' },
+          '60%': { transform: 'translate(2px, 2px)' },
+          '80%': { transform: 'translate(2px, -2px)' },
+          '100%': { transform: 'translate(0)', opacity: '1' },
+        },
+        stadiumSweep: {
+          '0%': { transform: 'translateX(40px) skewX(-6deg)', opacity: '0', filter: 'blur(10px)' },
+          '100%': { transform: 'translateX(0) skewX(0)', opacity: '1', filter: 'blur(0)' },
+        },
+        tacticalReveal: {
+          '0%': { clipPath: 'inset(0 100% 0 0)', opacity: '0.4' },
+          '100%': { clipPath: 'inset(0 0 0 0)', opacity: '1' },
+        },
+        scoreFlash: {
+          '0%': { transform: 'scale(1.12)', opacity: '0', filter: 'brightness(2.5) blur(8px)' },
+          '60%': { transform: 'scale(0.99)', opacity: '1', filter: 'brightness(1.2) blur(0)' },
+          '100%': { transform: 'scale(1)', opacity: '1', filter: 'brightness(1)' },
+        },
+      },
+    },
+  },
+  plugins: [],
+};

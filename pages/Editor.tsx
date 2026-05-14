@@ -741,6 +741,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
     ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}`
     : null;
+  const bridgeControlsLocked = !isAdminUnlocked || isImportingMatchStats || isBridgeActionRunning;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
@@ -834,11 +835,33 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
                     )}
                 </div>
+                {!isAdminUnlocked && (
+                    <form onSubmit={handleAdminLogin} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                        <div className="mb-2 text-[11px] font-bold text-amber-200">افتح قفل التحكم لتغيير رابط المباراة أو تشغيل الجسر.</div>
+                        <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={adminPassword}
+                              onChange={(event) => setAdminPassword(event.target.value)}
+                              placeholder="Admin passcode"
+                              className="min-w-0 flex-1 rounded-md border border-amber-500/25 bg-black/35 px-2 py-2 text-xs text-white outline-none focus:border-amber-300"
+                            />
+                            <button
+                              type="submit"
+                              disabled={isAdminAuthorizing}
+                              className="rounded-md bg-amber-500 px-3 py-2 text-xs font-black text-black disabled:bg-gray-700 disabled:text-gray-400"
+                            >
+                              فتح
+                            </button>
+                        </div>
+                        {passwordError && <div className="mt-2 text-[10px] font-bold text-red-300">{passwordError}</div>}
+                    </form>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={handleStartMatchStatsBridge}
-                      disabled={isImportingMatchStats || isBridgeActionRunning}
+                      disabled={bridgeControlsLocked}
                       className="col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                         <Zap className="w-3 h-3" /> تشغيل الجسر من رابط المباراة
@@ -846,15 +869,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     <button
                       type="button"
                       onClick={handleSetMatchStatsBridgeUrl}
-                      disabled={isImportingMatchStats || isBridgeActionRunning}
-                      className="bg-indigo-600/80 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                      disabled={bridgeControlsLocked}
+                      className="hidden"
                     >
                         <Monitor className="w-3 h-3" /> حفظ الرابط
                     </button>
                     <button
                       type="button"
                       onClick={handleStopMatchStatsBridge}
-                      disabled={isImportingMatchStats || isBridgeActionRunning}
+                      disabled={bridgeControlsLocked}
                       className="bg-red-600/80 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                         <Square className="w-3 h-3" /> إيقاف
@@ -863,7 +886,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       type="button"
                       onClick={handleRefreshMatchStatsStatus}
                       disabled={isBridgeActionRunning}
-                      className="col-span-2 bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                      className="bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                         <RefreshCw className="w-3 h-3" /> فحص حالة Google Cloud
                     </button>
@@ -871,7 +894,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       type="button"
                       onClick={() => matchStatsJsonInputRef.current?.click()}
                       disabled={isImportingMatchStats}
-                      className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                      className="hidden"
                     >
                         <Copy className="w-3 h-3" /> استيراد JSON
                     </button>
@@ -879,7 +902,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       type="button"
                       onClick={handleImportMatchStatsFromBridge}
                       disabled={isImportingMatchStats}
-                      className="bg-cyan-600/80 hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                      className="hidden"
                     >
                         <Zap className="w-3 h-3" /> سحب الجسر
                     </button>
@@ -889,7 +912,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL });
                         setMatchStatsImportMessage({ type: 'success', text: 'تم تفعيل الجسر المباشر.' });
                       }}
-                      className="col-span-2 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                      className="hidden"
                     >
                         <Monitor className="w-3 h-3" /> وضع Live Bridge المباشر
                     </button>

@@ -449,7 +449,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
         { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
       ] },
       { id: 'manualJson', label: 'JSON المباراة المستورد', type: 'textarea', value: '' },
-      { id: 'pollIntervalSec', label: 'تحديث الجسر كل ثانية', type: 'range', value: 10, min: 3, max: 60, step: 1 },
+      { id: 'pollIntervalSec', label: 'تحديث القالب من الجسر كل ثانية', type: 'range', value: 30, min: 10, max: 60, step: 5 },
       { id: 'statsRotateSec', label: 'تبديل مجموعات الإحصائيات كل ثانية', type: 'range', value: 30, min: 10, max: 90, step: 5 },
       { id: 'showPlayerTicker', label: 'إظهار لوحة إحصائيات اللاعبين', type: 'boolean', value: true },
       { id: 'playerRotateSec', label: 'تبديل فئة اللاعبين كل ثانية', type: 'range', value: 30, min: 15, max: 120, step: 5 },
@@ -470,6 +470,8 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
         { value: 'TACTICAL_SPLIT', label: 'Tactical Split' },
         { value: 'DATA_TOWER', label: 'Data Tower' },
         { value: 'COMPACT_BROADCAST', label: 'Compact Broadcast' },
+        { value: 'GLASS_STUDIO', label: 'Glass Studio' },
+        { value: 'NEON_TOUCHLINE', label: 'Neon Touchline' },
       ] },
       { id: 'playerMetricPreset', label: 'تركيز لوحة اللاعبين', type: 'select', value: 'ALL', options: [
         { value: 'ALL', label: 'كل الفئات' },
