@@ -556,6 +556,19 @@ def build_output(raw: Dict) -> Dict:
     processed = process_events(events, player_dict)
     ts = processed["teamStats"]
     ps = processed["playerStats"]
+    status_code = str(raw.get("statusCode", "")).strip()
+    minute_candidates = [
+        raw.get("minute"),
+        raw.get("currentMinute"),
+        raw.get("expandedMinute"),
+        raw.get("matchMinute"),
+        raw.get("elapsed"),
+    ]
+    event_minutes = [safe_int(evt.get("minute"), 0) for evt in events if safe_int(evt.get("minute"), 0) > 0]
+    match_minute = max([safe_int(value, 0) for value in minute_candidates] + event_minutes + [0])
+    is_final = status_code.lower() in {"6", "ft", "fulltime", "full time", "final", "finished", "postmatch", "post-match"}
+    clock_value = raw.get("clock") or raw.get("matchTime") or raw.get("matchClock") or ""
+    display_status = "انتهت" if is_final else (f"{match_minute}'" if match_minute else (status_code or "LIVE"))
 
     for pid, pdata in ps.items():
         if pid in player_positions:
@@ -785,6 +798,10 @@ def build_output(raw: Dict) -> Dict:
             "venue":      raw.get("venueName", ""),
             "competition":raw.get("competitionName", ""),
             "status":     raw.get("statusCode", ""),
+            "minute":     match_minute,
+            "clock":      clock_value,
+            "displayStatus": display_status,
+            "isFinal":    is_final,
         },
         "homeStats":  home_stats,
         "awayStats":  away_stats,
@@ -981,7 +998,20 @@ def build_output_url(site_url: str, port: int, source_url: str, panel_side: str 
             {"id": "playerMetricPreset", "label": "Player stat focus", "type": "select", "value": "SMART"},
             {"id": "teamStatsSide", "label": "Team stat side", "type": "select", "value": "HOME_LEFT"},
             {"id": "enablePanelTransitions", "label": "Panel transitions", "type": "boolean", "value": False},
+            {"id": "broadcastMotion", "label": "Broadcast motion", "type": "boolean", "value": True},
+            {"id": "broadcastQuality", "label": "Broadcast quality", "type": "select", "value": "ULTRA"},
+            {"id": "matchPanelScale", "label": "Match panel scale", "type": "range", "value": 1},
+            {"id": "playerPanelScale", "label": "Player panel scale", "type": "range", "value": 1},
+            {"id": "showCreatorBadge", "label": "Creator badge", "type": "boolean", "value": True},
+            {"id": "creatorName", "label": "Creator name", "type": "text", "value": "REO Live"},
+            {"id": "creatorHandle", "label": "Creator handle", "type": "text", "value": "@reo_live"},
+            {"id": "creatorLabel", "label": "Creator label", "type": "text", "value": "Content Creator"},
+            {"id": "creatorAvatar", "label": "Creator avatar", "type": "image", "value": ""},
+            {"id": "creatorBadgeScale", "label": "Creator badge scale", "type": "range", "value": 1},
+            {"id": "creatorPositionX", "label": "Creator X", "type": "range", "value": 0},
+            {"id": "creatorPositionY", "label": "Creator Y", "type": "range", "value": 0},
             {"id": "playerImageMapJson", "label": "Player image map", "type": "textarea", "value": "{}"},
+            {"id": "playerImageCacheUrl", "label": "Player image cache URL", "type": "text", "value": ""},
             {"id": "homeColor", "label": "Home color", "type": "color", "value": "#3b82f6"},
             {"id": "awayColor", "label": "Away color", "type": "color", "value": "#ef4444"},
             {"id": "scale", "label": "Scale", "type": "range", "value": 1},

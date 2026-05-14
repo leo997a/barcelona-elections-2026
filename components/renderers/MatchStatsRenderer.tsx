@@ -1,4 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  CircleDot,
+  Clock3,
+  Crosshair,
+  Flame,
+  Gauge,
+  Medal,
+  Radio,
+  Shield,
+  Sparkles,
+  Star,
+  Target,
+  Timer,
+  Trophy,
+  UserRound,
+  Users,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { RendererProps } from './SharedComponents';
 
 type TeamStats = {
@@ -104,6 +126,10 @@ type MatchViewData = {
     homeLogo?: string;
     awayLogo?: string;
     status?: string;
+    minute?: number;
+    clock?: string;
+    displayStatus?: string;
+    isFinal?: boolean;
     competition?: string;
     venue?: string;
   };
@@ -386,6 +412,100 @@ const resolvePlayerImage = (player: PlayerStats, imageMap: Record<string, string
   ''
 );
 
+const statIconById: Record<string, LucideIcon> = {
+  possession: Activity,
+  dominance: Gauge,
+  passes: Users,
+  passAccuracy: Target,
+  finalThird: Zap,
+  recoveries: Sparkles,
+  shots: Crosshair,
+  onTarget: Target,
+  offTarget: CircleDot,
+  blockedShots: Shield,
+  shotAccuracy: Gauge,
+  keyPasses: Star,
+  boxTouches: Flame,
+  accuratePasses: Users,
+  corners: CircleDot,
+  crosses: Zap,
+  longBalls: Radio,
+  throughBalls: Sparkles,
+  dribbles: Activity,
+  dribbleRate: Gauge,
+  tackles: Shield,
+  interceptions: Shield,
+  clearances: AlertTriangle,
+  blocks: Shield,
+  aerialWon: Trophy,
+  aerialRate: Gauge,
+  saves: Shield,
+  saveRate: Gauge,
+  fouls: AlertTriangle,
+  offsides: Timer,
+  yellowCards: AlertTriangle,
+  redCards: AlertTriangle,
+  turnovers: Activity,
+};
+
+const groupIconByCategory: Record<StatGroup['category'], LucideIcon> = {
+  CONTROL: Activity,
+  ATTACK: Crosshair,
+  PASSING: Users,
+  DEFENSE: Shield,
+  DISCIPLINE: AlertTriangle,
+};
+
+const playerIconByKey: Partial<Record<keyof PlayerStats, LucideIcon>> = {
+  passes: Users,
+  passAccuracy: Target,
+  passesAccurate: Users,
+  keyPasses: Star,
+  assists: Sparkles,
+  shots: Crosshair,
+  shotsOnTarget: Target,
+  shotAccuracy: Gauge,
+  goals: Trophy,
+  dribbles: Activity,
+  dribbleSuccessRate: Gauge,
+  crosses: Zap,
+  longBalls: Radio,
+  throughBalls: Sparkles,
+  finalThirdPasses: Zap,
+  boxTouches: Flame,
+  tackles: Shield,
+  interceptions: Shield,
+  clearances: AlertTriangle,
+  ballRecoveries: Sparkles,
+  saves: Shield,
+};
+
+const metricHelpByKey: Partial<Record<keyof PlayerStats, string>> = {
+  passes: 'حجم البناء وصناعة النسق',
+  keyPasses: 'تمريرات صنعت فرصة مباشرة',
+  shots: 'محاولات إنهاء الهجمة',
+  shotsOnTarget: 'تهديد مباشر على المرمى',
+  tackles: 'تدخلات ناجحة على حامل الكرة',
+  interceptions: 'قراءة مسار التمرير وقطع اللعب',
+  clearances: 'إبعاد الخطر من المنطقة',
+  ballRecoveries: 'استعادة الاستحواذ بعد فقدانه',
+  saves: 'تصديات الحارس المؤثرة',
+};
+
+const IconBox: React.FC<{ icon: LucideIcon; color?: string; className?: string }> = ({ icon: Icon, color = '#ffffff', className = '' }) => (
+  <span className={`inline-flex shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/10 ${className}`} style={{ color }}>
+    <Icon className="h-3.5 w-3.5" strokeWidth={2.6} />
+  </span>
+);
+
+const clockLabel = (match: MatchViewData['match']) => {
+  if (match.displayStatus) return match.displayStatus;
+  if (match.isFinal || ['6', 'ft', 'final', 'finished'].includes(String(match.status || '').toLowerCase())) return 'انتهت';
+  if (match.clock) return match.clock;
+  if (Number.isFinite(match.minute)) return `${Math.round(Number(match.minute))}'`;
+  return String(match.status || 'LIVE') || 'LIVE';
+};
+
 const shortTeam = (name: string) => {
   const trimmed = name.trim();
   if (!trimmed) return '---';
@@ -623,6 +743,7 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
       };
     }),
   ].sort((a, b) => a.minute - b.minute);
+  const eventLastMinute = events.reduce((max, event) => Math.max(max, event.minute), 0);
 
   return {
     meta: raw.meta as MatchViewData['meta'],
@@ -636,6 +757,10 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
       homeScore: toNumber(matchRaw.homeScore),
       awayScore: toNumber(matchRaw.awayScore),
       status: String(matchRaw.status || ''),
+      minute: toNumber(matchRaw.minute || matchRaw.currentMinute || matchRaw.elapsed || matchRaw.expandedMinute, eventLastMinute),
+      clock: String(matchRaw.clock || matchRaw.matchClock || ''),
+      displayStatus: String(matchRaw.displayStatus || matchRaw.statusText || ''),
+      isFinal: boolField(matchRaw.isFinal, ['6', 'ft', 'final', 'finished'].includes(String(matchRaw.status || '').toLowerCase())),
       competition: String(matchRaw.competition || ''),
       venue: String(matchRaw.venue || ''),
     },
@@ -865,6 +990,8 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
   };
   finalizeStats(hStats, aStats);
   finalizeStats(aStats, hStats);
+  const sortedEvents = events.sort((a, b) => a.minute - b.minute);
+  const eventLastMinute = sortedEvents.reduce((max, event) => Math.max(max, event.minute), 0);
 
   return {
     meta: { extractedAt: new Date().toISOString() },
@@ -878,13 +1005,17 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       homeScore: score.home,
       awayScore: score.away,
       status: String(raw.statusCode || raw.status || ''),
+      minute: toNumber(raw.minute || raw.currentMinute || raw.elapsed || raw.expandedMinute, eventLastMinute),
+      clock: String(raw.clock || raw.matchClock || ''),
+      displayStatus: String(raw.displayStatus || raw.statusText || ''),
+      isFinal: ['6', 'ft', 'final', 'finished'].includes(String(raw.statusCode || raw.status || '').toLowerCase()),
       competition: String(raw.competitionName || ''),
       venue: String(raw.venueName || ''),
     },
     hStats,
     aStats,
     players,
-    events: events.sort((a, b) => a.minute - b.minute),
+    events: sortedEvents,
     ...buildTopLists(players),
   };
 };
@@ -988,9 +1119,54 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const playerMetricPreset = String(getField('playerMetricPreset') || 'SMART').toUpperCase();
   const teamStatsSide = String(getField('teamStatsSide') || 'HOME_LEFT');
   const enablePanelTransitions = boolField(getField('enablePanelTransitions'), false);
+  const broadcastMotion = boolField(getField('broadcastMotion'), true);
+  const broadcastQuality = String(getField('broadcastQuality') || 'ULTRA');
+  const matchPanelScale = clamp(toNumber(getField('matchPanelScale'), 1), 0.65, 1.6);
+  const playerPanelScale = clamp(toNumber(getField('playerPanelScale'), 1), 0.65, 1.6);
+  const showCreatorBadge = boolField(getField('showCreatorBadge'), true);
+  const creatorName = String(getField('creatorName') || 'REO LIVE');
+  const creatorHandle = String(getField('creatorHandle') || '@reo_live');
+  const creatorLabel = String(getField('creatorLabel') || 'صانع المحتوى');
+  const creatorAvatar = String(getField('creatorAvatar') || '');
+  const creatorBadgeScale = clamp(toNumber(getField('creatorBadgeScale'), 1), 0.55, 1.8);
+  const creatorPositionX = clamp(toNumber(getField('creatorPositionX'), 0), -700, 700);
+  const creatorPositionY = clamp(toNumber(getField('creatorPositionY'), 0), -450, 450);
   const playerImageMapJson = String(getField('playerImageMapJson') || '{}');
+  const playerImageCacheUrl = String(getField('playerImageCacheUrl') || '').trim();
   const dataSourceName = String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'REO Cloud Bridge' : 'REO Live Bridge'));
-  const playerImageMap = useMemo(() => parsePlayerImageMap(playerImageMapJson), [playerImageMapJson]);
+  const [remotePlayerImageMap, setRemotePlayerImageMap] = useState<Record<string, string>>({});
+  const manualPlayerImageMap = useMemo(() => parsePlayerImageMap(playerImageMapJson), [playerImageMapJson]);
+  const playerImageMap = useMemo(() => ({ ...remotePlayerImageMap, ...manualPlayerImageMap }), [manualPlayerImageMap, remotePlayerImageMap]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!playerImageCacheUrl) {
+      setRemotePlayerImageMap({});
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadImageCache = async () => {
+      try {
+        const response = await fetch(playerImageCacheUrl, { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const text = await response.text();
+        if (!cancelled) {
+          setRemotePlayerImageMap(parsePlayerImageMap(text));
+        }
+      } catch {
+        if (!cancelled) {
+          setRemotePlayerImageMap({});
+        }
+      }
+    };
+
+    loadImageCache();
+    return () => {
+      cancelled = true;
+    };
+  }, [playerImageCacheUrl]);
 
   const [rawJson, setRawJson] = useState<unknown>(dataMode === 'DEMO' ? DEMO_MATCH_DATA : null);
   const [errorStatus, setErrorStatus] = useState<string>('');
@@ -1100,16 +1276,23 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const matchSideClass = panelSide === 'LEFT' ? 'left-6' : 'right-6';
   const playerSideClass = playerPanelSide === 'LEFT' ? 'left-6' : 'right-6';
-  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[470px]' : visualStyle === 'DATA_TOWER' ? 'w-[500px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[560px]' : 'w-[540px]';
-  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[430px]' : visualStyle === 'DATA_TOWER' ? 'w-[460px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[520px]' : 'w-[500px]';
+  const qualityBoost = broadcastQuality === 'ULTRA' ? 24 : 0;
+  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[490px]' : visualStyle === 'DATA_TOWER' ? 'w-[520px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[580px]' : qualityBoost ? 'w-[564px]' : 'w-[540px]';
+  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[450px]' : visualStyle === 'DATA_TOWER' ? 'w-[480px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[540px]' : qualityBoost ? 'w-[524px]' : 'w-[500px]';
+  const matchPanelTransform = `scale(${matchPanelScale})`;
+  const playerPanelTransform = `scale(${playerPanelScale})`;
+  const matchPanelOrigin = panelSide === 'LEFT' ? 'left center' : 'right center';
+  const playerPanelOrigin = playerPanelSide === 'LEFT' ? 'left center' : 'right center';
+  const motionClass = broadcastMotion ? 'reo-motion' : '';
+  const qualityClass = broadcastQuality === 'ULTRA' ? 'reo-quality-ultra' : '';
   const panelSurface = visualStyle === 'TACTICAL_SPLIT'
-    ? 'border-white/15 bg-slate-950/92'
+    ? 'border-white/15 bg-slate-950/[0.92]'
     : visualStyle === 'DATA_TOWER'
-      ? 'border-cyan-300/20 bg-black/92'
+      ? 'border-cyan-300/20 bg-black/[0.92]'
       : visualStyle === 'GLASS_STUDIO'
-        ? 'border-white/25 bg-white/12'
+        ? 'border-white/25 bg-white/[0.12]'
         : visualStyle === 'NEON_TOUCHLINE'
-          ? 'border-lime-300/25 bg-[#03120d]/92'
+          ? 'border-lime-300/25 bg-[#03120d]/[0.92]'
           : 'border-white/10 bg-black/90';
   const backdropClass = visualStyle === 'NEON_TOUCHLINE'
     ? 'bg-[linear-gradient(90deg,rgba(34,197,94,0.10),transparent_35%,rgba(59,130,246,0.08)_65%,transparent)]'
@@ -1284,19 +1467,20 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     const meaningfulItems = group.items.filter(item => item.home !== 0 || item.away !== 0 || ['possession', 'dominance'].includes(item.id));
     const items = meaningfulItems.length ? meaningfulItems : group.items;
     const pages: StatGroup[] = [];
-    for (let index = 0; index < items.length; index += 3) {
-      const page = Math.floor(index / 3);
+    for (let index = 0; index < items.length; index += 5) {
+      const page = Math.floor(index / 5);
       pages.push({
         ...group,
         id: `${group.id}-${page + 1}`,
         title: items.length > 3 ? `${group.title} ${page + 1}` : group.title,
-        items: items.slice(index, index + 3),
+        items: items.slice(index, index + 5),
       });
     }
     return pages;
   });
   const activeGroup = groups[activeGroupIndex % groups.length];
   const activeGroupItems = activeGroup.items;
+  const ActiveGroupIcon = groupIconByCategory[activeGroup.category] || BarChart3;
 
   const StatRow: React.FC<{ item: StatItem; index: number }> = ({ item, index }) => {
     const leftIsAway = teamStatsSide === 'AWAY_LEFT';
@@ -1310,13 +1494,17 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     const leftLead = leftValue > rightValue;
     const rightLead = rightValue > leftValue;
     const animationStyle = enablePanelTransitions ? { animation: `reoStatIn 360ms ease ${index * 35}ms both` } : undefined;
+    const StatIcon = statIconById[item.id] || BarChart3;
     return (
-      <div className="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1" style={animationStyle}>
+      <div className="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" style={animationStyle}>
         <div className="mb-1 grid grid-cols-[48px_1fr_48px] items-center gap-2">
           <div className="font-['Barlow_Condensed'] text-lg font-black leading-none text-left" style={{ color: leftLead ? leftColor : 'rgba(255,255,255,0.72)' }}>
             {formatStat(leftValue, item.suffix, item.decimals)}
           </div>
-          <div className="truncate text-center text-[10px] font-black leading-none text-white/75">{item.label}</div>
+          <div className="flex min-w-0 items-center justify-center gap-1.5 text-center text-[10px] font-black leading-none text-white/80">
+            <IconBox icon={StatIcon} color={leftLead ? leftColor : rightLead ? rightColor : 'rgba(255,255,255,0.65)'} className="h-5 w-5" />
+            <span className="truncate">{item.label}</span>
+          </div>
           <div className="font-['Barlow_Condensed'] text-lg font-black leading-none text-right" style={{ color: rightLead ? rightColor : 'rgba(255,255,255,0.72)' }}>
             {formatStat(rightValue, item.suffix, item.decimals)}
           </div>
@@ -1333,10 +1521,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     );
   };
 
-  const PlayerLine: React.FC<{ player: PlayerStats; value: number; label: string }> = ({ player, value, label }) => (
+  const PlayerLine: React.FC<{ player: PlayerStats; value: number; label: string; icon?: LucideIcon }> = ({ player, value, label, icon = Star }) => (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/40 px-2.5 py-2">
       <div className="flex min-w-0 items-center gap-2">
-        <div className="h-7 w-1.5 shrink-0 rounded-full" style={{ background: player.isHome ? homeColor : awayColor }} />
+        <IconBox icon={icon} color={player.isHome ? homeColor : awayColor} className="h-7 w-7" />
         <div className="min-w-0">
           <div className="truncate text-xs font-bold text-white">{playerShortName(player.name)}</div>
           <div className="truncate text-[9px] font-semibold text-white/35">{label}</div>
@@ -1350,14 +1538,19 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
 
   const PlayerStatsPanel = () => {
     if (!showPlayerTicker || !activePlayerGroup) return null;
+    const ActivePlayerIcon = playerIconByKey[activePlayerGroup.key] || Medal;
+    const activePlayerHelp = metricHelpByKey[activePlayerGroup.key] || activePlayerGroup.subtitle;
     return (
-      <div dir="rtl" className={`absolute inset-y-6 ${playerSideClass} z-20 flex ${playerPanelWidth} max-w-[calc(50vw-42px)] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl`}>
-        <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${awayColor}, ${homeColor})` }} />
+      <div dir="rtl" className={`absolute inset-y-6 ${playerSideClass} z-20 flex ${playerPanelWidth} max-w-[calc(50vw-42px)] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl ${motionClass}`} style={{ transform: playerPanelTransform, transformOrigin: playerPanelOrigin }}>
+        <div className="absolute inset-x-0 top-0 h-1 reo-sweep" style={{ background: `linear-gradient(90deg, ${awayColor}, ${homeColor})` }} />
         <div className="mb-3 flex items-start justify-between gap-3 border-b border-white/10 pb-3">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-2">
+            <IconBox icon={ActivePlayerIcon} color={awayColor} className="mt-1 h-9 w-9" />
+            <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">PLAYER COMMAND</div>
             <div className="truncate text-2xl font-black">{activePlayerGroup.title}</div>
-            <div className="truncate text-[10px] font-bold text-white/45">{activePlayerGroup.subtitle}</div>
+            <div className="truncate text-[10px] font-bold text-white/45">{activePlayerHelp}</div>
+            </div>
           </div>
           <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
             <div className="font-['Barlow_Condensed'] text-xl font-black">{playerGroups.length}</div>
@@ -1377,6 +1570,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                 style={enablePanelTransitions ? { animation: `reoStatIn 360ms ease ${index * 45}ms both` } : undefined}
               >
                 <div className="absolute bottom-0 right-0 top-0 opacity-15 transition-all duration-700" style={{ width: `${clamp((value / maxValue) * 100, 3, 100)}%`, background: color }} />
+                <div className="absolute bottom-0 left-0 top-0 w-px opacity-60" style={{ background: color }} />
                 <div className="relative z-10 flex h-full items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <PlayerAvatar src={avatarUrl} name={player.name} color={color} className="h-10 w-10" />
@@ -1387,7 +1581,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   </div>
                   <div className="text-left">
                     <div className="font-['Barlow_Condensed'] text-4xl font-black leading-none" style={{ color }}>{Math.round(value)}</div>
-                    <div className="text-[8px] font-black text-white/40">{activePlayerGroup.suffix}</div>
+                    <div className="flex items-center justify-end gap-1 text-[8px] font-black text-white/40">
+                      <ActivePlayerIcon className="h-3 w-3" />
+                      <span>{activePlayerGroup.suffix}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded bg-black/55 px-1 font-['Barlow_Condensed'] text-sm font-black" style={{ color }}>
@@ -1418,14 +1615,103 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         {impactPlayer ? (
           <div className="mt-2 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE IMPACT</div>
+              <div className="flex min-w-0 items-center gap-2">
+                <IconBox icon={Gauge} color="#fcd34d" className="h-8 w-8" />
+                <div className="min-w-0">
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200/70">مؤشر التأثير</div>
                 <div className="truncate text-sm font-black">{impactPlayer.player.name}</div>
+                </div>
               </div>
-              <div className="font-['Barlow_Condensed'] text-3xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
+              <div className="text-left">
+                <div className="font-['Barlow_Condensed'] text-3xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
+                <div className="text-[8px] font-black text-amber-100/55">تأثير</div>
+              </div>
             </div>
           </div>
         ) : null}
+      </div>
+    );
+  };
+
+  const EventsCard = () => (
+    <div className={`rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <IconBox icon={Radio} color="#67e8f9" className="h-7 w-7" />
+          <div>
+            <div className="text-xs font-black text-white">أحداث المباراة</div>
+            <div className="text-[9px] font-bold text-white/40">{clockLabel(match)} · {match.venue || dataSourceName}</div>
+          </div>
+        </div>
+        <div className="rounded-md border border-white/10 bg-white/10 px-2 py-1 text-[9px] font-black text-white/55">
+          {latestEvents.length || 0} أحداث
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {latestEvents.length ? latestEvents.map((event, index) => (
+          <div key={`${event.minute}-${event.player}-${index}`} className="grid min-w-0 grid-cols-[30px_auto_1fr] items-center gap-2 rounded-md bg-white/10 px-2 py-1.5">
+            <div className="font-['Barlow_Condensed'] text-lg font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
+            <div className={`rounded px-1.5 py-0.5 text-[8px] font-black ${event.tone === 'goal' ? 'bg-emerald-400/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-400/15 text-red-300' : 'bg-amber-400/15 text-amber-300'}`}>{event.label}</div>
+            <div className="min-w-0 truncate text-[11px] font-bold text-white/85">{event.player}</div>
+          </div>
+        )) : (
+          <div className="col-span-2 rounded-md bg-white/10 px-3 py-3 text-center text-xs font-bold text-white/45">لا توجد أحداث حاسمة بعد</div>
+        )}
+      </div>
+    </div>
+  );
+
+  const TopStatsStrip = () => (
+    <div className={`grid grid-cols-3 gap-2 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
+      {topCreators[0] && <PlayerLine player={topCreators[0]} value={topCreators[0].keyPasses + topCreators[0].assists} label="صناعة فرص" icon={Star} />}
+      {topPassers[0] && <PlayerLine player={topPassers[0]} value={topPassers[0].passes} label="تمرير وبناء" icon={Users} />}
+      {topInterceptors[0] && <PlayerLine player={topInterceptors[0]} value={topInterceptors[0].tackles + topInterceptors[0].interceptions + topInterceptors[0].clearances} label="عمل دفاعي" icon={Shield} />}
+    </div>
+  );
+
+  const ImpactCard = () => {
+    if (!impactPlayer) return null;
+    return (
+      <div className="relative min-h-[108px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
+        <div className="absolute inset-y-0 left-0 w-1 bg-amber-300/80" />
+        <div className="flex h-full items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <IconBox icon={Gauge} color="#fcd34d" className="h-10 w-10" />
+            <div className="min-w-0">
+              <div className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200/70">مؤشر التأثير</div>
+              <div className="truncate text-lg font-black">{impactPlayer.player.name}</div>
+              <div className="truncate text-[10px] font-bold text-white/45">هدف، صناعة، تسديد، دفاع، واسترجاع</div>
+            </div>
+          </div>
+          <div className="text-left">
+            <div className="font-['Barlow_Condensed'] text-5xl font-black leading-none text-amber-300">{Math.round(impactPlayer.score)}</div>
+            <div className="text-[9px] font-black text-amber-100/55">نقطة تأثير</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CreatorBadge = () => {
+    if (!showCreatorBadge) return null;
+    return (
+      <div
+        dir="rtl"
+        className={`absolute left-1/2 top-1/2 z-10 w-[260px] rounded-lg border border-white/15 bg-black/80 p-3 font-['Cairo'] text-white shadow-2xl backdrop-blur-xl ${motionClass}`}
+        style={{ transform: `translate(calc(-50% + ${creatorPositionX}px), calc(-50% + ${creatorPositionY}px)) scale(${creatorBadgeScale})` }}
+      >
+        <div className="absolute inset-x-0 top-0 h-1 reo-sweep" style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }} />
+        <div className="flex items-center gap-3">
+          <PlayerAvatar src={creatorAvatar} name={creatorName} color={homeColor} className="h-12 w-12 rounded-lg" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-white/45">
+              <UserRound className="h-3 w-3" />
+              <span>{creatorLabel}</span>
+            </div>
+            <div className="truncate text-lg font-black">{creatorName}</div>
+            <div dir="ltr" className="truncate text-left text-[11px] font-bold text-white/45">{creatorHandle}</div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1438,16 +1724,40 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes reoSweep {
+          from { background-position: 0% 50%; }
+          to { background-position: 200% 50%; }
+        }
+        @keyframes reoSoftPulse {
+          0%, 100% { opacity: .72; transform: scaleX(.96); }
+          50% { opacity: 1; transform: scaleX(1); }
+        }
+        .reo-quality-ultra {
+          -webkit-font-smoothing: antialiased;
+          text-rendering: geometricPrecision;
+          text-shadow: 0 1px 0 rgba(0,0,0,.35), 0 0 12px rgba(0,0,0,.22);
+        }
+        .reo-motion .reo-sweep {
+          background-size: 200% 100%;
+          animation: reoSweep 7s linear infinite;
+        }
+        .reo-motion .reo-pulse-line {
+          transform-origin: center;
+          animation: reoSoftPulse 2.6s ease-in-out infinite;
+        }
       `}</style>
-      <div className="relative h-full w-full overflow-hidden p-6" style={{ direction: 'ltr' }}>
+      <div className={`relative h-full w-full overflow-hidden p-6 ${qualityClass}`} style={{ direction: 'ltr' }}>
         {backdropClass ? <div className={`pointer-events-none absolute inset-0 ${backdropClass}`} /> : null}
-        <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white`}>
+        <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white ${motionClass}`} style={{ transform: matchPanelTransform, transformOrigin: matchPanelOrigin }}>
           {showScorebug && (
             <div className={`relative overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
-              <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
+              <div className="absolute inset-x-0 top-0 h-1 reo-sweep" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
               <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
                 <span>{dataMode === 'BRIDGE' ? 'LIVE BRIDGE' : dataMode}</span>
-                <span>{meta?.extractedAt ? new Date(meta.extractedAt).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' }) : 'LIVE'}</span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock3 className="h-3 w-3" />
+                  {clockLabel(match)}
+                </span>
               </div>
               <div dir="ltr" className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div className="flex min-w-0 items-center gap-2">
@@ -1461,7 +1771,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   <div className="font-['Barlow_Condensed'] text-5xl font-black leading-none">
                     {match.homeScore}<span className="mx-2 text-white/30">:</span>{match.awayScore}
                   </div>
-                  <div className="mt-1 text-[9px] font-black uppercase tracking-[0.2em] text-white/45">{match.competition || match.venue || 'MATCH CENTER'}</div>
+                  <div className="mt-1 flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-[0.16em] text-white/45">
+                    <Timer className="h-3 w-3" />
+                    <span>{match.competition || match.venue || 'MATCH CENTER'}</span>
+                  </div>
                 </div>
                 <div className="flex min-w-0 items-center justify-end gap-2">
                   <div dir="ltr" className="min-w-0 text-right">
@@ -1488,19 +1801,25 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                 </div>
               </div>
               <div className="relative h-4 overflow-hidden rounded-full bg-white/10">
-                <div className="absolute inset-y-0 left-0 transition-all duration-1000" style={{ width: `${domLeftValue}%`, background: domLeftColor }} />
-                <div className="absolute inset-y-0 right-0 transition-all duration-1000" style={{ width: `${domRightValue}%`, background: domRightColor }} />
+                <div className="reo-pulse-line absolute inset-y-0 left-0 transition-all duration-1000" style={{ width: `${domLeftValue}%`, background: domLeftColor }} />
+                <div className="reo-pulse-line absolute inset-y-0 right-0 transition-all duration-1000" style={{ width: `${domRightValue}%`, background: domRightColor }} />
                 <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/75" />
               </div>
             </div>
           )}
 
+          {showEvents && <EventsCard />}
+          {showTopStats && <TopStatsStrip />}
+
           {showAdvancedStats && (
-            <div className={`flex min-h-[208px] flex-[1.45] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+            <div className={`flex min-h-[318px] flex-[1.55] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-black">{activeGroup.title}</div>
-                  <div className="truncate text-[10px] font-bold text-white/45">{activeGroup.subtitle}</div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <IconBox icon={ActiveGroupIcon} color={homeColor} className="h-8 w-8" />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-black">{activeGroup.title}</div>
+                    <div className="truncate text-[10px] font-bold text-white/45">{activeGroup.subtitle}</div>
+                  </div>
                 </div>
                 <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
                   <div className="font-['Barlow_Condensed'] text-xl font-black">{totalMetrics}+</div>
@@ -1525,34 +1844,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
             </div>
           )}
 
-          {(showEvents || showTopStats || showKeyBattle || showMotm) && (
-            <div className="grid grid-cols-2 gap-3">
-              {showEvents && (
-                <div className={`min-h-[110px] rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
-                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">أحداث المباراة</div>
-                  <div className="flex flex-col gap-1.5">
-                    {latestEvents.length ? latestEvents.map((event, index) => (
-                      <div key={`${event.minute}-${event.player}-${index}`} className="grid grid-cols-[30px_auto_1fr] items-center gap-2 rounded-md bg-white/10 px-2 py-1">
-                        <div className="font-['Barlow_Condensed'] text-lg font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
-                        <div className={`rounded px-1.5 py-0.5 text-[8px] font-black ${event.tone === 'goal' ? 'bg-emerald-400/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-400/15 text-red-300' : 'bg-amber-400/15 text-amber-300'}`}>{event.label}</div>
-                        <div className="min-w-0 truncate text-[11px] font-bold text-white/85">{event.player}</div>
-                      </div>
-                    )) : (
-                      <div className="rounded-md bg-white/10 px-3 py-5 text-center text-xs font-bold text-white/40">لا توجد أحداث حاسمة بعد</div>
-                    )}
-                  </div>
-                </div>
-              )}
-
+          {(showMotm || showKeyBattle) && (
+            <div className="grid grid-cols-1 gap-3">
               {showMotm && impactPlayer ? (
-                <div className="relative min-h-[110px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE IMPACT</div>
-                  <div className="mt-2 min-w-0">
-                    <div className="truncate text-lg font-black">{impactPlayer.player.name}</div>
-                    <div className="truncate text-[10px] font-bold text-white/45">{impactPlayer.player.isHome ? match.homeTeam : match.awayTeam}</div>
-                  </div>
-                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-4xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
-                </div>
+                <ImpactCard />
               ) : showKeyBattle && keyCreator && keyDefender ? (
                 <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Key Battle</div>
@@ -1571,16 +1866,9 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
               ) : null}
             </div>
           )}
-
-          {showTopStats && (
-            <div className={`grid grid-cols-3 gap-2 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
-              {topCreators[0] && <PlayerLine player={topCreators[0]} value={topCreators[0].keyPasses + topCreators[0].assists} label="صناعة" />}
-              {topPassers[0] && <PlayerLine player={topPassers[0]} value={topPassers[0].passes} label="تمرير" />}
-              {topInterceptors[0] && <PlayerLine player={topInterceptors[0]} value={topInterceptors[0].tackles + topInterceptors[0].interceptions + topInterceptors[0].clearances} label="دفاع" />}
-            </div>
-          )}
         </div>
         <PlayerStatsPanel />
+        <CreatorBadge />
       </div>
     </div>
   );

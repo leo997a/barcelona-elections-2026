@@ -80,6 +80,10 @@ type BridgeStatusSnapshot = {
     awayTeam?: string;
     homeScore?: number;
     awayScore?: number;
+    minute?: number;
+    clock?: string;
+    displayStatus?: string;
+    status?: string | number;
   } | null;
 };
 
@@ -801,8 +805,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         ? 'انتهت المباراة'
         : 'متوقف'
     : 'غير مفحوص';
+  const bridgeClock = bridgeMatch?.displayStatus || bridgeMatch?.clock || (bridgeMatch?.minute ? `${bridgeMatch.minute}'` : bridgeMatch?.status);
   const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
-    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}`
+    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` · ${bridgeClock}` : ''}`
     : null;
   const bridgeControlsLocked = !isAdminUnlocked || isImportingMatchStats || isBridgeActionRunning;
 
@@ -862,7 +867,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         )}
 
         {draftOverlay.type === OverlayType.MATCH_STATS && (
-            <div className="p-4 bg-blue-950/25 border-b border-blue-900/40 space-y-3">
+            <div className="shrink-0 max-h-[62vh] overflow-y-auto border-b border-blue-900/40 bg-blue-950/25 p-4 [scrollbar-width:thin] space-y-3">
                 <input
                   ref={matchStatsJsonInputRef}
                   type="file"
@@ -951,6 +956,62 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 </button>
                               );
                             })}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="mb-1.5 text-[10px] font-black text-violet-200/80">تحكم البث والصانع</div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('broadcastMotion', !Boolean(getDraftValue('broadcastMotion') ?? true))}
+                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('broadcastMotion') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                            >
+                              حركة
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('broadcastQuality', String(getDraftValue('broadcastQuality') || 'ULTRA') === 'ULTRA' ? 'STANDARD' : 'ULTRA')}
+                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('broadcastQuality') || 'ULTRA') === 'ULTRA' ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                            >
+                              Ultra
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('showCreatorBadge', !Boolean(getDraftValue('showCreatorBadge') ?? true))}
+                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('showCreatorBadge') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                            >
+                              الصانع
+                            </button>
+                        </div>
+                        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('matchPanelScale', Math.max(0.65, Number(getDraftValue('matchPanelScale') || 1) - 0.05))}
+                              className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
+                            >
+                              تصغير المباراة
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('matchPanelScale', Math.min(1.6, Number(getDraftValue('matchPanelScale') || 1) + 0.05))}
+                              className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
+                            >
+                              تكبير المباراة
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('playerPanelScale', Math.max(0.65, Number(getDraftValue('playerPanelScale') || 1) - 0.05))}
+                              className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
+                            >
+                              تصغير اللاعبين
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('playerPanelScale', Math.min(1.6, Number(getDraftValue('playerPanelScale') || 1) + 0.05))}
+                              className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
+                            >
+                              تكبير اللاعبين
+                            </button>
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -1504,9 +1565,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       else if (activeTab === 'style') { if (!isStyleField) return null; }
                   } else {
                       // UNIVERSAL SMART TABS for ALL non-election templates
-                      const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime'];
+                      const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime', 'matchPanelScale', 'playerPanelScale', 'creatorBadgeScale', 'creatorPositionX', 'creatorPositionY'];
                       const SOUND_FIELDS = ['soundEnabled', 'soundVolume', 'useTTS', 'ttsText', 'soundInStyle', 'soundOutStyle'];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);

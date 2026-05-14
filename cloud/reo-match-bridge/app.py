@@ -8,6 +8,7 @@ errors, and stops automatically when the match reaches a final status.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -21,6 +22,8 @@ from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+import urllib.error
+import urllib.request
 from urllib.parse import parse_qs, urlparse
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,6 +43,10 @@ MIN_INTERVAL = int(os.environ.get("REO_MIN_INTERVAL", "30"))
 MAX_RUNTIME_SECONDS = int(os.environ.get("REO_MAX_RUNTIME_SECONDS", str(4 * 60 * 60)))
 DEFAULT_MATCH_URL = os.environ.get("REO_DEFAULT_MATCH_URL", "")
 STOP_ON_FINAL = os.environ.get("REO_STOP_ON_FINAL", "1") != "0"
+ARCHIVE_GITHUB_TOKEN = os.environ.get("REO_ARCHIVE_GITHUB_TOKEN", "")
+ARCHIVE_GITHUB_REPO = os.environ.get("REO_ARCHIVE_GITHUB_REPO", "")
+ARCHIVE_GITHUB_BRANCH = os.environ.get("REO_ARCHIVE_GITHUB_BRANCH", "main")
+ARCHIVE_BASE_PATH = os.environ.get("REO_ARCHIVE_BASE_PATH", "match-archive")
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
@@ -146,6 +153,70 @@ def validate_match_url(url: str) -> str:
     return cleaned
 
 
+def slugify(value: Any, fallback: str = "unknown") -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"[^a-z0-9\u0600-\u06ff]+", "-", text, flags=re.I).strip("-")
+    return text or fallback
+
+
+def derive_archive_path(payload: dict[str, Any], url: str) -> str:
+    match = payload.get("match") or {}
+    meta = payload.get("meta") or {}
+    url_path = urlparse(url).path
+    url_match = re.search(r"/matches/(\d+)/", url_path)
+    match_id = str(meta.get("matchId") or match.get("matchId") or (url_match.group(1) if url_match else "match"))
+    slug_tail = url_path.rstrip("/").split("/")[-1] if url_path else ""
+    season_match = re.search(r"(20\d{2})-(20\d{2})", slug_tail)
+    season = "-".join(season_match.groups()) if season_match else slugify(match.get("season"), "season-unknown")
+    competition_from_url = slug_tail.split(season_match.group(0))[0].strip("-") if season_match else ""
+    competition = slugify(match.get("competition") or competition_from_url, "competition-unknown")
+    round_name = slugify(match.get("round") or meta.get("round") or "round-unknown", "round-unknown")
+    home = slugify(match.get("homeTeam"), "home")
+    away = slugify(match.get("awayTeam"), "away")
+    date_value = str(match.get("date") or meta.get("bridgeUpdatedAt") or now_iso())
+    date_match = re.search(r"\d{4}-\d{2}-\d{2}", date_value)
+    date_part = date_match.group(0) if date_match else now_iso()[:10]
+    return f"{ARCHIVE_BASE_PATH.strip('/')}/{season}/{competition}/{round_name}/{date_part}_{match_id}_{home}-vs-{away}.json"
+
+
+def archive_match_to_github(payload: dict[str, Any], url: str) -> dict[str, Any]:
+    if not ARCHIVE_GITHUB_TOKEN or not ARCHIVE_GITHUB_REPO:
+        return {"enabled": False, "reason": "missing REO_ARCHIVE_GITHUB_TOKEN or REO_ARCHIVE_GITHUB_REPO"}
+    archive_path = derive_archive_path(payload, url)
+    body = {
+        "message": f"archive match {archive_path}",
+        "content": base64.b64encode(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii"),
+        "branch": ARCHIVE_GITHUB_BRANCH,
+    }
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{ARCHIVE_GITHUB_REPO}/contents/{archive_path}",
+        data=json.dumps(body).encode("utf-8"),
+        method="PUT",
+        headers={
+            "Authorization": f"Bearer {ARCHIVE_GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "User-Agent": "reo-match-bridge",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8"))
+        return {
+            "enabled": True,
+            "ok": True,
+            "path": archive_path,
+            "url": (result.get("content") or {}).get("html_url"),
+            "committedAt": now_iso(),
+        }
+    except urllib.error.HTTPError as error:
+        details = error.read().decode("utf-8", errors="replace")
+        return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub {error.code}: {details[:500]}"}
+    except Exception as error:
+        return {"enabled": True, "ok": False, "path": archive_path, "error": str(error)}
+
+
 def cleanup_browser_processes() -> None:
     if os.name == "nt":
         return
@@ -189,6 +260,7 @@ class BridgeState:
             "stoppedReason": None,
             "match": (self.data or {}).get("match") if isinstance(self.data, dict) else None,
             "provider": METRICS_CATALOG["provider"],
+            "archive": None,
         }
 
     def snapshot(self) -> dict[str, Any]:
@@ -205,6 +277,7 @@ class BridgeState:
                 self.data = None
                 self.status["hasData"] = False
                 self.status["match"] = None
+                self.status["archive"] = None
             self.status["currentUrl"] = cleaned
             self.status["lastError"] = None
             self.status["stoppedReason"] = "match_changed"
@@ -254,7 +327,10 @@ class BridgeState:
     def _should_stop_for_final(self, payload: dict[str, Any]) -> bool:
         if not STOP_ON_FINAL:
             return False
-        status_value = str((payload.get("match") or {}).get("status") or "").strip().lower()
+        match = payload.get("match") or {}
+        if bool(match.get("isFinal")):
+            return True
+        status_value = str(match.get("status") or "").strip().lower()
         return bool(status_value and status_value in FINAL_STATUS_VALUES)
 
     def _run_loop(self) -> None:
@@ -289,6 +365,9 @@ class BridgeState:
                     })
 
                 if self._should_stop_for_final(data):
+                    archive_result = archive_match_to_github(data, url)
+                    with self.lock:
+                        self.status["archive"] = archive_result
                     self.stop("match_final")
                     break
             except Exception as error:
