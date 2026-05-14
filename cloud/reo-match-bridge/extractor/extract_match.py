@@ -238,6 +238,49 @@ def qualifier_names(evt: Dict) -> set:
     return names
 
 
+def flatten_event_tokens(value) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, (str, int, float, bool)):
+        return [str(value)]
+    if isinstance(value, list):
+        tokens = []
+        for item in value:
+            tokens.extend(flatten_event_tokens(item))
+        return tokens
+    if isinstance(value, dict):
+        tokens = []
+        for item in value.values():
+            tokens.extend(flatten_event_tokens(item))
+        return tokens
+    return []
+
+
+def is_key_pass_event(evt: Dict, etype: str, qualifiers: set) -> bool:
+    if any(bool(evt.get(key)) for key in ("isKeyPass", "keyPass", "isAssist", "isGoalAssist", "goalAssist")):
+        return True
+    combined = " ".join(
+        [etype]
+        + list(qualifiers)
+        + flatten_event_tokens(evt.get("satisfiedEventsTypes"))
+        + flatten_event_tokens(evt.get("qualifiers"))
+    ).lower()
+    key_tokens = (
+        "keypass",
+        "key pass",
+        "chancecreated",
+        "chance created",
+        "bigchancecreated",
+        "big chance created",
+        "intentionalassist",
+        "intentional assist",
+        "goalassist",
+        "goal assist",
+        "assist",
+    )
+    return any(token in combined for token in key_tokens)
+
+
 def same_team(left, right) -> bool:
     return str(left) == str(right)
 
@@ -300,6 +343,7 @@ def process_events(events: List, player_dict: Dict) -> Dict:
         ps = player_stats.get(player_id, {}) if player_id else {}
         ok = outcome in ("Successful", "Success", "SuccessInPlay", "SuccessOut")
         qualifiers = qualifier_names(evt)
+        key_pass_signal = is_key_pass_event(evt, etype, qualifiers)
         x = safe_float(evt.get("x"))
         y = safe_float(evt.get("y"))
         end_x = safe_float(evt.get("endX"))
@@ -329,6 +373,10 @@ def process_events(events: List, player_dict: Dict) -> Dict:
                 ts["finalThirdEntries"] += 1
                 if ps:
                     ps["finalThirdPasses"] += 1
+            if key_pass_signal:
+                ts["keyPasses"] += 1
+                if ps:
+                    ps["keyPasses"] += 1
             if ps:
                 ps["passes"] += 1
                 if ok:
@@ -925,10 +973,15 @@ def build_output_url(site_url: str, port: int, source_url: str, panel_side: str 
             {"id": "showTopStats", "label": "Top stats", "type": "boolean", "value": True},
             {"id": "showEvents", "label": "Events", "type": "boolean", "value": True},
             {"id": "showKeyBattle", "label": "Key battle", "type": "boolean", "value": True},
-            {"id": "pollIntervalSec", "label": "Template refresh", "type": "range", "value": 5},
+            {"id": "pollIntervalSec", "label": "Template refresh", "type": "range", "value": 30},
             {"id": "statsRotateSec", "label": "Stats rotation", "type": "range", "value": 30},
+            {"id": "matchMetricPreset", "label": "Match stat focus", "type": "select", "value": "SMART"},
             {"id": "showPlayerTicker", "label": "Player ticker", "type": "boolean", "value": True},
-            {"id": "playerRotateSec", "label": "Player ticker rotation", "type": "range", "value": 60},
+            {"id": "playerRotateSec", "label": "Player ticker rotation", "type": "range", "value": 30},
+            {"id": "playerMetricPreset", "label": "Player stat focus", "type": "select", "value": "SMART"},
+            {"id": "teamStatsSide", "label": "Team stat side", "type": "select", "value": "HOME_LEFT"},
+            {"id": "enablePanelTransitions", "label": "Panel transitions", "type": "boolean", "value": False},
+            {"id": "playerImageMapJson", "label": "Player image map", "type": "textarea", "value": "{}"},
             {"id": "homeColor", "label": "Home color", "type": "color", "value": "#3b82f6"},
             {"id": "awayColor", "label": "Away color", "type": "color", "value": "#ef4444"},
             {"id": "scale", "label": "Scale", "type": "range", "value": 1},

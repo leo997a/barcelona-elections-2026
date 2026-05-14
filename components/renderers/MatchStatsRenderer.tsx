@@ -47,6 +47,7 @@ type PlayerStats = {
   isHome: boolean;
   position?: string;
   shirtNo?: string | number;
+  image?: string;
   shots: number;
   shotsOnTarget: number;
   shotsOffTarget: number;
@@ -126,9 +127,11 @@ type StatItem = {
 
 type StatGroup = {
   id: string;
+  category: 'CONTROL' | 'ATTACK' | 'PASSING' | 'DEFENSE' | 'DISCIPLINE';
   title: string;
   subtitle: string;
   items: StatItem[];
+  smart?: boolean;
 };
 
 const numberKeys: Array<keyof TeamStats> = [
@@ -314,6 +317,75 @@ const displayName = (value: unknown): string => {
   return String(value);
 };
 
+const collectTextTokens = (value: unknown): string[] => {
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return [String(value)];
+  }
+  if (Array.isArray(value)) return value.flatMap(collectTextTokens);
+  if (typeof value === 'object') return Object.values(value).flatMap(collectTextTokens);
+  return [];
+};
+
+const tokenText = (value: unknown) => collectTextTokens(value).join(' ').toLowerCase();
+
+const isKeyPassEvent = (event: Record<string, unknown>, type: string, qualifiers: string) => {
+  if (
+    event.isKeyPass === true ||
+    event.keyPass === true ||
+    event.isAssist === true ||
+    event.isGoalAssist === true ||
+    event.goalAssist === true
+  ) {
+    return true;
+  }
+
+  const combined = `${type} ${qualifiers} ${tokenText(event.satisfiedEventsTypes)} ${tokenText(event.qualifiers)}`;
+  return /(key\s*pass|keypass|chance\s*created|big\s*chance\s*created|bigchancecreated|intentional\s*assist|goal\s*assist|assist)/i.test(combined);
+};
+
+const lookupKey = (value: unknown) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+const parsePlayerImageMap = (value: string): Record<string, string> => {
+  if (!value.trim()) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    const map: Record<string, string> = {};
+    const addEntry = (key: unknown, url: unknown) => {
+      const normalizedKey = lookupKey(key);
+      const normalizedUrl = String(url || '').trim();
+      if (normalizedKey && /^https?:\/\//i.test(normalizedUrl)) {
+        map[normalizedKey] = normalizedUrl;
+      }
+    };
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        const record = item as Record<string, unknown>;
+        const url = record.image || record.imageUrl || record.photo || record.photoUrl || record.url;
+        addEntry(record.id || record.playerId, url);
+        addEntry(record.name || record.playerName, url);
+      });
+      return map;
+    }
+
+    if (parsed && typeof parsed === 'object') {
+      Object.entries(parsed as Record<string, unknown>).forEach(([key, url]) => addEntry(key, url));
+    }
+    return map;
+  } catch {
+    return {};
+  }
+};
+
+const resolvePlayerImage = (player: PlayerStats, imageMap: Record<string, string>) => (
+  player.image ||
+  imageMap[lookupKey(player.id)] ||
+  imageMap[lookupKey(player.name)] ||
+  ''
+);
+
 const shortTeam = (name: string) => {
   const trimmed = name.trim();
   if (!trimmed) return '---';
@@ -446,9 +518,9 @@ const buildTopLists = (players: PlayerStats[]) => {
   const byCreators = (a: PlayerStats, b: PlayerStats) => (b.keyPasses + b.assists) - (a.keyPasses + a.assists) || byPasses(a, b);
   const byDefenders = (a: PlayerStats, b: PlayerStats) => (b.tackles + b.interceptions + b.clearances) - (a.tackles + a.interceptions + a.clearances) || byName(a, b);
   return {
-    topPassers: [...players].sort(byPasses).slice(0, 4),
-    topCreators: [...players].sort(byCreators).slice(0, 4),
-    topInterceptors: [...players].sort(byDefenders).slice(0, 4),
+    topPassers: players.filter(player => player.passes > 0).sort(byPasses).slice(0, 4),
+    topCreators: players.filter(player => player.keyPasses + player.assists > 0).sort(byCreators).slice(0, 4),
+    topInterceptors: players.filter(player => player.tackles + player.interceptions + player.clearances > 0).sort(byDefenders).slice(0, 4),
   };
 };
 
@@ -490,6 +562,7 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
         ),
         position: source.position ? String(source.position) : undefined,
         shirtNo: source.shirtNo as string | number | undefined,
+        image: String(source.image || source.imageUrl || source.photo || source.photoUrl || source.picture || source.pictureUrl || '').trim() || undefined,
         shots: toNumber(source.shots),
         shotsOnTarget: toNumber(source.shotsOnTarget),
         shotsOffTarget: toNumber(source.shotsOffTarget),
@@ -612,6 +685,7 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
     const outcome = displayName(event.outcomeType);
     const success = ['Successful', 'Success', 'SuccessInPlay', 'SuccessOut'].includes(outcome);
     const qualifiers = Array.isArray(event.qualifiers) ? event.qualifiers.map((q: any) => displayName(q.type || q)).join(' ') : '';
+    const keyPassSignal = isKeyPassEvent(event, type, qualifiers);
 
     if (type === 'Pass') {
       stats.passes += 1;
@@ -620,6 +694,7 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       if (qualifiers.includes('Longball') || qualifiers.includes('LongBall')) stats.longBalls += 1;
       if (qualifiers.includes('Throughball') || qualifiers.includes('ThroughBall')) stats.throughBalls += 1;
       if (toNumber(event.endX) >= 66 && toNumber(event.x) < 66) stats.finalThirdEntries += 1;
+      if (keyPassSignal) stats.keyPasses += 1;
       if (player) {
         player.passes += 1;
         if (success) player.passesAccurate += 1;
@@ -627,6 +702,7 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
         if (qualifiers.includes('Longball') || qualifiers.includes('LongBall')) player.longBalls += 1;
         if (qualifiers.includes('Throughball') || qualifiers.includes('ThroughBall')) player.throughBalls += 1;
         if (toNumber(event.endX) >= 66 && toNumber(event.x) < 66) player.finalThirdPasses += 1;
+        if (keyPassSignal) player.keyPasses += 1;
       }
     } else if (['SavedShot', 'MissedShots', 'BlockedShot', 'ShotOnPost', 'Goal'].includes(type)) {
       stats.shots += 1;
@@ -743,7 +819,8 @@ const normalizeWhoScoredRaw = (raw: Record<string, unknown>): MatchViewData | nu
       item.passes = Math.max(item.passes, sumMetric(stats, ['passes', 'totalPasses']));
       item.passesAccurate = Math.max(item.passesAccurate, sumMetric(stats, ['passesAccurate', 'accuratePasses', 'accuratePass']));
       item.passAccuracy = Math.max(item.passAccuracy, latestMetric(stats, ['passAccuracy', 'passSuccess', 'passSuccessRate']));
-      item.keyPasses = Math.max(item.keyPasses, sumMetric(stats, ['keyPasses', 'keyPass']));
+      item.image = String(player.image || player.imageUrl || player.photo || player.photoUrl || player.picture || player.pictureUrl || item.image || '').trim() || item.image;
+      item.keyPasses = Math.max(item.keyPasses, sumMetric(stats, ['keyPasses', 'keyPass', 'keyPassTotal', 'totalKeyPasses', 'totalKeyPass', 'chancesCreated', 'bigChancesCreated']));
       item.assists = Math.max(item.assists, sumMetric(stats, ['assists', 'goalAssist']));
       item.tackles = Math.max(item.tackles, sumMetric(stats, ['tackles', 'totalTackles']));
       item.interceptions = Math.max(item.interceptions, sumMetric(stats, ['interceptions']));
@@ -856,6 +933,32 @@ const TeamCrest: React.FC<{ src?: string; name: string; color: string; side: 'ho
   );
 };
 
+const PlayerAvatar: React.FC<{ src?: string; name: string; color: string; className?: string }> = ({ src, name, color, className = 'h-10 w-10' }) => {
+  const [failed, setFailed] = useState(false);
+  const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P';
+
+  return (
+    <div className={`relative shrink-0 overflow-hidden rounded-md border border-white/10 bg-black/45 ${className}`}>
+      <div className="absolute inset-0 opacity-30" style={{ background: `linear-gradient(135deg, ${color}, transparent 72%)` }} />
+      {src && !failed ? (
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="relative z-10 h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="relative z-10 flex h-full w-full items-center justify-center font-['Barlow_Condensed'] text-lg font-black" style={{ color }}>
+          {initials}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const MatchStatsRenderer: React.FC<RendererProps> = ({
   getField,
   containerStyle,
@@ -881,8 +984,13 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const requestedPlayerSide = String(getField('playerPanelSide') || 'RIGHT');
   const playerPanelSide = requestedPlayerSide === panelSide ? (panelSide === 'LEFT' ? 'RIGHT' : 'LEFT') : requestedPlayerSide;
   const visualStyle = String(getField('visualStyle') || 'DUAL_RAIL');
-  const playerMetricPreset = String(getField('playerMetricPreset') || 'ALL');
+  const matchMetricPreset = String(getField('matchMetricPreset') || 'SMART').toUpperCase();
+  const playerMetricPreset = String(getField('playerMetricPreset') || 'SMART').toUpperCase();
+  const teamStatsSide = String(getField('teamStatsSide') || 'HOME_LEFT');
+  const enablePanelTransitions = boolField(getField('enablePanelTransitions'), false);
+  const playerImageMapJson = String(getField('playerImageMapJson') || '{}');
   const dataSourceName = String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'REO Cloud Bridge' : 'REO Live Bridge'));
+  const playerImageMap = useMemo(() => parsePlayerImageMap(playerImageMapJson), [playerImageMapJson]);
 
   const [rawJson, setRawJson] = useState<unknown>(dataMode === 'DEMO' ? DEMO_MATCH_DATA : null);
   const [errorStatus, setErrorStatus] = useState<string>('');
@@ -978,11 +1086,16 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const keyShare = hStats.keyPasses + aStats.keyPasses > 0 ? hStats.keyPasses / (hStats.keyPasses + aStats.keyPasses) : 0.5;
   const territoryShare = hStats.finalThirdEntries + aStats.finalThirdEntries > 0 ? hStats.finalThirdEntries / (hStats.finalThirdEntries + aStats.finalThirdEntries) : 0.5;
   const domHome = clamp(Math.round((possHome / 100 * 0.38 + shotShare * 0.27 + keyShare * 0.2 + territoryShare * 0.15) * 100), 0, 100);
+  const domLeftIsAway = teamStatsSide === 'AWAY_LEFT';
+  const domLeftValue = domLeftIsAway ? 100 - domHome : domHome;
+  const domRightValue = domLeftIsAway ? domHome : 100 - domHome;
+  const domLeftColor = domLeftIsAway ? awayColor : homeColor;
+  const domRightColor = domLeftIsAway ? homeColor : awayColor;
   const impactPlayer = players
     .map(player => ({ player, score: playerImpactScore(player) }))
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score || a.player.name.localeCompare(b.player.name))[0];
-  const latestEvents = [...events].slice(-3).reverse();
+  const latestEvents = [...events].slice(-2).reverse();
   const keyCreator = topCreators.find(player => player.keyPasses > 0 || player.assists > 0);
   const keyDefender = topInterceptors.find(player => player.tackles > 0 || player.interceptions > 0 || player.clearances > 0);
   const matchSideClass = panelSide === 'LEFT' ? 'left-6' : 'right-6';
@@ -1003,7 +1116,6 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     : visualStyle === 'GLASS_STUDIO'
       ? 'bg-[linear-gradient(135deg,rgba(255,255,255,0.10),transparent_42%,rgba(255,255,255,0.06))]'
       : '';
-  const totalMetrics = 31;
   const playerValue = (player: PlayerStats, key: keyof PlayerStats) => {
     const value = player[key];
     return typeof value === 'number' ? value : 0;
@@ -1013,8 +1125,17 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     subtitle: string;
     key: keyof PlayerStats;
     suffix: string;
-    category: 'PASSING' | 'ATTACK' | 'DEFENSE';
+    category: 'PASSING' | 'ATTACK' | 'DEFENSE' | 'KEEPER';
     players: PlayerStats[];
+    smart?: boolean;
+    quality: number;
+  };
+  const hasMeaningfulPlayerValue = (player: PlayerStats, key: keyof PlayerStats) => {
+    const value = playerValue(player, key);
+    if (key === 'passAccuracy') return player.passes >= 12 && value > 0;
+    if (key === 'shotAccuracy') return player.shots > 0 && value > 0;
+    if (key === 'dribbleSuccessRate') return player.dribbles + player.dispossessed > 0 && value > 0;
+    return value > 0;
   };
   const makePlayerGroup = (
     title: string,
@@ -1022,46 +1143,62 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     key: keyof PlayerStats,
     suffix: string,
     category: PlayerGroup['category'],
-  ): PlayerGroup => ({
-    title,
-    subtitle,
-    key,
-    suffix,
-    category,
-    players: [...players]
+    smart = false,
+  ): PlayerGroup => {
+    const rankedPlayers = [...players]
+      .filter(player => hasMeaningfulPlayerValue(player, key))
       .sort((a, b) => playerValue(b, key) - playerValue(a, key) || playerImpactScore(b) - playerImpactScore(a) || a.name.localeCompare(b.name))
-      .slice(0, 5),
-  });
+      .slice(0, 5);
+
+    return {
+      title,
+      subtitle,
+      key,
+      suffix,
+      category,
+      smart,
+      quality: rankedPlayers.reduce((sum, player) => sum + playerValue(player, key), 0),
+      players: rankedPlayers,
+    };
+  };
   const allPlayerGroups = [
-    makePlayerGroup('أفضل الممرين', 'أعلى حجم تمرير في المباراة', 'passes', 'تمريرة', 'PASSING'),
+    makePlayerGroup('أفضل الممرين', 'أعلى حجم تمرير في المباراة', 'passes', 'تمريرة', 'PASSING', true),
     makePlayerGroup('أدق الممرين', 'نسبة التمريرات الصحيحة لكل لاعب', 'passAccuracy', '%', 'PASSING'),
     makePlayerGroup('تمريرات صحيحة', 'أكثر تمريرات وصلت للزميل', 'passesAccurate', 'صحيحة', 'PASSING'),
-    makePlayerGroup('تمريرات مفتاحية', 'أكثر صناعة للفرص المباشرة', 'keyPasses', 'مفتاحية', 'PASSING'),
+    makePlayerGroup('تمريرات مفتاحية', 'أكثر صناعة للفرص المباشرة', 'keyPasses', 'مفتاحية', 'PASSING', true),
     makePlayerGroup('أكثر صناعة', 'تمريرات حاسمة مسجلة', 'assists', 'أسيست', 'PASSING'),
-    makePlayerGroup('أكثر تسديدا', 'إجمالي محاولات التسديد', 'shots', 'تسديدة', 'ATTACK'),
-    makePlayerGroup('على المرمى', 'التسديدات بين القائمين', 'shotsOnTarget', 'على المرمى', 'ATTACK'),
+    makePlayerGroup('أكثر تسديدا', 'إجمالي محاولات التسديد', 'shots', 'تسديدة', 'ATTACK', true),
+    makePlayerGroup('على المرمى', 'التسديدات بين القائمين', 'shotsOnTarget', 'على المرمى', 'ATTACK', true),
     makePlayerGroup('دقة التسديد', 'نسبة التسديدات على المرمى', 'shotAccuracy', '%', 'ATTACK'),
     makePlayerGroup('الهدافون', 'الأهداف المسجلة من اللاعبين', 'goals', 'هدف', 'ATTACK'),
-    makePlayerGroup('مراوغات ناجحة', 'تجاوزات ناجحة بالكرة', 'dribbles', 'مراوغة', 'ATTACK'),
+    makePlayerGroup('مراوغات ناجحة', 'تجاوزات ناجحة بالكرة', 'dribbles', 'مراوغة', 'ATTACK', true),
     makePlayerGroup('نجاح المراوغة', 'نسبة نجاح محاولات المراوغة', 'dribbleSuccessRate', '%', 'ATTACK'),
     makePlayerGroup('كرات عرضية', 'أكثر إرسالا للعرضيات', 'crosses', 'عرضية', 'PASSING'),
     makePlayerGroup('كرات طويلة', 'تمريرات طويلة نحو الأمام', 'longBalls', 'طويلة', 'PASSING'),
     makePlayerGroup('كرات بينية', 'تمريرات تخترق الخطوط', 'throughBalls', 'بينية', 'PASSING'),
-    makePlayerGroup('للثلث الأخير', 'تمريرات أو دخول لمنطقة الخطورة', 'finalThirdPasses', 'تمريرة', 'PASSING'),
-    makePlayerGroup('لمسات في المنطقة', 'لمسات داخل منطقة الجزاء', 'boxTouches', 'لمسة', 'ATTACK'),
-    makePlayerGroup('أفضل المتدخلين', 'أكثر تدخلات دفاعية', 'tackles', 'تدخل', 'DEFENSE'),
-    makePlayerGroup('قاطعو الكرات', 'أكثر اعتراضا لمسار اللعب', 'interceptions', 'اعتراض', 'DEFENSE'),
-    makePlayerGroup('الإبعادات', 'إبعاد الخطر من المناطق الدفاعية', 'clearances', 'إبعاد', 'DEFENSE'),
-    makePlayerGroup('استرجاع الكرة', 'أكثر لاعبين استعادوا الاستحواذ', 'ballRecoveries', 'استرجاع', 'DEFENSE'),
+    makePlayerGroup('للثلث الأخير', 'تمريرات أو دخول لمنطقة الخطورة', 'finalThirdPasses', 'تمريرة', 'PASSING', true),
+    makePlayerGroup('لمسات في المنطقة', 'لمسات داخل منطقة الجزاء', 'boxTouches', 'لمسة', 'ATTACK', true),
+    makePlayerGroup('أفضل المتدخلين', 'أكثر تدخلات دفاعية', 'tackles', 'تدخل', 'DEFENSE', true),
+    makePlayerGroup('قاطعو الكرات', 'أكثر اعتراضا لمسار اللعب', 'interceptions', 'اعتراض', 'DEFENSE', true),
+    makePlayerGroup('الإبعادات', 'إبعاد الخطر من المناطق الدفاعية', 'clearances', 'إبعاد', 'DEFENSE', true),
+    makePlayerGroup('استرجاع الكرة', 'أكثر لاعبين استعادوا الاستحواذ', 'ballRecoveries', 'استرجاع', 'DEFENSE', true),
+    makePlayerGroup('تصديات الحراس', 'أكثر الحراس إنقاذا للمرمى', 'saves', 'تصدي', 'KEEPER', true),
   ];
-  const playerGroups = allPlayerGroups.filter(group =>
-    (playerMetricPreset === 'ALL' || group.category === playerMetricPreset) && group.players.length > 0
-  );
+  const selectedPlayerGroups = allPlayerGroups.filter(group => {
+    if (!group.players.length) return false;
+    if (playerMetricPreset === 'ALL') return true;
+    if (playerMetricPreset === 'SMART') return group.smart;
+    return group.category === playerMetricPreset;
+  });
+  const playerGroups = (selectedPlayerGroups.length ? selectedPlayerGroups : allPlayerGroups.filter(group => group.players.length > 0))
+    .sort((a, b) => Number(b.smart) - Number(a.smart) || b.quality - a.quality);
   const activePlayerGroup = playerGroups[activePlayerGroupIndex % Math.max(1, playerGroups.length)];
 
-  const groups: StatGroup[] = [
+  const allGroups: StatGroup[] = [
     {
       id: 'control',
+      category: 'CONTROL',
+      smart: true,
       title: 'السيطرة والنسق',
       subtitle: 'استحواذ، إيقاع، وتقدم للمناطق الخطرة',
       items: [
@@ -1075,6 +1212,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     },
     {
       id: 'attack',
+      category: 'ATTACK',
+      smart: true,
       title: 'الإنتاج الهجومي',
       subtitle: 'تسديد، صناعة فرص، ولمسات داخل المنطقة',
       items: [
@@ -1089,6 +1228,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     },
     {
       id: 'passing',
+      category: 'PASSING',
       title: 'جودة البناء',
       subtitle: 'تنويع التمرير والكرات العرضية والطويلة',
       items: [
@@ -1103,6 +1243,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     },
     {
       id: 'defense',
+      category: 'DEFENSE',
+      smart: true,
       title: 'العمل الدفاعي',
       subtitle: 'ضغط، افتكاك، وتنظيف مناطق الخطورة',
       items: [
@@ -1116,6 +1258,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     },
     {
       id: 'discipline',
+      category: 'DISCIPLINE',
       title: 'الانضباط والحراسة',
       subtitle: 'أخطاء، بطاقات، وتصديات الحراس',
       items: [
@@ -1130,31 +1273,60 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     },
   ];
 
+  const selectedBaseGroups = allGroups.filter(group => {
+    if (matchMetricPreset === 'ALL') return true;
+    if (matchMetricPreset === 'SMART') return group.smart;
+    return group.category === matchMetricPreset;
+  });
+  const baseGroups = selectedBaseGroups.length ? selectedBaseGroups : allGroups;
+  const totalMetrics = baseGroups.reduce((sum, group) => sum + group.items.length, 0);
+  const groups = baseGroups.flatMap(group => {
+    const meaningfulItems = group.items.filter(item => item.home !== 0 || item.away !== 0 || ['possession', 'dominance'].includes(item.id));
+    const items = meaningfulItems.length ? meaningfulItems : group.items;
+    const pages: StatGroup[] = [];
+    for (let index = 0; index < items.length; index += 3) {
+      const page = Math.floor(index / 3);
+      pages.push({
+        ...group,
+        id: `${group.id}-${page + 1}`,
+        title: items.length > 3 ? `${group.title} ${page + 1}` : group.title,
+        items: items.slice(index, index + 3),
+      });
+    }
+    return pages;
+  });
   const activeGroup = groups[activeGroupIndex % groups.length];
+  const activeGroupItems = activeGroup.items;
 
   const StatRow: React.FC<{ item: StatItem; index: number }> = ({ item, index }) => {
-    const max = Math.max(1, Math.abs(item.home), Math.abs(item.away));
-    const homeWidth = clamp((item.home / max) * 100, 4, 100);
-    const awayWidth = clamp((item.away / max) * 100, 4, 100);
-    const homeLead = item.home > item.away;
-    const awayLead = item.away > item.home;
+    const leftIsAway = teamStatsSide === 'AWAY_LEFT';
+    const leftValue = leftIsAway ? item.away : item.home;
+    const rightValue = leftIsAway ? item.home : item.away;
+    const leftColor = leftIsAway ? awayColor : homeColor;
+    const rightColor = leftIsAway ? homeColor : awayColor;
+    const max = Math.max(1, Math.abs(leftValue), Math.abs(rightValue));
+    const leftWidth = clamp((leftValue / max) * 100, 4, 100);
+    const rightWidth = clamp((rightValue / max) * 100, 4, 100);
+    const leftLead = leftValue > rightValue;
+    const rightLead = rightValue > leftValue;
+    const animationStyle = enablePanelTransitions ? { animation: `reoStatIn 360ms ease ${index * 35}ms both` } : undefined;
     return (
-      <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2.5" style={{ animation: `reoStatIn 420ms ease ${index * 55}ms both` }}>
-        <div className="mb-1.5 grid grid-cols-[54px_1fr_54px] items-center gap-2">
-          <div className="font-['Barlow_Condensed'] text-2xl font-black text-left" style={{ color: homeLead ? homeColor : 'rgba(255,255,255,0.72)' }}>
-            {formatStat(item.home, item.suffix, item.decimals)}
+      <div className="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1" style={animationStyle}>
+        <div className="mb-1 grid grid-cols-[48px_1fr_48px] items-center gap-2">
+          <div className="font-['Barlow_Condensed'] text-lg font-black leading-none text-left" style={{ color: leftLead ? leftColor : 'rgba(255,255,255,0.72)' }}>
+            {formatStat(leftValue, item.suffix, item.decimals)}
           </div>
-          <div className="truncate text-center text-[11px] font-black text-white/75">{item.label}</div>
-          <div className="font-['Barlow_Condensed'] text-2xl font-black text-right" style={{ color: awayLead ? awayColor : 'rgba(255,255,255,0.72)' }}>
-            {formatStat(item.away, item.suffix, item.decimals)}
+          <div className="truncate text-center text-[10px] font-black leading-none text-white/75">{item.label}</div>
+          <div className="font-['Barlow_Condensed'] text-lg font-black leading-none text-right" style={{ color: rightLead ? rightColor : 'rgba(255,255,255,0.72)' }}>
+            {formatStat(rightValue, item.suffix, item.decimals)}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div className="flex justify-end">
-            <div className="h-1.5 rounded-full" style={{ width: `${homeWidth}%`, background: homeColor }} />
+            <div className="h-1 rounded-full" style={{ width: `${leftWidth}%`, background: leftColor }} />
           </div>
           <div>
-            <div className="h-1.5 rounded-full" style={{ width: `${awayWidth}%`, background: awayColor }} />
+            <div className="h-1 rounded-full" style={{ width: `${rightWidth}%`, background: rightColor }} />
           </div>
         </div>
       </div>
@@ -1188,27 +1360,26 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
             <div className="truncate text-[10px] font-bold text-white/45">{activePlayerGroup.subtitle}</div>
           </div>
           <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
-            <div className="font-['Barlow_Condensed'] text-xl font-black">{allPlayerGroups.length}</div>
+            <div className="font-['Barlow_Condensed'] text-xl font-black">{playerGroups.length}</div>
             <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/40">PLAYER STATS</div>
           </div>
         </div>
-        <div key={activePlayerGroup.title} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           {activePlayerGroup.players.map((player, index) => {
             const value = playerValue(player, activePlayerGroup.key);
             const maxValue = Math.max(1, ...activePlayerGroup.players.map(item => playerValue(item, activePlayerGroup.key)));
             const color = player.isHome ? homeColor : awayColor;
+            const avatarUrl = resolvePlayerImage(player, playerImageMap);
             return (
               <div
                 key={`${activePlayerGroup.title}-${player.id}-${index}`}
                 className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-white/10 bg-white/10 px-3 py-2"
-                style={{ animation: `reoStatIn 420ms ease ${index * 65}ms both` }}
+                style={enablePanelTransitions ? { animation: `reoStatIn 360ms ease ${index * 45}ms both` } : undefined}
               >
                 <div className="absolute bottom-0 right-0 top-0 opacity-15 transition-all duration-700" style={{ width: `${clamp((value / maxValue) * 100, 3, 100)}%`, background: color }} />
                 <div className="relative z-10 flex h-full items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/35 font-['Barlow_Condensed'] text-xl font-black" style={{ color }}>
-                      {index + 1}
-                    </div>
+                    <PlayerAvatar src={avatarUrl} name={player.name} color={color} className="h-10 w-10" />
                     <div className="min-w-0">
                       <div className="truncate text-sm font-black text-white">{playerShortName(player.name)}</div>
                       <div className="truncate text-[9px] font-bold text-white/40">{player.isHome ? match.homeTeam : match.awayTeam}</div>
@@ -1218,6 +1389,9 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                     <div className="font-['Barlow_Condensed'] text-4xl font-black leading-none" style={{ color }}>{Math.round(value)}</div>
                     <div className="text-[8px] font-black text-white/40">{activePlayerGroup.suffix}</div>
                   </div>
+                </div>
+                <div className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded bg-black/55 px-1 font-['Barlow_Condensed'] text-sm font-black" style={{ color }}>
+                  {index + 1}
                 </div>
               </div>
             );
@@ -1308,24 +1482,24 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   <div className="text-sm font-black text-white/85">مؤشر السيطرة المباشر</div>
                 </div>
                 <div className="font-['Barlow_Condensed'] text-3xl font-black">
-                  <span style={{ color: homeColor }}>{domHome}</span>
+                  <span style={{ color: domLeftColor }}>{domLeftValue}</span>
                   <span className="text-white/30"> / </span>
-                  <span style={{ color: awayColor }}>{100 - domHome}</span>
+                  <span style={{ color: domRightColor }}>{domRightValue}</span>
                 </div>
               </div>
               <div className="relative h-4 overflow-hidden rounded-full bg-white/10">
-                <div className="absolute inset-y-0 left-0 transition-all duration-1000" style={{ width: `${domHome}%`, background: homeColor }} />
-                <div className="absolute inset-y-0 right-0 transition-all duration-1000" style={{ width: `${100 - domHome}%`, background: awayColor }} />
+                <div className="absolute inset-y-0 left-0 transition-all duration-1000" style={{ width: `${domLeftValue}%`, background: domLeftColor }} />
+                <div className="absolute inset-y-0 right-0 transition-all duration-1000" style={{ width: `${domRightValue}%`, background: domRightColor }} />
                 <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/75" />
               </div>
             </div>
           )}
 
           {showAdvancedStats && (
-            <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
-              <div className="mb-3 flex items-center justify-between gap-3">
+            <div className={`flex min-h-[208px] flex-[1.45] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+              <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-base font-black">{activeGroup.title}</div>
+                  <div className="truncate text-sm font-black">{activeGroup.title}</div>
                   <div className="truncate text-[10px] font-bold text-white/45">{activeGroup.subtitle}</div>
                 </div>
                 <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">
@@ -1333,8 +1507,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   <div className="text-[8px] font-black uppercase tracking-[0.16em] text-white/40">STATS</div>
                 </div>
               </div>
-              <div key={activeGroup.id} className="grid min-h-0 flex-1 auto-rows-fr grid-cols-1 gap-2 overflow-hidden">
-                {activeGroup.items.map((item, index) => <StatRow key={item.id} item={item} index={index} />)}
+              <div className="grid min-h-0 flex-1 content-start grid-cols-1 gap-1 overflow-hidden">
+                {activeGroupItems.map((item, index) => <StatRow key={item.id} item={item} index={index} />)}
               </div>
               <div className="mt-3 flex items-center justify-center gap-1.5">
                 {groups.map((group, index) => (
@@ -1354,12 +1528,12 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           {(showEvents || showTopStats || showKeyBattle || showMotm) && (
             <div className="grid grid-cols-2 gap-3">
               {showEvents && (
-                <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+                <div className={`min-h-[110px] rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/45">أحداث المباراة</div>
                   <div className="flex flex-col gap-1.5">
                     {latestEvents.length ? latestEvents.map((event, index) => (
-                      <div key={`${event.minute}-${event.player}-${index}`} className="grid grid-cols-[34px_auto_1fr] items-center gap-2 rounded-md bg-white/10 px-2 py-1.5">
-                        <div className="font-['Barlow_Condensed'] text-xl font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
+                      <div key={`${event.minute}-${event.player}-${index}`} className="grid grid-cols-[30px_auto_1fr] items-center gap-2 rounded-md bg-white/10 px-2 py-1">
+                        <div className="font-['Barlow_Condensed'] text-lg font-black" style={{ color: event.isHome ? homeColor : awayColor }}>{event.minute}'</div>
                         <div className={`rounded px-1.5 py-0.5 text-[8px] font-black ${event.tone === 'goal' ? 'bg-emerald-400/15 text-emerald-300' : event.tone === 'red' ? 'bg-red-400/15 text-red-300' : 'bg-amber-400/15 text-amber-300'}`}>{event.label}</div>
                         <div className="min-w-0 truncate text-[11px] font-bold text-white/85">{event.player}</div>
                       </div>
@@ -1371,13 +1545,13 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
               )}
 
               {showMotm && impactPlayer ? (
-                <div className="relative min-h-[132px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+                <div className="relative min-h-[110px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">LIVE IMPACT</div>
                   <div className="mt-2 min-w-0">
                     <div className="truncate text-lg font-black">{impactPlayer.player.name}</div>
                     <div className="truncate text-[10px] font-bold text-white/45">{impactPlayer.player.isHome ? match.homeTeam : match.awayTeam}</div>
                   </div>
-                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-5xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
+                  <div className="absolute bottom-2 left-3 font-['Barlow_Condensed'] text-4xl font-black text-amber-300">{Math.round(impactPlayer.score)}</div>
                 </div>
               ) : showKeyBattle && keyCreator && keyDefender ? (
                 <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>

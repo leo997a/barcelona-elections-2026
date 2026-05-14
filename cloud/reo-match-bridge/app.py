@@ -117,6 +117,7 @@ METRICS_CATALOG = {
         "interceptions",
         "clearances",
         "ballRecoveries",
+        "saves",
     ],
 }
 

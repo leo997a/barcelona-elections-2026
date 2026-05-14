@@ -35,6 +35,32 @@ const CURRENCY_OPTIONS = [
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
 const CLOUD_MATCH_API_URL = '/api/reo-match/match';
 
+const MATCH_STAT_PRESET_QUICK = [
+  { value: 'SMART', label: 'ذكي' },
+  { value: 'ATTACK', label: 'هجوم' },
+  { value: 'PASSING', label: 'تمرير' },
+  { value: 'DEFENSE', label: 'دفاع' },
+  { value: 'DISCIPLINE', label: 'حراسة' },
+  { value: 'ALL', label: 'الكل' },
+];
+
+const PLAYER_STAT_PRESET_QUICK = [
+  { value: 'SMART', label: 'ذكي' },
+  { value: 'ATTACK', label: 'تسديد' },
+  { value: 'PASSING', label: 'تمرير' },
+  { value: 'DEFENSE', label: 'دفاع' },
+  { value: 'KEEPER', label: 'حراس' },
+  { value: 'ALL', label: 'الكل' },
+];
+
+const MATCH_VISUAL_STYLE_QUICK = [
+  { value: 'DUAL_RAIL', label: 'Rail' },
+  { value: 'TACTICAL_SPLIT', label: 'Split' },
+  { value: 'DATA_TOWER', label: 'Tower' },
+  { value: 'GLASS_STUDIO', label: 'Glass' },
+  { value: 'NEON_TOUCHLINE', label: 'Neon' },
+];
+
 type BridgeStatusSnapshot = {
   ok?: boolean;
   hasData?: boolean;
@@ -83,6 +109,43 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
 
   if (id === 'apiUrl') {
     return { id, label: 'رابط خادم الجسر المحلي', type: 'text', value };
+  }
+
+  if (id === 'matchMetricPreset') {
+    return {
+      id,
+      label: 'تركيز إحصائيات المباراة',
+      type: 'select',
+      value,
+      options: MATCH_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
+    };
+  }
+
+  if (id === 'playerMetricPreset') {
+    return {
+      id,
+      label: 'تركيز إحصائيات اللاعبين',
+      type: 'select',
+      value,
+      options: PLAYER_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
+    };
+  }
+
+  if (id === 'teamStatsSide') {
+    return {
+      id,
+      label: 'ترتيب جهات إحصائيات الفريقين',
+      type: 'select',
+      value,
+      options: [
+        { value: 'HOME_LEFT', label: 'المضيف يسار' },
+        { value: 'AWAY_LEFT', label: 'الضيف يسار' },
+      ],
+    };
+  }
+
+  if (id === 'playerImageMapJson') {
+    return { id, label: 'روابط صور اللاعبين JSON', type: 'textarea', value };
   }
 
   return {
@@ -835,9 +898,94 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
                     )}
                 </div>
+                <div className="rounded-lg border border-blue-800/35 bg-slate-950/45 p-3 space-y-3">
+                    <div>
+                        <div className="mb-1.5 text-[10px] font-black text-blue-200/80">إحصائيات المباراة التي تظهر في القالب</div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                            {MATCH_STAT_PRESET_QUICK.map(option => {
+                              const active = String(getDraftValue('matchMetricPreset') || 'SMART') === option.value;
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => handleDraftFieldChange('matchMetricPreset', option.value)}
+                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="mb-1.5 text-[10px] font-black text-rose-200/80">إحصائيات اللاعبين</div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                            {PLAYER_STAT_PRESET_QUICK.map(option => {
+                              const active = String(getDraftValue('playerMetricPreset') || 'SMART') === option.value;
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => handleDraftFieldChange('playerMetricPreset', option.value)}
+                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-rose-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="mb-1.5 text-[10px] font-black text-cyan-200/80">تصميم القالب</div>
+                        <div className="grid grid-cols-5 gap-1.5">
+                            {MATCH_VISUAL_STYLE_QUICK.map(option => {
+                              const active = String(getDraftValue('visualStyle') || 'DUAL_RAIL') === option.value;
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => handleDraftFieldChange('visualStyle', option.value)}
+                                  className={`rounded-md px-1.5 py-1.5 text-[9px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDraftFieldChange('teamStatsSide', 'HOME_LEFT')}
+                          className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'HOME_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                        >
+                          المضيف يسار
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDraftFieldChange('teamStatsSide', 'AWAY_LEFT')}
+                          className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'AWAY_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                        >
+                          الضيف يسار
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDraftFieldChanges({
+                            homeColor: String(getDraftValue('awayColor') || '#ef4444'),
+                            awayColor: String(getDraftValue('homeColor') || '#3b82f6'),
+                          })}
+                          className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
+                        >
+                          عكس الألوان
+                        </button>
+                    </div>
+                </div>
                 {!isAdminUnlocked && (
                     <form onSubmit={handleAdminLogin} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                         <div className="mb-2 text-[11px] font-bold text-amber-200">افتح قفل التحكم لتغيير رابط المباراة أو تشغيل الجسر.</div>
+                        <div className="mb-2 text-[10px] leading-5 text-amber-100/70">
+                          المفتاح يؤخذ من متغير Vercel باسم EDITOR_ADMIN_PASSCODE أو ADMIN_ACCESS_CODE. إذا لا تعرفه، غيّره من إعدادات المشروع ثم أعد النشر.
+                        </div>
                         <div className="flex gap-2">
                             <input
                               type="password"
