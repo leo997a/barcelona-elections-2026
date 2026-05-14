@@ -94,20 +94,21 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     if (!id) return;
     let sseActive = true;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
-    let fallbackRaf: number | null = null;
-    let fallbackRafLastPoll = 0;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let requestCounter = 0;
     let pollInFlight = false;
     let lastAppliedVersion = 0;
+    let lastAppliedFingerprint = embeddedOverlay ? JSON.stringify(embeddedOverlay) : '';
+    let lastFullFetchAt = 0;
 
     const pageParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(hashPath.includes('?') ? hashPath.split('?')[1] : '');
     const isObsBrowser = Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
       || pageParams.get('obs') === '1'
       || hashParams.get('obs') === '1';
-    const pollIntervalMs = isObsBrowser ? 250 : 500;
+    const pollIntervalMs = isObsBrowser ? 2500 : 3000;
+    const staleFullFetchMs = isObsBrowser ? 10000 : 15000;
     const noCacheHeaders = {
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
@@ -153,16 +154,21 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     };
 
     // ── تحديث الحالة بأمان ────────────────────────────────────────────────────
-    // version=0 means the update came from Firebase (instant) — always apply it.
+    // version=0 means the update came from Firebase. Apply it only when the
+    // payload really changed so OBS does not repaint the template for no reason.
     // version>0 means SSE/polling — only apply if newer than the last applied version.
     const applyState = (newOverlay: OverlayConfig, version = 0) => {
       if (version > 0 && version < lastAppliedVersion) return;
+      const fingerprint = JSON.stringify(newOverlay);
+      if (fingerprint === lastAppliedFingerprint) return;
       if (version > 0) lastAppliedVersion = version;
+      lastAppliedFingerprint = fingerprint;
       lastGoodState.current = newOverlay;
       setOverlay(newOverlay);
     };
 
     const fetchLiveState = async () => {
+      lastFullFetchAt = Date.now();
       try {
         const r = await fetchNoCache(liveUrl({ full: '1' }));
         if (!r.ok) return false;
@@ -188,7 +194,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
         const meta = await r.json() as { version?: number };
         const nextVersion = Number(meta.version || 0);
-        if (!lastGoodState.current || !nextVersion || nextVersion !== lastAppliedVersion) {
+        const shouldRefreshUnknownVersion = !nextVersion && Date.now() - lastFullFetchAt >= staleFullFetchMs;
+        if (!lastGoodState.current || (nextVersion > 0 && nextVersion !== lastAppliedVersion) || shouldRefreshUnknownVersion) {
           await fetchLiveState();
         }
 
@@ -205,28 +212,14 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     const stopFallback = () => {
       if (fallbackInterval) clearInterval(fallbackInterval);
       fallbackInterval = null;
-      if (fallbackRaf !== null) cancelAnimationFrame(fallbackRaf);
-      fallbackRaf = null;
     };
 
     const startFallback = () => {
       if (fallbackInterval) return;
       void pollLiveMeta();
-      fallbackRafLastPoll = 0;
       fallbackInterval = setInterval(() => {
         void pollLiveMeta();
       }, pollIntervalMs);
-
-      const pollOnFrame = (now: number) => {
-        if (!sseActive) return;
-        if (now - fallbackRafLastPoll >= pollIntervalMs) {
-          fallbackRafLastPoll = now;
-          void pollLiveMeta();
-        }
-        fallbackRaf = requestAnimationFrame(pollOnFrame);
-      };
-
-      fallbackRaf = requestAnimationFrame(pollOnFrame);
     };
 
     // ── SSE: اتصال مفتوح، تحديثات فورية ─────────────────────────────────

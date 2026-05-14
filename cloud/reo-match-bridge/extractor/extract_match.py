@@ -1011,7 +1011,7 @@ def build_output_url(site_url: str, port: int, source_url: str, panel_side: str 
             {"id": "creatorPositionX", "label": "Creator X", "type": "range", "value": 0},
             {"id": "creatorPositionY", "label": "Creator Y", "type": "range", "value": 0},
             {"id": "playerImageMapJson", "label": "Player image map", "type": "textarea", "value": "{}"},
-            {"id": "playerImageCacheUrl", "label": "Player image cache URL", "type": "text", "value": ""},
+            {"id": "playerImageCacheUrl", "label": "Player image cache URL", "type": "text", "value": "/player-image-cache/barcelona.json"},
             {"id": "homeColor", "label": "Home color", "type": "color", "value": "#3b82f6"},
             {"id": "awayColor", "label": "Away color", "type": "color", "value": "#ef4444"},
             {"id": "scale", "label": "Scale", "type": "range", "value": 1},

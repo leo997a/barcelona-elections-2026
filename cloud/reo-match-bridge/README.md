@@ -40,6 +40,24 @@ REO_ALLOWED_ORIGINS=https://barcelona-elections-2026.vercel.app
 PORT=3005
 ```
 
+Optional GitHub archive after final whistle:
+
+```bash
+REO_ARCHIVE_GITHUB_TOKEN=github-token-with-contents-write
+REO_ARCHIVE_GITHUB_REPO=owner/repo
+REO_ARCHIVE_GITHUB_BRANCH=main
+REO_ARCHIVE_BASE_PATH=match-archive
+```
+
+When enabled, the bridge writes the final payload into:
+
+```text
+match-archive/<season>/<competition>/<round>/<date>_<matchId>_<home>-vs-<away>.json
+```
+
+If the file already exists, the bridge updates it using the GitHub Contents API
+SHA instead of failing on duplicate paths.
+
 Use Vercel env vars:
 
 ```bash

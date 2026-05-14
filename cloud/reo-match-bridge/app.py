@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 import urllib.error
 import urllib.request
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("REO_BRIDGE_DATA_DIR", BASE_DIR / "data"))
@@ -183,22 +183,38 @@ def archive_match_to_github(payload: dict[str, Any], url: str) -> dict[str, Any]
     if not ARCHIVE_GITHUB_TOKEN or not ARCHIVE_GITHUB_REPO:
         return {"enabled": False, "reason": "missing REO_ARCHIVE_GITHUB_TOKEN or REO_ARCHIVE_GITHUB_REPO"}
     archive_path = derive_archive_path(payload, url)
+    encoded_path = quote(archive_path, safe="/")
+    contents_url = f"https://api.github.com/repos/{ARCHIVE_GITHUB_REPO}/contents/{encoded_path}"
+    headers = {
+        "Authorization": f"Bearer {ARCHIVE_GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "User-Agent": "reo-match-bridge",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
     body = {
         "message": f"archive match {archive_path}",
         "content": base64.b64encode(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")).decode("ascii"),
         "branch": ARCHIVE_GITHUB_BRANCH,
     }
+    try:
+        lookup = urllib.request.Request(f"{contents_url}?ref={quote(ARCHIVE_GITHUB_BRANCH)}", headers=headers)
+        with urllib.request.urlopen(lookup, timeout=20) as response:
+            existing = json.loads(response.read().decode("utf-8"))
+        if existing.get("sha"):
+            body["sha"] = existing["sha"]
+    except urllib.error.HTTPError as error:
+        if error.code != 404:
+            details = error.read().decode("utf-8", errors="replace")
+            return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub lookup {error.code}: {details[:500]}"}
+    except Exception as error:
+        return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub lookup failed: {error}"}
+
     request = urllib.request.Request(
-        f"https://api.github.com/repos/{ARCHIVE_GITHUB_REPO}/contents/{archive_path}",
+        contents_url,
         data=json.dumps(body).encode("utf-8"),
         method="PUT",
-        headers={
-            "Authorization": f"Bearer {ARCHIVE_GITHUB_TOKEN}",
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json",
-            "User-Agent": "reo-match-bridge",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
+        headers=headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:

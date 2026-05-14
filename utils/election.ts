@@ -490,7 +490,7 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
     id: 'playerImageCacheUrl',
     label: 'رابط كاش صور اللاعبين JSON',
     type: 'text',
-    value: '',
+    value: '/player-image-cache/barcelona.json',
   },
   {
     id: 'dataSourceName',

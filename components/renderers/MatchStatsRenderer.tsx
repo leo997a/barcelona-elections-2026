@@ -1267,6 +1267,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const domRightValue = domLeftIsAway ? domHome : 100 - domHome;
   const domLeftColor = domLeftIsAway ? awayColor : homeColor;
   const domRightColor = domLeftIsAway ? homeColor : awayColor;
+  const statLeftTeam = domLeftIsAway ? match.awayTeam : match.homeTeam;
+  const statRightTeam = domLeftIsAway ? match.homeTeam : match.awayTeam;
   const impactPlayer = players
     .map(player => ({ player, score: playerImpactScore(player) }))
     .filter(item => item.score > 0)
@@ -1496,12 +1498,12 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
     const animationStyle = enablePanelTransitions ? { animation: `reoStatIn 360ms ease ${index * 35}ms both` } : undefined;
     const StatIcon = statIconById[item.id] || BarChart3;
     return (
-      <div className="rounded-lg border border-white/10 bg-white/10 px-2.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" style={animationStyle}>
-        <div className="mb-1 grid grid-cols-[48px_1fr_48px] items-center gap-2">
+      <div className="rounded-lg border border-white/10 bg-black/45 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" style={animationStyle}>
+        <div className="mb-1.5 grid grid-cols-[58px_1fr_58px] items-center gap-2">
           <div className="font-['Barlow_Condensed'] text-lg font-black leading-none text-left" style={{ color: leftLead ? leftColor : 'rgba(255,255,255,0.72)' }}>
             {formatStat(leftValue, item.suffix, item.decimals)}
           </div>
-          <div className="flex min-w-0 items-center justify-center gap-1.5 text-center text-[10px] font-black leading-none text-white/80">
+          <div className="flex min-w-0 items-center justify-center gap-1.5 text-center text-[11px] font-black leading-none text-white/85">
             <IconBox icon={StatIcon} color={leftLead ? leftColor : rightLead ? rightColor : 'rgba(255,255,255,0.65)'} className="h-5 w-5" />
             <span className="truncate">{item.label}</span>
           </div>
@@ -1634,7 +1636,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   };
 
   const EventsCard = () => (
-    <div className={`rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
+    <div className={`shrink-0 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <IconBox icon={Radio} color="#67e8f9" className="h-7 w-7" />
@@ -1662,7 +1664,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   );
 
   const TopStatsStrip = () => (
-    <div className={`grid grid-cols-3 gap-2 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
+    <div className={`grid shrink-0 grid-cols-3 gap-2 rounded-lg border ${panelSurface} p-2.5 shadow-2xl backdrop-blur-xl`}>
       {topCreators[0] && <PlayerLine player={topCreators[0]} value={topCreators[0].keyPasses + topCreators[0].assists} label="صناعة فرص" icon={Star} />}
       {topPassers[0] && <PlayerLine player={topPassers[0]} value={topPassers[0].passes} label="تمرير وبناء" icon={Users} />}
       {topInterceptors[0] && <PlayerLine player={topInterceptors[0]} value={topInterceptors[0].tackles + topInterceptors[0].interceptions + topInterceptors[0].clearances} label="عمل دفاعي" icon={Shield} />}
@@ -1672,7 +1674,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const ImpactCard = () => {
     if (!impactPlayer) return null;
     return (
-      <div className="relative min-h-[108px] overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
+      <div className="relative min-h-[108px] shrink-0 overflow-hidden rounded-lg border border-amber-300/30 bg-black/90 p-2.5 shadow-2xl backdrop-blur-xl">
         <div className="absolute inset-y-0 left-0 w-1 bg-amber-300/80" />
         <div className="flex h-full items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -1729,8 +1731,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           to { background-position: 200% 50%; }
         }
         @keyframes reoSoftPulse {
-          0%, 100% { opacity: .72; transform: scaleX(.96); }
-          50% { opacity: 1; transform: scaleX(1); }
+          0%, 100% { filter: brightness(1); }
+          50% { filter: brightness(1.12); }
         }
         .reo-quality-ultra {
           -webkit-font-smoothing: antialiased;
@@ -1739,18 +1741,18 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         }
         .reo-motion .reo-sweep {
           background-size: 200% 100%;
-          animation: reoSweep 7s linear infinite;
+          animation: reoSweep 18s linear infinite;
         }
         .reo-motion .reo-pulse-line {
           transform-origin: center;
-          animation: reoSoftPulse 2.6s ease-in-out infinite;
+          animation: reoSoftPulse 9s ease-in-out infinite;
         }
       `}</style>
       <div className={`relative h-full w-full overflow-hidden p-6 ${qualityClass}`} style={{ direction: 'ltr' }}>
         {backdropClass ? <div className={`pointer-events-none absolute inset-0 ${backdropClass}`} /> : null}
         <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white ${motionClass}`} style={{ transform: matchPanelTransform, transformOrigin: matchPanelOrigin }}>
           {showScorebug && (
-            <div className={`relative overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+            <div className={`relative shrink-0 overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="absolute inset-x-0 top-0 h-1 reo-sweep" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
               <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
                 <span>{dataMode === 'BRIDGE' ? 'LIVE BRIDGE' : dataMode}</span>
@@ -1788,7 +1790,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           )}
 
           {showDominance && (
-            <div className={`rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+            <div className={`shrink-0 rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">Momentum</div>
@@ -1798,6 +1800,16 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
                   <span style={{ color: domLeftColor }}>{domLeftValue}</span>
                   <span className="text-white/30"> / </span>
                   <span style={{ color: domRightColor }}>{domRightValue}</span>
+                </div>
+              </div>
+              <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-black text-white/70">
+                <div className="flex min-w-0 items-center gap-1.5 rounded-md bg-black/35 px-2 py-0.5">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: domLeftColor }} />
+                  <span className="truncate">{statLeftTeam}</span>
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5 rounded-md bg-black/35 px-2 py-0.5">
+                  <span className="truncate">{statRightTeam}</span>
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: domRightColor }} />
                 </div>
               </div>
               <div className="relative h-4 overflow-hidden rounded-full bg-white/10">
@@ -1812,13 +1824,23 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           {showTopStats && <TopStatsStrip />}
 
           {showAdvancedStats && (
-            <div className={`flex min-h-[318px] flex-[1.55] flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
+            <div className={`flex min-h-[350px] shrink-0 flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <IconBox icon={ActiveGroupIcon} color={homeColor} className="h-8 w-8" />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-black">{activeGroup.title}</div>
                     <div className="truncate text-[10px] font-bold text-white/45">{activeGroup.subtitle}</div>
+                    <div className="mt-1 flex items-center gap-2 text-[9px] font-black text-white/45">
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded bg-black/30 px-1.5 py-0.5">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: domLeftColor }} />
+                        <span className="truncate">{statLeftTeam}</span>
+                      </span>
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded bg-black/30 px-1.5 py-0.5">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: domRightColor }} />
+                        <span className="truncate">{statRightTeam}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-center">

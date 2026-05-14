@@ -511,7 +511,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'creatorPositionX', label: 'إزاحة مربع صانع المحتوى X', type: 'range', value: 0, min: -760, max: 760, step: 10 },
       { id: 'creatorPositionY', label: 'إزاحة مربع صانع المحتوى Y', type: 'range', value: 0, min: -420, max: 420, step: 10 },
       { id: 'playerImageMapJson', label: 'روابط صور اللاعبين JSON', type: 'textarea', value: '{}' },
-      { id: 'playerImageCacheUrl', label: 'رابط كاش صور اللاعبين JSON', type: 'text', value: '' },
+      { id: 'playerImageCacheUrl', label: 'رابط كاش صور اللاعبين JSON', type: 'text', value: '/player-image-cache/barcelona.json' },
       { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'REO Cloud Bridge' },
       { id: 'sourceMatchUrl', label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
       { id: 'apiUrl', label: 'رابط API بيانات المباراة', type: 'text', value: '/api/reo-match/match' },
