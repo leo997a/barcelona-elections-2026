@@ -370,7 +370,12 @@ const isKeyPassEvent = (event: Record<string, unknown>, type: string, qualifiers
   return /(key\s*pass|keypass|chance\s*created|big\s*chance\s*created|bigchancecreated|intentional\s*assist|goal\s*assist|assist)/i.test(combined);
 };
 
-const lookupKey = (value: unknown) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const lookupKey = (value: unknown) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase()
+  .replace(/\s+/g, ' ');
 
 const parsePlayerImageMap = (value: string): Record<string, string> => {
   if (!value.trim()) return {};

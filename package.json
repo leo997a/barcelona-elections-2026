@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:player-cache": "node scripts/sync-player-image-cache.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
