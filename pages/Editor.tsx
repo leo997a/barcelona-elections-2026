@@ -100,6 +100,46 @@ type BridgeStatusSnapshot = {
   } | null;
 };
 
+const PLAYER_AI_ALIASES = [
+  { name: 'Robert Lewandowski', position: 'ST / Forward', club: 'Barcelona', fallbackImage: 'https://sportrenders.com/wp-content/uploads/2025/05/Lewandowski-PNG-Barcelona-Football-Render-5-scaled.png', aliases: ['lewandowski', 'robert lewandowski', 'ليفاندوفسكي', 'روبرت ليفاندوفسكي'] },
+  { name: 'Lamine Yamal', position: 'RW / Forward', club: 'Barcelona', aliases: ['lamine yamal', 'yamal', 'لامين يامال', 'يامال'] },
+  { name: 'Pedri', position: 'CM / AM', club: 'Barcelona', aliases: ['pedri', 'بيدري'] },
+  { name: 'Dani Olmo', position: 'AM / Forward', club: 'Barcelona', aliases: ['dani olmo', 'olmo', 'داني اولمو', 'داني أولمو', 'اولمو', 'أولمو'] },
+  { name: 'Raphinha', position: 'RW / Forward', club: 'Barcelona', aliases: ['raphinha', 'رافينيا'] },
+  { name: 'Ferran Torres', position: 'Forward', club: 'Barcelona', aliases: ['ferran torres', 'torres', 'فيران توريس'] },
+  { name: 'Frenkie de Jong', position: 'CM', club: 'Barcelona', aliases: ['frenkie de jong', 'de jong', 'دي يونغ', 'فرينكي دي يونغ'] },
+  { name: 'Gavi', position: 'CM', club: 'Barcelona', aliases: ['gavi', 'غافي', 'جافي'] },
+];
+
+const CLUB_AI_ALIASES = [
+  { name: 'Barcelona', aliases: ['barcelona', 'barca', 'fc barcelona', 'برشلونة', 'برشلونه', 'البارسا'] },
+  { name: 'Real Madrid', aliases: ['real madrid', 'madrid', 'ريال مدريد'] },
+  { name: 'Atletico Madrid', aliases: ['atletico madrid', 'اتلتيكو مدريد', 'أتلتيكو مدريد'] },
+  { name: 'Alaves', aliases: ['alaves', 'deportivo alaves', 'الافيس', 'ألافيس'] },
+];
+
+const textHas = (text: string, needle: string) => text.toLocaleLowerCase().includes(needle.toLocaleLowerCase());
+
+const findPlayerAlias = (text: string) =>
+  PLAYER_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+
+const findClubAlias = (text: string) =>
+  CLUB_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+
+const extractPercentSignal = (text: string) => {
+  const match = text.match(/(?:بنسبة|احتمال|نسبة|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
+  if (!match) return null;
+  const value = Number(match[1] || match[2]);
+  if (!Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, value));
+};
+
+const hasLeavingSignal = (text: string) =>
+  /مغادر|مغادرة|يرحل|رحيل|خروج|خارج|leav|exit|depart/i.test(text);
+
+const hasFreeTransferSignal = (text: string) =>
+  /مجانا|مجاني|نهاية عقد|انتهاء عقد|free|contract|free agent/i.test(text);
+
 const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'dataMode') {
     return {
@@ -390,7 +430,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const withAssetEnrichment = async (
       rawUpdates: Record<string, unknown>,
-      hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string } = {}
+      hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string; fallbackPlayerImageUrl?: string } = {}
   ) => {
       const { clubs, players } = await loadAssetMaps();
       const updates = { ...rawUpdates };
@@ -411,7 +451,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           playerName,
           ...assetCandidates(playerName),
           ...assetCandidates(hints.imageQuery),
-      ], players);
+      ], players) || findAssetUrl([hints.fallbackPlayerImageUrl], {});
 
       if (!playerImageIsUrl) delete updates.playerImage;
       if (resolvedPlayerImage && !playerImageIsUrl) updates.playerImage = resolvedPlayerImage;
@@ -524,7 +564,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               draftOverlay.type === OverlayType.BARCA_PREMIUM
               );
           let updates: Record<string, unknown> = {};
-          let hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string } = {};
+          let hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string; fallbackPlayerImageUrl?: string } = {};
 
           if (isPlayerLike) {
               const currentFullName = String(
@@ -538,18 +578,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   getDraftValue('teamName') ||
                   ''
               ).trim();
+              const detectedPlayer = findPlayerAlias(prompt);
+              const detectedClub = findClubAlias(prompt);
+              const promptConfidence = extractPercentSignal(prompt);
+              const isLeavingStory = hasLeavingSignal(prompt);
+              const isFreeStory = hasFreeTransferSignal(prompt);
               const generated = await assistPlayerTransferCard({
                   rawText: prompt,
-                  playerName: currentFullName,
-                  clubName: currentClub,
+                  playerName: detectedPlayer?.name || currentFullName,
+                  clubName: detectedClub?.name || currentClub,
                   currentFields,
               });
 
               if (!generated) throw new Error('AI returned no player data');
 
               updates = { ...(generated.fields || {}) };
-              const resolvedPlayerName = String(generated.playerName || updates.playerName || currentFullName || '').trim();
-              const resolvedClubName = String(generated.clubName || updates.playerTeam || updates.toClub || currentClub || '').trim();
+              const resolvedPlayerName = String(detectedPlayer?.name || generated.playerName || updates.playerName || currentFullName || '').trim();
+              const resolvedClubName = String(detectedClub?.name || generated.clubName || updates.playerTeam || updates.toClub || currentClub || detectedPlayer?.club || '').trim();
               const stats = Array.isArray(generated.stats)
                   ? generated.stats
                       .filter(stat => stat && stat.label)
@@ -569,16 +614,41 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   updates.playerTeam = updates.playerTeam || resolvedClubName;
                   updates.toClub = updates.toClub || resolvedClubName;
               }
-              if (generated.position) {
-                  updates.playerPosition = updates.playerPosition || generated.position;
-                  updates.playerRole = updates.playerRole || generated.position;
-                  updates.position = updates.position || generated.position;
+              if (generated.position || detectedPlayer?.position) {
+                  const position = generated.position || detectedPlayer?.position || '';
+                  updates.playerPosition = updates.playerPosition || position;
+                  updates.playerRole = updates.playerRole || position;
+                  updates.position = updates.position || position;
               }
-              if (generated.headline) updates.headline = updates.headline || generated.headline;
+              if (promptConfidence !== null) {
+                  updates.confidence = promptConfidence;
+              }
+              if (isFreeStory) {
+                  updates.dealValue = updates.dealValue || 'Free transfer / end of contract';
+              }
+              if (isLeavingStory && detectedClub?.name) {
+                  updates.fromClub = updates.fromClub || detectedClub.name;
+                  const currentToClub = String(updates.toClub || '').trim();
+                  if (!currentToClub || currentToClub === detectedClub.name) {
+                      updates.toClub = isFreeStory ? 'Free agent' : 'Destination TBC';
+                  }
+              }
+              if (generated.headline || (resolvedPlayerName && isLeavingStory)) {
+                  updates.headline = updates.headline || generated.headline || `${resolvedPlayerName} EXIT WATCH`;
+              }
               if (generated.summary) {
                   updates.subheadline = updates.subheadline || generated.summary;
                   updates.bodyText = updates.bodyText || generated.summary;
                   updates.latestNews = updates.latestNews || generated.summary;
+              }
+              if (isLeavingStory || isFreeStory || promptConfidence !== null) {
+                  updates.subheadline = updates.subheadline || `${resolvedClubName || detectedClub?.name || 'Club'} exit scenario tracked at ${promptConfidence ?? Number(getDraftValue('confidence') || 65)}%.`;
+                  updates.latestNews = updates.latestNews || [
+                      prompt,
+                      isFreeStory ? 'Free transfer angle detected from contract context.' : 'Market movement detected from AI prompt.',
+                      promptConfidence !== null ? `Probability signal locked at ${promptConfidence}%.` : 'Probability can be adjusted from the confidence control.',
+                  ].join(';');
+                  updates.source = updates.source || 'AI Mercato Desk';
               }
               if (stats.length) {
                   updates.playerStatsJson = updates.playerStatsJson || JSON.stringify(stats);
@@ -595,15 +665,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   updates.subline = updates.subline || resolvedClubName || 'LA LIGA';
               }
 
-              if (draftOverlay.type === OverlayType.TRANSFER_NEWS && resolvedPlayerName && !updates.marketItems) {
+              if (draftOverlay.type === OverlayType.TRANSFER_NEWS && resolvedPlayerName && (!updates.marketItems || isLeavingStory || isFreeStory || promptConfidence !== null)) {
+                  const marketConfidence = promptConfidence ?? Number(updates.confidence || getDraftValue('confidence') || 70);
+                  const marketFrom = String(updates.fromClub || getDraftValue('fromClub') || detectedClub?.name || 'Source club');
+                  const marketTo = String(updates.toClub || (isFreeStory ? 'Free agent' : resolvedClubName) || getDraftValue('toClub') || 'Destination TBC');
+                  const marketValue = String(updates.dealValue || getDraftValue('dealValue') || (isFreeStory ? 'Free transfer' : 'Market watch'));
                   updates.marketItems = JSON.stringify([{
                       player: resolvedPlayerName,
-                      from: String(updates.fromClub || getDraftValue('fromClub') || 'Source club'),
-                      to: resolvedClubName || String(getDraftValue('toClub') || 'Target club'),
-                      value: String(getDraftValue('dealValue') || 'Market watch'),
-                      confidence: Number(getDraftValue('confidence') || 70),
-                      status: 'AI prepared',
-                      tag: 'Focus',
+                      from: marketFrom,
+                      to: marketTo,
+                      value: marketValue,
+                      confidence: marketConfidence,
+                      status: isFreeStory ? 'Contract exit' : 'AI prepared',
+                      tag: isLeavingStory ? 'Exit watch' : 'Focus',
                   }]);
               }
 
@@ -613,6 +687,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   toClub: String(updates.toClub || resolvedClubName || ''),
                   fromClub: String(updates.fromClub || getDraftValue('fromClub') || ''),
                   imageQuery: generated.imageQuery,
+                  fallbackPlayerImageUrl: detectedPlayer?.fallbackImage,
               };
           } else {
               const generated = await assistTemplateFields({

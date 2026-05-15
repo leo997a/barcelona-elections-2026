@@ -147,6 +147,35 @@ const fallbackViewerBadges = (viewers: { name: string; rank: number }[]) => {
   }));
 };
 
+const detectLocalPlayer = (text: string) => {
+  const value = text.toLowerCase();
+  if (/lewandowski|ليفاندوفسكي|روبرت ليفاندوفسكي/i.test(value)) {
+    return { playerName: 'Robert Lewandowski', clubName: 'Barcelona', position: 'ST / Forward' };
+  }
+  if (/lamine yamal|yamal|لامين يامال|يامال/i.test(value)) {
+    return { playerName: 'Lamine Yamal', clubName: 'Barcelona', position: 'RW / Forward' };
+  }
+  if (/pedri|بيدري/i.test(value)) {
+    return { playerName: 'Pedri', clubName: 'Barcelona', position: 'CM / AM' };
+  }
+  return null;
+};
+
+const detectLocalClub = (text: string) => {
+  if (/barcelona|barca|برشلونة|برشلونه|البارسا/i.test(text)) return 'Barcelona';
+  if (/real madrid|ريال مدريد/i.test(text)) return 'Real Madrid';
+  return '';
+};
+
+const extractLocalPercent = (text: string) => {
+  const match = text.match(/(?:بنسبة|احتمال|نسبة|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
+  if (!match) return null;
+  return clampInteger(match[1] || match[2], 65, 0, 100);
+};
+
+const hasLocalLeavingSignal = (text: string) => /مغادر|مغادرة|يرحل|رحيل|خروج|خارج|leav|exit|depart/i.test(text);
+const hasLocalFreeSignal = (text: string) => /مجانا|مجاني|نهاية عقد|انتهاء عقد|free|contract|free agent/i.test(text);
+
 const sendLocalFallback = (
   response: ServerlessResponse,
   body: AiRequestBody,
@@ -191,6 +220,92 @@ const sendLocalFallback = (
       data: [],
       fallback: true,
       warning: `${warning} تعذر استخراج الأسماء من الصور بدون نموذج رؤية متاح.`,
+    });
+    return true;
+  }
+
+  if (body.action === 'template-assist') {
+    const rawText = body.rawText?.trim();
+    if (!rawText) return false;
+    const title = rawText.split(/[\n.؟!?]+/).map(part => part.trim()).filter(Boolean)[0]?.slice(0, 90) || 'AI STORY';
+    const pages = fallbackSlides(rawText, 4);
+    sendJson(response, 200, {
+      data: {
+        title,
+        subtitle: rawText.slice(0, 160),
+        fields: {
+          headline: title,
+          title,
+          content: rawText,
+          specialText: rawText,
+          bodyText: rawText,
+          pagesData: JSON.stringify(pages),
+          currentPage: 0,
+          rawText,
+        },
+        notes: ['local AI fallback'],
+      },
+      fallback: true,
+      warning,
+    });
+    return true;
+  }
+
+  if (body.action === 'player-transfer-card') {
+    const rawText = body.rawText?.trim() || '';
+    const detected = detectLocalPlayer(`${body.playerName || ''} ${rawText}`) || {
+      playerName: body.playerName?.trim() || 'Player',
+      clubName: detectLocalClub(`${body.clubName || ''} ${rawText}`) || body.clubName?.trim() || 'Club',
+      position: 'Footballer',
+    };
+    const clubName = detectLocalClub(`${body.clubName || ''} ${rawText}`) || detected.clubName;
+    const confidence = extractLocalPercent(rawText) ?? 65;
+    const freeStory = hasLocalFreeSignal(rawText);
+    const leavingStory = hasLocalLeavingSignal(rawText);
+    const fromClub = leavingStory ? clubName : String(body.currentFields?.fromClub || clubName || 'Source club');
+    const toClub = leavingStory ? (freeStory ? 'Free agent' : 'Destination TBC') : String(body.currentFields?.toClub || clubName || 'Target club');
+    const dealValue = freeStory ? 'Free transfer / end of contract' : String(body.currentFields?.dealValue || 'Market watch');
+    const headline = leavingStory ? `${detected.playerName} EXIT WATCH` : `${detected.playerName} MARKET WATCH`;
+    const marketItems = [{
+      player: detected.playerName,
+      from: fromClub,
+      to: toClub,
+      value: dealValue,
+      confidence,
+      status: freeStory ? 'Contract exit' : 'AI prepared',
+      tag: leavingStory ? 'Exit watch' : 'Focus',
+    }];
+
+    sendJson(response, 200, {
+      data: {
+        playerName: detected.playerName,
+        clubName,
+        position: detected.position,
+        headline,
+        summary: rawText || `${detected.playerName} market update.`,
+        imageQuery: detected.playerName,
+        stats: [
+          { label: 'Goals', value: 'غير متوفر', hint: 'Source needed' },
+          { label: 'Shots / 90', value: 'غير متوفر', hint: 'Source needed' },
+          { label: 'Key passes', value: 'غير متوفر', hint: 'Source needed' },
+        ],
+        fields: {
+          playerName: detected.playerName,
+          playerTeam: clubName,
+          playerPosition: detected.position,
+          fromClub,
+          toClub,
+          dealValue,
+          confidence,
+          headline,
+          subheadline: rawText || `${clubName} transfer desk update.`,
+          latestNews: rawText,
+          marketItems: JSON.stringify(marketItems),
+        },
+        sourceNotes: ['local AI fallback'],
+      },
+      fallback: true,
+      warning,
     });
     return true;
   }

@@ -72,6 +72,7 @@ class SyncManager {
   private liveApiDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingLiveSnapshots = new Map<string, OverlayConfig>();
   private liveClientVersion = Date.now();
+  private secureWriteDisabled = false;
 
   constructor() {
     this.studioId = this.detectStudioId();
@@ -244,7 +245,7 @@ class SyncManager {
       return {
         provider: 'firebase',
         ...firebaseConfig,
-        studioId: DEFAULT_STUDIO_ID,
+        studioId: this.studioId || DEFAULT_STUDIO_ID,
         stateAccessKey: DEFAULT_STATE_ACCESS_KEY,
         controlAccessKey: window.location.hash.includes('/output/') ? '' : DEFAULT_CONTROL_ACCESS_KEY,
         updatedAt: Date.now(),
@@ -270,6 +271,7 @@ class SyncManager {
 
   private async ensureFirebaseSession() {
     if (!this.config) return false;
+    this.secureWriteDisabled = false;
 
     const webConfig = this.buildWebConfig(this.config);
     const appName = `${APP_NAMESPACE}:${this.config.projectId}:${this.config.studioId}`;
@@ -282,13 +284,24 @@ class SyncManager {
 
     await setPersistence(this.auth, browserLocalPersistence).catch(() => undefined);
     if (!this.auth.currentUser) {
-      await signInAnonymously(this.auth);
+      await signInAnonymously(this.auth).catch(error => {
+        console.warn('Anonymous Firebase auth unavailable; continuing with token path access.', error);
+        this.disableSecureWrites(error, 'Anonymous Firebase auth unavailable');
+      });
     }
 
     if (this.auth.currentUser && this.config.controlAccessKey) {
       const operatorRef = ref(this.db, this.getOperatorPath(this.auth.currentUser.uid));
-      await set(operatorRef, { connectedAt: Date.now() });
-      await onDisconnect(operatorRef).remove().catch(() => undefined);
+      await set(operatorRef, { connectedAt: Date.now() }).catch(error => {
+        this.disableSecureWrites(error, 'Firebase operator registration denied');
+      });
+      if (!this.secureWriteDisabled) {
+        await onDisconnect(operatorRef).remove().catch(error => {
+          this.disableSecureWrites(error, 'Firebase operator disconnect cleanup denied');
+        });
+      }
+    } else if (this.config.controlAccessKey) {
+      this.secureWriteDisabled = true;
     }
 
     return true;
@@ -357,7 +370,7 @@ class SyncManager {
         });
       }
 
-      this.status = 'secure';
+      this.status = this.secureWriteDisabled ? 'local' : 'secure';
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('Secure sync failed:', msg);
@@ -367,7 +380,22 @@ class SyncManager {
   }
 
   private canWriteSecureState() {
-    return Boolean(this.db && this.config?.controlAccessKey);
+    return Boolean(this.db && this.auth?.currentUser && this.config?.controlAccessKey && !this.secureWriteDisabled);
+  }
+
+  private isPermissionLikeError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return /permission[_-]?denied|admin-restricted-operation|auth\/admin-restricted-operation|permission denied/i.test(message);
+  }
+
+  private disableSecureWrites(error: unknown, context: string) {
+    if (!this.isPermissionLikeError(error)) return false;
+
+    this.secureWriteDisabled = true;
+    this.status = 'local';
+    this.lastError = 'Firebase write access is unavailable; using local and Live API sync.';
+    console.warn(`${context}; using local and Live API sync fallback.`, error);
+    return true;
   }
 
   private persist(broadcast = true) {
@@ -417,7 +445,9 @@ class SyncManager {
 
     if (this.canWriteSecureState()) {
       void this.pushToSecureState().catch(error => {
-        console.error('Failed to push secure overlay state', error);
+        if (!this.disableSecureWrites(error, 'Firebase state write denied')) {
+          console.error('Failed to push secure overlay state', error);
+        }
       });
     }
 
@@ -574,7 +604,9 @@ class SyncManager {
       this.pushToLiveApi(command.targetId, changedOverlay ?? undefined);
       if (this.canWriteSecureState()) {
         void this.pushToSecureState().catch(error => {
-          console.error('Failed to publish secure state after command', error);
+          if (!this.disableSecureWrites(error, 'Firebase command state write denied')) {
+            console.error('Failed to publish secure state after command', error);
+          }
         });
       }
     }
@@ -590,7 +622,9 @@ class SyncManager {
     if (this.config?.controlAccessKey) {
       this.processAction(command);
       void this.publishCommand(command).catch(error => {
-        console.error('Failed to publish secure command', error);
+        if (!this.disableSecureWrites(error, 'Firebase command publish denied')) {
+          console.error('Failed to publish secure command', error);
+        }
       });
       return;
     }
@@ -693,12 +727,12 @@ class SyncManager {
   }
 
   public getSmartTokenContext() {
-    if (!this.config?.controlAccessKey) return null;
+    const effectiveControlKey = this.config?.controlAccessKey || DEFAULT_CONTROL_ACCESS_KEY;
 
     return {
       provider: 'firebase' as const,
-      studioId: this.config.studioId,
-      controlAccessKey: this.config.controlAccessKey,
+      studioId: this.config?.studioId || this.studioId,
+      controlAccessKey: effectiveControlKey,
     };
   }
 

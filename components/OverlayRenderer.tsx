@@ -357,6 +357,22 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           hit(now + 0.075, 140, 0.12, 0.52);
           shimmer(now + 0.05, 620, 0.28, 0.28);
           sweep(now + 0.01, 0.24, 3600, 420, 0.2, 'bandpass');
+      } else if (cue === 'HERE_WE_GO_STING' || cue === 'DEAL_LOCK' || cue === 'CONTRACT_STAMP') {
+          hit(now, 38, 0.58, 1.18);
+          hit(now + 0.035, 86, 0.3, 0.72);
+          hit(now + 0.18, cue === 'CONTRACT_STAMP' ? 132 : 176, 0.18, 0.56);
+          shimmer(now + 0.08, 330, 0.66, 0.32);
+          sweep(now, 0.5, 2800, 160, 0.34, 'bandpass');
+      } else if (cue === 'AGENT_CALL' || cue === 'RUMOUR_GLITCH' || cue === 'MEDICAL_PASS') {
+          hit(now, cue === 'MEDICAL_PASS' ? 64 : 112, 0.28, 0.78);
+          hit(now + 0.1, cue === 'RUMOUR_GLITCH' ? 920 : 440, 0.12, 0.42);
+          hit(now + 0.18, cue === 'RUMOUR_GLITCH' ? 620 : 660, 0.1, 0.34);
+          shimmer(now + 0.08, cue === 'AGENT_CALL' ? 520 : 300, 0.42, 0.2);
+          sweep(now + 0.01, 0.36, 3600, 300, 0.22, 'bandpass');
+      } else if (cue === 'CASH_REGISTER' || cue === 'ULTRA_RISER') {
+          hit(now, 44, 0.5, 1.02);
+          shimmer(now + 0.04, cue === 'CASH_REGISTER' ? 760 : 240, 0.7, 0.34);
+          sweep(now, 0.72, cue === 'ULTRA_RISER' ? 180 : 3400, cue === 'ULTRA_RISER' ? 6200 : 540, 0.36, cue === 'ULTRA_RISER' ? 'highpass' : 'bandpass');
       } else if (cue === 'LUXURY_IMPACT' || cue === 'VAR_BUZZ') {
           hit(now, 52, 0.55, 0.95);
           hit(now + 0.025, 104, 0.22, 0.35);
@@ -387,7 +403,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextCtor) return false;
 
-      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'TRANSFER_RISER', 'DEADLINE_ALARM', 'CLUB_REVEAL', 'PHOTO_FLASH', 'NEWS_STING', 'ELITE_HIT', 'TACTICAL_LOCK', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
+      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'TRANSFER_RISER', 'DEADLINE_ALARM', 'HERE_WE_GO_STING', 'CONTRACT_STAMP', 'AGENT_CALL', 'CASH_REGISTER', 'MEDICAL_PASS', 'RUMOUR_GLITCH', 'DEAL_LOCK', 'ULTRA_RISER', 'CLUB_REVEAL', 'PHOTO_FLASH', 'NEWS_STING', 'ELITE_HIT', 'TACTICAL_LOCK', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
           return playLuxurySound(cue);
       }
 
