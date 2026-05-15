@@ -834,13 +834,23 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
       if (resolvedPlayerName) {
         parsed.playerName = String(resolvedPlayerName);
-        setFieldWhenWeak(fields, 'sourcePlayerName', String(resolvedPlayerName));
-        setFieldWhenWeak(fields, 'playerAName', String(resolvedPlayerName));
+        if (localPlayer) {
+          fields.sourcePlayerName = String(resolvedPlayerName);
+          fields.playerAName = String(resolvedPlayerName);
+        } else {
+          setFieldWhenWeak(fields, 'sourcePlayerName', String(resolvedPlayerName));
+          setFieldWhenWeak(fields, 'playerAName', String(resolvedPlayerName));
+        }
       }
       if (localClub) {
         parsed.clubName = String(localClub);
-        setFieldWhenWeak(fields, 'sourceClubName', String(localClub));
-        setFieldWhenWeak(fields, 'playerAClub', String(localClub));
+        if (localPlayer || detectLocalClub(identityText)) {
+          fields.sourceClubName = String(localClub);
+          fields.playerAClub = String(localClub);
+        } else {
+          setFieldWhenWeak(fields, 'sourceClubName', String(localClub));
+          setFieldWhenWeak(fields, 'playerAClub', String(localClub));
+        }
       }
       if (resolvedPosition) {
         parsed.position = String(resolvedPosition);
