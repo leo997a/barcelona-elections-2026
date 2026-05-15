@@ -54,6 +54,23 @@ const normalizeKey = (value) => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
+const buildNameAliases = (name) => {
+  const cleanName = String(name || '').trim();
+  if (!cleanName) return [];
+  const parts = cleanName.split(/\s+/).filter(Boolean);
+  const aliases = new Set([cleanName, normalizeKey(cleanName)]);
+  if (parts.length >= 2) {
+    const surname = parts.slice(1).join(' ');
+    aliases.add(surname);
+    aliases.add(normalizeKey(surname));
+    aliases.add(`${parts[0][0]}. ${surname}`);
+    aliases.add(`${normalizeKey(parts[0][0])}. ${normalizeKey(surname)}`);
+    aliases.add(`${parts[0][0]} ${surname}`);
+    aliases.add(`${normalizeKey(parts[0][0])} ${normalizeKey(surname)}`);
+  }
+  return Array.from(aliases).filter(Boolean);
+};
+
 const addAlias = (cache, key, url) => {
   const cleanKey = String(key || '').trim();
   let cleanUrl = String(url || '').trim();
@@ -69,6 +86,10 @@ const addAlias = (cache, key, url) => {
   if (asciiKey && asciiKey !== cleanKey && !cache[asciiKey]) {
     cache[asciiKey] = cleanUrl;
   }
+
+  buildNameAliases(cleanKey).forEach((alias) => {
+    if (!cache[alias]) cache[alias] = cleanUrl;
+  });
 };
 
 const apiPath = encodePath(config.sourcePath);

@@ -1073,6 +1073,10 @@ const PlayerAvatar: React.FC<{ src?: string; name: string; color: string; classN
   const [failed, setFailed] = useState(false);
   const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P';
 
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
   return (
     <div className={`relative shrink-0 overflow-hidden rounded-md border border-white/10 bg-black/45 ${className}`}>
       <div className="absolute inset-0 opacity-30" style={{ background: `linear-gradient(135deg, ${color}, transparent 72%)` }} />
@@ -1080,7 +1084,7 @@ const PlayerAvatar: React.FC<{ src?: string; name: string; color: string; classN
         <img
           src={src}
           alt={name}
-          loading="lazy"
+          loading="eager"
           decoding="async"
           referrerPolicy="no-referrer"
           className="relative z-10 h-full w-full object-cover"
@@ -1154,7 +1158,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
 
     const loadImageCache = async () => {
       try {
-        const response = await fetch(playerImageCacheUrl, { cache: 'force-cache' });
+        const response = await fetch(playerImageCacheUrl, { cache: 'no-cache' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
         if (!cancelled) {

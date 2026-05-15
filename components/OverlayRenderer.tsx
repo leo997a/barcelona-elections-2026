@@ -262,7 +262,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const now = ac.currentTime;
       const master = ac.createGain();
       const compressor = ac.createDynamicsCompressor();
-      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.34, now);
+      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.62, now);
       master.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
       compressor.threshold.value = -22;
       compressor.knee.value = 28;
@@ -326,7 +326,22 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           source.stop(start + duration + 0.02);
       };
 
-      if (cue === 'LUXURY_IMPACT' || cue === 'VAR_BUZZ') {
+      if (cue === 'MERCATO_HIT') {
+          hit(now, 42, 0.42, 1.05);
+          hit(now + 0.035, 118, 0.18, 0.46);
+          shimmer(now + 0.08, 260, 0.54, 0.28);
+          sweep(now + 0.02, 0.52, 2200, 180, 0.32, 'bandpass');
+          sweep(now + 0.12, 0.58, 360, 4800, 0.22, 'highpass');
+      } else if (cue === 'CINEMA_BOOM') {
+          hit(now, 34, 0.72, 1.1);
+          hit(now + 0.05, 72, 0.38, 0.48);
+          sweep(now, 0.72, 140, 2400, 0.26, 'lowpass');
+      } else if (cue === 'DATA_SLAM') {
+          hit(now, 90, 0.18, 0.7);
+          hit(now + 0.075, 140, 0.12, 0.52);
+          shimmer(now + 0.05, 620, 0.28, 0.28);
+          sweep(now + 0.01, 0.24, 3600, 420, 0.2, 'bandpass');
+      } else if (cue === 'LUXURY_IMPACT' || cue === 'VAR_BUZZ') {
           hit(now, 52, 0.55, 0.95);
           hit(now + 0.025, 104, 0.22, 0.35);
           shimmer(now + 0.08, 196, 0.58, 0.18);
@@ -356,7 +371,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextCtor) return false;
 
-      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT'].includes(cue)) {
+      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
           return playLuxurySound(cue);
       }
 
@@ -367,7 +382,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const now = sharedAudioContext.currentTime;
       const master = sharedAudioContext.createGain();
       master.connect(sharedAudioContext.destination);
-      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.16, now);
+      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.28, now);
       master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
 
       pattern.forEach(step => {

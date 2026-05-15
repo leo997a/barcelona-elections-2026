@@ -71,6 +71,9 @@ export const BROADCAST_SOUND_OPTIONS = [
     { value: 'LUXURY_STING', label: 'Luxury Sting' },
     { value: 'LUXURY_SWEEP', label: 'Luxury Sweep' },
     { value: 'LUXURY_IMPACT', label: 'Luxury Impact' },
+    { value: 'MERCATO_HIT', label: 'Mercato Hit' },
+    { value: 'CINEMA_BOOM', label: 'Cinema Boom' },
+    { value: 'DATA_SLAM', label: 'Data Slam' },
     { value: 'LUXURY_OUT', label: 'Luxury Out' },
     { value: 'SOFT_FADE', label: 'Soft Fade' },
     { value: 'BROADCAST_OUT', label: 'Broadcast Out' },
@@ -104,6 +107,22 @@ export const ELECTION_SOUND_PATTERNS: Record<string, ElectionSynthStep[]> = {
         { delay: 0, duration: 0.22, frequency: 48, toFrequency: 38, waveform: 'sine', gain: 0.9 },
         { delay: 0.02, duration: 0.12, frequency: 112, toFrequency: 76, waveform: 'triangle', gain: 0.42 },
         { delay: 0.1, duration: 0.2, frequency: 330, toFrequency: 440, waveform: 'sine', gain: 0.16 },
+    ],
+    MERCATO_HIT: [
+        { delay: 0, duration: 0.2, frequency: 44, toFrequency: 32, waveform: 'sine', gain: 1.0 },
+        { delay: 0.035, duration: 0.16, frequency: 118, toFrequency: 84, waveform: 'sawtooth', gain: 0.52 },
+        { delay: 0.14, duration: 0.28, frequency: 520, toFrequency: 980, waveform: 'triangle', gain: 0.28 },
+        { delay: 0.34, duration: 0.18, frequency: 1240, waveform: 'sine', gain: 0.18 },
+    ],
+    CINEMA_BOOM: [
+        { delay: 0, duration: 0.42, frequency: 38, toFrequency: 28, waveform: 'sine', gain: 1.0 },
+        { delay: 0.03, duration: 0.28, frequency: 76, toFrequency: 50, waveform: 'triangle', gain: 0.55 },
+        { delay: 0.18, duration: 0.48, frequency: 220, toFrequency: 360, waveform: 'sawtooth', gain: 0.22 },
+    ],
+    DATA_SLAM: [
+        { delay: 0, duration: 0.06, frequency: 920, waveform: 'square', gain: 0.34 },
+        { delay: 0.07, duration: 0.08, frequency: 640, waveform: 'square', gain: 0.42 },
+        { delay: 0.16, duration: 0.18, frequency: 260, toFrequency: 140, waveform: 'sawtooth', gain: 0.44 },
     ],
     LUXURY_OUT: [
         { delay: 0, duration: 0.24, frequency: 420, toFrequency: 220, waveform: 'triangle', gain: 0.16 },
