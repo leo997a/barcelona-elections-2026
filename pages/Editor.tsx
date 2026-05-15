@@ -75,6 +75,18 @@ type BridgeStatusSnapshot = {
   errorCount?: number;
   stoppedReason?: string | null;
   provider?: string;
+  archiveOnSuccess?: boolean;
+  archive?: {
+    enabled?: boolean;
+    ok?: boolean;
+    skipped?: boolean;
+    reason?: string;
+    path?: string | null;
+    url?: string;
+    error?: string;
+    committedAt?: string;
+    checkedAt?: string;
+  } | null;
   match?: {
     homeTeam?: string;
     awayTeam?: string;
@@ -648,7 +660,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   const callMatchStatsControl = async (
-    action: 'set-match' | 'start' | 'stop',
+    action: 'set-match' | 'start' | 'stop' | 'archive',
     body: Record<string, unknown> = {},
     signal?: AbortSignal,
   ) => {
@@ -732,6 +744,34 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
   };
 
+  const handleArchiveMatchStatsBridge = async () => {
+    setIsBridgeActionRunning(true);
+    setMatchStatsImportMessage(null);
+    try {
+      const payload = await callMatchStatsControl('archive');
+      const archive = payload.archive;
+      if (archive?.ok) {
+        const archivePath = archive.path ? `: ${archive.path}` : '';
+        setMatchStatsImportMessage({
+          type: 'success',
+          text: archive.skipped ? `الأرشيف موجود ولم يتغير${archivePath}` : `تم حفظ لقطة المباراة في GitHub${archivePath}`,
+        });
+      } else {
+        setMatchStatsImportMessage({
+          type: 'error',
+          text: archive?.error || archive?.reason || 'تعذر حفظ أرشيف المباراة في GitHub.',
+        });
+      }
+    } catch (error) {
+      setMatchStatsImportMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'تعذر حفظ أرشيف المباراة في GitHub.',
+      });
+    } finally {
+      setIsBridgeActionRunning(false);
+    }
+  };
+
   const handleImportMatchStatsFromBridge = async () => {
     setIsImportingMatchStats(true);
     setMatchStatsImportMessage(null);
@@ -809,6 +849,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
     ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` · ${bridgeClock}` : ''}`
     : null;
+  const bridgeArchive = bridgeStatus?.archive;
   const bridgeControlsLocked = !isAdminUnlocked || isImportingMatchStats || isBridgeActionRunning;
 
   return (
@@ -901,6 +942,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     </div>
                     {bridgeStatus?.lastError && (
                         <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
+                    )}
+                    {bridgeArchive && (
+                        <div className={`mt-1 truncate text-[10px] font-bold ${bridgeArchive.ok ? 'text-emerald-200/90' : 'text-red-300'}`}>
+                            {bridgeArchive.ok
+                              ? `GitHub Archive${bridgeArchive.skipped ? ' · unchanged' : ''}: ${bridgeArchive.path || 'ready'}`
+                              : `Archive error: ${bridgeArchive.error || bridgeArchive.reason || 'not saved'}`}
+                        </div>
                     )}
                 </div>
                 <div className="rounded-lg border border-blue-800/35 bg-slate-950/45 p-3 space-y-3">
@@ -1098,6 +1146,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       className="bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                         <RefreshCw className="w-3 h-3" /> فحص حالة Google Cloud
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleArchiveMatchStatsBridge}
+                      disabled={bridgeControlsLocked}
+                      className="col-span-2 bg-cyan-700/80 hover:bg-cyan-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <History className="w-3 h-3" /> أرشفة الآن في GitHub
                     </button>
                     <button
                       type="button"

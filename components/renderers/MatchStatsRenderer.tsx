@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
 
+const DEFAULT_PLAYER_IMAGE_CACHE_URL = '/player-image-cache/barcelona.json?v=20260515';
+
 type TeamStats = {
   possession: number;
   shots: number;
@@ -377,6 +379,21 @@ const lookupKey = (value: unknown) => String(value || '')
   .toLowerCase()
   .replace(/\s+/g, ' ');
 
+const playerImageLookupKeys = (player: PlayerStats) => {
+  const name = String(player.name || '').trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const first = parts[0] || '';
+  const last = parts[parts.length - 1] || '';
+  const initials = first && last ? [`${first[0]} ${last}`, `${first[0]}. ${last}`] : [];
+  return [
+    player.image,
+    player.id,
+    name,
+    last,
+    ...initials,
+  ].filter(Boolean);
+};
+
 const parsePlayerImageMap = (value: string): Record<string, string> => {
   if (!value.trim()) return {};
   try {
@@ -410,12 +427,15 @@ const parsePlayerImageMap = (value: string): Record<string, string> => {
   }
 };
 
-const resolvePlayerImage = (player: PlayerStats, imageMap: Record<string, string>) => (
-  player.image ||
-  imageMap[lookupKey(player.id)] ||
-  imageMap[lookupKey(player.name)] ||
-  ''
-);
+const resolvePlayerImage = (player: PlayerStats, imageMap: Record<string, string>) => {
+  for (const candidate of playerImageLookupKeys(player)) {
+    const value = String(candidate || '').trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    const found = imageMap[lookupKey(value)];
+    if (found) return found;
+  }
+  return '';
+};
 
 const statIconById: Record<string, LucideIcon> = {
   possession: Activity,
@@ -678,9 +698,10 @@ const normalizeExtractorOutput = (raw: Record<string, unknown>): MatchViewData =
     return list.map((player, index) => {
       const source = (player || {}) as Record<string, unknown>;
       const teamId = String(source.teamId || (isHome ? homeId : awayId));
+      const playerId = String(source.id || source.playerId || `${teamId}-${index}`);
       return {
         ...emptyPlayer(
-          String(source.id || source.playerId || `${teamId}-${index}`),
+          playerId,
           String(source.name || source.playerName || `Player ${index + 1}`),
           teamId,
           isHome,
@@ -1141,7 +1162,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const creatorPositionX = clamp(toNumber(getField('creatorPositionX'), 0), -700, 700);
   const creatorPositionY = clamp(toNumber(getField('creatorPositionY'), 0), -450, 450);
   const playerImageMapJson = String(getField('playerImageMapJson') || '{}');
-  const playerImageCacheUrl = String(getField('playerImageCacheUrl') || '').trim();
+  const playerImageCacheUrl = String(getField('playerImageCacheUrl') || DEFAULT_PLAYER_IMAGE_CACHE_URL).trim();
   const dataSourceName = String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'REO Cloud Bridge' : 'REO Live Bridge'));
   const [remotePlayerImageMap, setRemotePlayerImageMap] = useState<Record<string, string>>({});
   const manualPlayerImageMap = useMemo(() => parsePlayerImageMap(playerImageMapJson), [playerImageMapJson]);

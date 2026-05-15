@@ -15,6 +15,7 @@ proxy.
 - `POST /api/control/set-match` authenticated `{ "url": "https://www.whoscored.com/matches/.../live/..." }`
 - `POST /api/control/start` authenticated optional `{ "url": "...", "intervalSec": 60 }`
 - `POST /api/control/stop` authenticated manual stop
+- `POST /api/control/archive` authenticated force-save of the latest payload to GitHub
 
 ## Safety Defaults
 
@@ -22,6 +23,7 @@ proxy.
 - Minimum interval defaults to 30 seconds.
 - Default extraction interval is 60 seconds.
 - Backoff increases after errors.
+- Every successful extraction is archived to GitHub when archive env vars are set.
 - Service stops automatically when WhoScored status matches a final status.
 - Service stops after `REO_MAX_RUNTIME_SECONDS` even if the final status is not detected.
 - Browser cleanup runs under the dedicated `reo-bridge` Linux user.
@@ -40,16 +42,17 @@ REO_ALLOWED_ORIGINS=https://barcelona-elections-2026.vercel.app
 PORT=3005
 ```
 
-Optional GitHub archive after final whistle:
+Optional GitHub archive:
 
 ```bash
 REO_ARCHIVE_GITHUB_TOKEN=github-token-with-contents-write
 REO_ARCHIVE_GITHUB_REPO=owner/repo
 REO_ARCHIVE_GITHUB_BRANCH=main
 REO_ARCHIVE_BASE_PATH=match-archive
+REO_ARCHIVE_ON_SUCCESS=1
 ```
 
-When enabled, the bridge writes the final payload into:
+When enabled, the bridge writes each changed successful extraction into:
 
 ```text
 match-archive/<season>/<competition>/<round>/<date>_<matchId>_<home>-vs-<away>.json
@@ -57,6 +60,10 @@ match-archive/<season>/<competition>/<round>/<date>_<matchId>_<home>-vs-<away>.j
 
 If the file already exists, the bridge updates it using the GitHub Contents API
 SHA instead of failing on duplicate paths.
+
+If GitHub rejects the token or the archive env vars are missing, the bridge keeps
+the payload on the VM under `data/archive-queue/<archive-path>.json` and returns
+`queuedPath` in the archive status so the extraction is not lost.
 
 Use Vercel env vars:
 

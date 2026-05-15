@@ -18,6 +18,7 @@ const actionPath = (action: string | null) => {
   if (action === 'set-match') return '/api/control/set-match';
   if (action === 'start') return '/api/control/start';
   if (action === 'stop') return '/api/control/stop';
+  if (action === 'archive') return '/api/control/archive';
   return null;
 };
 
@@ -47,7 +48,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
   const path = actionPath(getQuery(req).get('action'));
   if (!path) {
-    return sendJson(res, 400, { error: 'Invalid action. Use set-match, start, or stop.' });
+    return sendJson(res, 400, { error: 'Invalid action. Use set-match, start, stop, or archive.' });
   }
 
   return proxyBridgePost(req, res, path);

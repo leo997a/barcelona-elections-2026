@@ -7,13 +7,16 @@ import {
 } from './_lib/http.js';
 
 interface AiRequestBody {
-  action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers';
+  action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card';
   sport?: string;
   rawText?: string;
   targetPages?: number;
   viewers?: { name: string; rank: number }[];
   channelName?: string;
   images?: string[];
+  templateType?: string;
+  playerName?: string;
+  clubName?: string;
 }
 
 type GeminiPart =
@@ -26,10 +29,40 @@ type GeminiContent = {
 };
 
 const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+const AI_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 25_000);
 
 const uniqueModels = () => {
   const configured = process.env.GEMINI_MODEL?.trim();
   return Array.from(new Set([configured, ...FALLBACK_MODELS].filter(Boolean))) as string[];
+};
+
+const splitEnvList = (value?: string) => (value || '')
+  .split(/[\n,]+/)
+  .map(item => item.trim())
+  .filter(Boolean);
+
+const geminiApiKeys = () => Array.from(new Set([
+  process.env.GEMINI_API_KEY?.trim(),
+  ...splitEnvList(process.env.GEMINI_API_KEYS),
+].filter(Boolean))) as string[];
+
+const liteLlmProxyUrl = () => process.env.LITELLM_PROXY_URL?.trim().replace(/\/+$/, '') || '';
+
+const liteLlmModels = () => {
+  const models = splitEnvList(process.env.LITELLM_MODELS);
+  return models.length ? models : ['gemini/gemini-2.5-flash', 'gemini/gemini-2.5-flash-lite'];
+};
+
+const hasAiBackend = () => Boolean(liteLlmProxyUrl() || geminiApiKeys().length);
+
+const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs = AI_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 const cleanJsonOutput = (text: string): string => {
@@ -154,27 +187,91 @@ const getInputError = (body: AiRequestBody): string | null => {
   if (body.action === 'smart-text' && !body.rawText?.trim()) return 'النص الخام مطلوب.';
   if (body.action === 'viewer-badges' && !(body.viewers || []).length) return 'يلزم وجود قائمة متفاعلين.';
   if (body.action === 'extract-viewers' && !(body.images || []).length) return 'يلزم إرسال صورة واحدة على الأقل.';
+  if (body.action === 'template-assist' && !body.rawText?.trim() && !(body.images || []).length) return 'أرسل نصا أو صورة ليقترح الذكاء محتوى القالب.';
+  if (body.action === 'player-transfer-card' && !body.playerName?.trim() && !body.rawText?.trim()) return 'أدخل اسم اللاعب أو نص الخبر أولا.';
   return null;
 };
 
-async function callGeminiRaw(apiKey: string, contents: GeminiContent[], jsonMode = true) {
+async function callGeminiRaw(contents: GeminiContent[], jsonMode = true) {
   const errors: string[] = [];
 
-  for (const model of uniqueModels()) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const body = {
-      contents,
-      generationConfig: {
-        temperature: 0.35,
-        topP: 0.9,
-        ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
-      },
-    };
+  for (const apiKey of geminiApiKeys()) {
+    for (const model of uniqueModels()) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const body = {
+        contents,
+        generationConfig: {
+          temperature: 0.35,
+          topP: 0.9,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+      };
 
-    const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => response.statusText);
+        errors.push(`${model}: ${response.status} ${detail.slice(0, 220)}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts
+        ?.map((part: { text?: string }) => part.text || '')
+        .join('')
+        .trim();
+
+      if (text) return text;
+      errors.push(`${model}: empty response`);
+    }
+  }
+
+  if (jsonMode) {
+    try {
+      return await callGeminiRaw(contents, false);
+    } catch (fallbackError) {
+      errors.push(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+    }
+  }
+
+  throw new Error(`Gemini request failed. Tried ${uniqueModels().join(', ')}. ${errors.join(' | ')}`);
+}
+
+const toOpenAiMessages = (contents: GeminiContent[]) => contents.map(content => ({
+  role: content.role === 'model' ? 'assistant' : 'user',
+  content: content.parts.map(part => {
+    if ('text' in part) return { type: 'text', text: part.text };
+    return {
+      type: 'image_url',
+      image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` },
+    };
+  }),
+}));
+
+async function callLiteLlmRaw(contents: GeminiContent[], jsonMode = true) {
+  const proxyUrl = liteLlmProxyUrl();
+  if (!proxyUrl) throw new Error('LITELLM_PROXY_URL is not configured');
+
+  const errors: string[] = [];
+  const apiKey = process.env.LITELLM_API_KEY?.trim();
+
+  for (const model of liteLlmModels()) {
+    const response = await fetchWithTimeout(`${proxyUrl}/v1/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages: toOpenAiMessages(contents),
+        temperature: 0.35,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      }),
     });
 
     if (!response.ok) {
@@ -184,24 +281,39 @@ async function callGeminiRaw(apiKey: string, contents: GeminiContent[], jsonMode
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text || '')
-      .join('')
-      .trim();
-
+    const text = String(data.choices?.[0]?.message?.content || '').trim();
     if (text) return text;
     errors.push(`${model}: empty response`);
   }
 
   if (jsonMode) {
     try {
-      return await callGeminiRaw(apiKey, contents, false);
+      return await callLiteLlmRaw(contents, false);
     } catch (fallbackError) {
       errors.push(fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
     }
   }
 
-  throw new Error(`Gemini request failed. Tried ${uniqueModels().join(', ')}. ${errors.join(' | ')}`);
+  throw new Error(`LiteLLM request failed. Tried ${liteLlmModels().join(', ')}. ${errors.join(' | ')}`);
+}
+
+async function callAiRaw(contents: GeminiContent[], jsonMode = true) {
+  const errors: string[] = [];
+  if (liteLlmProxyUrl()) {
+    try {
+      return await callLiteLlmRaw(contents, jsonMode);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (geminiApiKeys().length) {
+    try {
+      return await callGeminiRaw(contents, jsonMode);
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  throw new Error(errors.join(' | ') || 'No AI backend configured');
 }
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
@@ -215,19 +327,18 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const inputError = getInputError(body);
   if (inputError) return sendJson(res, 400, { error: inputError });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    if (sendLocalFallback(res, body, 'GEMINI_API_KEY is not configured')) return;
+  if (!hasAiBackend()) {
+    if (sendLocalFallback(res, body, 'No AI backend is configured')) return;
 
     return sendJson(res, 503, {
-      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY في متغيرات البيئة.',
+      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY أو GEMINI_API_KEYS أو LITELLM_PROXY_URL في متغيرات البيئة.',
     });
   }
 
   try {
     if (body.action === 'match-data') {
       const sport = body.sport?.trim() || 'football';
-      const text = await callGeminiRaw(apiKey, [
+      const text = await callAiRaw([
         {
           role: 'user',
           parts: [{
@@ -263,7 +374,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       if (!rawText) return sendJson(res, 400, { error: 'النص الخام مطلوب.' });
 
       const targetPages = clampInteger(body.targetPages, 6, 1, 20);
-      const text = await callGeminiRaw(apiKey, [
+      const text = await callAiRaw([
         {
           role: 'user',
           parts: [{
@@ -286,7 +397,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       if (!viewers.length) return sendJson(res, 400, { error: 'يلزم وجود قائمة متفاعلين.' });
 
       const list = viewers.map(viewer => `المرتبة ${viewer.rank}: ${viewer.name}`).join('\n');
-      const text = await callGeminiRaw(apiKey, [
+      const text = await callAiRaw([
         {
           role: 'user',
           parts: [{
@@ -314,7 +425,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         },
       }));
 
-      const text = await callGeminiRaw(apiKey, [
+      const text = await callAiRaw([
         {
           role: 'user',
           parts: [
@@ -331,6 +442,74 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
       const parsed = parseModelJson<{ items?: { rank: number; name: string; badge: string }[] }>(text);
       return sendJson(res, 200, { data: parsed.items || [] });
+    }
+
+    if (body.action === 'template-assist') {
+      const rawText = body.rawText?.trim() || '';
+      const templateType = body.templateType || 'broadcast overlay';
+      const imageParts: GeminiPart[] = (body.images || []).slice(0, 2).map(image => ({
+        inlineData: {
+          mimeType: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+          data: image.replace(/^data:image\/\w+;base64,/, ''),
+        },
+      }));
+
+      const text = await callAiRaw([
+        {
+          role: 'user',
+          parts: [
+            {
+              text:
+                'أنت مساعد إنتاج بث رياضي عربي. حوّل المدخل إلى حقول جاهزة لقالب بث، بدون اختراع نتائج مباشرة أو أرقام غير موجودة.\n' +
+                `نوع القالب: ${templateType}\n` +
+                'أعد JSON فقط بهذا الشكل: {"title":"عنوان قصير","subtitle":"سطر داعم","labels":["وسم 1","وسم 2"],"fields":{"fieldId":"value"},"notes":["تنبيه قصير"]}\n' +
+                `النص:\n${rawText}`,
+            },
+            ...imageParts,
+          ],
+        },
+      ]);
+
+      const parsed = parseModelJson<{
+        title?: string;
+        subtitle?: string;
+        labels?: string[];
+        fields?: Record<string, string | number | boolean>;
+        notes?: string[];
+      }>(text);
+      return sendJson(res, 200, { data: parsed });
+    }
+
+    if (body.action === 'player-transfer-card') {
+      const playerName = body.playerName?.trim() || '';
+      const clubName = body.clubName?.trim() || '';
+      const rawText = body.rawText?.trim() || '';
+
+      const text = await callAiRaw([
+        {
+          role: 'user',
+          parts: [{
+            text:
+              'أنت محرر ميركاتو وتحليل لاعبين. استخرج بطاقة لاعب للانتقالات من النص أو الاسم، ولا تخترع إحصائيات غير مذكورة.\n' +
+              'إذا كانت الإحصائيات غير متاحة أعد null في الحقول الرقمية واترك ملاحظة مصدر.\n' +
+              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","headline":"...","summary":"...","stats":[{"label":"...","value":"..."}],"searchHints":["WhoScored player page","image cache key"],"imageQuery":"...","sourceNotes":["..."]}\n' +
+              `اسم اللاعب: ${playerName}\nالنادي: ${clubName}\nالنص:\n${rawText}`,
+          }],
+        },
+      ]);
+
+      const parsed = parseModelJson<{
+        playerName?: string;
+        clubName?: string;
+        position?: string;
+        headline?: string;
+        summary?: string;
+        stats?: { label: string; value: string | number | null }[];
+        searchHints?: string[];
+        imageQuery?: string;
+        sourceNotes?: string[];
+      }>(text);
+      return sendJson(res, 200, { data: parsed });
     }
 
     return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });

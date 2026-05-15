@@ -9,6 +9,7 @@ errors, and stops automatically when the match reaches a final status.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -47,6 +48,7 @@ ARCHIVE_GITHUB_TOKEN = os.environ.get("REO_ARCHIVE_GITHUB_TOKEN", "")
 ARCHIVE_GITHUB_REPO = os.environ.get("REO_ARCHIVE_GITHUB_REPO", "")
 ARCHIVE_GITHUB_BRANCH = os.environ.get("REO_ARCHIVE_GITHUB_BRANCH", "main")
 ARCHIVE_BASE_PATH = os.environ.get("REO_ARCHIVE_BASE_PATH", "match-archive")
+ARCHIVE_ON_SUCCESS = os.environ.get("REO_ARCHIVE_ON_SUCCESS", "1") != "0"
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
@@ -180,9 +182,16 @@ def derive_archive_path(payload: dict[str, Any], url: str) -> str:
 
 
 def archive_match_to_github(payload: dict[str, Any], url: str) -> dict[str, Any]:
-    if not ARCHIVE_GITHUB_TOKEN or not ARCHIVE_GITHUB_REPO:
-        return {"enabled": False, "reason": "missing REO_ARCHIVE_GITHUB_TOKEN or REO_ARCHIVE_GITHUB_REPO"}
     archive_path = derive_archive_path(payload, url)
+    if not ARCHIVE_GITHUB_TOKEN or not ARCHIVE_GITHUB_REPO:
+        queued_path = queue_archive_payload(payload, archive_path, "missing REO_ARCHIVE_GITHUB_TOKEN or REO_ARCHIVE_GITHUB_REPO")
+        return {
+            "enabled": False,
+            "ok": False,
+            "path": archive_path,
+            "queuedPath": queued_path,
+            "reason": "missing REO_ARCHIVE_GITHUB_TOKEN or REO_ARCHIVE_GITHUB_REPO",
+        }
     encoded_path = quote(archive_path, safe="/")
     contents_url = f"https://api.github.com/repos/{ARCHIVE_GITHUB_REPO}/contents/{encoded_path}"
     headers = {
@@ -206,9 +215,23 @@ def archive_match_to_github(payload: dict[str, Any], url: str) -> dict[str, Any]
     except urllib.error.HTTPError as error:
         if error.code != 404:
             details = error.read().decode("utf-8", errors="replace")
-            return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub lookup {error.code}: {details[:500]}"}
+            error_text = f"GitHub lookup {error.code}: {details[:500]}"
+            return {
+                "enabled": True,
+                "ok": False,
+                "path": archive_path,
+                "queuedPath": queue_archive_payload(payload, archive_path, error_text),
+                "error": error_text,
+            }
     except Exception as error:
-        return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub lookup failed: {error}"}
+        error_text = f"GitHub lookup failed: {error}"
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": archive_path,
+            "queuedPath": queue_archive_payload(payload, archive_path, error_text),
+            "error": error_text,
+        }
 
     request = urllib.request.Request(
         contents_url,
@@ -228,9 +251,56 @@ def archive_match_to_github(payload: dict[str, Any], url: str) -> dict[str, Any]
         }
     except urllib.error.HTTPError as error:
         details = error.read().decode("utf-8", errors="replace")
-        return {"enabled": True, "ok": False, "path": archive_path, "error": f"GitHub {error.code}: {details[:500]}"}
+        error_text = f"GitHub {error.code}: {details[:500]}"
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": archive_path,
+            "queuedPath": queue_archive_payload(payload, archive_path, error_text),
+            "error": error_text,
+        }
     except Exception as error:
-        return {"enabled": True, "ok": False, "path": archive_path, "error": str(error)}
+        error_text = str(error)
+        return {
+            "enabled": True,
+            "ok": False,
+            "path": archive_path,
+            "queuedPath": queue_archive_payload(payload, archive_path, error_text),
+            "error": error_text,
+        }
+
+
+def queue_archive_payload(payload: dict[str, Any], archive_path: str, reason: str) -> str:
+    queued_file = DATA_DIR / "archive-queue" / archive_path
+    queued_file.parent.mkdir(parents=True, exist_ok=True)
+    queued_file.write_text(
+        json.dumps(
+            {
+                "archivePath": archive_path,
+                "queuedAt": now_iso(),
+                "lastError": reason,
+                "payload": payload,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return str(queued_file)
+
+
+def archive_fingerprint(payload: dict[str, Any]) -> str:
+    """Build a stable hash for real match data while ignoring bridge timestamps."""
+    try:
+        stable = json.loads(json.dumps(payload, ensure_ascii=False))
+        meta = stable.get("meta")
+        if isinstance(meta, dict):
+            for key in ("bridgeUpdatedAt", "extractedAt", "snapshotFile"):
+                meta.pop(key, None)
+        encoded = json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    except Exception:
+        encoded = repr(payload)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def cleanup_browser_processes() -> None:
@@ -259,6 +329,7 @@ class BridgeState:
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.data: dict[str, Any] | None = read_json(LATEST_FILE, None)
+        self.last_archive_fingerprint = ""
         self.status: dict[str, Any] = {
             "ok": True,
             "service": "reo-match-bridge",
@@ -277,6 +348,7 @@ class BridgeState:
             "match": (self.data or {}).get("match") if isinstance(self.data, dict) else None,
             "provider": METRICS_CATALOG["provider"],
             "archive": None,
+            "archiveOnSuccess": ARCHIVE_ON_SUCCESS,
         }
 
     def snapshot(self) -> dict[str, Any]:
@@ -291,6 +363,7 @@ class BridgeState:
         with self.lock:
             if cleaned != self.status.get("currentUrl"):
                 self.data = None
+                self.last_archive_fingerprint = ""
                 self.status["hasData"] = False
                 self.status["match"] = None
                 self.status["archive"] = None
@@ -349,6 +422,55 @@ class BridgeState:
         status_value = str(match.get("status") or "").strip().lower()
         return bool(status_value and status_value in FINAL_STATUS_VALUES)
 
+    def _archive_snapshot(
+        self,
+        payload: dict[str, Any],
+        url: str,
+        reason: str,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        if not payload:
+            result = {"enabled": bool(ARCHIVE_GITHUB_TOKEN and ARCHIVE_GITHUB_REPO), "ok": False, "reason": "no match data yet"}
+            with self.lock:
+                self.status["archive"] = result
+            return result
+
+        fingerprint = archive_fingerprint(payload)
+        with self.lock:
+            previous_fingerprint = self.last_archive_fingerprint
+
+        if not force and previous_fingerprint == fingerprint:
+            path = derive_archive_path(payload, url) if ARCHIVE_GITHUB_TOKEN and ARCHIVE_GITHUB_REPO else None
+            result = {
+                "enabled": bool(ARCHIVE_GITHUB_TOKEN and ARCHIVE_GITHUB_REPO),
+                "ok": True,
+                "skipped": True,
+                "reason": "unchanged",
+                "path": path,
+                "checkedAt": now_iso(),
+            }
+            with self.lock:
+                self.status["archive"] = result
+            return result
+
+        result = archive_match_to_github(payload, url)
+        result["reason"] = reason
+        with self.lock:
+            self.status["archive"] = result
+            if result.get("ok"):
+                self.last_archive_fingerprint = fingerprint
+        return result
+
+    def force_archive(self) -> dict[str, Any]:
+        with self.lock:
+            data = self.data if isinstance(self.data, dict) else read_json(LATEST_FILE, None)
+            url = str(self.status.get("currentUrl") or (data or {}).get("meta", {}).get("sourceUrl") or "")
+        if not data:
+            self._archive_snapshot({}, url, "manual_force", force=True)
+            return self.snapshot()
+        self._archive_snapshot(data, url, "manual_force", force=True)
+        return self.snapshot()
+
     def _run_loop(self) -> None:
         started = datetime.utcnow()
         while not self.stop_event.is_set():
@@ -380,10 +502,12 @@ class BridgeState:
                         "match": data.get("match"),
                     })
 
+                if ARCHIVE_ON_SUCCESS:
+                    self._archive_snapshot(data, url, "poll_success")
+
                 if self._should_stop_for_final(data):
-                    archive_result = archive_match_to_github(data, url)
-                    with self.lock:
-                        self.status["archive"] = archive_result
+                    if not ARCHIVE_ON_SUCCESS:
+                        self._archive_snapshot(data, url, "match_final", force=True)
                     self.stop("match_final")
                     break
             except Exception as error:
@@ -504,6 +628,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/control/stop":
                 self._send_json(200, STATE.stop("manual_stop"))
+                return
+            if path == "/api/control/archive":
+                self._send_json(200, STATE.force_archive())
                 return
             self._send_json(404, {"error": "Not found"})
         except Exception as error:

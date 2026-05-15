@@ -322,6 +322,8 @@ def process_events(events: List, player_dict: Dict) -> Dict:
 
         if player_id and player_id not in player_stats:
             player_stats[player_id] = {
+                "id": player_id,
+                "playerId": player_id,
                 "name": player_dict.get(player_id, f"Player {player_id}"),
                 "teamId": team_id,
                 "shots": 0, "shotsOnTarget": 0, "shotsOffTarget": 0,
