@@ -147,8 +147,69 @@ const fallbackViewerBadges = (viewers: { name: string; rank: number }[]) => {
   }));
 };
 
+const normalizeArabicText = (text: string) => text
+  .toLowerCase()
+  .normalize('NFKD')
+  .replace(/[\u064B-\u065F\u0670]/g, '')
+  .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
+  .replace(/\u0629/g, '\u0647')
+  .replace(/\u0649/g, '\u064A')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const hasAnyTerm = (text: string, terms: string[]) => {
+  const lower = text.toLowerCase();
+  const normalized = normalizeArabicText(text);
+  return terms.some(term => {
+    const termLower = term.toLowerCase();
+    const termNormalized = normalizeArabicText(term);
+    return lower.includes(termLower) || Boolean(termNormalized && normalized.includes(termNormalized));
+  });
+};
+
+const isWeakTextValue = (value: unknown) => {
+  const text = String(value ?? '').trim();
+  if (!text) return true;
+  const normalized = normalizeArabicText(text);
+  return /^(unknown|unknown player|unknown club|player|club|n\/a|na|null|undefined)$/i.test(text)
+    || ['\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641', '\u0644\u0627\u0639\u0628', '\u0646\u0627\u062F\u064A'].includes(normalized);
+};
+
+const firstStrongString = (...values: unknown[]) => {
+  for (const value of values) {
+    if (!isWeakTextValue(value)) return String(value).trim();
+  }
+  return '';
+};
+
+const setFieldWhenWeak = (
+  fields: Record<string, string | number | boolean>,
+  key: string,
+  value: string,
+) => {
+  if (value && isWeakTextValue(fields[key])) fields[key] = value;
+};
+
 const detectLocalPlayer = (text: string) => {
   const value = text.toLowerCase();
+  if (/lewandowski/i.test(value) || hasAnyTerm(text, ['\u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A', '\u0631\u0648\u0628\u0631\u062A \u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A'])) {
+    return { playerName: 'Robert Lewandowski', clubName: 'Barcelona', position: 'ST / Forward' };
+  }
+  if (/lamine yamal|yamal/i.test(value) || hasAnyTerm(text, ['\u0644\u0627\u0645\u064A\u0646 \u064A\u0627\u0645\u0627\u0644', '\u064A\u0627\u0645\u0627\u0644'])) {
+    return { playerName: 'Lamine Yamal', clubName: 'Barcelona', position: 'RW / Forward' };
+  }
+  if (/pedri/i.test(value) || hasAnyTerm(text, ['\u0628\u064A\u062F\u0631\u064A'])) {
+    return { playerName: 'Pedri', clubName: 'Barcelona', position: 'CM / AM' };
+  }
+  if (/cole palmer|palmer/i.test(value) || hasAnyTerm(text, ['\u0643\u0648\u0644 \u0628\u0627\u0644\u0645\u0631', '\u0628\u0627\u0644\u0645\u0631'])) {
+    return { playerName: 'Cole Palmer', clubName: 'Chelsea', position: 'AM / RW' };
+  }
+  if (/enzo fernandez|enzo fern[aá]ndez/i.test(value) || hasAnyTerm(text, ['\u0627\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632', '\u0625\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632'])) {
+    return { playerName: 'Enzo Fernandez', clubName: 'Chelsea', position: 'CM' };
+  }
+  if (/moises caicedo|mois[eé]s caicedo|caicedo/i.test(value) || hasAnyTerm(text, ['\u0643\u0627\u064A\u0633\u064A\u062F\u0648', '\u0645\u0648\u064A\u0633\u064A\u0633 \u0643\u0627\u064A\u0633\u064A\u062F\u0648'])) {
+    return { playerName: 'Moises Caicedo', clubName: 'Chelsea', position: 'DM / CM' };
+  }
   if (/lewandowski|ليفاندوفسكي|روبرت ليفاندوفسكي/i.test(value)) {
     return { playerName: 'Robert Lewandowski', clubName: 'Barcelona', position: 'ST / Forward' };
   }
@@ -171,6 +232,9 @@ const detectLocalPlayer = (text: string) => {
 };
 
 const detectLocalClub = (text: string) => {
+  if (/barcelona|barca/i.test(text) || hasAnyTerm(text, ['\u0628\u0631\u0634\u0644\u0648\u0646\u0629', '\u0628\u0631\u0634\u0644\u0648\u0646\u0647', '\u0627\u0644\u0628\u0627\u0631\u0633\u0627'])) return 'Barcelona';
+  if (/chelsea/i.test(text) || hasAnyTerm(text, ['\u062A\u0634\u064A\u0644\u0633\u064A'])) return 'Chelsea';
+  if (/real madrid/i.test(text) || hasAnyTerm(text, ['\u0631\u064A\u0627\u0644 \u0645\u062F\u0631\u064A\u062F'])) return 'Real Madrid';
   if (/barcelona|barca|برشلونة|برشلونه|البارسا/i.test(text)) return 'Barcelona';
   if (/chelsea|تشيلسي/i.test(text)) return 'Chelsea';
   if (/real madrid|ريال مدريد/i.test(text)) return 'Real Madrid';
@@ -749,24 +813,38 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         assetHints?: { playerName?: string; clubName?: string };
         sourceNotes?: string[];
       }>(text);
-      const localPlayer = detectLocalPlayer(`${playerName} ${rawText}`);
-      const localClub = detectLocalClub(`${clubName} ${rawText}`) || localPlayer?.clubName || parsed.clubName || clubName;
       const fields = { ...(parsed.fields || {}) };
-      const resolvedPlayerName = localPlayer?.playerName || parsed.playerName || fields.playerAName || playerName;
+      const identityText = [
+        playerName,
+        clubName,
+        rawText,
+        fields.sourcePlayerName,
+        fields.sourceClubName,
+        fields.playerAName,
+        fields.playerAClub,
+      ].filter(Boolean).join(' ');
+      const localPlayer = detectLocalPlayer(identityText);
+      const localClub = detectLocalClub(identityText)
+        || localPlayer?.clubName
+        || firstStrongString(parsed.clubName, fields.sourceClubName, fields.playerAClub, clubName);
+      const resolvedPlayerName = localPlayer?.playerName
+        || firstStrongString(parsed.playerName, fields.sourcePlayerName, fields.playerAName, playerName);
+      const resolvedPosition = localPlayer?.position
+        || firstStrongString(parsed.position, fields.playerAPosition, 'Footballer');
 
       if (resolvedPlayerName) {
         parsed.playerName = String(resolvedPlayerName);
-        fields.sourcePlayerName = fields.sourcePlayerName || String(resolvedPlayerName);
-        fields.playerAName = fields.playerAName || String(resolvedPlayerName);
+        setFieldWhenWeak(fields, 'sourcePlayerName', String(resolvedPlayerName));
+        setFieldWhenWeak(fields, 'playerAName', String(resolvedPlayerName));
       }
       if (localClub) {
         parsed.clubName = String(localClub);
-        fields.sourceClubName = fields.sourceClubName || String(localClub);
-        fields.playerAClub = fields.playerAClub || String(localClub);
+        setFieldWhenWeak(fields, 'sourceClubName', String(localClub));
+        setFieldWhenWeak(fields, 'playerAClub', String(localClub));
       }
-      if (localPlayer?.position) {
-        parsed.position = parsed.position || localPlayer.position;
-        fields.playerAPosition = fields.playerAPosition || localPlayer.position;
+      if (resolvedPosition) {
+        parsed.position = String(resolvedPosition);
+        setFieldWhenWeak(fields, 'playerAPosition', String(resolvedPosition));
       }
       const stats = [
         { label: 'Goals', value: 'pending', hint: 'WhoScored season total', category: 'attack' },
