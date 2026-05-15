@@ -629,7 +629,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               if (isLeavingStory && detectedClub?.name) {
                   updates.fromClub = updates.fromClub || detectedClub.name;
                   const currentToClub = String(updates.toClub || '').trim();
-                  if (!currentToClub || currentToClub === detectedClub.name) {
+                  if (!currentToClub || currentToClub === detectedClub.name || /غير محدد|unknown|destination|tbc/i.test(currentToClub)) {
                       updates.toClub = isFreeStory ? 'Free agent' : 'Destination TBC';
                   }
               }

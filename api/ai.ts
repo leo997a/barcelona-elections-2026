@@ -685,7 +685,53 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         imageQuery?: string;
         sourceNotes?: string[];
       }>(text);
-      return sendJson(res, 200, { data: parsed });
+      const localPlayer = detectLocalPlayer(`${playerName} ${rawText}`);
+      const localClub = detectLocalClub(`${clubName} ${rawText}`) || localPlayer?.clubName || parsed.clubName || clubName;
+      const localConfidence = extractLocalPercent(rawText);
+      const freeStory = hasLocalFreeSignal(rawText);
+      const leavingStory = hasLocalLeavingSignal(rawText);
+      const fields = { ...(parsed.fields || {}) };
+      const resolvedPlayerName = localPlayer?.playerName || parsed.playerName || fields.playerName || playerName;
+      const genericDestination = /غير محدد|unknown|destination|tbc/i.test(String(fields.toClub || ''));
+
+      if (resolvedPlayerName) {
+        parsed.playerName = String(resolvedPlayerName);
+        fields.playerName = fields.playerName || String(resolvedPlayerName);
+        parsed.imageQuery = parsed.imageQuery || String(resolvedPlayerName);
+      }
+      if (localClub) {
+        parsed.clubName = String(localClub);
+        fields.playerTeam = fields.playerTeam || String(localClub);
+      }
+      if (localPlayer?.position) {
+        parsed.position = parsed.position || localPlayer.position;
+        fields.playerPosition = fields.playerPosition || localPlayer.position;
+      }
+      if (localConfidence !== null) fields.confidence = localConfidence;
+      if (freeStory) fields.dealValue = 'Free transfer / end of contract';
+      if (leavingStory && localClub) {
+        fields.fromClub = String(localClub);
+        if (!fields.toClub || String(fields.toClub) === String(localClub) || genericDestination) {
+          fields.toClub = freeStory ? 'Free agent' : 'Destination TBC';
+        }
+      }
+      if (resolvedPlayerName && (leavingStory || !parsed.headline)) {
+        parsed.headline = leavingStory ? `${resolvedPlayerName} EXIT WATCH` : parsed.headline || `${resolvedPlayerName} MARKET WATCH`;
+        fields.headline = fields.headline || parsed.headline;
+      }
+      if (resolvedPlayerName && (leavingStory || freeStory || localConfidence !== null)) {
+        fields.marketItems = JSON.stringify([{
+          player: String(resolvedPlayerName),
+          from: String(fields.fromClub || localClub || 'Source club'),
+          to: String(fields.toClub || (freeStory ? 'Free agent' : 'Destination TBC')),
+          value: String(fields.dealValue || (freeStory ? 'Free transfer' : 'Market watch')),
+          confidence: Number(fields.confidence || localConfidence || 65),
+          status: freeStory ? 'Contract exit' : 'AI prepared',
+          tag: leavingStory ? 'Exit watch' : 'Focus',
+        }]);
+      }
+
+      return sendJson(res, 200, { data: { ...parsed, fields } });
     }
 
     return sendJson(res, 400, { error: 'نوع الطلب غير معروف.' });
