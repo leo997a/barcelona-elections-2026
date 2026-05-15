@@ -78,6 +78,18 @@ export type PlayerTransferAssistResult = {
   sourceNotes?: string[];
 };
 
+export type PlayerStatsAssistResult = {
+  playerName?: string;
+  clubName?: string;
+  position?: string;
+  fields?: Record<string, string | number | boolean>;
+  assetHints?: {
+    playerName?: string;
+    clubName?: string;
+  };
+  sourceNotes?: string[];
+};
+
 export const assistTemplateFields = async (payload: {
   rawText: string;
   overlayType: OverlayType;
@@ -103,6 +115,20 @@ export const assistPlayerTransferCard = async (payload: {
 }): Promise<PlayerTransferAssistResult | null> =>
   callSecureAi<PlayerTransferAssistResult>({
     action: 'player-transfer-card',
+    rawText: payload.rawText,
+    playerName: payload.playerName,
+    clubName: payload.clubName,
+    currentFields: payload.currentFields,
+  });
+
+export const assistPlayerStatsQuery = async (payload: {
+  rawText: string;
+  playerName?: string;
+  clubName?: string;
+  currentFields: Record<string, unknown>;
+}): Promise<PlayerStatsAssistResult | null> =>
+  callSecureAi<PlayerStatsAssistResult>({
+    action: 'player-stats-query',
     rawText: payload.rawText,
     playerName: payload.playerName,
     clubName: payload.clubName,

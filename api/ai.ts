@@ -7,7 +7,7 @@ import {
 } from './_lib/http.js';
 
 interface AiRequestBody {
-  action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card';
+  action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card' | 'player-stats-query';
   sport?: string;
   rawText?: string;
   targetPages?: number;
@@ -158,11 +158,21 @@ const detectLocalPlayer = (text: string) => {
   if (/pedri|بيدري/i.test(value)) {
     return { playerName: 'Pedri', clubName: 'Barcelona', position: 'CM / AM' };
   }
+  if (/cole palmer|palmer|كول بالمر|بالمر/i.test(value)) {
+    return { playerName: 'Cole Palmer', clubName: 'Chelsea', position: 'AM / RW' };
+  }
+  if (/enzo fernandez|enzo fernández|انزو فيرنانديز|إنزو فيرنانديز/i.test(value)) {
+    return { playerName: 'Enzo Fernandez', clubName: 'Chelsea', position: 'CM' };
+  }
+  if (/moises caicedo|moisés caicedo|caicedo|كايسيدو|مويسيس كايسيدو/i.test(value)) {
+    return { playerName: 'Moises Caicedo', clubName: 'Chelsea', position: 'DM / CM' };
+  }
   return null;
 };
 
 const detectLocalClub = (text: string) => {
   if (/barcelona|barca|برشلونة|برشلونه|البارسا/i.test(text)) return 'Barcelona';
+  if (/chelsea|تشيلسي/i.test(text)) return 'Chelsea';
   if (/real madrid|ريال مدريد/i.test(text)) return 'Real Madrid';
   return '';
 };
@@ -310,6 +320,63 @@ const sendLocalFallback = (
     return true;
   }
 
+  if (body.action === 'player-stats-query') {
+    const rawText = body.rawText?.trim() || '';
+    const detected = detectLocalPlayer(`${body.playerName || ''} ${rawText}`) || {
+      playerName: body.playerName?.trim() || String(body.currentFields?.sourcePlayerName || body.currentFields?.playerAName || 'Player'),
+      clubName: detectLocalClub(`${body.clubName || ''} ${rawText}`) || body.clubName?.trim() || String(body.currentFields?.sourceClubName || body.currentFields?.playerAClub || 'Club'),
+      position: 'Footballer',
+    };
+    const clubName = detectLocalClub(`${body.clubName || ''} ${rawText}`) || detected.clubName;
+    const stats = [
+      { label: 'Goals', value: 'pending', hint: 'WhoScored season total', category: 'attack' },
+      { label: 'Shots / 90', value: 'pending', hint: 'per-match volume', category: 'attack' },
+      { label: 'Key passes', value: 'pending', hint: 'chance creation', category: 'passing' },
+      { label: 'Recoveries', value: 'pending', hint: 'ball wins', category: 'defense' },
+      { label: 'Successful dribbles', value: 'pending', hint: '1v1 output', category: 'possession' },
+      { label: 'Minutes', value: 'pending', hint: 'season load', category: 'season' },
+    ];
+    const sourcePayload = {
+      mode: String(body.currentFields?.playerStatsMode || 'SINGLE'),
+      season: String(body.currentFields?.seasonLabel || '2025/26'),
+      source: 'AI identity fallback + player bridge contract',
+      updatedAt: new Date().toISOString(),
+      players: [{
+        name: detected.playerName,
+        club: clubName,
+        position: detected.position,
+        stats,
+      }],
+    };
+
+    sendJson(response, 200, {
+      data: {
+        playerName: detected.playerName,
+        clubName,
+        position: detected.position,
+        fields: {
+          sourcePlayerName: detected.playerName,
+          sourceClubName: clubName,
+          playerAName: detected.playerName,
+          playerAClub: clubName,
+          playerAPosition: detected.position,
+          playerStatsJson: JSON.stringify(stats),
+          playerStatsSourceJson: JSON.stringify(sourcePayload),
+          headline: `${detected.playerName} DATA FILE`,
+          subheadline: rawText || `${clubName} player statistics profile prepared for bridge extraction.`,
+        },
+        assetHints: {
+          playerName: detected.playerName,
+          clubName,
+        },
+        sourceNotes: ['local player stats fallback'],
+      },
+      fallback: true,
+      warning,
+    });
+    return true;
+  }
+
   console.warn('AI local fallback unavailable:', reason);
   return false;
 };
@@ -320,6 +387,7 @@ const getInputError = (body: AiRequestBody): string | null => {
   if (body.action === 'extract-viewers' && !(body.images || []).length) return 'يلزم إرسال صورة واحدة على الأقل.';
   if (body.action === 'template-assist' && !body.rawText?.trim() && !(body.images || []).length) return 'أرسل نصا أو صورة ليقترح الذكاء محتوى القالب.';
   if (body.action === 'player-transfer-card' && !body.playerName?.trim() && !body.rawText?.trim()) return 'أدخل اسم اللاعب أو نص الخبر أولا.';
+  if (body.action === 'player-stats-query' && !body.playerName?.trim() && !body.rawText?.trim()) return 'أدخل اسم اللاعب أو نص طلب الإحصائيات أولا.';
   return null;
 };
 
@@ -650,6 +718,91 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         notes?: string[];
       }>(text);
       return sendJson(res, 200, { data: parsed });
+    }
+
+    if (body.action === 'player-stats-query') {
+      const playerName = body.playerName?.trim() || '';
+      const clubName = body.clubName?.trim() || '';
+      const rawText = body.rawText?.trim() || '';
+      const fieldContext = fieldManifest(body.currentFields);
+
+      const text = await callAiRaw([
+        {
+          role: 'user',
+          parts: [{
+            text:
+              'أنت وكيل إعداد بيانات كرة قدم لقالب إحصائيات لاعب. افهم اسم اللاعب العربي أو الإنجليزي والنادي، ثم جهز حقول البحث وجلب الصور والشعارات بدون اختراع أرقام مؤكدة.\n' +
+              'المطلوب ليس تقييم rating. المطلوب فئات إحصائية قابلة للجلب: هجوم، تسديد، تمرير، صناعة، دفاع، استرجاع، مراوغات، متوسط لكل مباراة، إجمالي الموسم.\n' +
+              'إذا لم تكن الأرقام موجودة في النص اكتب value: "pending" حتى يجلبها جسر WhoScored لاحقا.\n' +
+              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","fields":{"sourcePlayerName":"...","sourceClubName":"...","playerAName":"...","playerAClub":"...","playerAPosition":"...","headline":"...","subheadline":"...","playerStatsJson":"...","playerStatsSourceJson":"..."},"assetHints":{"playerName":"...","clubName":"..."},"sourceNotes":["..."]}\n' +
+              `الحقول الحالية:\n${fieldContext}\n\n` +
+              `اسم اللاعب: ${playerName}\nالنادي: ${clubName}\nالنص:\n${rawText}`,
+          }],
+        },
+      ]);
+
+      const parsed = parseModelJson<{
+        playerName?: string;
+        clubName?: string;
+        position?: string;
+        fields?: Record<string, string | number | boolean>;
+        assetHints?: { playerName?: string; clubName?: string };
+        sourceNotes?: string[];
+      }>(text);
+      const localPlayer = detectLocalPlayer(`${playerName} ${rawText}`);
+      const localClub = detectLocalClub(`${clubName} ${rawText}`) || localPlayer?.clubName || parsed.clubName || clubName;
+      const fields = { ...(parsed.fields || {}) };
+      const resolvedPlayerName = localPlayer?.playerName || parsed.playerName || fields.playerAName || playerName;
+
+      if (resolvedPlayerName) {
+        parsed.playerName = String(resolvedPlayerName);
+        fields.sourcePlayerName = fields.sourcePlayerName || String(resolvedPlayerName);
+        fields.playerAName = fields.playerAName || String(resolvedPlayerName);
+      }
+      if (localClub) {
+        parsed.clubName = String(localClub);
+        fields.sourceClubName = fields.sourceClubName || String(localClub);
+        fields.playerAClub = fields.playerAClub || String(localClub);
+      }
+      if (localPlayer?.position) {
+        parsed.position = parsed.position || localPlayer.position;
+        fields.playerAPosition = fields.playerAPosition || localPlayer.position;
+      }
+      const stats = [
+        { label: 'Goals', value: 'pending', hint: 'WhoScored season total', category: 'attack' },
+        { label: 'Shots / 90', value: 'pending', hint: 'per-match volume', category: 'attack' },
+        { label: 'Key passes', value: 'pending', hint: 'chance creation', category: 'passing' },
+        { label: 'Recoveries', value: 'pending', hint: 'ball wins', category: 'defense' },
+        { label: 'Successful dribbles', value: 'pending', hint: '1v1 output', category: 'possession' },
+        { label: 'Minutes', value: 'pending', hint: 'season load', category: 'season' },
+      ];
+      fields.playerStatsJson = fields.playerStatsJson || JSON.stringify(stats);
+      fields.playerStatsSourceJson = fields.playerStatsSourceJson || JSON.stringify({
+        mode: String(body.currentFields?.playerStatsMode || 'SINGLE'),
+        season: String(body.currentFields?.seasonLabel || '2025/26'),
+        source: 'AI identity + player bridge contract',
+        updatedAt: new Date().toISOString(),
+        players: [{
+          name: String(resolvedPlayerName || 'Player'),
+          club: String(localClub || 'Club'),
+          position: String(parsed.position || localPlayer?.position || ''),
+          stats,
+        }],
+      });
+      fields.headline = fields.headline || `${String(resolvedPlayerName || 'PLAYER').toUpperCase()} DATA FILE`;
+      fields.subheadline = fields.subheadline || rawText || `${localClub || 'Club'} player statistics prepared for bridge extraction.`;
+
+      return sendJson(res, 200, {
+        data: {
+          ...parsed,
+          fields,
+          assetHints: {
+            ...(parsed.assetHints || {}),
+            playerName: parsed.assetHints?.playerName || String(resolvedPlayerName || ''),
+            clubName: parsed.assetHints?.clubName || String(localClub || ''),
+          },
+        },
+      });
     }
 
     if (body.action === 'player-transfer-card') {

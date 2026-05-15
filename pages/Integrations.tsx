@@ -92,6 +92,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     var websocket = null;
     var realtimeReady = null;
     const FIREBASE_CONFIG = ${JSON.stringify(publicConfig)};
+    const DEFAULT_CONTROL_KEY = 'studio-live-control';
+    const DEFAULT_SITE_URL = 'https://barcelona-elections-2026.vercel.app';
 
     function createCommandId() {
       return 'cmd_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
@@ -104,7 +106,14 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         try {
           var existing = firebase.apps.filter(function(candidate) { return candidate.name === 'rge-streamdeck'; })[0];
           var app = existing || firebase.initializeApp(FIREBASE_CONFIG, 'rge-streamdeck');
-          app.auth().signInAnonymously().then(function() {
+          var auth = app.auth();
+          var signIn = auth.currentUser
+            ? Promise.resolve(auth.currentUser)
+            : auth.signInAnonymously().catch(function(error) {
+                console.warn('Anonymous auth unavailable; using Smart Token path access.', error);
+                return null;
+              });
+          signIn.then(function() {
             resolve(app.database());
           }).catch(reject);
         } catch (error) {
@@ -147,9 +156,74 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         }));
         showOk(context);
       } catch (error) {
-        console.error('RGE secure command failed', error);
-        showAlert(context);
+        console.warn('RGE Firebase command failed, trying live API', error);
+        try {
+          await sendLiveApiCommand(settings, payload);
+          showOk(context);
+        } catch (liveError) {
+          console.error('RGE command failed', liveError);
+          showAlert(context);
+        }
       }
+    }
+
+    async function sendLiveApiCommand(settings, payload) {
+      var urls = [settings.siteUrl, DEFAULT_SITE_URL].filter(Boolean)
+        .map(function(url) { return String(url).replace(/\\/+$/, ''); })
+        .filter(function(url, index, list) { return /^https?:\\/\\//i.test(url) && list.indexOf(url) === index; });
+
+      var lastError = null;
+      for (var i = 0; i < urls.length; i += 1) {
+        var endpoint = urls[i] + '/api/live?id=' + encodeURIComponent(settings.overlayId);
+        try {
+          var getResponse = await fetch(endpoint + '&_=' + Date.now(), { cache: 'no-store' });
+          if (!getResponse.ok) throw new Error('GET ' + getResponse.status);
+          var entry = await getResponse.json();
+          var state = extractLiveState(entry);
+          if (!state) throw new Error('No live state published for this overlay');
+          var nextState = applyLiveCommand(state, payload);
+          var postResponse = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ state: nextState, clientVersion: Date.now() })
+          });
+          if (!postResponse.ok) throw new Error('POST ' + postResponse.status);
+          return;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('Live API did not accept command');
+    }
+
+    function extractLiveState(entry) {
+      if (!entry) return null;
+      if (entry.state && typeof entry.state === 'object') return entry.state;
+      if (entry.id && Array.isArray(entry.fields)) return entry;
+      return null;
+    }
+
+    function applyLiveCommand(state, command) {
+      var next = Object.assign({}, state);
+      var fields = Array.isArray(state.fields) ? state.fields : [];
+
+      if (command.action === 'toggle_visible') {
+        next.isVisible = !Boolean(state.isVisible);
+      } else if (command.action === 'set_visible') {
+        next.isVisible = Boolean(command.value);
+      } else if (command.action === 'update_field') {
+        next.fields = fields.map(function(field) {
+          return field.id === command.fieldId ? Object.assign({}, field, { value: command.value }) : field;
+        });
+      } else if (command.action === 'increment_field') {
+        next.fields = fields.map(function(field) {
+          if (field.id !== command.fieldId) return field;
+          var currentValue = Number(field.value) || 0;
+          return Object.assign({}, field, { value: Math.max(0, currentValue + Number(command.amount || 0)) });
+        });
+      }
+
+      return next;
     }
 
     function mapCommand(cmd, target) {
@@ -270,13 +344,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
       try {
         var payload = JSON.parse(decodeBase64Url(raw.substring(4)));
-        if (!payload.ct) {
-          statusBox.className = 'info-box invalid';
-          document.getElementById('statusMsg').innerText = 'Secure sync is not enabled for this token';
-          details.style.display = 'none';
-          actionDiv.style.display = 'none';
-          return;
-        }
+        payload.ct = payload.ct || 'studio-live-control';
 
         statusBox.className = 'info-box valid';
         document.getElementById('statusMsg').innerText = 'Token verified';
@@ -348,11 +416,13 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (tokenData) {
         payload.studioId = tokenData.s;
         payload.overlayId = tokenData.id;
-        payload.controlKey = tokenData.ct;
+        payload.controlKey = tokenData.ct || 'studio-live-control';
+        payload.siteUrl = tokenData.u || 'https://barcelona-elections-2026.vercel.app';
       } else {
         payload.studioId = currentSettings.studioId;
         payload.overlayId = currentSettings.overlayId;
         payload.controlKey = currentSettings.controlKey;
+        payload.siteUrl = currentSettings.siteUrl;
       }
 
       currentSettings = payload;

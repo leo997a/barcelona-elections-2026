@@ -107,6 +107,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#3b82f6',
     description: 'استوديو إحصائيات مباراة مباشر يعتمد على بيانات Live Bridge ويعرض الهيمنة، رجل المباراة، وأفضل الأرقام.',
   },
+  [OverlayType.PLAYER_STATS]: {
+    icon: 'PLYR',
+    accent: '#22d3ee',
+    description: 'قالب إحصائيات لاعب ذكي: لاعب واحد، مقارنة لاعبين، أو قائمة مراقبة بثلاثة لاعبين مع كاش صور وشعارات.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {
@@ -140,6 +145,14 @@ export const getVisibleTemplates = (): OverlayConfig[] =>
     }
 
     if (left.type !== OverlayType.MATCH_STATS && right.type === OverlayType.MATCH_STATS) {
+      return 1;
+    }
+
+    if (left.type === OverlayType.PLAYER_STATS && right.type !== OverlayType.PLAYER_STATS) {
+      return -1;
+    }
+
+    if (left.type !== OverlayType.PLAYER_STATS && right.type === OverlayType.PLAYER_STATS) {
       return 1;
     }
 

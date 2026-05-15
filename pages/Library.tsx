@@ -37,6 +37,7 @@ const ACCENT: Record<string, string> = {
   [OverlayType.FOOTBALL_PACKAGE]: '#c8aa63',
   [OverlayType.H2H_STATS]:        '#00E5FF',
   [OverlayType.MATCH_STATS]:      '#3b82f6',
+  [OverlayType.PLAYER_STATS]:     '#22d3ee',
   [OverlayType.TRANSFER_NEWS]:    '#E9FF00',
   [OverlayType.BARCA_PREMIUM]:    '#EDBB00',
 };
@@ -46,6 +47,7 @@ const TYPE_FILTERS = [
   { id: OverlayType.FOOTBALL_PACKAGE, label: 'Projection' },
   { id: OverlayType.SCOREBOARD,      label: 'سكور بورد' },
   { id: OverlayType.MATCH_STATS,     label: 'Match Stats' },
+  { id: OverlayType.PLAYER_STATS,    label: 'Player Stats' },
   { id: OverlayType.H2H_STATS,       label: 'H2H' },
   { id: OverlayType.TRANSFER_NEWS,   label: 'Transfers' },
   { id: OverlayType.BARCA_PREMIUM,   label: 'Barca' },
@@ -255,7 +257,15 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
   const handleCopyToken = (overlay: OverlayConfig, e: React.MouseEvent) => {
     e.stopPropagation();
     const ctx = syncManager.getSmartTokenContext();
-    const payload = { s: syncManager.getStudioId(), id: overlay.id, tp: overlay.type, nm: overlay.name, sv: ctx?.provider || 'local' };
+    const payload = {
+      s: ctx?.studioId || syncManager.getStudioId(),
+      id: overlay.id,
+      tp: overlay.type,
+      nm: overlay.name,
+      sv: ctx?.provider || 'firebase',
+      ct: ctx?.controlAccessKey || 'studio-live-control',
+      u: window.location.origin,
+    };
     try {
       navigator.clipboard.writeText('rge_' + encodeBase64UrlUtf8(JSON.stringify(payload)));
       const btn = e.currentTarget as HTMLElement;

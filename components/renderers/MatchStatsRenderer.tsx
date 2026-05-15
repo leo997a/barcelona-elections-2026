@@ -22,8 +22,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
+import { PLAYER_PORTRAIT_CACHE_URLS, fetchAssetCaches, parseAssetMap, splitAssetCacheUrls } from '../../utils/assetCache';
 
-const DEFAULT_PLAYER_IMAGE_CACHE_URL = '/player-image-cache/barcelona.json?v=20260515';
+const DEFAULT_PLAYER_IMAGE_CACHE_URL = PLAYER_PORTRAIT_CACHE_URLS.join(';');
 
 type TeamStats = {
   possession: number;
@@ -398,28 +399,22 @@ const parsePlayerImageMap = (value: string): Record<string, string> => {
   if (!value.trim()) return {};
   try {
     const parsed = JSON.parse(value) as unknown;
-    const map: Record<string, string> = {};
-    const addEntry = (key: unknown, url: unknown) => {
-      const normalizedKey = lookupKey(key);
-      const normalizedUrl = String(url || '').trim();
-      if (normalizedKey && /^https?:\/\//i.test(normalizedUrl)) {
-        map[normalizedKey] = normalizedUrl;
-      }
-    };
+    const map = parseAssetMap(parsed, 'portrait');
 
     if (Array.isArray(parsed)) {
       parsed.forEach((item) => {
         if (!item || typeof item !== 'object') return;
         const record = item as Record<string, unknown>;
         const url = record.image || record.imageUrl || record.photo || record.photoUrl || record.url;
-        addEntry(record.id || record.playerId, url);
-        addEntry(record.name || record.playerName, url);
+        const addEntry = (key: unknown) => {
+          const normalizedKey = lookupKey(key);
+          const normalizedUrl = String(url || '').trim();
+          if (normalizedKey && /^https?:\/\//i.test(normalizedUrl)) map[normalizedKey] = normalizedUrl;
+        };
+        addEntry(record.id || record.playerId);
+        addEntry(record.name || record.playerName);
       });
       return map;
-    }
-
-    if (parsed && typeof parsed === 'object') {
-      Object.entries(parsed as Record<string, unknown>).forEach(([key, url]) => addEntry(key, url));
     }
     return map;
   } catch {
@@ -1179,12 +1174,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
 
     const loadImageCache = async () => {
       try {
-        const response = await fetch(playerImageCacheUrl, { cache: 'no-cache' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const text = await response.text();
-        if (!cancelled) {
-          setRemotePlayerImageMap(parsePlayerImageMap(text));
-        }
+        const map = await fetchAssetCaches(splitAssetCacheUrls(playerImageCacheUrl || DEFAULT_PLAYER_IMAGE_CACHE_URL), 'portrait');
+        if (!cancelled) setRemotePlayerImageMap(map);
       } catch {
         if (!cancelled) {
           setRemotePlayerImageMap({});

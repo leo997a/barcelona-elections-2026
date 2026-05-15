@@ -20,9 +20,20 @@ const config = {
   branch: args.branch || defaults.branch,
   sourcePath: args.path || args.sourcePath || defaults.sourcePath,
   out: args.out || defaults.out,
+  mode: String(args.mode || 'portrait').toLowerCase(),
 };
 
 const stripExtension = (name) => name.replace(/\.[^.]+$/, '').trim();
+const displayNameFromFile = (name) => stripExtension(name)
+  .replace(/[_-]+/g, ' ')
+  .replace(/\s+\d+(?:\s+\d+)*$/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const variantScore = (name) => {
+  const numbers = stripExtension(name).match(/\d+/g) || [];
+  return numbers.reduce((score, number, index) => score + Number(number) * (index + 1), 0);
+};
 
 const decodeRepeated = (value) => {
   let current = String(value || '');
@@ -132,6 +143,17 @@ const ARABIC_PLAYER_ALIASES = {
   '\u062c\u0648\u0641\u0631\u064a \u062a\u0648\u0631\u064a\u0646\u062a\u0633': 'Jofre Torrents',
   '\u0643\u0627\u0646\u0633\u064a\u0644\u0648': 'Joao Cancelo',
   '\u062c\u0648\u0627\u0648 \u0643\u0627\u0646\u0633\u064a\u0644\u0648': 'Joao Cancelo',
+  '\u0643\u0648\u0644 \u0628\u0627\u0644\u0645\u0631': 'Cole Palmer',
+  '\u0628\u0627\u0644\u0645\u0631': 'Cole Palmer',
+  '\u0625\u0646\u0632\u0648 \u0641\u064a\u0631\u0646\u0627\u0646\u062f\u064a\u0632': 'Enzo Fernandez',
+  '\u0627\u0646\u0632\u0648 \u0641\u064a\u0631\u0646\u0627\u0646\u062f\u064a\u0632': 'Enzo Fernandez',
+  '\u0643\u0627\u064a\u0633\u064a\u062f\u0648': 'Moises Caicedo',
+  '\u0645\u0648\u064a\u0633\u064a\u0633 \u0643\u0627\u064a\u0633\u064a\u062f\u0648': 'Moises Caicedo',
+  '\u0631\u064a\u0633 \u062c\u064a\u0645\u0633': 'Reece James',
+  '\u0628\u064a\u062f\u0631\u0648 \u0646\u064a\u062a\u0648': 'Pedro Neto',
+  '\u062c\u0648\u0627\u0648 \u0628\u064a\u062f\u0631\u0648': 'Joao Pedro',
+  '\u062c\u0627\u062f\u0648\u0646 \u0633\u0627\u0646\u0634\u0648': 'Jadon Sancho',
+  '\u0633\u0627\u0646\u0634\u0648': 'Jadon Sancho',
 };
 
 const apiPath = encodePath(config.sourcePath);
@@ -165,9 +187,27 @@ if (jsonManifest?.download_url) {
   }
 }
 
-items
+const imageItems = items
   .filter((item) => item.type === 'file' && /\.(png|jpe?g|webp|avif)$/i.test(item.name || '') && item.download_url)
-  .forEach((item) => addAlias(cache, stripExtension(item.name), item.download_url));
+  .map((item) => ({ item, displayName: displayNameFromFile(item.name) }));
+
+const groupedItems = imageItems.reduce((acc, record) => {
+  if (!acc.has(record.displayName)) acc.set(record.displayName, []);
+  acc.get(record.displayName).push(record.item);
+  return acc;
+}, new Map());
+
+const selectedItems = config.mode === 'all'
+  ? imageItems.map(record => record.item)
+  : Array.from(groupedItems.values()).map((group) => {
+    const sorted = group.slice().sort((left, right) => variantScore(left.name) - variantScore(right.name) || left.name.localeCompare(right.name));
+    return config.mode === 'render' ? sorted[sorted.length - 1] : sorted[0];
+  });
+
+selectedItems.forEach((item) => {
+  const displayName = displayNameFromFile(item.name);
+  addAlias(cache, displayName, item.download_url);
+});
 
 Object.entries(ARABIC_PLAYER_ALIASES).forEach(([alias, target]) => {
   const url = cache[target] || cache[normalizeKey(target)];
