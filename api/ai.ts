@@ -15,8 +15,11 @@ interface AiRequestBody {
   channelName?: string;
   images?: string[];
   templateType?: string;
+  overlayType?: string;
+  overlayName?: string;
   playerName?: string;
   clubName?: string;
+  currentFields?: Record<string, unknown>;
 }
 
 type GeminiPart =
@@ -41,10 +44,23 @@ const splitEnvList = (value?: string) => (value || '')
   .map(item => item.trim())
   .filter(Boolean);
 
-const geminiApiKeys = () => Array.from(new Set([
-  process.env.GEMINI_API_KEY?.trim(),
-  ...splitEnvList(process.env.GEMINI_API_KEYS),
-].filter(Boolean))) as string[];
+const geminiApiKeys = () => {
+  const numberedKeys = Array.from({ length: 12 }, (_, index) => {
+    const n = index + 1;
+    return [
+      process.env[`GEMINI_API_KEY_${n}`],
+      process.env[`GEMINI_API_KEY${n}`],
+      process.env[`GEMINI_API_KEYS_${n}`],
+      process.env[`GEMINI_API_KEYS${n}`],
+    ];
+  }).flat();
+
+  return Array.from(new Set([
+    process.env.GEMINI_API_KEY?.trim(),
+    ...splitEnvList(process.env.GEMINI_API_KEYS),
+    ...numberedKeys.map(key => key?.trim()),
+  ].filter(Boolean))) as string[];
+};
 
 const liteLlmProxyUrl = () => process.env.LITELLM_PROXY_URL?.trim().replace(/\/+$/, '') || '';
 
@@ -192,6 +208,16 @@ const getInputError = (body: AiRequestBody): string | null => {
   return null;
 };
 
+const fieldManifest = (fields?: Record<string, unknown>) => {
+  if (!fields) return 'لا توجد حقول مرسلة.';
+  return Object.entries(fields)
+    .slice(0, 90)
+    .map(([id, value]) => `${id}: ${String(value ?? '').slice(0, 180)}`)
+    .join('\n');
+};
+
+const safeJsonStringify = (value: unknown) => JSON.stringify(value, null, 0);
+
 async function callGeminiRaw(contents: GeminiContent[], jsonMode = true) {
   const errors: string[] = [];
 
@@ -207,11 +233,17 @@ async function callGeminiRaw(contents: GeminiContent[], jsonMode = true) {
         },
       };
 
-      const response = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      let response: Response;
+      try {
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch (error) {
+        errors.push(`${model}: request failed ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
 
       if (!response.ok) {
         const detail = await response.text().catch(() => response.statusText);
@@ -219,7 +251,13 @@ async function callGeminiRaw(contents: GeminiContent[], jsonMode = true) {
         continue;
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (error) {
+        errors.push(`${model}: invalid JSON ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
       const text = data.candidates?.[0]?.content?.parts
         ?.map((part: { text?: string }) => part.text || '')
         .join('')
@@ -260,19 +298,25 @@ async function callLiteLlmRaw(contents: GeminiContent[], jsonMode = true) {
   const apiKey = process.env.LITELLM_API_KEY?.trim();
 
   for (const model of liteLlmModels()) {
-    const response = await fetchWithTimeout(`${proxyUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model,
-        messages: toOpenAiMessages(contents),
-        temperature: 0.35,
-        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(`${proxyUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model,
+          messages: toOpenAiMessages(contents),
+          temperature: 0.35,
+          ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      });
+    } catch (error) {
+      errors.push(`${model}: request failed ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
 
     if (!response.ok) {
       const detail = await response.text().catch(() => response.statusText);
@@ -280,7 +324,13 @@ async function callLiteLlmRaw(contents: GeminiContent[], jsonMode = true) {
       continue;
     }
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (error) {
+      errors.push(`${model}: invalid JSON ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
     const text = String(data.choices?.[0]?.message?.content || '').trim();
     if (text) return text;
     errors.push(`${model}: empty response`);
@@ -331,7 +381,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     if (sendLocalFallback(res, body, 'No AI backend is configured')) return;
 
     return sendJson(res, 503, {
-      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY أو GEMINI_API_KEYS أو LITELLM_PROXY_URL في متغيرات البيئة.',
+      error: 'خدمة الذكاء الاصطناعي غير مفعلة. أضف GEMINI_API_KEY أو GEMINI_API_KEYS أو GEMINI_API_KEYS1/2/3 أو LITELLM_PROXY_URL في متغيرات البيئة.',
     });
   }
 
@@ -446,7 +496,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
     if (body.action === 'template-assist') {
       const rawText = body.rawText?.trim() || '';
-      const templateType = body.templateType || 'broadcast overlay';
+      const templateType = body.templateType || body.overlayType || 'broadcast overlay';
+      const overlayName = body.overlayName || templateType;
       const imageParts: GeminiPart[] = (body.images || []).slice(0, 2).map(image => ({
         inlineData: {
           mimeType: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
@@ -460,10 +511,16 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
           parts: [
             {
               text:
-                'أنت مساعد إنتاج بث رياضي عربي. حوّل المدخل إلى حقول جاهزة لقالب بث، بدون اختراع نتائج مباشرة أو أرقام غير موجودة.\n' +
-                `نوع القالب: ${templateType}\n` +
-                'أعد JSON فقط بهذا الشكل: {"title":"عنوان قصير","subtitle":"سطر داعم","labels":["وسم 1","وسم 2"],"fields":{"fieldId":"value"},"notes":["تنبيه قصير"]}\n' +
-                `النص:\n${rawText}`,
+                'أنت مساعد إنتاج بث رياضي عربي داخل نظام قوالب مباشر. مهمتك تعبئة الحقول الحقيقية للقالب فقط، لا ترجع كلاما عاما.\n' +
+                `نوع القالب: ${templateType}\nاسم القالب: ${overlayName}\n` +
+                'القواعد:\n' +
+                '- استخدم مفاتيح الحقول الموجودة في القائمة فقط، إلا هذه الحقول المسموحة للإثراء: playerImage, clubLogo, fromClubLogo, toClubLogo, leagueLogo, playerStatsJson, marketItems.\n' +
+                '- إذا كان القالب أخبارا، قسّم عدة أخبار إلى صفحات قصيرة، واجعل pagesData عبارة عن JSON string لمصفوفة نصوص.\n' +
+                '- إذا كان القالب ميركاتو أو بطاقة لاعب، املأ playerName/fromClub/toClub/headline/subheadline/playerStatsJson/marketItems عندما تكون مناسبة.\n' +
+                '- لا تخترع نتيجة مباراة مباشرة. لا تضع إحصائيات رقمية مؤكدة إذا لم تكن في النص؛ يمكن وضع تقديرات تحريرية كنصوص مثل \"غير متوفر\".\n' +
+                '- أعد JSON فقط بهذا الشكل: {"fields":{"fieldId":"value"},"title":"عنوان قصير","subtitle":"سطر داعم","assetHints":{"playerName":"...","clubName":"...","fromClub":"...","toClub":"..."},"notes":["تنبيه قصير"]}\n' +
+                `الحقول الحالية:\n${fieldManifest(body.currentFields)}\n\n` +
+                `المدخل:\n${rawText}`,
             },
             ...imageParts,
           ],
@@ -484,16 +541,19 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       const playerName = body.playerName?.trim() || '';
       const clubName = body.clubName?.trim() || '';
       const rawText = body.rawText?.trim() || '';
+      const fieldContext = fieldManifest(body.currentFields);
 
       const text = await callAiRaw([
         {
           role: 'user',
           parts: [{
             text:
-              'أنت محرر ميركاتو وتحليل لاعبين. استخرج بطاقة لاعب للانتقالات من النص أو الاسم، ولا تخترع إحصائيات غير مذكورة.\n' +
-              'إذا كانت الإحصائيات غير متاحة أعد null في الحقول الرقمية واترك ملاحظة مصدر.\n' +
-              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","headline":"...","summary":"...","stats":[{"label":"...","value":"..."}],"searchHints":["WhoScored player page","image cache key"],"imageQuery":"...","sourceNotes":["..."]}\n' +
-              `اسم اللاعب: ${playerName}\nالنادي: ${clubName}\nالنص:\n${rawText}`,
+              'أنت محرر ميركاتو وتحليل لاعبين. افهم الاسم العربي أو الإنجليزي والنادي، ثم ابن حقول بطاقة لاعب/ميركاتو جاهزة للبث.\n' +
+              'القواعد: لا تخترع أرقام موسم مؤكدة إذا لم تكن مذكورة. إذا غابت الإحصائيات أعد عناصر نصية آمنة أو \"غير متوفر\". لا تستخدم تقييم rating.\n' +
+              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","headline":"...","summary":"...","stats":[{"label":"...","value":"...","hint":"..."}],"fields":{"playerName":"...","playerTeam":"...","playerPosition":"...","fromClub":"...","toClub":"...","headline":"...","subheadline":"...","playerStatsJson":"...","marketItems":"...","latestNews":"..."},"searchHints":["..."],"imageQuery":"...","sourceNotes":["..."]}\n' +
+              `الحقول الحالية:\n${fieldContext}\n\n` +
+              `اسم اللاعب: ${playerName}\nالنادي: ${clubName}\nالنص:\n${rawText}\n` +
+              `صيغة playerStatsJson المطلوبة عند وجود stats: ${safeJsonStringify([{ label: 'Key passes', value: 'غير متوفر', hint: 'Source needed' }])}`,
           }],
         },
       ]);
@@ -505,6 +565,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         headline?: string;
         summary?: string;
         stats?: { label: string; value: string | number | null }[];
+        fields?: Record<string, string | number | boolean>;
         searchHints?: string[];
         imageQuery?: string;
         sourceNotes?: string[];

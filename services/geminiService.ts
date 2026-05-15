@@ -1,4 +1,4 @@
-import { GeneratedContent, SmartNewsContent } from '../types';
+import { GeneratedContent, OverlayType, SmartNewsContent } from '../types';
 
 interface AiApiResponse<T> {
   data?: T;
@@ -50,4 +50,61 @@ export const extractViewersFromScreenshots = async (
   callSecureAi<{ rank: number; name: string; badge: string }[]>({
     action: 'extract-viewers',
     images,
+  });
+
+export type TemplateAssistResult = {
+  title?: string;
+  subtitle?: string;
+  fields?: Record<string, string | number | boolean>;
+  assetHints?: {
+    playerName?: string;
+    clubName?: string;
+    fromClub?: string;
+    toClub?: string;
+  };
+  notes?: string[];
+};
+
+export type PlayerTransferAssistResult = {
+  playerName?: string;
+  clubName?: string;
+  position?: string;
+  headline?: string;
+  summary?: string;
+  stats?: { label: string; value: string | number | null; hint?: string }[];
+  fields?: Record<string, string | number | boolean>;
+  imageQuery?: string;
+  searchHints?: string[];
+  sourceNotes?: string[];
+};
+
+export const assistTemplateFields = async (payload: {
+  rawText: string;
+  overlayType: OverlayType;
+  overlayName: string;
+  currentFields: Record<string, unknown>;
+  images?: string[];
+}): Promise<TemplateAssistResult | null> =>
+  callSecureAi<TemplateAssistResult>({
+    action: 'template-assist',
+    rawText: payload.rawText,
+    overlayType: payload.overlayType,
+    overlayName: payload.overlayName,
+    templateType: payload.overlayType,
+    currentFields: payload.currentFields,
+    images: payload.images || [],
+  });
+
+export const assistPlayerTransferCard = async (payload: {
+  rawText: string;
+  playerName?: string;
+  clubName?: string;
+  currentFields: Record<string, unknown>;
+}): Promise<PlayerTransferAssistResult | null> =>
+  callSecureAi<PlayerTransferAssistResult>({
+    action: 'player-transfer-card',
+    rawText: payload.rawText,
+    playerName: payload.playerName,
+    clubName: payload.clubName,
+    currentFields: payload.currentFields,
   });

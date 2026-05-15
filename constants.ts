@@ -46,7 +46,7 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
   }
 
   if (!hasField('soundVolume')) {
-    additions.push({ id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.05 });
+    additions.push({ id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.05 });
   }
 
   if (!hasField('soundInStyle')) {
@@ -86,7 +86,7 @@ const broadcastMotionPreset = (
   { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: transitionIn, options: BROADCAST_TRANSITION_OPTIONS },
   { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: transitionOut, options: BROADCAST_EXIT_OPTIONS },
   { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-  { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.75, min: 0, max: 1, step: 0.05 },
+  { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.75, min: 0, max: 3, step: 0.05 },
   { id: 'soundInStyle', label: 'مؤثر الظهور', type: 'select', value: soundInStyle, options: BROADCAST_SOUND_OPTIONS },
   { id: 'soundOutStyle', label: 'مؤثر الإخفاء', type: 'select', value: soundOutStyle, options: BROADCAST_SOUND_OPTIONS },
 ];
@@ -207,7 +207,7 @@ const createElectionTemplate = ({
     { id: 'leaksContent', label: 'نص الخبر العاجل', type: 'textarea', value: specialText },
     { id: 'statementTitle', label: 'عنوان الاقتباس', type: 'text', value: 'Key Statement' },
     { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-    { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.05 },
+    { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.05 },
     { id: 'soundInStyle', label: 'مؤثر TAKE IN', type: 'select', value: soundInStyle, options: ELECTION_SOUND_OPTIONS },
     { id: 'soundOutStyle', label: 'مؤثر TAKE OUT', type: 'select', value: soundOutStyle, options: ELECTION_SOUND_OPTIONS },
   ],
@@ -970,7 +970,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
 
       // --- الصوت ---
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 }
     ]
   },
   {
@@ -1073,7 +1073,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'ttsText', label: 'نص النطق الصوتي', type: 'text', value: 'حصرياً مع ريو' },
       { id: 'themePreset', label: 'اللون', type: 'select', value: 'CLASSIC_RED', options: ['CLASSIC_RED', 'ROYAL_GOLD', 'TACTICAL_BLUE', 'PITCH_GREEN', 'NIGHT_PURPLE'] },
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 }
     ]
   },
   {
@@ -1172,7 +1172,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'varBayern', label: 'شعار بايرن', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg' },
       
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 }
     ]
   },
   {
@@ -1267,7 +1267,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'countdownSeconds', label: 'نص الثواني', type: 'text', value: 'ثانية' },
       
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 }
     ]
   },
   {
@@ -1296,7 +1296,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
       { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 }
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 }
     ]
   },
   {
@@ -1350,7 +1350,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'itemsCount', label: 'عدد المحاور', type: 'range', value: 4, min: 1, max: 8, step: 1 },
       { id: 'themePreset', label: 'الثيم', type: 'select', value: 'MODERN_GLASS', options: ['MODERN_GLASS', 'DARK_NEON', 'CLEAN_LIGHT'] },
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
-      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 1, step: 0.1 },
+      { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.7, min: 0, max: 3, step: 0.1 },
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
       { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },

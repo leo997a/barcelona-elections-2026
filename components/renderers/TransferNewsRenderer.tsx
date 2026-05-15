@@ -29,6 +29,15 @@ type PlayerStat = {
   hint?: string;
 };
 
+const FALLBACK_CLUB_LOGOS: Record<string, string> = {
+  barcelona: 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png',
+  'fc barcelona': 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png',
+  athletic: 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Athletic%20Club%20Bilbao.png',
+  'athletic club': 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Athletic%20Club%20Bilbao.png',
+};
+
+const fallbackClubLogo = (name: string) => FALLBACK_CLUB_LOGOS[name.trim().toLowerCase()] || '';
+
 const STAT_ICON_POOL: LucideIcon[] = [Activity, Crosshair, Gauge, TrendingUp, Zap, ShieldCheck];
 
 const getStatIcon = (label: string, index: number): LucideIcon => {
@@ -195,10 +204,18 @@ const ConfidenceBar = ({ value, color }: { value: number; color: string }) => (
   </div>
 );
 
-const ClubPill = ({ label, color }: { label: string; color: string }) => (
+const ClubPill = ({ label, color, logo }: { label: string; color: string; logo?: string }) => (
   <div className="grid grid-cols-[42px_1fr] border border-white/12 bg-black/45">
-    <div className="flex h-12 items-center justify-center text-sm font-black text-white" style={{ background: color }}>
-      {initials(label)}
+    <div className="flex h-12 items-center justify-center overflow-hidden text-sm font-black text-white" style={{ background: color }}>
+      {logo ? (
+        <img
+          src={logo}
+          alt=""
+          className="h-9 w-9 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,.45)]"
+          referrerPolicy="no-referrer"
+          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+        />
+      ) : initials(label)}
     </div>
     <div className="flex h-12 min-w-0 items-center px-4 text-xl font-black uppercase text-white">
       <span className="truncate">{label}</span>
@@ -258,6 +275,10 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   const playerImage = String(getField('playerImage') || '');
   const fromClub = String(getField('fromClub') || 'Athletic Club');
   const toClub = String(getField('toClub') || 'Barcelona');
+  const fromClubLogo = String(getField('fromClubLogo') || fallbackClubLogo(fromClub));
+  const toClubLogo = String(getField('toClubLogo') || fallbackClubLogo(toClub));
+  const clubLogo = String(getField('clubLogo') || toClubLogo);
+  const leagueLogo = String(getField('leagueLogo') || '');
   const dealValue = String(getField('dealValue') || '58M EUR');
   const confidence = clampPercent(getField('confidence'), 78);
   const headline = String(getField('headline') || 'Mercato Intelligence');
@@ -308,6 +329,14 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   };
   const featuredConfidence = clampPercent(featured.confidence, confidence);
   const featuredTone = confidenceTone(featuredConfidence, accentColor);
+  const logoForClub = (label: string) => {
+    const normalized = label.trim().toLowerCase();
+    const from = fromClub.trim().toLowerCase();
+    const to = toClub.trim().toLowerCase();
+    if (normalized && (normalized === from || from.includes(normalized) || normalized.includes(from))) return fromClubLogo;
+    if (normalized && (normalized === to || to.includes(normalized) || normalized.includes(to))) return toClubLogo || clubLogo;
+    return '';
+  };
 
   const didPlay = useRef(false);
   useEffect(() => {
@@ -372,6 +401,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
             <div className="flex items-center gap-4">
               <span className="h-2 w-2" style={{ background: isUrgent ? '#fb3b52' : accentColor, animation: 'mercatoPulse 1.2s ease-in-out infinite' }} />
               <Sparkles className="h-4 w-4 text-white/42" strokeWidth={2.4} />
+              {leagueLogo && <img src={leagueLogo} alt="" className="h-7 w-7 object-contain opacity-85" referrerPolicy="no-referrer" />}
               <span className="text-[11px] tracking-[0.36em] text-white/54">REO MERCATO INTELLIGENCE</span>
             </div>
             <div className="text-[11px] tracking-[0.28em]" style={{ color: accentColor }}>{source}</div>
@@ -531,9 +561,9 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
                 <div className="text-[11px] font-black uppercase tracking-[0.3em] text-white/38">{featured.tag || 'Featured target'}</div>
                 <div className="mt-2 truncate font-['Barlow_Condensed'] text-[64px] font-black uppercase leading-none">{featured.player}</div>
                 <div className="mt-4 grid grid-cols-[1fr_52px_1fr] items-center gap-3">
-                  <ClubPill label={featured.from} color={fromColor} />
+                  <ClubPill label={featured.from} color={fromColor} logo={logoForClub(featured.from) || fromClubLogo} />
                   <div className="flex h-12 items-center justify-center border border-white/10 bg-white/[0.06] font-['Barlow_Condensed'] text-3xl font-black" style={{ color: accentColor }}>TO</div>
-                  <ClubPill label={featured.to} color={toColor} />
+                  <ClubPill label={featured.to} color={toColor} logo={logoForClub(featured.to) || toClubLogo || clubLogo} />
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <MiniMetric label="package" value={featured.value} color={accentColor} />
@@ -578,8 +608,8 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
               <div className="text-[11px] font-black uppercase tracking-[0.26em] text-white/36">focus target</div>
               <div className="mt-2 text-4xl font-black leading-none">{displayPlayerName}</div>
               <div className="mt-4 grid grid-cols-1 gap-2">
-                <ClubPill label={fromClub} color={fromColor} />
-                <ClubPill label={toClub} color={toColor} />
+                <ClubPill label={fromClub} color={fromColor} logo={fromClubLogo} />
+                <ClubPill label={toClub} color={toColor} logo={toClubLogo || clubLogo} />
               </div>
             </div>
           </section>
@@ -639,9 +669,9 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
                   <div className="border border-emerald-300/30 bg-emerald-300/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">done</div>
                 </div>
                 <div className="mt-7 grid grid-cols-[1fr_34px_1fr] items-center gap-2">
-                  <ClubPill label={item.from} color={fromColor} />
+                  <ClubPill label={item.from} color={fromColor} logo={logoForClub(item.from)} />
                   <div className="text-center font-['Barlow_Condensed'] text-3xl font-black text-white/40">{'>'}</div>
-                  <ClubPill label={item.to} color={toColor} />
+                  <ClubPill label={item.to} color={toColor} logo={logoForClub(item.to)} />
                 </div>
                 <div className="mt-5 flex items-end justify-between">
                   <div className="font-['Barlow_Condensed'] text-4xl font-black leading-none" style={{ color: accentColor }}>{item.value}</div>
@@ -683,9 +713,9 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
             <p className="mt-5 max-w-[720px] text-2xl font-bold leading-tight text-white/62">{subheadline}</p>
 
             <div className="mt-8 grid grid-cols-[1fr_72px_1fr] items-center gap-4">
-              <ClubPill label={fromClub} color={fromColor} />
+              <ClubPill label={fromClub} color={fromColor} logo={fromClubLogo} />
               <div className="flex h-16 items-center justify-center border border-white/10 bg-white/[0.05] font-['Barlow_Condensed'] text-5xl font-black" style={{ color: accentColor }}>TO</div>
-              <ClubPill label={toClub} color={toColor} />
+              <ClubPill label={toClub} color={toColor} logo={toClubLogo || clubLogo} />
             </div>
 
             <div className="mt-8 grid grid-cols-[1fr_220px] gap-4">

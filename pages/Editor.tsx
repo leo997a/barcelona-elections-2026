@@ -3,11 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square } from 'lucide-react';
-import { processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
+import { assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
 import { adminSessionService } from '../services/adminSession';
 import { normalizeElectionOverlay } from '../utils/election';
+import { LA_LIGA_LOGO_CACHE_URL, PLAYER_IMAGE_CACHE_URL, assetCandidates, fetchAssetCache, findAssetUrl } from '../utils/assetCache';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -164,6 +165,14 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
     return { id, label: 'روابط صور اللاعبين JSON', type: 'textarea', value };
   }
 
+  if (['playerImage', 'clubLogo', 'fromClubLogo', 'toClubLogo', 'leagueLogo'].includes(id)) {
+    return { id, label: id, type: 'image', value };
+  }
+
+  if (['playerStatsJson', 'marketItems', 'latestNews', 'dailyDeals', 'expectedDeals', 'pagesData'].includes(id)) {
+    return { id, label: id, type: 'textarea', value };
+  }
+
   return {
     id,
     label: id,
@@ -188,6 +197,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [matchStatsImportMessage, setMatchStatsImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isBridgeActionRunning, setIsBridgeActionRunning] = useState(false);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatusSnapshot | null>(null);
+  const [aiBoxInput, setAiBoxInput] = useState('');
+  const [aiBoxMessage, setAiBoxMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [clubLogoMap, setClubLogoMap] = useState<Record<string, string>>({});
+  const [playerImageMap, setPlayerImageMap] = useState<Record<string, string>>({});
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -316,6 +329,114 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
 
+  const getCurrentFieldValues = () =>
+      Object.fromEntries(draftOverlay.fields.map(field => [field.id, field.value]));
+
+  const loadAssetMaps = async () => {
+      let clubs = clubLogoMap;
+      let players = playerImageMap;
+      const requests: Promise<void>[] = [];
+
+      if (!Object.keys(clubs).length) {
+          requests.push(
+              fetchAssetCache(LA_LIGA_LOGO_CACHE_URL)
+                  .then(map => {
+                      clubs = map;
+                      setClubLogoMap(map);
+                  })
+                  .catch(error => console.warn('Club logo cache unavailable', error))
+          );
+      }
+
+      if (!Object.keys(players).length) {
+          requests.push(
+              fetchAssetCache(PLAYER_IMAGE_CACHE_URL)
+                  .then(map => {
+                      players = map;
+                      setPlayerImageMap(map);
+                  })
+                  .catch(error => console.warn('Player image cache unavailable', error))
+          );
+      }
+
+      if (requests.length) await Promise.all(requests);
+      return { clubs, players };
+  };
+
+  const cleanAiFieldUpdates = (updates: Record<string, unknown>) => {
+      const currentIds = new Set(draftOverlay.fields.map(field => field.id));
+      const enrichmentIds = new Set([
+          'playerImage',
+          'clubLogo',
+          'fromClubLogo',
+          'toClubLogo',
+          'leagueLogo',
+          'playerStatsJson',
+          'marketItems',
+          'latestNews',
+          'dailyDeals',
+          'expectedDeals',
+          'sportmonksSearch',
+      ]);
+
+      return Object.entries(updates).reduce<Record<string, any>>((acc, [id, value]) => {
+          if (!currentIds.has(id) && !enrichmentIds.has(id)) return acc;
+          if (value === null || value === undefined) return acc;
+          if (typeof value === 'string' && !value.trim()) return acc;
+          acc[id] = typeof value === 'object' ? JSON.stringify(value) : value;
+          return acc;
+      }, {});
+  };
+
+  const withAssetEnrichment = async (
+      rawUpdates: Record<string, unknown>,
+      hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string } = {}
+  ) => {
+      const { clubs, players } = await loadAssetMaps();
+      const updates = { ...rawUpdates };
+      const current = getCurrentFieldValues();
+
+      const valueOf = (...ids: string[]) =>
+          ids.map(id => updates[id] ?? current[id]).map(value => String(value || '').trim()).find(Boolean) || '';
+
+      const playerName = hints.playerName || valueOf('playerName', 'firstName', 'lastName', 'player1Name');
+      const toClub = hints.toClub || hints.clubName || valueOf('toClub', 'playerTeam', 'clubName', 'teamName');
+      const fromClub = hints.fromClub || valueOf('fromClub');
+
+      const rawPlayerImage = String(updates.playerImage || '').trim();
+      const playerImageIsUrl = /^https?:\/\//i.test(rawPlayerImage) || rawPlayerImage.startsWith('data:image');
+      const resolvedPlayerImage = findAssetUrl([
+          rawPlayerImage,
+          hints.imageQuery,
+          playerName,
+          ...assetCandidates(playerName),
+          ...assetCandidates(hints.imageQuery),
+      ], players);
+
+      if (!playerImageIsUrl) delete updates.playerImage;
+      if (resolvedPlayerImage && !playerImageIsUrl) updates.playerImage = resolvedPlayerImage;
+
+      const toClubLogo = findAssetUrl([toClub, ...assetCandidates(toClub)], clubs);
+      const fromClubLogo = findAssetUrl([fromClub, ...assetCandidates(fromClub)], clubs);
+      const leagueLogo = findAssetUrl(['La Liga'], clubs);
+
+      if (toClubLogo) {
+          if (draftOverlay.type === OverlayType.PLAYER_PROFILE || draftOverlay.type === OverlayType.BARCA_PREMIUM) {
+              updates.clubLogo = updates.clubLogo || toClubLogo;
+          }
+          if (draftOverlay.type === OverlayType.TRANSFER_NEWS) {
+              updates.toClubLogo = updates.toClubLogo || toClubLogo;
+          }
+      }
+
+      if (fromClubLogo && draftOverlay.type === OverlayType.TRANSFER_NEWS) {
+          updates.fromClubLogo = updates.fromClubLogo || fromClubLogo;
+      }
+
+      if (leagueLogo) updates.leagueLogo = updates.leagueLogo || leagueLogo;
+      return updates;
+  };
+
   const toggleLiveVisibility = () => {
       syncManager.updateLiveField(liveOverlay.id, 'isVisible', !liveOverlay.isVisible);
   };
@@ -368,6 +489,163 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               pagesData: JSON.stringify(generated.pages),
               currentPage: 0,
           });
+      } finally {
+          setIsProcessingAI(false);
+      }
+  };
+
+  const handleRunUniversalAi = async (mode: 'auto' | 'player' | 'news' = 'auto') => {
+      const fieldText = String(
+          getDraftValue('rawText') ||
+          getDraftValue('headline') ||
+          getDraftValue('content') ||
+          getDraftValue('specialText') ||
+          getDraftValue('playerName') ||
+          ''
+      ).trim();
+      const prompt = aiBoxInput.trim() || fieldText;
+
+      if (!prompt) {
+          setAiBoxMessage({ type: 'error', text: 'اكتب خبرا، اسم لاعب، أو ملخصا قصيرا داخل صندوق AI أولا.' });
+          return;
+      }
+
+      setIsProcessingAI(true);
+      setAiError(false);
+      setAiBoxMessage(null);
+
+      try {
+          const currentFields = getCurrentFieldValues();
+          const isPlayerLike =
+              mode !== 'news' && (
+              mode === 'player' ||
+              draftOverlay.type === OverlayType.TRANSFER_NEWS ||
+              draftOverlay.type === OverlayType.PLAYER_PROFILE ||
+              draftOverlay.type === OverlayType.BARCA_PREMIUM
+              );
+          let updates: Record<string, unknown> = {};
+          let hints: { playerName?: string; clubName?: string; fromClub?: string; toClub?: string; imageQuery?: string } = {};
+
+          if (isPlayerLike) {
+              const currentFullName = String(
+                  getDraftValue('playerName') ||
+                  `${getDraftValue('firstName') || ''} ${getDraftValue('lastName') || ''}`.trim()
+              ).trim();
+              const currentClub = String(
+                  getDraftValue('toClub') ||
+                  getDraftValue('playerTeam') ||
+                  getDraftValue('clubName') ||
+                  getDraftValue('teamName') ||
+                  ''
+              ).trim();
+              const generated = await assistPlayerTransferCard({
+                  rawText: prompt,
+                  playerName: currentFullName,
+                  clubName: currentClub,
+                  currentFields,
+              });
+
+              if (!generated) throw new Error('AI returned no player data');
+
+              updates = { ...(generated.fields || {}) };
+              const resolvedPlayerName = String(generated.playerName || updates.playerName || currentFullName || '').trim();
+              const resolvedClubName = String(generated.clubName || updates.playerTeam || updates.toClub || currentClub || '').trim();
+              const stats = Array.isArray(generated.stats)
+                  ? generated.stats
+                      .filter(stat => stat && stat.label)
+                      .slice(0, 8)
+                      .map(stat => ({
+                          label: String(stat.label),
+                          value: stat.value === null || stat.value === undefined ? 'غير متوفر' : String(stat.value),
+                          hint: stat.hint || 'AI / source needed',
+                      }))
+                  : [];
+
+              if (resolvedPlayerName) {
+                  updates.playerName = updates.playerName || resolvedPlayerName;
+                  updates.sportmonksSearch = updates.sportmonksSearch || resolvedPlayerName;
+              }
+              if (resolvedClubName) {
+                  updates.playerTeam = updates.playerTeam || resolvedClubName;
+                  updates.toClub = updates.toClub || resolvedClubName;
+              }
+              if (generated.position) {
+                  updates.playerPosition = updates.playerPosition || generated.position;
+                  updates.playerRole = updates.playerRole || generated.position;
+                  updates.position = updates.position || generated.position;
+              }
+              if (generated.headline) updates.headline = updates.headline || generated.headline;
+              if (generated.summary) {
+                  updates.subheadline = updates.subheadline || generated.summary;
+                  updates.bodyText = updates.bodyText || generated.summary;
+                  updates.latestNews = updates.latestNews || generated.summary;
+              }
+              if (stats.length) {
+                  updates.playerStatsJson = updates.playerStatsJson || JSON.stringify(stats);
+                  stats.slice(0, 3).forEach((stat, index) => {
+                      updates[`stat${index + 1}Label`] = updates[`stat${index + 1}Label`] || stat.label;
+                      updates[`stat${index + 1}Value`] = updates[`stat${index + 1}Value`] || stat.value;
+                  });
+              }
+
+              if (draftOverlay.type === OverlayType.BARCA_PREMIUM && resolvedPlayerName) {
+                  const parts = resolvedPlayerName.split(/\s+/).filter(Boolean);
+                  updates.firstName = updates.firstName || (parts[0] || resolvedPlayerName).toUpperCase();
+                  updates.lastName = updates.lastName || (parts.slice(1).join(' ') || resolvedPlayerName).toUpperCase();
+                  updates.subline = updates.subline || resolvedClubName || 'LA LIGA';
+              }
+
+              if (draftOverlay.type === OverlayType.TRANSFER_NEWS && resolvedPlayerName && !updates.marketItems) {
+                  updates.marketItems = JSON.stringify([{
+                      player: resolvedPlayerName,
+                      from: String(updates.fromClub || getDraftValue('fromClub') || 'Source club'),
+                      to: resolvedClubName || String(getDraftValue('toClub') || 'Target club'),
+                      value: String(getDraftValue('dealValue') || 'Market watch'),
+                      confidence: Number(getDraftValue('confidence') || 70),
+                      status: 'AI prepared',
+                      tag: 'Focus',
+                  }]);
+              }
+
+              hints = {
+                  playerName: resolvedPlayerName,
+                  clubName: resolvedClubName,
+                  toClub: String(updates.toClub || resolvedClubName || ''),
+                  fromClub: String(updates.fromClub || getDraftValue('fromClub') || ''),
+                  imageQuery: generated.imageQuery,
+              };
+          } else {
+              const generated = await assistTemplateFields({
+                  rawText: prompt,
+                  overlayType: draftOverlay.type,
+                  overlayName: draftOverlay.name,
+                  currentFields,
+              });
+
+              if (!generated) throw new Error('AI returned no template data');
+
+              updates = { ...(generated.fields || {}) };
+              const headlineField = ['headline', 'title', 'content', 'specialText'].find(id => id in currentFields);
+              const subtitleField = ['subheadline', 'subline', 'bodyText', 'subtitle'].find(id => id in currentFields);
+              if (generated.title && headlineField && !updates[headlineField]) updates[headlineField] = generated.title;
+              if (generated.subtitle && subtitleField && !updates[subtitleField]) updates[subtitleField] = generated.subtitle;
+              hints = generated.assetHints || {};
+          }
+
+          const enriched = await withAssetEnrichment(updates, hints);
+          const cleanUpdates = cleanAiFieldUpdates(enriched);
+
+          if (!Object.keys(cleanUpdates).length) {
+              setAiBoxMessage({ type: 'error', text: 'الذكاء لم يجد حقولا مناسبة لهذا القالب. جرّب نصا أوضح أو اختر زر اللاعب/الميركاتو.' });
+              return;
+          }
+
+          handleDraftFieldChanges(cleanUpdates);
+          setAiBoxMessage({ type: 'success', text: `تمت تعبئة ${Object.keys(cleanUpdates).length} حقول وربط الكاش إن توفر.` });
+      } catch (error) {
+          console.error('Universal AI box failed', error);
+          setAiError(true);
+          setAiBoxMessage({ type: 'error', text: 'تعذر تشغيل صندوق AI. تأكد أن مفاتيح Gemini موجودة في Vercel ثم أعد النشر.' });
       } finally {
           setIsProcessingAI(false);
       }
@@ -904,6 +1182,61 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     {isProcessingAI ? 'جاري توليد بيانات المباراة...' : 'ملء بيانات مباراة بالذكاء الاصطناعي'}
                 </button>
                 {aiError && <div className="text-[11px] text-red-400 text-center">تعذر تشغيل الذكاء الاصطناعي. تحقق من GEMINI_API_KEY أو جرّب لاحقا.</div>}
+            </div>
+        )}
+
+        {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.type !== OverlayType.MATCH_STATS && (
+            <div className="shrink-0 border-b border-cyan-900/35 bg-cyan-950/20 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs text-cyan-200 font-black flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> صندوق AI الموحد
+                    </label>
+                    <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                        Gemini fallback
+                    </span>
+                </div>
+                <textarea
+                  value={aiBoxInput}
+                  onChange={(event) => setAiBoxInput(event.target.value)}
+                  rows={3}
+                  placeholder="اكتب خبر انتقال، اسم لاعب ونادي، أو نص طويل ليتم توزيعه على حقول القالب الحالي..."
+                  className="w-full resize-y rounded-lg border border-cyan-800/45 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRunUniversalAi('auto')}
+                      disabled={isProcessingAI}
+                      className="rounded-lg bg-cyan-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400"
+                    >
+                      تعبئة ذكية
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRunUniversalAi('player')}
+                      disabled={isProcessingAI}
+                      className="rounded-lg bg-rose-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-rose-500 disabled:bg-gray-700 disabled:text-gray-400"
+                    >
+                      لاعب / ميركاتو
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRunUniversalAi('news')}
+                      disabled={isProcessingAI}
+                      className="rounded-lg bg-slate-800 px-2 py-2 text-[10px] font-black text-slate-100 transition-colors hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400"
+                    >
+                      أخبار متعددة
+                    </button>
+                </div>
+                {aiBoxMessage && (
+                    <div className={`rounded-lg border px-3 py-2 text-[11px] font-bold ${
+                      aiBoxMessage.type === 'success'
+                        ? 'border-emerald-700/40 bg-emerald-950/25 text-emerald-200'
+                        : 'border-red-700/40 bg-red-950/25 text-red-200'
+                    }`}>
+                        {aiBoxMessage.text}
+                    </div>
+                )}
             </div>
         )}
 
@@ -1654,11 +1987,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                  // Render standard fields...
                  if (field.type === 'range') {
+                     const rangeMax = field.id === 'soundVolume' ? 3 : field.max;
+                     const rangeStep = field.id === 'soundVolume' ? 0.05 : field.step;
+                     const rangeValue = Number(field.value);
                      return (
                          <div key={field.id} className="space-y-1">
                              <label className="text-xs text-gray-400 block">{field.label}</label>
                              <div className="flex items-center gap-2">
-                                <input type="range" min={field.min} max={field.max} step={field.step} value={Number(field.value)} onChange={(e) => handleDraftFieldChange(field.id, parseFloat(e.target.value))} className="w-full h-2 bg-gray-700 rounded-lg accent-blue-600" />
+                                <input type="range" min={field.min} max={rangeMax} step={rangeStep} value={rangeValue} onChange={(e) => handleDraftFieldChange(field.id, parseFloat(e.target.value))} className="w-full h-2 bg-gray-700 rounded-lg accent-blue-600" />
                                 <span className="text-xs font-mono">{field.value}</span>
                             </div>
                          </div>

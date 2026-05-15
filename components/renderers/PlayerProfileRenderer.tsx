@@ -13,8 +13,8 @@ export const PlayerProfileRenderer: React.FC<RendererProps> = ({
     const name = String(getField('playerName') || 'Lionel Messi');
     const number = String(getField('playerNumber') || '10');
     const role = String(getField('playerRole') || 'Forward');
-    const image = String(getField('playerImage') || 'https://picsum.photos/400/600');
-    const clubLogo = String(getField('clubLogo') || 'https://picsum.photos/100');
+    const image = String(getField('playerImage') || '');
+    const clubLogo = String(getField('clubLogo') || 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png');
     const stat1Label = String(getField('stat1Label') || 'Goals');
     const stat1Value = String(getField('stat1Value') || '34');
     const stat2Label = String(getField('stat2Label') || 'Assists');
@@ -41,7 +41,13 @@ export const PlayerProfileRenderer: React.FC<RendererProps> = ({
                     </div>
                     
                     {/* Player Image */}
-                    <img src={image} className="absolute inset-0 w-full h-full object-cover object-top mix-blend-luminosity opacity-80" alt={name} />
+                    {image ? (
+                        <img src={image} className="absolute inset-0 w-full h-full object-cover object-top mix-blend-luminosity opacity-80" alt={name} referrerPolicy="no-referrer" />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-8xl font-black text-white/10">
+                            {name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()}
+                        </div>
+                    )}
                     
                     {/* Gradient Overlay to blend image into background */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,15,1)] via-[rgba(10,10,15,0.4)] to-transparent"></div>
@@ -51,7 +57,7 @@ export const PlayerProfileRenderer: React.FC<RendererProps> = ({
 
                     {/* Logo */}
                     <div className="absolute top-6 left-6 z-20 w-16 h-16 bg-white/10 rounded-full p-2 backdrop-blur-md border border-white/20 shadow-xl">
-                        <img src={clubLogo} className="w-full h-full object-contain drop-shadow-md" alt="club" />
+                        <img src={clubLogo} className="w-full h-full object-contain drop-shadow-md" alt="club" referrerPolicy="no-referrer" />
                     </div>
 
                     {/* Basic Info */}

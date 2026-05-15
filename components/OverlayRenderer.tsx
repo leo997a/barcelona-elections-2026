@@ -41,6 +41,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]:  'tv-slide-left',
   [OverlayType.TOP_VIEWERS]:     'tv-slide-left',
   [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep',
+  [OverlayType.TRANSFER_NEWS]: 'tv-stadium-sweep',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -59,6 +60,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]:  'tv-slide-left-out',
   [OverlayType.TOP_VIEWERS]:     'tv-slide-left-out',
   [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep-out',
+  [OverlayType.TRANSFER_NEWS]: 'tv-stadium-sweep-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -77,6 +79,7 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
   [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL',
   [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP',
+  [OverlayType.TRANSFER_NEWS]: 'STADIUM_SWEEP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -95,6 +98,7 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE_OUT',
   [OverlayType.TOP_VIEWERS]: 'VERTICAL_REVEAL_OUT',
   [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.TRANSFER_NEWS]: 'STADIUM_SWEEP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -134,6 +138,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
   [OverlayType.TOP_VIEWERS]: 'DATA_TICK',
   [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_SWEEP',
+  [OverlayType.TRANSFER_NEWS]: 'MERCATO_HIT',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -152,6 +157,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_PROFILE]: 'SOFT_FADE',
   [OverlayType.TOP_VIEWERS]: 'SOFT_FADE',
   [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_OUT',
+  [OverlayType.TRANSFER_NEWS]: 'LUXURY_OUT',
 };
 
 const CSS = `
@@ -232,6 +238,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const posY = Number(getField('positionY') || 0);
   const soundEnabled = getField('soundEnabled') !== false;
   const soundVolume = Number(getField('soundVolume') ?? 0.7);
+  const synthVolume = Math.max(0, Math.min(soundVolume, 3));
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -262,7 +269,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const now = ac.currentTime;
       const master = ac.createGain();
       const compressor = ac.createDynamicsCompressor();
-      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.62, now);
+      master.gain.setValueAtTime(synthVolume * 0.62, now);
       master.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
       compressor.threshold.value = -22;
       compressor.knee.value = 28;
@@ -326,12 +333,21 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           source.stop(start + duration + 0.02);
       };
 
-      if (cue === 'MERCATO_HIT') {
+      if (cue === 'MERCATO_HIT' || cue === 'ELITE_HIT') {
           hit(now, 42, 0.42, 1.05);
           hit(now + 0.035, 118, 0.18, 0.46);
           shimmer(now + 0.08, 260, 0.54, 0.28);
           sweep(now + 0.02, 0.52, 2200, 180, 0.32, 'bandpass');
           sweep(now + 0.12, 0.58, 360, 4800, 0.22, 'highpass');
+      } else if (cue === 'TRANSFER_RISER' || cue === 'CLUB_REVEAL') {
+          hit(now, 56, 0.46, 0.62);
+          shimmer(now + 0.04, 240, 0.72, 0.24);
+          sweep(now, 0.68, 260, 5600, 0.28, 'highpass');
+      } else if (cue === 'DEADLINE_ALARM' || cue === 'PHOTO_FLASH' || cue === 'NEWS_STING' || cue === 'TACTICAL_LOCK') {
+          hit(now, cue === 'PHOTO_FLASH' ? 920 : 86, 0.22, 0.66);
+          hit(now + 0.09, cue === 'DEADLINE_ALARM' ? 780 : 180, 0.14, 0.42);
+          shimmer(now + 0.05, cue === 'NEWS_STING' ? 520 : 360, 0.36, 0.22);
+          sweep(now + 0.01, 0.3, 3400, 520, 0.18, 'bandpass');
       } else if (cue === 'CINEMA_BOOM') {
           hit(now, 34, 0.72, 1.1);
           hit(now + 0.05, 72, 0.38, 0.48);
@@ -371,7 +387,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextCtor) return false;
 
-      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
+      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'TRANSFER_RISER', 'DEADLINE_ALARM', 'CLUB_REVEAL', 'PHOTO_FLASH', 'NEWS_STING', 'ELITE_HIT', 'TACTICAL_LOCK', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
           return playLuxurySound(cue);
       }
 
@@ -382,7 +398,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const now = sharedAudioContext.currentTime;
       const master = sharedAudioContext.createGain();
       master.connect(sharedAudioContext.destination);
-      master.gain.setValueAtTime(Math.max(0, Math.min(soundVolume, 1)) * 0.28, now);
+      master.gain.setValueAtTime(synthVolume * 0.28, now);
       master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
 
       pattern.forEach(step => {
