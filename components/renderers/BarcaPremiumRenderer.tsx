@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { RendererProps } from './SharedComponents';
 
 // ─── Barca Premium Renderer v2 ───────────────────────────────────────────────
@@ -38,10 +38,7 @@ export const BarcaPremiumRenderer: React.FC<RendererProps> = ({
   const teamColor   = String(getField('teamColor')    || BARCA_BLUE);
   const showBadge   = Boolean(getField('showBadge')   ?? true);
 
-  const didPlay = useRef(false);
-  useEffect(() => {
-    if (!wasVisible && !didPlay.current) { didPlay.current = true; playSound('ENTRY').catch(() => {}); }
-  }, [wasVisible, playSound]);
+  // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio
 
   const isPlayerMode = badgeMode === 'player';
   const isNewsMode   = badgeMode === 'news';

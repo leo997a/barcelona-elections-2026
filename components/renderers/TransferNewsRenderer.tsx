@@ -414,12 +414,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   useEffect(() => {
     loadPlayerImageCache();
   }, []);
-  useEffect(() => {
-    if (!wasVisible && !didPlay.current) {
-      didPlay.current = true;
-      playSound('ENTRY').catch(() => {});
-    }
-  }, [wasVisible, playSound]);
+  // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio
 
   useEffect(() => {
     let cancelled = false;

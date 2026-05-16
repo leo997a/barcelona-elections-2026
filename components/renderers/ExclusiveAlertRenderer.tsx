@@ -19,8 +19,8 @@ export const ExclusiveAlertRenderer: React.FC<RendererProps> = ({
     const ttsText = String(getField('ttsText') || '');
 
     useEffect(() => {
+        // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio
         if (config.isVisible && useTTS && !isEditor && ttsText) {
-            playSound('ENTRY');
             setTimeout(() => {
                 const utterance = new SpeechSynthesisUtterance(ttsText);
                 utterance.lang = 'ar-SA';
@@ -41,7 +41,7 @@ export const ExclusiveAlertRenderer: React.FC<RendererProps> = ({
                 window.speechSynthesis.speak(utterance);
             }, 400);
         }
-    }, [config.isVisible, isEditor, useTTS, ttsText, playSound]);
+    }, [config.isVisible, isEditor, useTTS, ttsText]);
 
     const isRight = position === 'RIGHT';
     const animClass = config.isVisible ? 'animate-zoom-impact' : 'opacity-0 scale-90 blur-md transition-all duration-500';

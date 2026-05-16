@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { RendererProps } from './SharedComponents';
 
 // ─── H2H Stats Renderer v2 ───────────────────────────────────────────────────
@@ -38,10 +38,7 @@ export const H2HStatsRenderer: React.FC<RendererProps> = ({
     { label: 'التقييم', v1: 89, v2: 92 },
   ];
 
-  const didPlay = useRef(false);
-  useEffect(() => {
-    if (!wasVisible && !didPlay.current) { didPlay.current = true; playSound('ENTRY').catch(() => { }); }
-  }, [wasVisible, playSound]);
+  // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio
 
   const StatBar: React.FC<{ v1: number; v2: number; label: string }> = ({ v1, v2, label }) => {
     const total = v1 + v2 || 1;
