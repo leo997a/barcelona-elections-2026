@@ -107,7 +107,7 @@ const SOUND_PRIORITY: Record<string, number> = {
   HARD_CUT: 0,
 };
 
-const DEFAULT_COOLDOWN_MS = 300;
+const DEFAULT_COOLDOWN_MS = 250;
 const bufferCache = new Map<string, AudioBuffer>();
 const loadingCache = new Map<string, Promise<AudioBuffer | null>>();
 const failedUrls = new Set<string>();
@@ -115,7 +115,8 @@ const lastPlayedAt = new Map<string, number>();
 const activeSources = new Map<string, Set<AudioBufferSourceNode>>();
 
 let graph: AudioGraph | null = null;
-let masterVolume = 0.88;
+let reverbBuffer: AudioBuffer | null = null;
+let masterVolume = 1.12;
 let activePriority: { cue: string; priority: number; until: number } | null = null;
 let unlockPromise: Promise<boolean> | null = null;
 
@@ -135,15 +136,27 @@ const getGraph = (): AudioGraph | null => {
     const compressor = context.createDynamicsCompressor();
 
     masterGain.gain.value = masterVolume;
-    compressor.threshold.value = -18;
-    compressor.knee.value = 24;
-    compressor.ratio.value = 6;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.25;
+    compressor.threshold.value = -14;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 4.5;
+    compressor.attack.value = 0.002;
+    compressor.release.value = 0.18;
 
     masterGain.connect(compressor);
     compressor.connect(context.destination);
     graph = { context, masterGain, compressor };
+
+    // Generate impulse-response buffer for reverb
+    const irLen = Math.floor(context.sampleRate * 1.4);
+    const irBuf = context.createBuffer(2, irLen, context.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = irBuf.getChannelData(ch);
+      for (let i = 0; i < irLen; i++) {
+        const decay = Math.exp(-3.2 * i / irLen);
+        d[i] = (Math.random() * 2 - 1) * decay * 0.35;
+      }
+    }
+    reverbBuffer = irBuf;
   }
 
   return graph;
@@ -314,7 +327,7 @@ const playFileCue = async (cue: string, options: PlayCueOptions) => {
 const connectTimedGain = (context: AudioContext, duration: number, volume: number) => {
   const gain = context.createGain();
   const now = context.currentTime;
-  gain.gain.setValueAtTime(clampVolume(volume) * 0.62, now);
+  gain.gain.setValueAtTime(clampVolume(volume) * 0.82, now);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   return gain;
 };
@@ -325,7 +338,18 @@ const playLuxurySynth = (cue: string, volume: number) => {
 
   const context = audioGraph.context;
   const now = context.currentTime;
-  const master = connectTimedGain(context, 1.65, volume);
+  const master = connectTimedGain(context, 2.2, volume);
+
+  // Add reverb send for spatial depth
+  if (reverbBuffer) {
+    const convolver = context.createConvolver();
+    convolver.buffer = reverbBuffer;
+    const reverbGain = context.createGain();
+    reverbGain.gain.setValueAtTime(0.18, now);
+    master.connect(reverbGain);
+    reverbGain.connect(convolver);
+    convolver.connect(audioGraph.masterGain);
+  }
   master.connect(audioGraph.masterGain);
 
   const hit = (start: number, frequency: number, duration: number, gainValue: number, type: OscillatorType = 'sine') => {
@@ -333,33 +357,52 @@ const playLuxurySynth = (cue: string, volume: number) => {
     const gain = context.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(frequency, start);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(24, frequency * 0.58), start + duration);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(24, frequency * 0.52), start + duration);
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+    gain.gain.exponentialRampToValueAtTime(gainValue * 1.15, start + 0.008);
+    gain.gain.setValueAtTime(gainValue * 0.9, start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration + 0.06);
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start(start);
+    osc.stop(start + duration + 0.1);
+  };
+
+  // Sub-bass layer for extra punch on big cues
+  const subBass = (start: number, frequency: number, duration: number, gainValue: number) => {
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, frequency * 0.6), start + duration);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     osc.connect(gain);
     gain.connect(master);
     osc.start(start);
-    osc.stop(start + duration + 0.04);
+    osc.stop(start + duration + 0.05);
   };
 
   const shimmer = (start: number, base: number, duration: number, gainValue: number) => {
-    [1, 1.5, 2, 2.5].forEach((ratio, index) => {
+    [1, 1.5, 2, 2.5, 3, 4].forEach((ratio, index) => {
       const osc = context.createOscillator();
       const gain = context.createGain();
       const pan = context.createStereoPanner();
-      osc.type = index % 2 ? 'triangle' : 'sine';
+      osc.type = index % 3 === 0 ? 'sine' : index % 3 === 1 ? 'triangle' : 'sine';
       osc.frequency.setValueAtTime(base * ratio, start);
-      osc.detune.setValueAtTime(index * 4 - 6, start);
-      pan.pan.setValueAtTime(index % 2 ? 0.35 : -0.3, start);
+      osc.detune.setValueAtTime(index * 7 - 12, start);
+      const panVal = (index % 2 ? 1 : -1) * (0.25 + index * 0.08);
+      pan.pan.setValueAtTime(Math.max(-1, Math.min(1, panVal)), start);
+      const layerGain = gainValue / (index * 0.6 + 1);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(gainValue / (index + 1), start + 0.04 + index * 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      gain.gain.exponentialRampToValueAtTime(layerGain, start + 0.025 + index * 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration + 0.08);
       osc.connect(gain);
       gain.connect(pan);
       pan.connect(master);
       osc.start(start);
-      osc.stop(start + duration + 0.05);
+      osc.stop(start + duration + 0.12);
     });
   };
 
@@ -383,14 +426,19 @@ const playLuxurySynth = (cue: string, volume: number) => {
   };
 
   if (cue === 'GOAL_HORN') {
-    hit(now, 55, 0.72, 1.05, 'sawtooth');
-    hit(now + 0.16, 82, 0.58, 0.78, 'sawtooth');
-    shimmer(now + 0.08, 220, 0.82, 0.22);
-    sweep(now, 0.9, 180, 4600, 0.26, 'lowpass');
+    subBass(now, 30, 0.9, 0.95);
+    hit(now, 55, 0.82, 1.2, 'sawtooth');
+    hit(now + 0.12, 82, 0.68, 0.92, 'sawtooth');
+    hit(now + 0.28, 110, 0.42, 0.55, 'sawtooth');
+    shimmer(now + 0.06, 220, 1.0, 0.32);
+    sweep(now, 1.1, 180, 5200, 0.34, 'lowpass');
+    sweep(now + 0.15, 0.7, 800, 3600, 0.18, 'bandpass');
   } else if (cue === 'BREAKING_NEWS_ALARM') {
-    [0, 0.16, 0.32].forEach(delay => hit(now + delay, 880, 0.12, 0.48, 'square'));
-    hit(now, 68, 0.48, 0.62);
-    sweep(now, 0.5, 3200, 460, 0.18, 'bandpass');
+    subBass(now, 40, 0.5, 0.72);
+    [0, 0.14, 0.28, 0.42].forEach(delay => hit(now + delay, 880, 0.14, 0.56, 'square'));
+    hit(now, 68, 0.52, 0.78);
+    shimmer(now + 0.06, 440, 0.4, 0.18);
+    sweep(now, 0.6, 3200, 460, 0.24, 'bandpass');
   } else if (cue === 'PLAYER_ENTRANCE') {
     hit(now, 48, 0.42, 0.72);
     shimmer(now + 0.06, 260, 0.52, 0.22);
@@ -401,35 +449,49 @@ const playLuxurySynth = (cue: string, volume: number) => {
     hit(now, 180, 0.16, 0.48, 'square');
     hit(now + 0.035, 920, 0.08, 0.3, 'square');
   } else if (cue === 'MERCATO_HIT' || cue === 'ELITE_HIT') {
-    hit(now, 42, 0.42, 1.05);
-    hit(now + 0.035, 118, 0.18, 0.46);
-    shimmer(now + 0.08, 260, 0.54, 0.28);
-    sweep(now + 0.02, 0.52, 2200, 180, 0.32, 'bandpass');
-    sweep(now + 0.12, 0.58, 360, 4800, 0.22, 'highpass');
+    subBass(now, 28, 0.6, 1.0);
+    hit(now, 42, 0.52, 1.25);
+    hit(now + 0.03, 118, 0.22, 0.58);
+    hit(now + 0.12, 196, 0.16, 0.38, 'triangle');
+    shimmer(now + 0.06, 260, 0.72, 0.36);
+    sweep(now + 0.015, 0.62, 2200, 160, 0.38, 'bandpass');
+    sweep(now + 0.1, 0.68, 360, 5200, 0.28, 'highpass');
   } else if (cue === 'TRANSFER_RISER' || cue === 'CLUB_REVEAL' || cue === 'STADIUM_WHOOSH' || cue === 'LUXURY_SWEEP') {
-    hit(now, 56, 0.46, 0.62);
-    shimmer(now + 0.04, 240, 0.72, 0.24);
-    sweep(now, 0.68, 260, 5600, 0.28, 'highpass');
+    subBass(now, 36, 0.52, 0.68);
+    hit(now, 56, 0.52, 0.78);
+    hit(now + 0.14, 92, 0.28, 0.42, 'triangle');
+    shimmer(now + 0.03, 240, 0.88, 0.32);
+    sweep(now, 0.82, 260, 6200, 0.34, 'highpass');
+    sweep(now + 0.2, 0.5, 1200, 380, 0.16, 'bandpass');
   } else if (cue === 'DEADLINE_ALARM' || cue === 'PHOTO_FLASH' || cue === 'NEWS_STING' || cue === 'TACTICAL_LOCK') {
     hit(now, cue === 'PHOTO_FLASH' ? 920 : 86, 0.22, 0.66);
     hit(now + 0.09, cue === 'DEADLINE_ALARM' ? 780 : 180, 0.14, 0.42);
     shimmer(now + 0.05, cue === 'NEWS_STING' ? 520 : 360, 0.36, 0.22);
     sweep(now + 0.01, 0.3, 3400, 520, 0.18, 'bandpass');
   } else if (cue === 'CINEMA_BOOM') {
-    hit(now, 34, 0.72, 1.1);
-    hit(now + 0.05, 72, 0.38, 0.48);
-    sweep(now, 0.72, 140, 2400, 0.26, 'lowpass');
+    subBass(now, 22, 0.85, 1.2);
+    hit(now, 34, 0.82, 1.3);
+    hit(now + 0.04, 72, 0.48, 0.62);
+    hit(now + 0.12, 142, 0.28, 0.35, 'triangle');
+    shimmer(now + 0.08, 180, 0.6, 0.18);
+    sweep(now, 0.92, 140, 2800, 0.32, 'lowpass');
+    sweep(now + 0.1, 0.6, 600, 3400, 0.2, 'bandpass');
   } else if (cue === 'DATA_SLAM') {
-    hit(now, 90, 0.18, 0.7);
-    hit(now + 0.075, 140, 0.12, 0.52);
-    shimmer(now + 0.05, 620, 0.28, 0.28);
-    sweep(now + 0.01, 0.24, 3600, 420, 0.2, 'bandpass');
+    subBass(now, 45, 0.32, 0.72);
+    hit(now, 90, 0.24, 0.85);
+    hit(now + 0.06, 140, 0.16, 0.62);
+    hit(now + 0.12, 220, 0.1, 0.38, 'square');
+    shimmer(now + 0.04, 620, 0.38, 0.34);
+    sweep(now + 0.008, 0.32, 3600, 380, 0.26, 'bandpass');
   } else if (cue === 'HERE_WE_GO_STING' || cue === 'DEAL_LOCK' || cue === 'CONTRACT_STAMP') {
-    hit(now, 38, 0.58, 1.18);
-    hit(now + 0.035, 86, 0.3, 0.72);
-    hit(now + 0.18, cue === 'CONTRACT_STAMP' ? 132 : 176, 0.18, 0.56);
-    shimmer(now + 0.08, 330, 0.66, 0.32);
-    sweep(now, 0.5, 2800, 160, 0.34, 'bandpass');
+    subBass(now, 26, 0.65, 1.1);
+    hit(now, 38, 0.68, 1.35);
+    hit(now + 0.03, 86, 0.36, 0.88);
+    hit(now + 0.15, cue === 'CONTRACT_STAMP' ? 132 : 176, 0.22, 0.68);
+    hit(now + 0.32, 264, 0.14, 0.42, 'triangle');
+    shimmer(now + 0.06, 330, 0.82, 0.4);
+    sweep(now, 0.62, 2800, 140, 0.4, 'bandpass');
+    sweep(now + 0.18, 0.48, 480, 4200, 0.22, 'highpass');
   } else if (cue === 'AGENT_CALL' || cue === 'RUMOUR_GLITCH' || cue === 'MEDICAL_PASS') {
     hit(now, cue === 'MEDICAL_PASS' ? 64 : 112, 0.28, 0.78);
     hit(now + 0.1, cue === 'RUMOUR_GLITCH' ? 920 : 440, 0.12, 0.42);
@@ -446,13 +508,16 @@ const playLuxurySynth = (cue: string, volume: number) => {
     shimmer(now + 0.08, 196, 0.58, 0.18);
     sweep(now + 0.02, 0.46, 1800, 180, 0.22, 'bandpass');
   } else if (cue === 'LUXURY_OUT' || cue === 'BROADCAST_OUT' || cue === 'SOFT_FADE') {
-    hit(now, 110, 0.42, 0.3);
-    shimmer(now, 330, 0.38, 0.1);
-    sweep(now, 0.42, 900, 120, 0.12, 'lowpass');
+    hit(now, 110, 0.52, 0.42);
+    hit(now + 0.06, 72, 0.38, 0.22);
+    shimmer(now, 330, 0.52, 0.16);
+    sweep(now, 0.56, 900, 100, 0.18, 'lowpass');
   } else if (cue === 'SCOREBUG_SNAP' || cue === 'DATA_TICK') {
-    hit(now, 72, 0.32, 0.5);
-    shimmer(now + 0.025, 440, 0.34, 0.16);
-    sweep(now + 0.005, 0.2, 2600, 620, 0.12, 'bandpass');
+    subBass(now, 50, 0.18, 0.42);
+    hit(now, 72, 0.38, 0.65);
+    hit(now + 0.04, 180, 0.12, 0.32, 'square');
+    shimmer(now + 0.02, 440, 0.42, 0.22);
+    sweep(now + 0.004, 0.28, 2600, 580, 0.18, 'bandpass');
   } else {
     hit(now, 58, 0.62, 0.62);
     shimmer(now + 0.06, 220, 0.72, 0.18);
@@ -466,9 +531,9 @@ const playLuxurySynth = (cue: string, volume: number) => {
     } catch {
       /* no-op */
     }
-  }, 1800);
+  }, 2800);
 
-  markCueActive(cue, 1100);
+  markCueActive(cue, 1200);
   return true;
 };
 

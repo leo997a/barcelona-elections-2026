@@ -32,14 +32,17 @@ const RULES_SNIPPET = `{
             },
             "state": {
               "$viewerKey": {
-                ".read": "auth != null",
+                ".read": true,
                 ".write": "auth != null && root.child('rgeSecure/v1/studios/' + $studioId + '/operators/' + auth.uid).exists()"
               }
             },
             "commands": {
               "$controlKey": {
-                ".read": "auth != null && root.child('rgeSecure/v1/studios/' + $studioId + '/operators/' + auth.uid).exists()",
-                ".write": "auth != null"
+                ".read": true,
+                ".write": true,
+                "latest": {
+                  ".validate": "newData.hasChildren(['action','targetId','commandId','issuedAt']) && newData.child('action').isString() && newData.child('targetId').isString() && newData.child('commandId').isString() && newData.child('issuedAt').isNumber()"
+                }
               }
             }
           }

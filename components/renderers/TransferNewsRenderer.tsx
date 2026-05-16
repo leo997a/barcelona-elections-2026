@@ -14,6 +14,43 @@ import {
 import { RendererProps } from './SharedComponents';
 import { resolvePlayerIdentity } from '../../utils/playerIdentity';
 
+const BARCA_PLAYER_CACHE_URL = '/player-image-cache/barcelona.json?v=20260516';
+let playerImageCacheMap: Record<string, string> | null = null;
+let cacheLoadAttempted = false;
+
+const loadPlayerImageCache = async () => {
+  if (cacheLoadAttempted) return;
+  cacheLoadAttempted = true;
+  try {
+    const res = await fetch(BARCA_PLAYER_CACHE_URL, { cache: 'force-cache' });
+    if (!res.ok) return;
+    const data = await res.json() as Record<string, string>;
+    playerImageCacheMap = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (typeof val === 'string' && val.startsWith('http')) {
+        playerImageCacheMap[key.toLowerCase().trim()] = val;
+      }
+    }
+  } catch { /* cache not available */ }
+};
+
+const findInCache = (name: string): string => {
+  if (!playerImageCacheMap) return '';
+  const n = name.toLowerCase().trim();
+  if (playerImageCacheMap[n]) return playerImageCacheMap[n];
+  // Try last name
+  const parts = n.split(/\s+/);
+  if (parts.length > 1) {
+    const lastName = parts[parts.length - 1];
+    if (playerImageCacheMap[lastName]) return playerImageCacheMap[lastName];
+  }
+  // Partial match
+  for (const [key, url] of Object.entries(playerImageCacheMap)) {
+    if (key.includes(n) || n.includes(key)) return url;
+  }
+  return '';
+};
+
 type MarketItem = {
   player: string;
   from: string;
@@ -190,8 +227,14 @@ const initials = (value: string) =>
 
 const marketItemImage = (item: MarketItem, fallbackImage = '') => {
   if (item.image) return item.image;
+  // Try identity system
   const identity = resolvePlayerIdentity(`${item.player} ${item.to || item.from}`, item.to || item.from);
-  return identity?.player.renderImage || identity?.player.smallImage || fallbackImage;
+  if (identity?.player.renderImage) return identity.player.renderImage;
+  if (identity?.player.smallImage) return identity.player.smallImage;
+  // Try player image cache
+  const cached = findInCache(item.player);
+  if (cached) return cached;
+  return fallbackImage;
 };
 
 const visualVariantClass = (variant: string) => {
@@ -240,12 +283,20 @@ const ClubPill = ({ label, color, logo }: { label: string; color: string; logo?:
   </div>
 );
 
-const MarketRows = ({ items, accentColor }: { items: MarketItem[]; accentColor: string }) => (
+  const MarketRows = ({ items, accentColor }: { items: MarketItem[]; accentColor: string }) => (
   <div className="space-y-2">
     {items.slice(0, 5).map((item, index) => {
       const tone = confidenceTone(item.confidence, accentColor);
+      const img = marketItemImage(item);
       return (
-        <div key={`${item.player}-${index}`} className="grid grid-cols-[34px_1fr_92px] items-center gap-3 border border-white/10 bg-black/38 px-3 py-2">
+        <div key={`${item.player}-${index}`} className="grid grid-cols-[42px_34px_1fr_92px] items-center gap-3 border border-white/10 bg-black/38 px-3 py-2">
+          <div className="relative h-10 w-10 overflow-hidden border border-white/10 bg-black/40">
+            {img ? (
+              <img src={img} alt="" className="absolute inset-x-0 bottom-0 mx-auto h-full w-auto object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            ) : (
+              <div className="flex h-full items-center justify-center font-['Barlow_Condensed'] text-sm font-black text-white/40">{initials(item.player)}</div>
+            )}
+          </div>
           <div className="flex h-8 w-8 items-center justify-center bg-white/10 font-['Barlow_Condensed'] text-xl font-black text-white/70">
             {index + 1}
           </div>
@@ -320,7 +371,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   const playerStats = useMemo(() => parsePlayerStats(playerStatsJson), [playerStatsJson]);
   const sportmonksPlayer = getSportmonksPlayer(sportmonksPayload);
   const displayPlayerName = String(sportmonksPlayer?.display_name || sportmonksPlayer?.common_name || sportmonksPlayer?.name || playerName);
-  const displayPlayerImage = playerImageLarge || playerImage || String(sportmonksPlayer?.image_path || '');
+  const displayPlayerImage = playerImageLarge || playerImage || String(sportmonksPlayer?.image_path || '') || findInCache(playerName);
   const latestNews = splitFeed(getField('latestNews'), [
     'Board approved the sporting profile and salary range.',
     'Agent meeting expected within 48 hours.',
@@ -358,6 +409,9 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   };
 
   const didPlay = useRef(false);
+  useEffect(() => {
+    loadPlayerImageCache();
+  }, []);
   useEffect(() => {
     if (!wasVisible && !didPlay.current) {
       didPlay.current = true;
@@ -706,9 +760,16 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
             <MiniMetric label="completed" value={marketItems.length} color="#22c55e" />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            {marketItems.slice(0, 6).map((item, index) => (
+            {marketItems.slice(0, 6).map((item, index) => {
+              const img = marketItemImage(item);
+              return (
               <div key={`${item.player}-${index}`} className="relative min-h-[190px] overflow-hidden border border-white/10 bg-[#070a10]/86 p-5">
                 <div className="absolute inset-x-0 top-0 h-1" style={{ background: index % 2 ? accentColor : '#22c55e' }} />
+                {img && (
+                  <div className="absolute right-2 top-2 h-20 w-20 overflow-hidden opacity-30">
+                    <img src={img} alt="" className="h-full w-full object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="truncate font-['Barlow_Condensed'] text-5xl font-black uppercase leading-none">{item.player}</div>
@@ -726,7 +787,8 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
                   <div className="text-xs font-black uppercase tracking-[0.12em] text-white/44">{item.status}</div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </Shell>
