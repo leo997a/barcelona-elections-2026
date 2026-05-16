@@ -16,6 +16,7 @@ import {
   fetchAssetCaches,
   findAssetUrl,
 } from '../utils/assetCache';
+import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -135,11 +136,28 @@ const CLUB_AI_ALIASES = [
 
 const textHas = (text: string, needle: string) => text.toLocaleLowerCase().includes(needle.toLocaleLowerCase());
 
-const findPlayerAlias = (text: string) =>
-  PLAYER_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+const findPlayerAlias = (text: string) => {
+  const resolved = resolvePlayerIdentity(text);
+  if (resolved && resolved.confidence >= 58) {
+    return {
+      name: resolved.player.displayName,
+      position: resolved.player.position,
+      club: resolved.club?.displayName || resolved.player.club,
+      fallbackImage: resolved.player.renderImage || resolved.player.smallImage,
+      aliases: [...resolved.player.aliases, ...resolved.player.arabicNames],
+      identity: resolved,
+    };
+  }
+  return PLAYER_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+};
 
-const findClubAlias = (text: string) =>
-  CLUB_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+const findClubAlias = (text: string) => {
+  const resolved = resolveClubIdentity(text);
+  if (resolved && resolved.confidence >= 58) {
+    return { name: resolved.club.displayName, aliases: [...resolved.club.aliases, ...resolved.club.arabicNames], identity: resolved };
+  }
+  return CLUB_AI_ALIASES.find(entry => entry.aliases.some(alias => textHas(text, alias)));
+};
 
 const extractPercentSignal = (text: string) => {
   const match = text.match(/(?:بنسبة|احتمال|نسبة|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
@@ -493,6 +511,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const preferRender = draftOverlay.type === OverlayType.TRANSFER_NEWS ||
           draftOverlay.type === OverlayType.BARCA_PREMIUM ||
           draftOverlay.type === OverlayType.PLAYER_STATS;
+      const identity = resolvePlayerIdentity(`${playerName} ${toClub}`, toClub);
+      const identityAssets = identityToAssetFields(identity, preferRender);
+      if (identityAssets.playerName && !String(updates.playerName || '').trim()) updates.playerName = identityAssets.playerName;
+      if (identityAssets.playerTeam && !String(updates.playerTeam || '').trim()) updates.playerTeam = identityAssets.playerTeam;
+      if (identityAssets.playerPosition && !String(updates.playerPosition || '').trim()) updates.playerPosition = identityAssets.playerPosition;
+      if (identityAssets.clubLogo && !String(updates.clubLogo || '').trim()) updates.clubLogo = identityAssets.clubLogo;
       const primaryPlayerMap = preferRender ? renders : players;
       const fallbackPlayerMap = preferRender ? players : renders;
 
@@ -510,12 +534,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           playerName,
           ...assetCandidates(playerName),
           ...assetCandidates(hints.imageQuery),
-      ], fallbackPlayerMap) || findAssetUrl([hints.fallbackPlayerImageUrl], {});
+      ], fallbackPlayerMap) || String(identityAssets.playerImage || '') || findAssetUrl([hints.fallbackPlayerImageUrl], {});
 
       if (!playerImageIsUrl) delete updates.playerImage;
       if (resolvedPlayerImage && !playerImageIsUrl) updates.playerImage = resolvedPlayerImage;
       if (preferRender && resolvedPlayerImage && !String(updates.playerImageLarge || '').trim()) {
-          updates.playerImageLarge = resolvedPlayerImage;
+          updates.playerImageLarge = String(identityAssets.playerImageLarge || resolvedPlayerImage);
       }
 
       const toClubLogo = findAssetUrl([toClub, ...assetCandidates(toClub)], clubs);

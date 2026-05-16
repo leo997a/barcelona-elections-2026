@@ -154,8 +154,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     };
 
     // ── تحديث الحالة بأمان ────────────────────────────────────────────────────
-    // version=0 means the update came from Firebase. Apply it only when the
-    // payload really changed so OBS does not repaint the template for no reason.
+    // version=0 means the update came from a non-versioned fallback. Apply it
+    // only when the payload changed so OBS does not repaint for no reason.
     // version>0 means SSE/polling — only apply if newer than the last applied version.
     const applyState = (newOverlay: OverlayConfig, version = 0) => {
       if (version > 0 && version < lastAppliedVersion) return;
@@ -258,18 +258,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       }
     };
 
-    // ── LAYER 1: syncManager subscription (Firebase WebSocket - INSTANT) ────
-    // syncManager in Output window now connects to Firebase in read-only mode.
-    // When Firebase pushes a state update, syncManager.notify() fires → this callback runs immediately.
-    const fbUnsubscribe = syncManager.subscribe((allOverlays) => {
-      const found = allOverlays.find(o => o.id === id);
-      if (found) {
-        applyState(found);
-        setConnStatus('live');
-      }
-    });
-
-    // ── LAYER 2: SSE + Polling (reliable fallback for when Firebase is unavailable) ──
+    // ── Official output sync: SSE + light polling fallback over /api/live ──
     startFallback();
     connectSSE();
 
@@ -278,7 +267,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       es?.close();
       stopFallback();
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      fbUnsubscribe();
     };
   }, [id, hashPath, embeddedOverlay]);
 

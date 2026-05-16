@@ -5,6 +5,7 @@ import {
   type ServerlessRequest,
   type ServerlessResponse,
 } from './_lib/http.js';
+import { resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity.ts';
 
 interface AiRequestBody {
   action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card' | 'player-stats-query';
@@ -192,6 +193,14 @@ const setFieldWhenWeak = (
 
 const detectLocalPlayer = (text: string) => {
   const value = text.toLowerCase();
+  const identity = resolvePlayerIdentity(text);
+  if (identity && identity.confidence >= 58) {
+    return {
+      playerName: identity.player.displayName,
+      clubName: identity.club?.displayName || identity.player.club,
+      position: identity.player.position,
+    };
+  }
   if (/lewandowski/i.test(value) || hasAnyTerm(text, ['\u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A', '\u0631\u0648\u0628\u0631\u062A \u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A'])) {
     return { playerName: 'Robert Lewandowski', clubName: 'Barcelona', position: 'ST / Forward' };
   }
@@ -232,6 +241,8 @@ const detectLocalPlayer = (text: string) => {
 };
 
 const detectLocalClub = (text: string) => {
+  const identity = resolveClubIdentity(text);
+  if (identity && identity.confidence >= 58) return identity.club.displayName;
   if (/barcelona|barca/i.test(text) || hasAnyTerm(text, ['\u0628\u0631\u0634\u0644\u0648\u0646\u0629', '\u0628\u0631\u0634\u0644\u0648\u0646\u0647', '\u0627\u0644\u0628\u0627\u0631\u0633\u0627'])) return 'Barcelona';
   if (/chelsea/i.test(text) || hasAnyTerm(text, ['\u062A\u0634\u064A\u0644\u0633\u064A'])) return 'Chelsea';
   if (/real madrid/i.test(text) || hasAnyTerm(text, ['\u0631\u064A\u0627\u0644 \u0645\u062F\u0631\u064A\u062F'])) return 'Real Madrid';

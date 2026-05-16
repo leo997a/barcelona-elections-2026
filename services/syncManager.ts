@@ -36,6 +36,7 @@ const DEFAULT_STUDIO_ID = 'reo-main';
 const DEFAULT_STATE_ACCESS_KEY = 'public-live-output';
 const DEFAULT_CONTROL_ACCESS_KEY = 'studio-live-control';
 const OBS_OUTPUT_URL_VERSION = 'obs-live-v3';
+const LEGACY_FIREBASE_SYNC_KEY = 'rge_enable_legacy_firebase_sync';
 
 interface ViewerSyncBundle {
   provider: 'firebase';
@@ -80,8 +81,9 @@ class SyncManager {
     this.currentState = isOutputWindow ? [] : this.loadLocalState();
 
     if (isOutputWindow) {
-      // Output window: connect to Firebase in read-only mode for instant updates
-      void this.initSecureSync();
+      // Output windows now use /api/stream + /api/live only. Firebase is legacy
+      // and must never inject old visibility commands into the broadcast view.
+      this.status = 'local';
       return;
     }
 
@@ -90,7 +92,11 @@ class SyncManager {
     }
 
     this.initLocalBridge();
-    void this.initSecureSync();
+    if (this.isLegacyFirebaseSyncEnabled()) {
+      void this.initSecureSync();
+    } else {
+      this.status = 'local';
+    }
 
     if (!window.location.hash.includes('/output/') && this.currentState.length > 0) {
       setTimeout(() => this.pushToLiveApi(), 1500);
@@ -101,6 +107,14 @@ class SyncManager {
 
   private isOutputRoute() {
     return window.location.hash.includes('/output/');
+  }
+
+  private isLegacyFirebaseSyncEnabled() {
+    try {
+      return localStorage.getItem(LEGACY_FIREBASE_SYNC_KEY) === '1';
+    } catch {
+      return false;
+    }
   }
 
   private normalizeOverlay(overlay: OverlayConfig, changedFieldId?: string) {
@@ -703,7 +717,7 @@ class SyncManager {
   }
 
   public getViewerBundle(): ViewerSyncBundle | null {
-    if (!this.config) return null;
+    if (!this.config || !this.isLegacyFirebaseSyncEnabled()) return null;
 
     return {
       provider: 'firebase',
@@ -730,7 +744,7 @@ class SyncManager {
     const effectiveControlKey = this.config?.controlAccessKey || DEFAULT_CONTROL_ACCESS_KEY;
 
     return {
-      provider: 'firebase' as const,
+      provider: 'live-api' as const,
       studioId: this.config?.studioId || this.studioId,
       controlAccessKey: effectiveControlKey,
     };

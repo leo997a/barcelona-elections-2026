@@ -222,12 +222,18 @@ const normalizePayload = (payload: PlayerStatsPayload | null, getField: Renderer
 
 const selectedCategories = (getField: RendererProps['getField']) => [
   ['attack', 'includeAttack'],
+  ['shooting', 'includeShooting'],
+  ['chance_creation', 'includeChanceCreation'],
   ['passing', 'includePassing'],
+  ['dribbling', 'includeDribbling'],
   ['defense', 'includeDefense'],
+  ['duels', 'includeDuels'],
   ['possession', 'includePossession'],
   ['discipline', 'includeDiscipline'],
+  ['goalkeeping', 'includeGoalkeeping'],
   ['season', 'includeSeasonTotals'],
   ['per90', 'includePer90'],
+  ['advanced', 'includeAdvanced'],
 ].filter(([, fieldId]) => getField(fieldId) !== false).map(([category]) => category);
 
 const PlayerImage = ({ player, accent, large = false }: { player: PlayerStatsCard; accent: string; large?: boolean }) => (

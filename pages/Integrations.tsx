@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { OverlayConfig } from '../types';
 import { syncManager } from '../services/syncManager';
 import {
@@ -19,18 +19,15 @@ interface IntegrationsProps {
   overlays: OverlayConfig[];
 }
 
-const FIREBASE_COMPAT_VERSION = '10.12.2';
-
 const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
   const [activeTab, setActiveTab] = useState<'plugin' | 'webdeck'>('plugin');
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'done'>('idle');
 
-  const secureConfig = useMemo(() => syncManager.getSecureConfig(), []);
   const secureContext = syncManager.getSmartTokenContext();
-  const secureReady = Boolean(secureConfig && secureContext);
+  const secureReady = Boolean(secureContext);
 
   const handleDownloadPlugin = async () => {
-    if (!secureReady || !secureConfig) return;
+    if (!secureReady) return;
 
     setDownloadStatus('downloading');
     const zip = new JSZip();
@@ -42,7 +39,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Actions: [
         {
           Icon: 'images/actionIcon',
-          Name: 'RGE Secure Action',
+          Name: 'RGE Live Action',
           States: [{ Image: 'images/actionIcon', TitleAlignment: 'middle', FontSize: 10 }],
           Tooltip: 'Paste your Smart Token',
           UUID: 'com.rge.secure.controller.action',
@@ -52,12 +49,12 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Author: 'RGE System',
       CodePath: 'index.html',
       PropertyInspectorPath: 'pi.html',
-      Category: 'RGE Secure',
+      Category: 'RGE Live',
       CategoryIcon: 'images/categoryIcon',
-      Description: 'Secure Firebase controller for REO Live overlays',
-      Name: 'RGE Secure Controller',
+      Description: 'Official Live API controller for REO Live overlays',
+      Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.0.0',
+      Version: '4.1.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -67,61 +64,20 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
     folder.file('manifest.json', JSON.stringify(manifest, null, 2));
 
-    const publicConfig = {
-      apiKey: secureConfig.apiKey,
-      authDomain: secureConfig.authDomain,
-      databaseURL: secureConfig.databaseURL,
-      projectId: secureConfig.projectId,
-      appId: secureConfig.appId,
-      messagingSenderId: secureConfig.messagingSenderId,
-      storageBucket: secureConfig.storageBucket,
-      measurementId: secureConfig.measurementId,
-    };
-
     const indexHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>RGE Secure Controller</title>
-  <script src="https://www.gstatic.com/firebasejs/${FIREBASE_COMPAT_VERSION}/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/${FIREBASE_COMPAT_VERSION}/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/${FIREBASE_COMPAT_VERSION}/firebase-database-compat.js"></script>
+  <title>RGE Live Controller</title>
 </head>
 <body>
   <script>
     var websocket = null;
-    var realtimeReady = null;
-    const FIREBASE_CONFIG = ${JSON.stringify(publicConfig)};
     const DEFAULT_CONTROL_KEY = 'studio-live-control';
     const DEFAULT_SITE_URL = 'https://barcelona-elections-2026.vercel.app';
 
     function createCommandId() {
       return 'cmd_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
-    }
-
-    function initRealtime() {
-      if (realtimeReady) return realtimeReady;
-
-      realtimeReady = new Promise(function(resolve, reject) {
-        try {
-          var existing = firebase.apps.filter(function(candidate) { return candidate.name === 'rge-streamdeck'; })[0];
-          var app = existing || firebase.initializeApp(FIREBASE_CONFIG, 'rge-streamdeck');
-          var auth = app.auth();
-          var signIn = auth.currentUser
-            ? Promise.resolve(auth.currentUser)
-            : auth.signInAnonymously().catch(function(error) {
-                console.warn('Anonymous auth unavailable; using Smart Token path access.', error);
-                return null;
-              });
-          signIn.then(function() {
-            resolve(app.database());
-          }).catch(reject);
-        } catch (error) {
-          reject(error);
-        }
-      });
-
-      return realtimeReady;
     }
 
     function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent) {
@@ -148,22 +104,11 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (!payload) return showAlert(context);
 
       try {
-        var database = await initRealtime();
-        var commandRef = database.ref('rgeSecure/v1/studios/' + settings.studioId + '/commands/' + settings.controlKey + '/latest');
-        await commandRef.set(Object.assign({}, payload, {
-          commandId: createCommandId(),
-          issuedAt: Date.now()
-        }));
+        await sendLiveApiCommand(settings, payload);
         showOk(context);
       } catch (error) {
-        console.warn('RGE Firebase command failed, trying live API', error);
-        try {
-          await sendLiveApiCommand(settings, payload);
-          showOk(context);
-        } catch (liveError) {
-          console.error('RGE command failed', liveError);
-          showAlert(context);
-        }
+        console.error('RGE Live API command failed', error);
+        showAlert(context);
       }
     }
 
@@ -257,7 +202,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>RGE Secure Settings</title>
+  <title>RGE Live Settings</title>
   <style>
     body { background-color: #2d2d2d; color: #b0b0b0; font-family: sans-serif; font-size: 12px; padding: 12px; }
     .sdpi-heading { color: #888; text-transform: uppercase; font-size: 10px; font-weight: bold; margin-bottom: 8px; margin-top: 16px; }
@@ -378,9 +323,9 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       var general = document.createElement('optgroup');
       general.label = 'General Controls';
       select.appendChild(general);
-      addOption(general, 'toggle', 'Toggle Visibility');
       addOption(general, 'set_on', 'Set ON AIR');
       addOption(general, 'set_off', 'Set OFF AIR');
+      addOption(general, 'toggle', 'Toggle Visibility (legacy)');
 
       if (type === 'SCOREBOARD') {
         var score = document.createElement('optgroup');
@@ -445,7 +390,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Secure_Controller_v4.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_1.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -463,7 +408,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
           <span>التكاملات</span>
         </h1>
         <p className="mb-8 text-xs leading-6 text-gray-500">
-          الربط الخارجي انتقل الآن إلى طبقة آمنة مبنية على Firebase وقوالب Smart Tokens المحدثة.
+          Stream Deck يعمل الآن رسميًا عبر Live API وSmart Tokens بدون مسار Firebase افتراضي.
         </p>
 
         <div className="space-y-2">
@@ -479,7 +424,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
               <Grid className="h-5 w-5" />
               <div>
                 <div className="font-bold">Stream Deck Plugin</div>
-                <div className="text-[10px] opacity-70">نسخة مؤمنة بـ Firebase</div>
+                <div className="text-[10px] opacity-70">Live API official path</div>
               </div>
             </div>
           </button>
@@ -508,10 +453,10 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
           <div className="mx-auto max-w-5xl space-y-8 animate-fade-in-up">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <h2 className="mb-4 text-4xl font-black">RGE Secure Plugin</h2>
+                <h2 className="mb-4 text-4xl font-black">RGE Live API Plugin</h2>
                 <p className="max-w-2xl text-lg leading-8 text-gray-400">
                   هذه النسخة لم تعد تستخدم broker عام أو MQTT مفتوح. الأوامر تنتقل الآن إلى
-                  Firebase Realtime من خلال مفاتيح تحكم خاصة داخل Smart Token.
+                  Live API عبر /api/live، وFirebase لم يعد مسار التحكم الافتراضي.
                 </p>
               </div>
               <div className="rounded-3xl bg-blue-600/20 p-4">
@@ -527,7 +472,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                 </div>
                 <p className="max-w-3xl text-sm leading-7 text-yellow-50/80">
                   قبل تنزيل الإضافة، افتح صفحة <strong>الحماية والربط</strong> وأضف Web Config
-                  الخاص بـ Firebase مع القواعد الآمنة. بدون ذلك ستبقى الإضافة بدون مسار تحكم
+                  الخاص بـ Live API. بدون ذلك ستبقى الإضافة بدون مسار تحكم
                   خارجي موثوق.
                 </p>
               </div>
@@ -542,7 +487,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                         تنزيل إضافة Stream Deck الآمنة
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
-                        الإضافة ستُنشأ وفي داخلها إعدادات Firebase العامة فقط، بينما صلاحية
+                        الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
                         التحكم الفعلية تأتي من Smart Token لكل قالب على حدة.
                       </p>
                       <button
@@ -564,7 +509,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                         <span>
                           {downloadStatus === 'done'
                             ? 'تم إنشاء الإضافة'
-                            : 'تنزيل RGE Secure Controller'}
+                            : 'تنزيل RGE Live Controller'}
                         </span>
                       </button>
                     </div>

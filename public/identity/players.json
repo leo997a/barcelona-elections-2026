@@ -1,0 +1,98 @@
+[
+  {
+    "id": "cole-palmer",
+    "displayName": "Cole Palmer",
+    "arabicNames": ["\u0643\u0648\u0644 \u0628\u0627\u0644\u0645\u0631", "\u0628\u0627\u0644\u0645\u0631"],
+    "aliases": ["cole palmer", "palmer", "c palmer", "c. palmer"],
+    "club": "chelsea",
+    "clubArabic": "\u062A\u0634\u064A\u0644\u0633\u064A",
+    "position": "AM/RW",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Cole_Palmer_3.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Cole_Palmer_5.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%A7%D9%86%D8%AF%D9%8A%D8%A9%20%D8%A7%D9%84%D8%A7%D9%86%D8%AC%D9%84%D9%8A%D8%B2%D9%8A%D8%A9/Chelsea%20FC.png"
+  },
+  {
+    "id": "enzo-fernandez",
+    "displayName": "Enzo Fernandez",
+    "arabicNames": ["\u0625\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632", "\u0627\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632"],
+    "aliases": ["enzo fernandez", "enzo", "e fernandez"],
+    "club": "chelsea",
+    "clubArabic": "\u062A\u0634\u064A\u0644\u0633\u064A",
+    "position": "CM",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Enzo_Fernandez_5.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Enzo_Fernandez_5.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%A7%D9%86%D8%AF%D9%8A%D8%A9%20%D8%A7%D9%84%D8%A7%D9%86%D8%AC%D9%84%D9%8A%D8%B2%D9%8A%D8%A9/Chelsea%20FC.png"
+  },
+  {
+    "id": "moises-caicedo",
+    "displayName": "Moises Caicedo",
+    "arabicNames": ["\u0645\u0648\u064A\u0633\u064A\u0633 \u0643\u0627\u064A\u0633\u064A\u062F\u0648", "\u0643\u0627\u064A\u0633\u064A\u062F\u0648"],
+    "aliases": ["moises caicedo", "caicedo", "m caicedo"],
+    "club": "chelsea",
+    "clubArabic": "\u062A\u0634\u064A\u0644\u0633\u064A",
+    "position": "DM/CM",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Moises_Caicedo.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Moises_Caicedo.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%A7%D9%86%D8%AF%D9%8A%D8%A9%20%D8%A7%D9%84%D8%A7%D9%86%D8%AC%D9%84%D9%8A%D8%B2%D9%8A%D8%A9/Chelsea%20FC.png"
+  },
+  {
+    "id": "reece-james",
+    "displayName": "Reece James",
+    "arabicNames": ["\u0631\u064A\u0633 \u062C\u064A\u0645\u0633", "\u062C\u064A\u0645\u0633"],
+    "aliases": ["reece james", "r james", "james"],
+    "club": "chelsea",
+    "clubArabic": "\u062A\u0634\u064A\u0644\u0633\u064A",
+    "position": "RB",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Reece_James_2.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/Players/Chelsea/Reece_James_2.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/Premier%20League/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%A7%D9%86%D8%AF%D9%8A%D8%A9%20%D8%A7%D9%84%D8%A7%D9%86%D8%AC%D9%84%D9%8A%D8%B2%D9%8A%D8%A9/Chelsea%20FC.png"
+  },
+  {
+    "id": "lamine-yamal",
+    "displayName": "Lamine Yamal",
+    "arabicNames": ["\u0644\u0627\u0645\u064A\u0646 \u064A\u0627\u0645\u0627\u0644", "\u064A\u0627\u0645\u0627\u0644"],
+    "aliases": ["lamine yamal", "yamal"],
+    "club": "barcelona",
+    "clubArabic": "\u0628\u0631\u0634\u0644\u0648\u0646\u0629",
+    "position": "RW",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Lamine%20Yamal.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Lamine%20Yamal.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png"
+  },
+  {
+    "id": "robert-lewandowski",
+    "displayName": "Robert Lewandowski",
+    "arabicNames": ["\u0631\u0648\u0628\u0631\u062A \u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A", "\u0644\u064A\u0641\u0627\u0646\u062F\u0648\u0641\u0633\u0643\u064A"],
+    "aliases": ["robert lewandowski", "lewandowski"],
+    "club": "barcelona",
+    "clubArabic": "\u0628\u0631\u0634\u0644\u0648\u0646\u0629",
+    "position": "ST",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Robert%20Lewandowski.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Robert%20Lewandowski.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png"
+  },
+  {
+    "id": "pedri",
+    "displayName": "Pedri",
+    "arabicNames": ["\u0628\u064A\u062F\u0631\u064A"],
+    "aliases": ["pedri"],
+    "club": "barcelona",
+    "clubArabic": "\u0628\u0631\u0634\u0644\u0648\u0646\u0629",
+    "position": "CM/AM",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Pedri.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Pedri.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png"
+  },
+  {
+    "id": "dani-olmo",
+    "displayName": "Dani Olmo",
+    "arabicNames": ["\u062F\u0627\u0646\u064A \u0623\u0648\u0644\u0645\u0648", "\u0623\u0648\u0644\u0645\u0648"],
+    "aliases": ["dani olmo", "olmo"],
+    "club": "barcelona",
+    "clubArabic": "\u0628\u0631\u0634\u0644\u0648\u0646\u0629",
+    "position": "AM/FW",
+    "smallImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Dani%20Olmo.png",
+    "renderImage": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/Barcelona/Dani%20Olmo.png",
+    "clubLogo": "https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png"
+  }
+]

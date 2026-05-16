@@ -27,13 +27,13 @@ const getQuery = (req: ServerlessRequest) => {
 
 const parseQuery = (req: ServerlessRequest): PlayerStatsQuery => {
   const query = getQuery(req);
-  const categories = (query.get('categories') || 'attack,passing,defense,possession,season,per90')
+  const categories = (query.get('categories') || 'all')
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);
 
   return {
-    mode: query.get('mode') || 'SINGLE',
+    mode: (query.get('mode') || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD'),
     season: query.get('season') || '2025/26',
     categories,
     playerAName: query.get('playerAName') || 'Robert Lewandowski',
@@ -45,36 +45,58 @@ const parseQuery = (req: ServerlessRequest): PlayerStatsQuery => {
   };
 };
 
+const ALL_CATEGORY_STATS = [
+  { label: 'Appearances', value: 'pending', hint: 'season matches played', category: 'season' },
+  { label: 'Starts', value: 'pending', hint: 'first XI appearances', category: 'season' },
+  { label: 'Minutes', value: 'pending', hint: 'season load', category: 'season' },
+  { label: 'Goals', value: 'pending', hint: 'WhoScored season total', category: 'attack' },
+  { label: 'Non-penalty goals', value: 'pending', hint: 'open-play scoring', category: 'attack' },
+  { label: 'Assists', value: 'pending', hint: 'direct goal creation', category: 'attack' },
+  { label: 'Shots', value: 'pending', hint: 'total attempts', category: 'shooting' },
+  { label: 'Shots / 90', value: 'pending', hint: 'normalised shot volume', category: 'shooting' },
+  { label: 'Shots on target', value: 'pending', hint: 'accurate attempts', category: 'shooting' },
+  { label: 'Shot accuracy', value: 'pending', hint: 'shots on target rate', category: 'shooting' },
+  { label: 'Touches in box', value: 'pending', hint: 'penalty-area presence', category: 'attack' },
+  { label: 'Big chances', value: 'pending', hint: 'high-value chances', category: 'attack' },
+  { label: 'Key passes', value: 'pending', hint: 'chance creation', category: 'chance_creation' },
+  { label: 'Big chances created', value: 'pending', hint: 'clear scoring chances made', category: 'chance_creation' },
+  { label: 'Through balls', value: 'pending', hint: 'line-breaking supply', category: 'chance_creation' },
+  { label: 'Crosses', value: 'pending', hint: 'wide service', category: 'chance_creation' },
+  { label: 'Passes', value: 'pending', hint: 'distribution volume', category: 'passing' },
+  { label: 'Pass accuracy', value: 'pending', hint: 'distribution quality', category: 'passing' },
+  { label: 'Progressive passes', value: 'pending', hint: 'build-up value', category: 'passing' },
+  { label: 'Long balls', value: 'pending', hint: 'direct distribution', category: 'passing' },
+  { label: 'Final-third passes', value: 'pending', hint: 'advanced ball progression', category: 'passing' },
+  { label: 'Successful dribbles', value: 'pending', hint: '1v1 output', category: 'dribbling' },
+  { label: 'Dribble success', value: 'pending', hint: 'take-on efficiency', category: 'dribbling' },
+  { label: 'Progressive carries', value: 'pending', hint: 'carry distance', category: 'possession' },
+  { label: 'Touches', value: 'pending', hint: 'involvement volume', category: 'possession' },
+  { label: 'Dispossessed', value: 'pending', hint: 'lost under pressure', category: 'possession' },
+  { label: 'Turnovers', value: 'pending', hint: 'possession losses', category: 'possession' },
+  { label: 'Recoveries', value: 'pending', hint: 'ball wins', category: 'defense' },
+  { label: 'Tackles', value: 'pending', hint: 'defensive actions', category: 'defense' },
+  { label: 'Tackle success', value: 'pending', hint: 'duel efficiency', category: 'defense' },
+  { label: 'Interceptions', value: 'pending', hint: 'reading play', category: 'defense' },
+  { label: 'Clearances', value: 'pending', hint: 'box protection', category: 'defense' },
+  { label: 'Blocks', value: 'pending', hint: 'shot/pass blocks', category: 'defense' },
+  { label: 'Aerial duels won', value: 'pending', hint: 'air strength', category: 'duels' },
+  { label: 'Ground duels won', value: 'pending', hint: 'contact strength', category: 'duels' },
+  { label: 'Fouls won', value: 'pending', hint: 'pressure resistance', category: 'duels' },
+  { label: 'Fouls committed', value: 'pending', hint: 'discipline load', category: 'discipline' },
+  { label: 'Yellow cards', value: 'pending', hint: 'discipline', category: 'discipline' },
+  { label: 'Red cards', value: 'pending', hint: 'discipline', category: 'discipline' },
+  { label: 'Rating', value: 'pending', hint: 'WhoScored model score', category: 'advanced' },
+  { label: 'Player impact index', value: 'pending', hint: 'REO synthetic profile score', category: 'advanced' },
+  { label: 'Per 90 profile', value: 'pending', hint: 'normalised comparison', category: 'per90' },
+  { label: 'Goalkeeper saves', value: 'pending', hint: 'keeper-only metric', category: 'goalkeeping' },
+  { label: 'Save percentage', value: 'pending', hint: 'keeper efficiency', category: 'goalkeeping' },
+  { label: 'Clean sheets', value: 'pending', hint: 'keeper/team defensive output', category: 'goalkeeping' },
+];
+
 const categoryStats = (categories: string[]) => {
-  const include = (category: string) => categories.includes(category);
-  return [
-    ...(include('attack') ? [
-      { label: 'Goals', value: 'pending', hint: 'WhoScored season total', category: 'attack' },
-      { label: 'Shots / 90', value: 'pending', hint: 'per-match attack volume', category: 'attack' },
-      { label: 'Touches in box', value: 'pending', hint: 'penalty-area presence', category: 'attack' },
-    ] : []),
-    ...(include('passing') ? [
-      { label: 'Key passes', value: 'pending', hint: 'chance creation', category: 'passing' },
-      { label: 'Progressive passes', value: 'pending', hint: 'build-up value', category: 'passing' },
-      { label: 'Pass accuracy', value: 'pending', hint: 'distribution quality', category: 'passing' },
-    ] : []),
-    ...(include('defense') ? [
-      { label: 'Recoveries', value: 'pending', hint: 'ball wins', category: 'defense' },
-      { label: 'Tackles', value: 'pending', hint: 'defensive actions', category: 'defense' },
-      { label: 'Interceptions', value: 'pending', hint: 'reading play', category: 'defense' },
-    ] : []),
-    ...(include('possession') ? [
-      { label: 'Successful dribbles', value: 'pending', hint: '1v1 output', category: 'possession' },
-      { label: 'Progressive carries', value: 'pending', hint: 'carry distance', category: 'possession' },
-    ] : []),
-    ...(include('season') ? [
-      { label: 'Appearances', value: 'pending', hint: 'season total', category: 'season' },
-      { label: 'Minutes', value: 'pending', hint: 'season load', category: 'season' },
-    ] : []),
-    ...(include('per90') ? [
-      { label: 'Per 90 profile', value: 'pending', hint: 'normalised comparison', category: 'per90' },
-    ] : []),
-  ];
+  const wanted = new Set(categories.map(item => item.toLowerCase()));
+  const includeAll = wanted.size === 0 || wanted.has('all') || wanted.has('*');
+  return ALL_CATEGORY_STATS.filter(stat => includeAll || wanted.has(stat.category));
 };
 
 const fallbackPayload = (query: PlayerStatsQuery) => {
@@ -91,6 +113,8 @@ const fallbackPayload = (query: PlayerStatsQuery) => {
     source: 'REO Player Stats Bridge contract',
     updatedAt: new Date().toISOString(),
     bridgeConfigured: false,
+    supportedModes: ['SINGLE', 'COMPARE', 'SCOUT_CARD'],
+    supportedCategories: [...new Set(ALL_CATEGORY_STATS.map(stat => stat.category))],
     players,
     notes: [
       'This endpoint is ready for the Google Cloud player extractor.',

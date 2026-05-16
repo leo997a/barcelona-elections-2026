@@ -262,7 +262,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       id: overlay.id,
       tp: overlay.type,
       nm: overlay.name,
-      sv: ctx?.provider || 'firebase',
+      sv: ctx?.provider || 'live-api',
       ct: ctx?.controlAccessKey || 'studio-live-control',
       u: window.location.origin,
     };
