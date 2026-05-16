@@ -1,6 +1,8 @@
 
 import React from 'react';
-import { Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star, Radio } from 'lucide-react';
+import { Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star, Radio, Lock } from 'lucide-react';
+import { licenseService } from '../services/licenseService';
+import { toSystemRole, can, getRoleDisplayName, type SystemRole } from '../utils/permissions';
 
 interface SidebarProps {
   activePage: string;
@@ -8,16 +10,32 @@ interface SidebarProps {
   favoriteCount?: number;
 }
 
-const NAV = [
-  { id: 'home',             label: 'الرئيسية',         icon: Home,        badge: null },
-  { id: 'library',          label: 'المكتبة',           icon: LayoutGrid,  badge: null },
-  { id: 'operator',         label: 'غرفة التحكم',       icon: Play,        badge: 'LIVE' },
-  { id: 'integrations',     label: 'الربط الخارجي',     icon: Cpu,         badge: null },
-  { id: 'broadcastcontrol', label: 'استوديو البث',      icon: Radio,       badge: null },
-  { id: 'settings',         label: 'الحماية والإعدادات', icon: Shield,      badge: null },
-];
+const NAV_ALL = [
+  { id: 'home',             label: 'الرئيسية',         icon: Home,        badge: null,   cap: null },
+  { id: 'library',          label: 'المكتبة',           icon: LayoutGrid,  badge: null,   cap: null },
+  { id: 'operator',         label: 'غرفة التحكم',       icon: Play,        badge: 'LIVE', cap: null },
+  { id: 'integrations',     label: 'الربط الخارجي',     icon: Cpu,         badge: null,   cap: null },
+  { id: 'broadcastcontrol', label: 'استوديو البث',      icon: Radio,       badge: null,   cap: null },
+  { id: 'settings',         label: 'الحماية والإعدادات', icon: Shield,      badge: null,   cap: 'SECURITY_SETTINGS_EDIT' as const },
+] as const;
+
+const ROLE_BADGE_STYLE: Record<SystemRole, string> = {
+  OWNER:           'bg-red-900/30 text-red-300 border-red-800/40',
+  ADMIN_ASSISTANT: 'bg-yellow-900/30 text-yellow-300 border-yellow-800/40',
+  SUBSCRIBER:      'bg-blue-900/30 text-blue-300 border-blue-800/40',
+  VIEWER:          'bg-gray-800/50 text-gray-400 border-gray-700/40',
+};
 
 const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, favoriteCount = 0 }) => {
+  const stored = licenseService.getStored();
+  const systemRole: SystemRole = stored?.valid ? toSystemRole(stored.role) : 'VIEWER';
+  const roleName = getRoleDisplayName(systemRole);
+
+  // Filter nav items by capability
+  const visibleNav = NAV_ALL.filter(item =>
+    !item.cap || can(systemRole, item.cap)
+  );
+
   return (
     <div className="w-60 bg-[#0e1117] border-l border-gray-800/80 flex flex-col h-full z-50 shadow-2xl flex-shrink-0">
 
@@ -37,9 +55,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, favoriteCount
         </div>
       </div>
 
+      {/* Role Badge */}
+      <div className="px-4 pt-3 pb-1">
+        <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${ROLE_BADGE_STYLE[systemRole]}`}>
+          <Lock className="w-2.5 h-2.5" />
+          {roleName}
+        </div>
+      </div>
+
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {NAV.map(item => {
+        {visibleNav.map(item => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (

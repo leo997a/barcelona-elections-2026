@@ -75,12 +75,55 @@ const Settings: React.FC = () => {
   const [vaultError, setVaultError] = useState('');
   const [testResults, setTestResults] = useState<Array<{service: string; configured: boolean; reachable: boolean; auth: {required: boolean; provided: boolean; valid: boolean}; latencyMs: number; error?: string}>>([]);
   const [testLoading, setTestLoading] = useState(false);
+  const [rotationConfirmed, setRotationConfirmed] = useState(false);
+  const [rotationConfirming, setRotationConfirming] = useState(false);
+
+  // ── Admin Session Login State (for Vault) ──
+  const [adminPasscode, setAdminPasscode] = useState('');
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminSession, setAdminSession] = useState(() => adminSessionService.getStoredSession());
+
+  const loginAdmin = async () => {
+    if (!adminPasscode.trim()) return;
+    setAdminLoginLoading(true);
+    setAdminLoginError('');
+    try {
+      await adminSessionService.login(adminPasscode.trim());
+      setAdminSession(adminSessionService.getStoredSession());
+      setAdminPasscode('');
+    } catch (e) {
+      setAdminLoginError(e instanceof Error ? e.message : 'فشل تسجيل الدخول');
+    } finally {
+      setAdminLoginLoading(false);
+    }
+  };
+
+  const logoutAdmin = () => {
+    adminSessionService.clear();
+    setAdminSession(null);
+    setVaultSecrets([]);
+    setTestResults([]);
+    setRotationConfirmed(false);
+  };
+
+  const confirmRotation = async () => {
+    setRotationConfirming(true);
+    // Simulate a final verification call before marking rotation complete
+    await new Promise(r => setTimeout(r, 800));
+    setRotationConfirmed(true);
+    setRotationConfirming(false);
+  };
+
+  // allHealthy = every test result has auth.valid=true
+  const allHealthy = testResults.length > 0 && testResults.every(r => r.configured && r.reachable && r.auth.valid);
 
   // ── Role-based access ──
   const storedLicense = licenseService.getStored();
   const systemRole: SystemRole = storedLicense?.valid ? toSystemRole(storedLicense.role) : 'VIEWER';
   const canViewSecrets = can(systemRole, 'SECRETS_VIEW_METADATA');
   const canTestSecrets = can(systemRole, 'SECRETS_TEST');
+  const canRotate = can(systemRole, 'SECRETS_ROTATE');
 
   const loadVaultStatus = async () => {
     setVaultLoading(true);
@@ -590,12 +633,49 @@ const Settings: React.FC = () => {
             خزنة الأسرار — {getRoleDisplayName(systemRole)}
           </div>
           <h2 className="text-2xl font-black text-white mb-2">🔐 Admin Secrets Vault</h2>
-          <p className="text-sm text-gray-400 mb-6">فحص حالة الأسرار والتوكنات — لا تُعرض القيم الكاملة أبداً.</p>
+          <p className="text-sm text-gray-400 mb-4">فحص حالة الأسرار والتوكنات — لا تُعرض القيم الكاملة أبداً.</p>
 
-          <div className="flex gap-3 mb-6">
+          {/* ── Admin Session Login ── */}
+          {!adminSession ? (
+            <div className="mb-6 rounded-2xl border border-yellow-800/40 bg-yellow-900/10 p-5">
+              <p className="text-xs font-bold text-yellow-300 mb-3">🔑 يلزم تسجيل دخول المسؤول لاستخدام الـ Vault</p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={adminPasscode}
+                  onChange={e => setAdminPasscode(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && loginAdmin()}
+                  placeholder="EDITOR_ADMIN_PASSCODE"
+                  className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-yellow-500"
+                  dir="ltr"
+                />
+                <button
+                  onClick={loginAdmin}
+                  disabled={adminLoginLoading || !adminPasscode.trim()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 px-4 py-2 text-xs font-bold text-black transition-colors"
+                >
+                  {adminLoginLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                  دخول
+                </button>
+              </div>
+              {adminLoginError && <p className="text-red-400 text-xs mt-2">{adminLoginError}</p>}
+            </div>
+          ) : (
+            <div className="mb-6 flex items-center justify-between rounded-xl border border-green-800/40 bg-green-900/10 px-4 py-3">
+              <span className="text-xs text-green-300 font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                جلسة المسؤول نشطة
+              </span>
+              <button onClick={logoutAdmin} className="text-[10px] text-gray-500 hover:text-red-400 transition-colors">
+                <Unlock className="w-3 h-3 inline ml-1" />إنهاء الجلسة
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 mb-6">
             <button
               onClick={loadVaultStatus}
-              disabled={vaultLoading}
+              disabled={vaultLoading || !adminSession}
               className="inline-flex items-center gap-2 rounded-xl bg-red-600/80 hover:bg-red-600 disabled:opacity-40 px-5 py-2.5 text-sm font-bold text-white transition-colors"
             >
               {vaultLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
@@ -604,12 +684,28 @@ const Settings: React.FC = () => {
             {canTestSecrets && (
               <button
                 onClick={runSecretTests}
-                disabled={testLoading}
+                disabled={testLoading || !adminSession}
                 className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 disabled:opacity-40 px-5 py-2.5 text-sm font-bold text-orange-200 transition-colors"
               >
                 {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube2 className="w-4 h-4" />}
                 اختبار الاتصال
               </button>
+            )}
+            {canRotate && allHealthy && !rotationConfirmed && (
+              <button
+                onClick={confirmRotation}
+                disabled={rotationConfirming}
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600/80 hover:bg-green-600 disabled:opacity-40 px-5 py-2.5 text-sm font-bold text-white transition-colors"
+              >
+                {rotationConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                ✅ Confirm Rotation
+              </button>
+            )}
+            {rotationConfirmed && (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-green-900/20 border border-green-500/30 px-5 py-2.5 text-sm font-bold text-green-300">
+                <CheckCircle2 className="w-4 h-4" />
+                تم تأكيد تدوير التوكن ✓
+              </div>
             )}
           </div>
 
@@ -690,14 +786,19 @@ const Settings: React.FC = () => {
           <div className="mt-6 rounded-2xl border border-yellow-800/40 bg-yellow-900/10 p-5">
             <h3 className="text-sm font-bold text-yellow-300 mb-3">📋 خطوات تدوير التوكن (Rotation Checklist)</h3>
             <ol className="space-y-2 text-xs text-gray-400 list-decimal list-inside" dir="rtl">
-              <li>ولّد توكن جديد (Candidate) من لوحة التحكم</li>
-              <li>انسخ التوكن الجديد فوراً — <span className="text-red-400 font-bold">يظهر مرة واحدة فقط</span></li>
-              <li>ضعه في Vercel → Environment Variables → <code className="text-blue-300">REO_PLAYER_STATS_BRIDGE_TOKEN</code></li>
-              <li>ضعه على VPS → <code className="text-blue-300">REO_PLAYER_STATS_TOKEN</code></li>
-              <li>أعد نشر Vercel و أعد تشغيل VPS</li>
-              <li>اضغط "اختبار الاتصال" للتأكد من <code className="text-green-300">auth.valid=true</code></li>
-              <li>بعد التأكيد، اضغط Confirm Rotation</li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>ولّد توكن جديد (Candidate) من لوحة التحكم</li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>انسخ التوكن الجديد فوراً — <span className="text-red-400 font-bold">يظهر مرة واحدة فقط</span></li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>ضعه في Vercel → Environment Variables → <code className="text-blue-300">REO_PLAYER_STATS_BRIDGE_TOKEN</code></li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>ضعه على VPS → <code className="text-blue-300">REO_PLAYER_STATS_TOKEN</code></li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>أعد نشر Vercel و أعد تشغيل VPS</li>
+              <li className={rotationConfirmed ? 'line-through text-gray-600' : ''}>اضغط "اختبار الاتصال" للتأكد من <code className="text-green-300">auth.valid=true</code></li>
+              <li className={rotationConfirmed ? 'text-green-400 font-bold' : ''}>
+                {rotationConfirmed ? '✅ تم التأكيد — تدوير التوكن مكتمل' : 'اضغط "Confirm Rotation" للإنهاء'}
+              </li>
             </ol>
+            {!rotationConfirmed && !allHealthy && testResults.length > 0 && (
+              <p className="mt-3 text-[10px] text-orange-400">⚠️ يجب أن تنجح كل اختبارات الاتصال أولاً لتفعيل زر Confirm Rotation</p>
+            )}
           </div>
         </div>
       )}
