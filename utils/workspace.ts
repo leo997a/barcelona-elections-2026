@@ -54,8 +54,8 @@ export function canEditTemplate(
  * Check if a user can delete a specific template.
  *
  * Rules:
- * - OWNER: can delete anything
- * - ADMIN_ASSISTANT: can delete global + own
+ * - OWNER: can delete anything (has TEMPLATES_DELETE_GLOBAL)
+ * - ADMIN_ASSISTANT: can delete OWN workspace templates only — NOT global
  * - SUBSCRIBER: can delete own workspace templates only
  * - VIEWER: cannot delete
  */
@@ -64,8 +64,17 @@ export function canDeleteTemplate(
   template: TemplateOwnership,
   userWorkspaceId: string,
 ): boolean {
-  // Same logic as edit for now — may diverge later
-  return canEditTemplate(role, template, userWorkspaceId);
+  // OWNER can do anything
+  if (can(role, 'SYSTEM_MANAGE_ALL')) return true;
+
+  // VIEWER cannot delete
+  if (!can(role, 'TEMPLATES_EDIT_OWN')) return false;
+
+  // Global templates: only roles with TEMPLATES_DELETE_GLOBAL can delete
+  if (template.isGlobal) return can(role, 'TEMPLATES_DELETE_GLOBAL');
+
+  // Own workspace check
+  return template.workspaceId === userWorkspaceId;
 }
 
 /**

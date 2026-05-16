@@ -88,8 +88,10 @@ const Settings: React.FC = () => {
     try {
       const session = adminSessionService.getStoredSession();
       if (!session) { setVaultError('يلزم تسجيل دخول المسؤول أولاً.'); return; }
-      const res = await fetch('/api/admin/secrets/status', {
-        headers: { Authorization: `Bearer ${session.token}` },
+      const res = await fetch('/api/admin/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify({ action: 'status' }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل تحميل حالة الأسرار');
@@ -106,10 +108,10 @@ const Settings: React.FC = () => {
     try {
       const session = adminSessionService.getStoredSession();
       if (!session) return;
-      const res = await fetch('/api/admin/secrets/test', {
+      const res = await fetch('/api/admin/secrets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
-        body: JSON.stringify({ service: 'all' }),
+        body: JSON.stringify({ action: 'test', service: 'all' }),
       });
       const data = await res.json();
       if (res.ok) setTestResults(data.results || []);

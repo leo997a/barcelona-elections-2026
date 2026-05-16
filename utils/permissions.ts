@@ -19,6 +19,7 @@ export type Capability =
   | 'USERS_MANAGE'
   // Templates
   | 'TEMPLATES_EDIT_GLOBAL'
+  | 'TEMPLATES_DELETE_GLOBAL'
   | 'TEMPLATES_EDIT_OWN'
   | 'TEMPLATES_VIEW'
   // Audio
@@ -44,6 +45,7 @@ const ROLE_CAPABILITIES: Record<SystemRole, readonly Capability[]> = {
     'SECRETS_DESTROY',
     'USERS_MANAGE',
     'TEMPLATES_EDIT_GLOBAL',
+    'TEMPLATES_DELETE_GLOBAL',
     'TEMPLATES_EDIT_OWN',
     'TEMPLATES_VIEW',
     'AUDIO_EDIT_GLOBAL',
