@@ -212,6 +212,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     .info-box { background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; display: none; border-left: 2px solid #888; }
     .info-box.valid { border-color: #84cc16; display: block; }
     .info-box.invalid { border-color: #ef4444; display: block; }
+    .warning-box { background: rgba(245,158,11,.14); border: 1px solid rgba(245,158,11,.35); color: #fde68a; padding: 7px; border-radius: 4px; margin-top: 8px; display: none; line-height: 1.5; font-size: 10px; }
     .status-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
     .label { color: #888; }
     .val { color: #fff; font-weight: bold; }
@@ -235,6 +236,9 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     <div id="actionConfig" style="display:none;">
       <div class="sdpi-heading">Choose Action</div>
       <select id="actionCommand" onchange="saveSettings()"></select>
+      <div id="toggleWarning" class="warning-box">
+        Toggle may hide the template unintentionally if pressed twice or if a duplicate command arrives. Use Show/Hide for live broadcast control.
+      </div>
       <div style="margin-top:8px; font-size:10px; color:#666;">
         This list changes based on the Smart Token type.
       </div>
@@ -308,6 +312,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         } else if (currentSettings.actionCommand) {
           document.getElementById('actionCommand').value = currentSettings.actionCommand;
         }
+        updateToggleWarning();
       } catch (error) {
         statusBox.className = 'info-box invalid';
         document.getElementById('statusMsg').innerText = 'Corrupt Token Data';
@@ -357,6 +362,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         rawToken: document.getElementById('rawToken').value,
         actionCommand: document.getElementById('actionCommand').value
       };
+      updateToggleWarning();
 
       if (tokenData) {
         payload.studioId = tokenData.s;
@@ -372,6 +378,12 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
       currentSettings = payload;
       websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: payload }));
+    }
+
+    function updateToggleWarning() {
+      var warning = document.getElementById('toggleWarning');
+      var select = document.getElementById('actionCommand');
+      if (warning && select) warning.style.display = select.value === 'toggle' ? 'block' : 'none';
     }
   </script>
 </body>

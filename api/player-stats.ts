@@ -19,6 +19,10 @@ type PlayerStatsQuery = {
 
 const trimSlash = (value: string) => value.replace(/\/+$/, '');
 
+const playerStatsBridgeUrl = () => process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim() || '';
+
+const playerStatsBridgeToken = () => process.env.REO_PLAYER_STATS_BRIDGE_TOKEN?.trim() || '';
+
 const getQuery = (req: ServerlessRequest) => {
   const rawUrl = (req as unknown as { url?: string }).url ?? '';
   const qIndex = rawUrl.indexOf('?');
@@ -43,6 +47,11 @@ const parseQuery = (req: ServerlessRequest): PlayerStatsQuery => {
     playerCName: query.get('playerCName') || 'Lamine Yamal',
     playerCClub: query.get('playerCClub') || 'Barcelona',
   };
+};
+
+const queryObject = (req: ServerlessRequest): Record<string, string> => {
+  const query = getQuery(req);
+  return Object.fromEntries(query.entries());
 };
 
 const ALL_CATEGORY_STATS = [
@@ -123,14 +132,37 @@ const fallbackPayload = (query: PlayerStatsQuery) => {
   };
 };
 
-const upstreamUrl = (queryString: string) => {
-  const explicit = process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim();
-  if (explicit) return `${explicit}${explicit.includes('?') ? '&' : '?'}${queryString}`;
-
+const legacyBridgeUrl = (queryString: string) => {
   const bridgeBase = process.env.REO_BRIDGE_URL?.trim();
   if (!bridgeBase) return '';
   return `${trimSlash(bridgeBase)}/api/player-stats?${queryString}`;
 };
+
+const bridgeHeaders = (jsonBody = false, allowLegacyToken = false): Record<string, string> => {
+  const headers: Record<string, string> = jsonBody
+    ? { 'Content-Type': 'application/json' }
+    : { Accept: 'application/json' };
+  const bridgeToken = playerStatsBridgeToken() || (allowLegacyToken ? process.env.REO_BRIDGE_TOKEN?.trim() : '');
+  if (bridgeToken) {
+    headers.Authorization = `Bearer ${bridgeToken}`;
+  }
+  return headers;
+};
+
+const fetchExplicitBridge = (url: string, query: PlayerStatsQuery, params: Record<string, string>) => fetch(url, {
+  method: 'POST',
+  headers: bridgeHeaders(true),
+  body: JSON.stringify({
+    ...query,
+    query: params,
+  }),
+  cache: 'no-store',
+});
+
+const fetchLegacyBridge = (url: string) => fetch(url, {
+  headers: bridgeHeaders(false, true),
+  cache: 'no-store',
+});
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -150,18 +182,15 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const rawUrl = (req as unknown as { url?: string }).url ?? '';
   const queryString = rawUrl.includes('?') ? rawUrl.slice(rawUrl.indexOf('?') + 1) : '';
   const query = parseQuery(req);
-  const url = upstreamUrl(queryString);
+  const explicitUrl = playerStatsBridgeUrl();
+  const legacyUrl = explicitUrl ? '' : legacyBridgeUrl(queryString);
+  const url = explicitUrl || legacyUrl;
 
   if (url) {
     try {
-      const token = process.env.REO_PLAYER_STATS_BRIDGE_TOKEN || process.env.REO_BRIDGE_TOKEN || '';
-      const upstream = await fetch(url, {
-        headers: {
-          Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        cache: 'no-store',
-      });
+      const upstream = explicitUrl
+        ? await fetchExplicitBridge(explicitUrl, query, queryObject(req))
+        : await fetchLegacyBridge(url);
       const payload = await upstream.json().catch(() => null);
       if (upstream.ok && payload) return sendJson(res, 200, payload);
     } catch (error) {
