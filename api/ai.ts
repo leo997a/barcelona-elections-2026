@@ -990,6 +990,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       setAssetField('clubLogo', assetFields.clubLogo);
       setAssetField('fromClubLogo', sourceClub?.club.logo || assetFields.clubLogo);
       setAssetField('toClubLogo', targetClub?.club.logo);
+      if (!targetClub && isWeakTextValue(fields.toClubLogo)) fields.toClubLogo = '';
       setAssetField('playerTeam', assetFields.playerTeam);
       setAssetField('playerPosition', assetFields.playerPosition);
       if (resolvedPlayerName && (leavingStory || !parsed.headline)) {
