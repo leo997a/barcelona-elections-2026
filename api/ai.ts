@@ -5,7 +5,7 @@ import {
   type ServerlessRequest,
   type ServerlessResponse,
 } from './_lib/http.js';
-import { resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity.ts';
+import { resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity.js';
 
 interface AiRequestBody {
   action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card' | 'player-stats-query';

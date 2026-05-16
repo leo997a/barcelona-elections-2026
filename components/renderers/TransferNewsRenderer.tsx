@@ -290,6 +290,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
 }) => {
   const playerName = String(getField('playerName') || 'Nico Williams');
   const playerImage = String(getField('playerImage') || '');
+  const playerImageLarge = String(getField('playerImageLarge') || '');
   const fromClub = String(getField('fromClub') || 'Athletic Club');
   const toClub = String(getField('toClub') || 'Barcelona');
   const fromClubLogo = String(getField('fromClubLogo') || fallbackClubLogo(fromClub));
@@ -319,7 +320,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   const playerStats = useMemo(() => parsePlayerStats(playerStatsJson), [playerStatsJson]);
   const sportmonksPlayer = getSportmonksPlayer(sportmonksPayload);
   const displayPlayerName = String(sportmonksPlayer?.display_name || sportmonksPlayer?.common_name || sportmonksPlayer?.name || playerName);
-  const displayPlayerImage = playerImage || String(sportmonksPlayer?.image_path || '');
+  const displayPlayerImage = playerImageLarge || playerImage || String(sportmonksPlayer?.image_path || '');
   const latestNews = splitFeed(getField('latestNews'), [
     'Board approved the sporting profile and salary range.',
     'Agent meeting expected within 48 hours.',

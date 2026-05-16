@@ -354,7 +354,18 @@ const StatTile = ({ stat, accent, index }: { key?: React.Key; stat: PlayerStatIt
   );
 };
 
-const PlayerColumn = ({ player, accent, index }: { key?: React.Key; player: PlayerStatsCard; accent: string; index: number }) => (
+const PlayerColumn = ({
+  player,
+  accent,
+  index,
+  statsOverride,
+}: {
+  key?: React.Key;
+  player: PlayerStatsCard;
+  accent: string;
+  index: number;
+  statsOverride?: PlayerStatItem[];
+}) => (
   <div className="relative grid min-h-0 grid-rows-[160px_auto_1fr] overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_80px_rgba(0,0,0,.45)]">
     <div className="absolute left-0 top-0 h-1 w-full" style={{ background: accent }} />
     <PlayerImage player={player} accent={accent} />
@@ -366,7 +377,7 @@ const PlayerColumn = ({ player, accent, index }: { key?: React.Key; player: Play
       </div>
     </div>
     <div className="grid min-h-0 gap-2 overflow-hidden p-4">
-      {(normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS).slice(0, 6).map((stat, statIndex) => (
+      {(statsOverride?.length ? statsOverride : normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS).slice(0, 6).map((stat, statIndex) => (
         <StatTile key={`${player.name}-${stat.label}-${statIndex}`} stat={stat} accent={accent} index={statIndex + index} />
       ))}
     </div>
@@ -518,7 +529,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                 <Radio size={14} color={accent} />
                 <span>Updated</span>
               </div>
-              <div className="font-['Barlow_Condensed'] text-3xl font-black uppercase text-white">{formatTime(payload.updatedAt)}</div>
+              <div className="font-['Barlow_Condensed'] text-3xl font-black uppercase text-white">{formatTime(payload.updatedAt || payload.generatedAt)}</div>
             </div>
           </div>
         </header>
@@ -558,26 +569,26 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
 
           {statsMode === 'COMPARE' && (
             <>
-              <PlayerColumn player={visiblePlayers[0] || buildFallbackPayload(getField).players![0]} accent={accent} index={0} />
+              <PlayerColumn player={visiblePlayers[0] || buildFallbackPayload(getField).players![0]} statsOverride={orderedStats(visiblePlayers[0] || buildFallbackPayload(getField).players![0])} accent={accent} index={0} />
               <div className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden border border-white/10 bg-black/65 p-5">
                 <div className="font-['Barlow_Condensed'] text-[86px] font-black leading-none text-white">VS</div>
                 <div className="my-5 h-44 w-px bg-white/15" />
                 <Gauge size={46} color={accent} />
                 <div className="mt-5 text-center text-[10px] font-black uppercase tracking-[0.22em] text-white/44">Selected data</div>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  {categories.slice(0, 6).map((category, index) => (
-                    <span key={category} className="border border-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: index % 2 ? secondaryAccent : accent }}>
-                      {category}
+                  {(selectedMetrics.length ? selectedMetrics : categories).slice(0, 6).map((metric, index) => (
+                    <span key={metric} className="border border-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: index % 2 ? secondaryAccent : accent }}>
+                      {metric.replace(/_/g, ' ')}
                     </span>
                   ))}
                 </div>
               </div>
-              <PlayerColumn player={visiblePlayers[1] || buildFallbackPayload(getField).players![1]} accent={secondaryAccent} index={6} />
+              <PlayerColumn player={visiblePlayers[1] || buildFallbackPayload(getField).players![1]} statsOverride={orderedStats(visiblePlayers[1] || buildFallbackPayload(getField).players![1])} accent={secondaryAccent} index={6} />
             </>
           )}
 
           {statsMode === 'SCOUT_SHORTLIST' && visiblePlayers.map((player, index) => (
-            <PlayerColumn key={`${player.name}-${index}`} player={player} accent={index === 0 ? accent : index === 1 ? secondaryAccent : '#facc15'} index={index * 4} />
+            <PlayerColumn key={`${player.name}-${index}`} player={player} statsOverride={orderedStats(player)} accent={index === 0 ? accent : index === 1 ? secondaryAccent : '#facc15'} index={index * 4} />
           ))}
         </main>
       </div>
