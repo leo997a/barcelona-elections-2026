@@ -282,7 +282,21 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
 const App: React.FC = () => {
   const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
-  const [route, setRoute] = useState<string>('home'); 
+  // URL pathname-based routing
+  const pathnameToRoute = (p: string): string => {
+    const clean = p.replace(/^\/+|\/+$/g, '').toLowerCase();
+    if (clean === 'library') return 'library';
+    if (clean === 'operator') return 'operator';
+    if (clean === 'integrations') return 'integrations';
+    if (clean === 'settings') return 'settings';
+    return 'home';
+  };
+  const [route, setRouteState] = useState<string>(() => pathnameToRoute(window.location.pathname));
+  const setRoute = (page: string) => {
+    setRouteState(page);
+    const urlPath = page === 'home' ? '/' : `/${page.charAt(0).toUpperCase() + page.slice(1)}`;
+    window.history.pushState({ route: page }, '', urlPath);
+  };
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [hashPath, setHashPath] = useState(window.location.hash);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
@@ -315,11 +329,16 @@ const App: React.FC = () => {
     });
   };
   
-  // Handle Hash Routing (Output Window)
+  // Handle Hash Routing (Output Window) + URL popstate
   useEffect(() => {
     const handleHashChange = () => setHashPath(window.location.hash);
+    const handlePopState = () => setRouteState(pathnameToRoute(window.location.pathname));
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   // Sync Manager Subscription
