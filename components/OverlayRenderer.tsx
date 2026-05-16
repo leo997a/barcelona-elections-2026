@@ -304,6 +304,13 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       } catch (e) { /* Ignore */ }
   };
 
+  // ── Strict Mode & Debounce Guards ──────────────────────────────────────────
+  // Prevents double-play from React Strict Mode (dev) or rapid state changes.
+  const previousVisibilityRef = useRef<boolean | null>(null);
+  const lastSoundAt = useRef(0);
+  const lastCommandId = useRef(0);
+  const SOUND_DEBOUNCE_MS = 300;
+
   useEffect(() => {
       if (isEditor) {
           setMounted(true);
@@ -312,21 +319,38 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       }
 
       const isNowVisible = config.isVisible;
-      
-      if (isNowVisible && !wasVisible) {
+      const prevVisible = previousVisibilityRef.current;
+      const now = Date.now();
+      const commandId = ++lastCommandId.current;
+
+      // Guard: only fire ENTRY when transitioning false→true
+      // Guard: only fire EXIT when transitioning true→false
+      // Guard: skip if same state (Strict Mode re-run)
+      // Guard: debounce rapid successive triggers
+      if (isNowVisible && prevVisible !== true) {
           clearTimeout(timer.current);
-          playSound('ENTRY');
+          if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
+              lastSoundAt.current = now;
+              playSound('ENTRY');
+          }
           setMounted(true);
           requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
-      } else if (!isNowVisible && wasVisible) {
-          playSound('EXIT');
+      } else if (!isNowVisible && prevVisible === true) {
+          if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
+              lastSoundAt.current = now;
+              playSound('EXIT');
+          }
           setAnimCls(resolveExitClass());
           timer.current = setTimeout(() => {
-              setMounted(false);
-              setAnimCls('');
+              // Ensure this is still the latest command
+              if (commandId === lastCommandId.current) {
+                  setMounted(false);
+                  setAnimCls('');
+              }
           }, 600);
       }
-      
+
+      previousVisibilityRef.current = isNowVisible;
       setWasVisible(isNowVisible);
       return () => clearTimeout(timer.current);
   }, [config.isVisible, isEditor, config.type]);

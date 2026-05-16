@@ -1,13 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { OverlayConfig } from '../../types';
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════════
+ * ⚠️  AUDIO ARCHITECTURE RULE — READ BEFORE MODIFYING ANY RENDERER  ⚠️
+ * ──────────────────────────────────────────────────────────────────────────────
+ *
+ *  ENTRY / EXIT sounds are EXCLUSIVELY triggered by OverlayRenderer.tsx.
+ *  Inner renderers (this file's consumers) must NEVER call playSound('ENTRY')
+ *  or playSound('EXIT'). Doing so causes double-audio playback.
+ *
+ *  Inner renderers ARE allowed to call:
+ *    • playSound('TRANSITION')  — page navigation, data refresh, slide change
+ *
+ *  For custom audio needs (TTS, alerts, special FX), use the Web Audio API
+ *  directly or schedule them AFTER the ENTRY sound completes (~700ms delay).
+ *
+ *  This rule is enforced at the TypeScript level: playSound only accepts
+ *  'TRANSITION'. OverlayRenderer uses an internal version that supports all
+ *  three types.
+ * ══════════════════════════════════════════════════════════════════════════════
+ */
 export interface RendererProps {
   config: OverlayConfig;
   getField: (id: string) => any;
   audioRef: React.MutableRefObject<HTMLAudioElement | null>;
   containerStyle: React.CSSProperties;
   contentWrapperStyle: React.CSSProperties;
-  playSound: (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => Promise<void>;
+  /** Inner renderers may ONLY trigger 'TRANSITION'. ENTRY/EXIT are handled by OverlayRenderer. */
+  playSound: (type: 'TRANSITION') => Promise<void>;
   isEditor?: boolean;
   wasVisible: boolean;
   activeTheme: { primary: string; secondary: string; text: string; accent: string };

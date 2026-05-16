@@ -19,7 +19,8 @@ export const ExclusiveAlertRenderer: React.FC<RendererProps> = ({
     const ttsText = String(getField('ttsText') || '');
 
     useEffect(() => {
-        // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio
+        // NOTE: Entry sound is played by OverlayRenderer — do NOT play here to avoid double audio.
+        // TTS starts after 700ms delay to let the ENTRY synth cue finish first.
         if (config.isVisible && useTTS && !isEditor && ttsText) {
             setTimeout(() => {
                 const utterance = new SpeechSynthesisUtterance(ttsText);
@@ -39,7 +40,7 @@ export const ExclusiveAlertRenderer: React.FC<RendererProps> = ({
                 }
 
                 window.speechSynthesis.speak(utterance);
-            }, 400);
+            }, 700);
         }
     }, [config.isVisible, isEditor, useTTS, ttsText]);
 
