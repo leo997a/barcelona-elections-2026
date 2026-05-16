@@ -5,7 +5,7 @@ import {
   type ServerlessRequest,
   type ServerlessResponse,
 } from './_lib/http.js';
-import { resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity.js';
+import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity.js';
 
 interface AiRequestBody {
   action?: 'match-data' | 'smart-text' | 'viewer-badges' | 'extract-viewers' | 'template-assist' | 'player-transfer-card' | 'player-stats-query';
@@ -772,7 +772,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
                 'أنت مساعد إنتاج بث رياضي عربي داخل نظام قوالب مباشر. مهمتك تعبئة الحقول الحقيقية للقالب فقط، لا ترجع كلاما عاما.\n' +
                 `نوع القالب: ${templateType}\nاسم القالب: ${overlayName}\n` +
                 'القواعد:\n' +
-                '- استخدم مفاتيح الحقول الموجودة في القائمة فقط، إلا هذه الحقول المسموحة للإثراء: playerImage, clubLogo, fromClubLogo, toClubLogo, leagueLogo, playerStatsJson, marketItems.\n' +
+                '- استخدم مفاتيح الحقول الموجودة في القائمة فقط، إلا هذه الحقول المسموحة للإثراء: playerImage, playerImageLarge, clubLogo, fromClubLogo, toClubLogo, leagueLogo, playerStatsJson, marketItems.\n' +
                 '- إذا كان القالب أخبارا، قسّم عدة أخبار إلى صفحات قصيرة، واجعل pagesData عبارة عن JSON string لمصفوفة نصوص.\n' +
                 '- إذا كان القالب ميركاتو أو بطاقة لاعب، املأ playerName/fromClub/toClub/headline/subheadline/playerStatsJson/marketItems عندما تكون مناسبة.\n' +
                 '- لا تخترع نتيجة مباراة مباشرة. لا تضع إحصائيات رقمية مؤكدة إذا لم تكن في النص؛ يمكن وضع تقديرات تحريرية كنصوص مثل \"غير متوفر\".\n' +
@@ -917,7 +917,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
             text:
               'أنت محرر ميركاتو وتحليل لاعبين. افهم الاسم العربي أو الإنجليزي والنادي، ثم ابن حقول بطاقة لاعب/ميركاتو جاهزة للبث.\n' +
               'القواعد: لا تخترع أرقام موسم مؤكدة إذا لم تكن مذكورة. إذا غابت الإحصائيات أعد عناصر نصية آمنة أو \"غير متوفر\". لا تستخدم تقييم rating.\n' +
-              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","headline":"...","summary":"...","stats":[{"label":"...","value":"...","hint":"..."}],"fields":{"playerName":"...","playerTeam":"...","playerPosition":"...","fromClub":"...","toClub":"...","headline":"...","subheadline":"...","playerStatsJson":"...","marketItems":"...","latestNews":"..."},"searchHints":["..."],"imageQuery":"...","sourceNotes":["..."]}\n' +
+              'أعد JSON فقط بهذا الشكل: {"playerName":"...","clubName":"...","position":"...","headline":"...","summary":"...","stats":[{"label":"...","value":"...","hint":"..."}],"fields":{"playerName":"...","playerTeam":"...","playerPosition":"...","playerImage":"...","playerImageLarge":"...","fromClub":"...","fromClubLogo":"...","toClub":"...","toClubLogo":"...","headline":"...","subheadline":"...","playerStatsJson":"...","marketItems":"...","latestNews":"..."},"searchHints":["..."],"imageQuery":"...","sourceNotes":["..."]}\n' +
               `الحقول الحالية:\n${fieldContext}\n\n` +
               `اسم اللاعب: ${playerName}\nالنادي: ${clubName}\nالنص:\n${rawText}\n` +
               `صيغة playerStatsJson المطلوبة عند وجود stats: ${safeJsonStringify([{ label: 'Key passes', value: 'غير متوفر', hint: 'Source needed' }])}`,
@@ -967,6 +967,23 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
           fields.toClub = freeStory ? 'Free agent' : 'Destination TBC';
         }
       }
+      const identityResolution = resolvePlayerIdentity(
+        `${String(resolvedPlayerName || '')} ${String(localClub || clubName || '')} ${rawText}`,
+        String(localClub || clubName || ''),
+      );
+      const assetFields = identityToAssetFields(identityResolution, true);
+      const sourceClub = resolveClubIdentity(String(fields.fromClub || localClub || clubName || ''));
+      const targetClub = resolveClubIdentity(String(fields.toClub || ''));
+      const setAssetField = (key: string, value: unknown) => {
+        if (value && isWeakTextValue(fields[key])) fields[key] = String(value);
+      };
+      setAssetField('playerImage', assetFields.playerImage);
+      setAssetField('playerImageLarge', assetFields.playerImageLarge);
+      setAssetField('clubLogo', assetFields.clubLogo);
+      setAssetField('fromClubLogo', sourceClub?.club.logo || assetFields.clubLogo);
+      setAssetField('toClubLogo', targetClub?.club.logo);
+      setAssetField('playerTeam', assetFields.playerTeam);
+      setAssetField('playerPosition', assetFields.playerPosition);
       if (resolvedPlayerName && (leavingStory || !parsed.headline)) {
         parsed.headline = leavingStory ? `${resolvedPlayerName} EXIT WATCH` : parsed.headline || `${resolvedPlayerName} MARKET WATCH`;
         fields.headline = fields.headline || parsed.headline;
@@ -980,6 +997,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
           confidence: Number(fields.confidence || localConfidence || 65),
           status: freeStory ? 'Contract exit' : 'AI prepared',
           tag: leavingStory ? 'Exit watch' : 'Focus',
+          image: String(fields.playerImageLarge || fields.playerImage || ''),
         }]);
       }
 
