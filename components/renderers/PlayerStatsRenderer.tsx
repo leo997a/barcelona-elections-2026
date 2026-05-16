@@ -19,11 +19,28 @@ import {
 import { RendererProps } from './SharedComponents';
 
 type PlayerStatItem = {
+  key?: string;
   label: string;
+  labelAr?: string;
   value: string | number;
   hint?: string;
   category?: string;
   per90?: string | number;
+  unit?: string;
+  provider?: string;
+  confidence?: number;
+  updatedAt?: string;
+};
+
+type PlayerMetricStat = {
+  label?: string;
+  labelAr?: string;
+  value?: string | number;
+  unit?: string;
+  category?: string;
+  provider?: string;
+  confidence?: number;
+  updatedAt?: string;
 };
 
 type PlayerStatsCard = {
@@ -35,16 +52,25 @@ type PlayerStatsCard = {
   season?: string;
   headline?: string;
   summary?: string;
-  stats?: PlayerStatItem[];
+  stats?: PlayerStatItem[] | Record<string, PlayerMetricStat>;
 };
 
 type PlayerStatsPayload = {
   mode?: string;
   source?: string;
   updatedAt?: string;
+  generatedAt?: string;
   season?: string;
   players?: PlayerStatsCard[];
   notes?: string[];
+  warnings?: string[];
+  selectedMetrics?: string[];
+  providerPlan?: unknown;
+  presentation?: {
+    heroMetrics?: string[];
+    secondaryMetrics?: string[];
+    visualVariant?: string;
+  };
 };
 
 const toNumber = (value: unknown, fallback = 0) => {
@@ -86,10 +112,28 @@ const splitStats = (value: unknown): PlayerStatItem[] => {
   }
 
   if (parsed && typeof parsed === 'object') {
-    return Object.entries(parsed as Record<string, unknown>).map(([label, value]) => ({
-      label,
-      value: String(value),
-    }));
+    return Object.entries(parsed as Record<string, unknown>).map(([key, value]) => {
+      if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        return {
+          key,
+          label: String(record.label || key.replace(/_/g, ' ')),
+          labelAr: String(record.labelAr || record.label || key.replace(/_/g, ' ')),
+          value: String(record.value ?? 'pending'),
+          hint: String(record.provider || record.category || record.unit || '').trim() || undefined,
+          category: String(record.category || '').trim() || undefined,
+          unit: String(record.unit || '').trim() || undefined,
+          provider: String(record.provider || '').trim() || undefined,
+          confidence: Number(record.confidence || 0) || undefined,
+          updatedAt: String(record.updatedAt || '').trim() || undefined,
+        };
+      }
+      return {
+        key,
+        label: key.replace(/_/g, ' '),
+        value: String(value),
+      };
+    });
   }
 
   const raw = String(value || '').trim();
@@ -101,6 +145,12 @@ const splitStats = (value: unknown): PlayerStatItem[] => {
       return label && statValue ? { label, value: statValue, hint: hint || undefined, category: category || undefined } : null;
     })
     .filter((item): item is PlayerStatItem => Boolean(item));
+};
+
+const normalizeStats = (value: PlayerStatsCard['stats']): PlayerStatItem[] => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return splitStats(JSON.stringify(value));
+  return [];
 };
 
 const DEFAULT_STATS: PlayerStatItem[] = [
@@ -215,7 +265,7 @@ const normalizePayload = (payload: PlayerStatsPayload | null, getField: Renderer
     players: players.map((player, index) => ({
       ...fallback.players?.[index],
       ...player,
-      stats: Array.isArray(player.stats) && player.stats.length ? player.stats : fallback.players?.[index]?.stats || DEFAULT_STATS,
+      stats: normalizeStats(player.stats).length ? normalizeStats(player.stats) : fallback.players?.[index]?.stats || DEFAULT_STATS,
     })),
   };
 };
@@ -280,6 +330,8 @@ const ClubMark = ({ player, accent }: { player: PlayerStatsCard; accent: string 
 const StatTile = ({ stat, accent, index }: { key?: React.Key; stat: PlayerStatItem; accent: string; index: number }) => {
   const Icon = statIcon(stat.label);
   const width = statPercent(stat.value, index);
+  const title = stat.labelAr || stat.label;
+  const caption = [stat.provider, stat.category, stat.unit].filter(Boolean).join(' / ') || stat.hint || 'season data';
   return (
     <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4">
       <div className="absolute inset-y-0 left-0 w-1" style={{ background: accent }} />
@@ -289,8 +341,8 @@ const StatTile = ({ stat, accent, index }: { key?: React.Key; stat: PlayerStatIt
             <Icon size={17} color={accent} />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{stat.label}</div>
-            <div className="truncate text-[11px] font-bold text-white/34">{stat.hint || stat.category || 'season data'}</div>
+            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{title}</div>
+            <div className="truncate text-[11px] font-bold text-white/34">{caption}</div>
           </div>
         </div>
         <div className="font-['Barlow_Condensed'] text-[38px] font-black leading-none" style={{ color: accent }}>{stat.value}</div>
@@ -314,7 +366,7 @@ const PlayerColumn = ({ player, accent, index }: { key?: React.Key; player: Play
       </div>
     </div>
     <div className="grid min-h-0 gap-2 overflow-hidden p-4">
-      {(player.stats || DEFAULT_STATS).slice(0, 6).map((stat, statIndex) => (
+      {(normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS).slice(0, 6).map((stat, statIndex) => (
         <StatTile key={`${player.name}-${stat.label}-${statIndex}`} stat={stat} accent={accent} index={statIndex + index} />
       ))}
     </div>
@@ -336,6 +388,10 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   const positionX = toNumber(getField('positionX'), 0);
   const positionY = toNumber(getField('positionY'), 0);
   const categories = selectedCategories(getField);
+  const selectedMetrics = parseJson<string[]>(getField('selectedMetricsJson')) || [];
+  const heroMetrics = parseJson<string[]>(getField('heroMetricsJson')) || selectedMetrics.slice(0, 4);
+  const secondaryMetrics = parseJson<string[]>(getField('secondaryMetricsJson')) || selectedMetrics.slice(4, 16);
+  const visualVariant = String(getField('playerStatsVisualVariant') || 'ULTRA_LAB');
   const sourceJson = String(getField('playerStatsSourceJson') || '').trim();
   const [remotePayload, setRemotePayload] = useState<PlayerStatsPayload | null>(null);
 
@@ -346,21 +402,39 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       return () => { cancelled = true; };
     }
 
+    if (!selectedMetrics.length) {
+      setRemotePayload(null);
+      return () => { cancelled = true; };
+    }
+
     const fetchPayload = async () => {
-      const params = new URLSearchParams({
+      const body = {
         mode: statsMode,
-        categories: categories.join(','),
+        providerPolicy: String(getField('providerPolicy') || 'auto'),
+        selectedMetrics,
         season: String(getField('seasonLabel') || '2025/26'),
-        playerAName: String(getField('playerAName') || getField('playerName') || getField('sourcePlayerName') || ''),
-        playerAClub: String(getField('playerAClub') || getField('playerTeam') || getField('sourceClubName') || ''),
-        playerBName: String(getField('playerBName') || ''),
-        playerBClub: String(getField('playerBClub') || ''),
-        playerCName: String(getField('playerCName') || ''),
-        playerCClub: String(getField('playerCClub') || ''),
-      });
+        player: {
+          name: String(getField('playerAName') || getField('playerName') || getField('sourcePlayerName') || ''),
+          club: String(getField('playerAClub') || getField('playerTeam') || getField('sourceClubName') || ''),
+        },
+        comparisonPlayers: [
+          { name: String(getField('playerBName') || ''), club: String(getField('playerBClub') || '') },
+          { name: String(getField('playerCName') || ''), club: String(getField('playerCClub') || '') },
+        ].filter(player => player.name.trim()),
+        presentation: {
+          heroMetrics,
+          secondaryMetrics,
+          visualVariant,
+        },
+      };
 
       try {
-        const response = await fetch(`${apiUrl}?${params.toString()}`, { cache: 'no-store' });
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          cache: 'no-store',
+        });
         const payload = await response.json().catch(() => null) as PlayerStatsPayload | null;
         if (!cancelled && response.ok) setRemotePayload(payload);
       } catch {
@@ -374,7 +448,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [apiUrl, categories.join(','), dataMode, getField, pollIntervalSec, statsMode]);
+  }, [apiUrl, dataMode, getField, heroMetrics.join(','), pollIntervalSec, secondaryMetrics.join(','), selectedMetrics.join(','), statsMode, visualVariant]);
 
   const payload = useMemo(() => {
     if (remotePayload) return normalizePayload(remotePayload, getField);
@@ -385,6 +459,23 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   const visiblePlayers = statsMode === 'SINGLE' ? players.slice(0, 1) : statsMode === 'COMPARE' ? players.slice(0, 2) : players.slice(0, 3);
   const title = String(getField('headline') || (statsMode === 'COMPARE' ? 'PLAYER DUEL' : statsMode === 'SCOUT_SHORTLIST' ? 'SCOUT SHORTLIST' : 'PLAYER DATA FILE'));
   const subtitle = String(getField('subheadline') || 'WhoScored-style player data bridge with AI-assisted identity and cached broadcast assets');
+  const activeHeroMetrics = payload.presentation?.heroMetrics?.length ? payload.presentation.heroMetrics : heroMetrics;
+  const activeSecondaryMetrics = payload.presentation?.secondaryMetrics?.length ? payload.presentation.secondaryMetrics : secondaryMetrics;
+  const orderedStats = (player: PlayerStatsCard) => {
+    const stats = normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS;
+    const byKey = new Map(stats.map(stat => [stat.key || stat.label, stat]));
+    const ordered = [...activeHeroMetrics, ...activeSecondaryMetrics]
+      .map(key => byKey.get(key))
+      .filter((stat): stat is PlayerStatItem => Boolean(stat));
+    return ordered.length ? ordered : stats;
+  };
+  const frameClass = visualVariant === 'GLASS_SCOUT'
+    ? 'bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,.18),transparent_34%),#071018]'
+    : visualVariant === 'BARCA_RADAR'
+      ? 'bg-[linear-gradient(135deg,#130016,#08142b_48%,#050608)]'
+      : visualVariant === 'MINIMAL_CAST'
+        ? 'bg-[#0b0d12]'
+        : 'bg-[#080a0f]';
 
   return (
     <div
@@ -400,7 +491,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
         @keyframes playerCardFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         @keyframes playerLinePulse { 0%,100% { opacity: .24; } 50% { opacity: .72; } }
       `}</style>
-      <div className="absolute inset-0 bg-[#080a0f]" />
+      <div className={`absolute inset-0 ${frameClass}`} />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.045)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
       <div className="absolute inset-y-0 left-[-30%] w-[70%] bg-[linear-gradient(100deg,transparent,rgba(34,211,238,.16),transparent)] blur-sm" style={{ animation: 'playerDataScan 6s linear infinite' }} />
 
@@ -457,7 +548,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                   })}
                 </div>
                 <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden">
-                  {(players[0].stats || DEFAULT_STATS).slice(0, 12).map((stat, index) => (
+                  {orderedStats(players[0]).slice(0, 12).map((stat, index) => (
                     <StatTile key={`${stat.label}-${index}`} stat={stat} accent={index % 2 ? secondaryAccent : accent} index={index} />
                   ))}
                 </div>

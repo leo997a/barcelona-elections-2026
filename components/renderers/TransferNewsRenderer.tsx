@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
+import { resolvePlayerIdentity } from '../../utils/playerIdentity';
 
 type MarketItem = {
   player: string;
@@ -21,6 +22,7 @@ type MarketItem = {
   confidence: number;
   status: string;
   tag?: string;
+  image?: string;
 };
 
 type PlayerStat = {
@@ -88,6 +90,7 @@ const parseMarketItems = (value: unknown): MarketItem[] => {
         confidence: clampPercent(item.confidence, fallback[index % fallback.length].confidence),
         status: String(item.status || fallback[index % fallback.length].status),
         tag: String(item.tag || fallback[index % fallback.length].tag || 'Tracked'),
+        image: String(item.image || item.playerImage || item.renderImage || ''),
       }));
     }
   } catch {
@@ -101,6 +104,7 @@ const parseMarketItems = (value: unknown): MarketItem[] => {
         confidence: clampPercent(confidence, fallback[index % fallback.length].confidence),
         status: status || fallback[index % fallback.length].status,
         tag: tag || fallback[index % fallback.length].tag,
+        image: '',
       };
     });
   }
@@ -183,6 +187,19 @@ const initials = (value: string) =>
     .map(part => part[0])
     .join('')
     .toUpperCase();
+
+const marketItemImage = (item: MarketItem, fallbackImage = '') => {
+  if (item.image) return item.image;
+  const identity = resolvePlayerIdentity(`${item.player} ${item.to || item.from}`, item.to || item.from);
+  return identity?.player.renderImage || identity?.player.smallImage || fallbackImage;
+};
+
+const visualVariantClass = (variant: string) => {
+  if (variant === 'TACTICAL_DARK') return 'bg-[#05070b]';
+  if (variant === 'LUXE_STUDIO') return 'bg-[radial-gradient(circle_at_78%_10%,rgba(250,204,21,.16),transparent_30%),#06070a]';
+  if (variant === 'CLEAN_BROADCAST') return 'bg-[#0b1117]';
+  return 'bg-[radial-gradient(circle_at_20%_10%,rgba(0,245,212,.14),transparent_34%),#05070b]';
+};
 
 const SectionTitle = ({ label, value }: { label: string; value?: React.ReactNode }) => (
   <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-2">
@@ -288,6 +305,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   const fromColor = String(getField('fromColor') || '#A50044');
   const toColor = String(getField('toColor') || '#004D98');
   const designStyle = String(getField('designStyle') || 'DEAL_BREAKER');
+  const visualVariant = String(getField('visualVariant') || 'NEON_GLASS');
   const isUrgent = Boolean(getField('isUrgent') ?? true);
   const sportmonksPlayerId = String(getField('sportmonksPlayerId') || '').trim();
   const sportmonksSearch = String(getField('sportmonksSearch') || '').trim();
@@ -385,7 +403,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
         @keyframes mercatoPulse { 0%, 100% { opacity: .36; } 50% { opacity: .82; } }
       `}</style>
       <div style={contentWrapperStyle} className="overflow-hidden text-white">
-        <div className="absolute inset-0 bg-[#05070b]" />
+        <div className={`absolute inset-0 ${visualVariantClass(visualVariant)}`} />
         <div
           className="absolute inset-0 opacity-[0.06]"
           style={{
@@ -603,6 +621,22 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
               <h1 className="mt-5 font-['Barlow_Condensed'] text-[78px] font-black uppercase leading-[.82] tracking-normal">
                 {headline}
               </h1>
+              <div className="relative mt-6 h-[310px] overflow-hidden border border-white/10 bg-white/[0.035]">
+                {marketItemImage(featured, displayPlayerImage) ? (
+                  <img
+                    src={marketItemImage(featured, displayPlayerImage)}
+                    alt=""
+                    className="absolute inset-x-0 bottom-0 mx-auto h-full w-auto object-contain drop-shadow-[0_26px_38px_rgba(0,0,0,.68)]"
+                    referrerPolicy="no-referrer"
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center font-['Barlow_Condensed'] text-[112px] font-black text-white/[0.08]">
+                    {initials(displayPlayerName)}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+              </div>
             </div>
             <div>
               <div className="text-[11px] font-black uppercase tracking-[0.26em] text-white/36">focus target</div>
@@ -620,7 +654,20 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
               {marketItems.slice(0, 7).map((item, index) => {
                 const tone = confidenceTone(item.confidence, accentColor);
                 return (
-                  <div key={`${item.player}-${index}`} className="grid grid-cols-[250px_1fr_96px] items-center gap-5">
+                  <div key={`${item.player}-${index}`} className="grid grid-cols-[74px_230px_1fr_96px] items-center gap-4">
+                    <div className="relative h-16 overflow-hidden border border-white/10 bg-black/40">
+                      {marketItemImage(item) ? (
+                        <img
+                          src={marketItemImage(item)}
+                          alt=""
+                          className="absolute inset-x-0 bottom-0 mx-auto h-full w-auto object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center font-['Barlow_Condensed'] text-2xl font-black text-white/38">{initials(item.player)}</div>
+                      )}
+                    </div>
                     <div className="min-w-0">
                       <div className="truncate text-3xl font-black leading-none">{item.player}</div>
                       <div className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{item.from} to {item.to}</div>

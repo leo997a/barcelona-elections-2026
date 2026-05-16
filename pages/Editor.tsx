@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square } from 'lucide-react';
@@ -69,6 +69,111 @@ const MATCH_VISUAL_STYLE_QUICK = [
   { value: 'GLASS_STUDIO', label: 'Glass' },
   { value: 'NEON_TOUCHLINE', label: 'Neon' },
 ];
+
+type MetricCatalogItem = {
+  key: string;
+  label: string;
+  labelAr: string;
+  category: string;
+  unit?: string;
+  preferredProvider?: string;
+  providers?: string[];
+  supportedModes?: string[];
+  bestFor?: string[];
+};
+
+const PLAYER_STATS_PRESETS: Record<string, string[]> = {
+  'Attacker Profile': ['goals', 'non_penalty_goals', 'assists', 'shots', 'shots_on_target', 'shot_accuracy', 'touches_in_box', 'xg', 'xg_per90', 'goals_per90', 'impact_index'],
+  'Playmaker Profile': ['assists', 'xa', 'xa_per90', 'key_passes', 'key_passes_per90', 'chances_created', 'big_chances_created', 'through_balls', 'progressive_passes', 'passes_into_penalty_area'],
+  'Defensive Profile': ['tackles', 'tackles_won', 'interceptions', 'clearances', 'blocks', 'pressures', 'recoveries', 'ground_duels_won', 'duel_win_rate', 'fouls_committed'],
+  'Goalkeeper Profile': ['appearances', 'minutes', 'saves', 'save_percentage', 'clean_sheets', 'goals_against', 'crosses_stopped'],
+  'Transfer Scout': ['minutes', 'starts', 'goals', 'assists', 'xg', 'xa', 'progressive_passes', 'progressive_carries', 'recoveries', 'barcelona_fit_score', 'market_risk_score', 'impact_index'],
+  'Barcelona Fit': ['pass_accuracy', 'progressive_passes', 'passes_into_final_third', 'progressive_carries', 'touches', 'recoveries', 'pressures', 'key_passes', 'xa', 'barcelona_fit_score'],
+  'Head-to-Head Comparison': ['minutes', 'goals', 'assists', 'goals_per90', 'assists_per90', 'shots_per90', 'xg_per90', 'xa_per90', 'key_passes_per90', 'dribble_success_rate', 'pass_accuracy', 'duel_win_rate'],
+  'Full Season Report': ['appearances', 'starts', 'minutes', 'goals', 'assists', 'goal_contributions', 'shots', 'shots_on_target', 'xg', 'xa', 'key_passes', 'chances_created', 'passes', 'pass_accuracy', 'progressive_passes', 'dribbles_completed', 'progressive_carries', 'tackles', 'interceptions', 'recoveries', 'duel_win_rate', 'yellow_cards', 'rating', 'impact_index'],
+};
+
+const PLAYER_STATS_CATEGORIES = [
+  { key: 'season', label: 'Season' },
+  { key: 'attack', label: 'Attack' },
+  { key: 'shooting', label: 'Shooting' },
+  { key: 'chance_creation', label: 'Chance Creation' },
+  { key: 'passing', label: 'Passing' },
+  { key: 'dribbling', label: 'Dribbling' },
+  { key: 'possession', label: 'Possession' },
+  { key: 'defense', label: 'Defense' },
+  { key: 'duels', label: 'Duels' },
+  { key: 'discipline', label: 'Discipline' },
+  { key: 'advanced', label: 'Advanced' },
+  { key: 'per90', label: 'Per 90' },
+  { key: 'goalkeeping', label: 'Goalkeeping' },
+];
+
+const METRIC_TEXT_ALIASES: Record<string, string[]> = {
+  xg: ['xg', 'expected goals', 'الأهداف المتوقعة', 'اهداف متوقعه'],
+  xa: ['xa', 'expected assists', 'التمريرات الحاسمة المتوقعة', 'اسيست متوقع'],
+  shots: ['shots', 'التسديدات', 'تسديدات'],
+  shots_on_target: ['shots on target', 'تسديدات على المرمى', 'على المرمى'],
+  dribbles_completed: ['successful dribbles', 'المراوغات', 'مراوغات', 'مراوغات ناجحة'],
+  key_passes: ['key passes', 'تمريرات مفتاحية', 'التمريرات المفتاحية'],
+  progressive_passes: ['progressive passes', 'تمريرات تقدمية', 'التمريرات التقدمية'],
+  pass_accuracy: ['pass accuracy', 'دقة التمرير'],
+  recoveries: ['recoveries', 'استرجاع الكرة', 'استرجاع'],
+  tackles: ['tackles', 'افتكاكات', 'الافتكاكات'],
+  saves: ['saves', 'تصديات', 'التصديات'],
+};
+
+const normalizeMetricText = (value: unknown) => String(value ?? '')
+  .toLowerCase()
+  .normalize('NFKD')
+  .replace(/[\u064B-\u065F\u0670]/g, '')
+  .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
+  .replace(/\u0629/g, '\u0647')
+  .replace(/\u0649/g, '\u064A')
+  .replace(/[^\p{L}\p{N}\s/_-]/gu, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const uniqueMetricKeys = (keys: string[]) => Array.from(new Set(keys.map(key => key.trim()).filter(Boolean)));
+
+const parseMetricKeys = (value: unknown, fallback: string[] = []) => {
+  if (Array.isArray(value)) return uniqueMetricKeys(value.map(String));
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return uniqueMetricKeys(parsed.map(String));
+  } catch {
+    return uniqueMetricKeys(raw.split(/[,;\n]/).map(item => item.trim()));
+  }
+  return fallback;
+};
+
+const fallbackMetricCatalog = (): MetricCatalogItem[] => uniqueMetricKeys(Object.values(PLAYER_STATS_PRESETS).flat()).map(key => ({
+  key,
+  label: key.replace(/_/g, ' '),
+  labelAr: key.replace(/_/g, ' '),
+  category: 'advanced',
+}));
+
+const metricsForCategories = (catalog: MetricCatalogItem[], categories: string[]) => {
+  const wanted = new Set(categories);
+  return catalog.filter(metric => wanted.has(metric.category)).map(metric => metric.key);
+};
+
+const resolveMetricTextKeys = (text: string, catalog: MetricCatalogItem[]) => {
+  const normalized = normalizeMetricText(text);
+  if (!normalized) return [];
+  const keys = new Set<string>();
+  Object.entries(METRIC_TEXT_ALIASES).forEach(([key, aliases]) => {
+    if (aliases.some(alias => normalized.includes(normalizeMetricText(alias)))) keys.add(key);
+  });
+  catalog.forEach(metric => {
+    const terms = [metric.key, metric.label, metric.labelAr, ...(metric.bestFor || [])].map(normalizeMetricText).filter(Boolean);
+    if (terms.some(term => normalized.includes(term))) keys.add(metric.key);
+  });
+  return Array.from(keys);
+};
 
 type BridgeStatusSnapshot = {
   ok?: boolean;
@@ -234,6 +339,64 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
     };
   }
 
+  if (id === 'providerPolicy') {
+    return {
+      id,
+      label: 'Provider policy',
+      type: 'select',
+      value,
+      options: [
+        { value: 'auto', label: 'Auto router' },
+        { value: 'fbref', label: 'FBref season first' },
+        { value: 'matchBridge', label: 'Match bridge first' },
+        { value: 'demo', label: 'Demo safe fallback' },
+      ],
+    };
+  }
+
+  if (id === 'metricPreset') {
+    return {
+      id,
+      label: 'Smart metric preset',
+      type: 'select',
+      value,
+      options: [
+        'Attacker Profile',
+        'Playmaker Profile',
+        'Defensive Profile',
+        'Goalkeeper Profile',
+        'Transfer Scout',
+        'Barcelona Fit',
+        'Head-to-Head Comparison',
+        'Full Season Report',
+      ],
+    };
+  }
+
+  if (['selectedMetricsJson', 'heroMetricsJson', 'secondaryMetricsJson', 'metricNaturalLanguage'].includes(id)) {
+    return { id, label: id, type: 'hidden', value };
+  }
+
+  if (id === 'playerStatsVisualVariant') {
+    return {
+      id,
+      label: 'Player Stats look',
+      type: 'select',
+      value,
+      options: ['ULTRA_LAB', 'GLASS_SCOUT', 'BARCA_RADAR', 'MINIMAL_CAST'],
+    };
+  }
+
+  if (id === 'visualVariant') {
+    return {
+      id,
+      label: 'Look variant',
+      type: 'select',
+      value,
+      options: ['NEON_GLASS', 'TACTICAL_DARK', 'LUXE_STUDIO', 'CLEAN_BROADCAST'],
+    };
+  }
+
   if (id === 'playerImageMapJson') {
     return { id, label: 'روابط صور اللاعبين JSON', type: 'textarea', value };
   }
@@ -288,6 +451,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [clubLogoMap, setClubLogoMap] = useState<Record<string, string>>({});
   const [playerImageMap, setPlayerImageMap] = useState<Record<string, string>>({});
   const [playerRenderMap, setPlayerRenderMap] = useState<Record<string, string>>({});
+  const [metricCatalog, setMetricCatalog] = useState<MetricCatalogItem[]>([]);
+  const [metricSearch, setMetricSearch] = useState('');
+  const [metricAdvancedOpen, setMetricAdvancedOpen] = useState(false);
+  const [isFetchingPlayerStats, setIsFetchingPlayerStats] = useState(false);
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -366,6 +533,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       }
   }, [newSponsor.amount, newSponsor.currency]);
 
+  useEffect(() => {
+      let cancelled = false;
+      fetch('/stats/metrics.catalog.json', { cache: 'no-store' })
+          .then(response => response.ok ? response.json() : null)
+          .then(payload => {
+              if (cancelled) return;
+              const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
+              setMetricCatalog(metrics);
+          })
+          .catch(() => {
+              if (!cancelled) setMetricCatalog([]);
+          });
+      return () => {
+          cancelled = true;
+      };
+  }, []);
+
   // --- HOTKEYS ---
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -418,6 +602,43 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const getCurrentFieldValues = () =>
       Object.fromEntries(draftOverlay.fields.map(field => [field.id, field.value]));
+
+  const effectiveMetricCatalog = useMemo(
+      () => metricCatalog.length ? metricCatalog : fallbackMetricCatalog(),
+      [metricCatalog],
+  );
+
+  const selectedMetricKeys = useMemo(
+      () => parseMetricKeys(getDraftValue('selectedMetricsJson'), PLAYER_STATS_PRESETS['Attacker Profile']),
+      [draftOverlay.fields],
+  );
+
+  const heroMetricKeys = useMemo(
+      () => parseMetricKeys(getDraftValue('heroMetricsJson'), selectedMetricKeys.slice(0, 4)),
+      [draftOverlay.fields, selectedMetricKeys],
+  );
+
+  const secondaryMetricKeys = useMemo(
+      () => parseMetricKeys(getDraftValue('secondaryMetricsJson'), selectedMetricKeys.slice(4, 12)),
+      [draftOverlay.fields, selectedMetricKeys],
+  );
+
+  const filteredMetricCatalog = useMemo(() => {
+      const search = normalizeMetricText(metricSearch);
+      if (!search) return effectiveMetricCatalog.slice(0, 36);
+      return effectiveMetricCatalog.filter(metric => {
+          const haystack = normalizeMetricText([
+              metric.key,
+              metric.label,
+              metric.labelAr,
+              metric.category,
+              ...(metric.bestFor || []),
+          ].join(' '));
+          return haystack.includes(search);
+      }).slice(0, 48);
+  }, [effectiveMetricCatalog, metricSearch]);
+
+  const selectedMetricSet = useMemo(() => new Set(selectedMetricKeys), [selectedMetricKeys]);
 
   const loadAssetMaps = async () => {
       let clubs = clubLogoMap;
@@ -579,6 +800,105 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
       if (leagueLogo) updates.leagueLogo = updates.leagueLogo || leagueLogo;
       return updates;
+  };
+
+  const writeSelectedMetrics = (keys: string[], preset?: string) => {
+      const normalized = uniqueMetricKeys(keys);
+      const updates: Record<string, unknown> = {
+          selectedMetricsJson: JSON.stringify(normalized),
+          heroMetricsJson: JSON.stringify(normalized.slice(0, 4)),
+          secondaryMetricsJson: JSON.stringify(normalized.slice(4, 16)),
+      };
+      if (preset) updates.metricPreset = preset;
+      handleDraftFieldChanges(updates);
+  };
+
+  const applyMetricPreset = (preset: string) => {
+      writeSelectedMetrics(PLAYER_STATS_PRESETS[preset] || PLAYER_STATS_PRESETS['Attacker Profile'], preset);
+  };
+
+  const toggleMetricKey = (key: string) => {
+      const next = selectedMetricSet.has(key)
+          ? selectedMetricKeys.filter(metricKey => metricKey !== key)
+          : [...selectedMetricKeys, key];
+      writeSelectedMetrics(next);
+  };
+
+  const toggleMetricCategory = (category: string) => {
+      const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category]);
+      const active = categoryKeys.length > 0 && categoryKeys.every(key => selectedMetricSet.has(key));
+      const next = active
+          ? selectedMetricKeys.filter(key => !categoryKeys.includes(key))
+          : uniqueMetricKeys([...selectedMetricKeys, ...categoryKeys]);
+      writeSelectedMetrics(next);
+  };
+
+  const applyMetricNaturalLanguage = () => {
+      const text = String(getDraftValue('metricNaturalLanguage') || '').trim();
+      const keys = resolveMetricTextKeys(text, effectiveMetricCatalog);
+      if (!keys.length) {
+          setAiBoxMessage({ type: 'error', text: 'لم أجد إحصائيات مطابقة. جرّب: الأهداف المتوقعة، التسديدات، المراوغات.' });
+          return;
+      }
+      writeSelectedMetrics(uniqueMetricKeys([...selectedMetricKeys, ...keys]));
+      setAiBoxMessage({ type: 'success', text: `تمت إضافة ${keys.length} إحصائيات من النص.` });
+  };
+
+  const handleFetchPlayerStats = async () => {
+      if (!selectedMetricKeys.length) {
+          setAiBoxMessage({ type: 'error', text: 'اختر إحصائية واحدة على الأقل قبل الجلب.' });
+          return;
+      }
+
+      setIsFetchingPlayerStats(true);
+      setAiBoxMessage(null);
+      try {
+          const body = {
+              mode: String(getDraftValue('playerStatsMode') || 'SINGLE'),
+              providerPolicy: String(getDraftValue('providerPolicy') || 'auto'),
+              player: {
+                  name: String(getDraftValue('playerAName') || getDraftValue('playerName') || getDraftValue('sourcePlayerName') || ''),
+                  club: String(getDraftValue('playerAClub') || getDraftValue('playerTeam') || getDraftValue('sourceClubName') || ''),
+              },
+              comparisonPlayers: [
+                  {
+                      name: String(getDraftValue('playerBName') || ''),
+                      club: String(getDraftValue('playerBClub') || ''),
+                  },
+                  {
+                      name: String(getDraftValue('playerCName') || ''),
+                      club: String(getDraftValue('playerCClub') || ''),
+                  },
+              ].filter(player => player.name.trim()),
+              season: String(getDraftValue('seasonLabel') || '2025/26'),
+              selectedMetrics: selectedMetricKeys,
+              presentation: {
+                  heroMetrics: heroMetricKeys,
+                  secondaryMetrics: secondaryMetricKeys,
+                  visualVariant: String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB'),
+              },
+          };
+          const apiUrl = String(getDraftValue('playerStatsApiUrl') || '/api/player-stats');
+          const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              cache: 'no-store',
+          });
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.ok) {
+              throw new Error(payload?.error || 'Player stats bridge failed');
+          }
+          handleDraftFieldChanges({
+              playerStatsSourceJson: JSON.stringify(payload, null, 2),
+              playerStatsDataMode: 'MANUAL',
+          });
+          setAiBoxMessage({ type: 'success', text: `تم جلب ${selectedMetricKeys.length} إحصائيات مختارة وحفظها في القالب.` });
+      } catch (error) {
+          setAiBoxMessage({ type: 'error', text: error instanceof Error ? error.message : 'تعذر جلب إحصائيات اللاعبين.' });
+      } finally {
+          setIsFetchingPlayerStats(false);
+      }
   };
 
   const toggleLiveVisibility = () => {
@@ -1457,6 +1777,169 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
         )}
 
+        {draftOverlay.type === OverlayType.PLAYER_STATS && (
+            <div className="shrink-0 max-h-[58vh] overflow-y-auto border-b border-cyan-900/40 bg-slate-950/70 p-4 [scrollbar-width:thin] space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <div className="text-xs font-black text-cyan-200">Smart Player Stats Selection</div>
+                        <div className="mt-0.5 text-[10px] font-bold text-slate-400">اختر قبل الجلب. لا يتم طلب كل الإحصائيات دفعة واحدة.</div>
+                    </div>
+                    <div className="rounded-lg border border-cyan-700/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-black text-cyan-100">
+                        {selectedMetricKeys.length} metrics
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={String(getDraftValue('providerPolicy') || 'auto')}
+                      onChange={(event) => handleDraftFieldChange('providerPolicy', event.target.value)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-[11px] font-bold text-white"
+                    >
+                        <option value="auto">Auto router</option>
+                        <option value="fbref">FBref season first</option>
+                        <option value="matchBridge">Match bridge first</option>
+                        <option value="demo">Demo fallback</option>
+                    </select>
+                    <select
+                      value={String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB')}
+                      onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-[11px] font-bold text-white"
+                    >
+                        <option value="ULTRA_LAB">Ultra Lab</option>
+                        <option value="GLASS_SCOUT">Glass Scout</option>
+                        <option value="BARCA_RADAR">Barca Radar</option>
+                        <option value="MINIMAL_CAST">Minimal Cast</option>
+                    </select>
+                </div>
+
+                <div>
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">Presets</div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                        {Object.keys(PLAYER_STATS_PRESETS).map(preset => {
+                            const active = String(getDraftValue('metricPreset') || 'Attacker Profile') === preset;
+                            return (
+                                <button
+                                  key={preset}
+                                  type="button"
+                                  onClick={() => applyMetricPreset(preset)}
+                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                                >
+                                    {preset}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div>
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">Categories</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        {PLAYER_STATS_CATEGORIES.map(category => {
+                            const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category.key]);
+                            const active = categoryKeys.length > 0 && categoryKeys.some(key => selectedMetricSet.has(key));
+                            return (
+                                <button
+                                  key={category.key}
+                                  type="button"
+                                  onClick={() => toggleMetricCategory(category.key)}
+                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-emerald-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                                >
+                                    {category.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-700/70 bg-slate-900/55 p-3 space-y-2">
+                    <div className="text-[10px] font-black text-slate-300">Arabic / English metric text</div>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                        <input
+                          value={String(getDraftValue('metricNaturalLanguage') || '')}
+                          onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
+                          placeholder="الأهداف المتوقعة، التسديدات، المراوغات"
+                          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyMetricNaturalLanguage}
+                          className="rounded-lg bg-cyan-600 px-3 py-2 text-[10px] font-black text-white hover:bg-cyan-500"
+                        >
+                          Add
+                        </button>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-200/80">Selected chips</div>
+                        <button
+                          type="button"
+                          onClick={() => setMetricAdvancedOpen(value => !value)}
+                          className="rounded-md border border-slate-700 px-2 py-1 text-[10px] font-black text-slate-200 hover:bg-slate-800"
+                        >
+                          {metricAdvancedOpen ? 'Close advanced' : 'Advanced search'}
+                        </button>
+                    </div>
+                    <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                        {selectedMetricKeys.map(key => {
+                            const metric = effectiveMetricCatalog.find(item => item.key === key);
+                            return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  onClick={() => toggleMetricKey(key)}
+                                  className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-black text-cyan-100 hover:bg-rose-500/20 hover:text-rose-100"
+                                >
+                                    {metric?.labelAr || metric?.label || key} ×
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {metricAdvancedOpen && (
+                    <div className="rounded-xl border border-slate-700/70 bg-slate-900/65 p-3 space-y-3">
+                        <input
+                          value={metricSearch}
+                          onChange={(event) => setMetricSearch(event.target.value)}
+                          placeholder="Search metric / ابحث عن إحصائية"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
+                        />
+                        <div className="grid max-h-60 grid-cols-1 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                            {filteredMetricCatalog.map(metric => {
+                                const active = selectedMetricSet.has(metric.key);
+                                return (
+                                    <button
+                                      key={metric.key}
+                                      type="button"
+                                      onClick={() => toggleMetricKey(metric.key)}
+                                      className={`grid grid-cols-[1fr_auto] rounded-lg border px-2.5 py-2 text-left transition-colors ${active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-800'}`}
+                                    >
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-[11px] font-black">{metric.labelAr || metric.label}</span>
+                                            <span className="block truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">{metric.key} / {metric.category}</span>
+                                        </span>
+                                        <span className="text-[10px] font-black">{active ? 'ON' : '+'}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleFetchPlayerStats}
+                  disabled={isFetchingPlayerStats || !selectedMetricKeys.length}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
+                    {isFetchingPlayerStats ? 'Fetching selected metrics...' : 'Fetch selected player stats'}
+                </button>
+            </div>
+        )}
+
         {draftOverlay.type === OverlayType.MATCH_STATS && (
             <div className="shrink-0 max-h-[62vh] overflow-y-auto border-b border-blue-900/40 bg-blue-950/25 p-4 [scrollbar-width:thin] space-y-3">
                 <input
@@ -2173,7 +2656,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       // UNIVERSAL SMART TABS for ALL non-election templates
                       const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime', 'matchPanelScale', 'playerPanelScale', 'creatorBadgeScale', 'creatorPositionX', 'creatorPositionY'];
                       const SOUND_FIELDS = ['soundEnabled', 'soundVolume', 'useTTS', 'ttsText', 'soundInStyle', 'soundOutStyle'];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);

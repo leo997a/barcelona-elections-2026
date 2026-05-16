@@ -1,4 +1,5 @@
 import {
+  readJsonBody,
   sendJson,
   sendMethodNotAllowed,
   type ServerlessRequest,
@@ -15,6 +16,27 @@ type PlayerStatsQuery = {
   playerBClub: string;
   playerCName: string;
   playerCClub: string;
+  providerPolicy: string;
+  selectedMetrics: string[];
+  presentation?: {
+    heroMetrics?: string[];
+    secondaryMetrics?: string[];
+    visualVariant?: string;
+  };
+};
+
+type PlayerStatsBody = {
+  mode?: string;
+  providerPolicy?: string;
+  player?: { name?: string; club?: string };
+  comparisonPlayers?: Array<{ name?: string; club?: string }>;
+  season?: string;
+  selectedMetrics?: string[];
+  presentation?: {
+    heroMetrics?: string[];
+    secondaryMetrics?: string[];
+    visualVariant?: string;
+  };
 };
 
 const trimSlash = (value: string) => value.replace(/\/+$/, '');
@@ -46,12 +68,50 @@ const parseQuery = (req: ServerlessRequest): PlayerStatsQuery => {
     playerBClub: query.get('playerBClub') || 'Chelsea',
     playerCName: query.get('playerCName') || 'Lamine Yamal',
     playerCClub: query.get('playerCClub') || 'Barcelona',
+    providerPolicy: query.get('providerPolicy') || 'auto',
+    selectedMetrics: listFrom(query.get('selectedMetrics') || query.get('metrics') || ''),
   };
 };
 
 const queryObject = (req: ServerlessRequest): Record<string, string> => {
   const query = getQuery(req);
   return Object.fromEntries(query.entries());
+};
+
+const listFrom = (value: unknown) => {
+  if (Array.isArray(value)) return value.map(String).map(item => item.trim()).filter(Boolean);
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+};
+
+const parseBodyQuery = async (req: ServerlessRequest): Promise<PlayerStatsQuery> => {
+  if (req.method === 'POST') {
+    const body = await readJsonBody<PlayerStatsBody>(req).catch(() => ({} as PlayerStatsBody));
+    const comparisons = Array.isArray(body.comparisonPlayers) ? body.comparisonPlayers : [];
+    return {
+      mode: String(body.mode || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD'),
+      season: String(body.season || '2025/26'),
+      categories: [],
+      playerAName: String(body.player?.name || 'Robert Lewandowski'),
+      playerAClub: String(body.player?.club || 'Barcelona'),
+      playerBName: String(comparisons[0]?.name || 'Cole Palmer'),
+      playerBClub: String(comparisons[0]?.club || 'Chelsea'),
+      playerCName: String(comparisons[1]?.name || 'Lamine Yamal'),
+      playerCClub: String(comparisons[1]?.club || 'Barcelona'),
+      providerPolicy: String(body.providerPolicy || 'auto'),
+      selectedMetrics: listFrom(body.selectedMetrics),
+      presentation: body.presentation,
+    };
+  }
+
+  const query = parseQuery(req);
+  return {
+    ...query,
+    providerPolicy: getQuery(req).get('providerPolicy') || 'auto',
+    selectedMetrics: listFrom(getQuery(req).get('selectedMetrics') || getQuery(req).get('metrics') || ''),
+  };
 };
 
 const ALL_CATEGORY_STATS = [
@@ -108,8 +168,31 @@ const categoryStats = (categories: string[]) => {
   return ALL_CATEGORY_STATS.filter(stat => includeAll || wanted.has(stat.category));
 };
 
+const metricStats = (selectedMetrics: string[]) => {
+  if (!selectedMetrics.length) return [];
+  const byLabel = new Map(ALL_CATEGORY_STATS.map(stat => [
+    stat.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+    stat,
+  ]));
+  return selectedMetrics.map(key => {
+    const fallback = byLabel.get(key) || ALL_CATEGORY_STATS.find(stat => stat.label.toLowerCase() === key.replace(/_/g, ' '));
+    return {
+      key,
+      label: fallback?.label || key.replace(/_/g, ' '),
+      labelAr: fallback?.label || key.replace(/_/g, ' '),
+      value: 'pending',
+      unit: '',
+      category: fallback?.category || 'advanced',
+      provider: 'fallback',
+      confidence: 0.35,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+};
+
 const fallbackPayload = (query: PlayerStatsQuery) => {
-  const stats = categoryStats(query.categories);
+  const statsArray = query.selectedMetrics.length ? metricStats(query.selectedMetrics) : categoryStats(query.categories);
+  const stats = Object.fromEntries(statsArray.map(stat => [stat.key || stat.label.toLowerCase().replace(/[^a-z0-9]+/g, '_'), stat]));
   const players = [
     { name: query.playerAName, club: query.playerAClub, position: 'AI resolved', season: query.season, stats },
     { name: query.playerBName, club: query.playerBClub, position: 'AI resolved', season: query.season, stats },
@@ -119,11 +202,17 @@ const fallbackPayload = (query: PlayerStatsQuery) => {
   return {
     mode: query.mode,
     season: query.season,
+    providerPolicy: query.providerPolicy,
+    providerPlan: [],
+    selectedMetrics: query.selectedMetrics,
+    presentation: query.presentation,
     source: 'REO Player Stats Bridge contract',
     updatedAt: new Date().toISOString(),
     bridgeConfigured: false,
+    auth: { required: false, provided: Boolean(playerStatsBridgeToken()), valid: false },
     supportedModes: ['SINGLE', 'COMPARE', 'SCOUT_CARD'],
     supportedCategories: [...new Set(ALL_CATEGORY_STATS.map(stat => stat.category))],
+    warnings: query.selectedMetrics.length ? [] : ['No selectedMetrics were provided; returning compatibility fallback only.'],
     players,
     notes: [
       'This endpoint is ready for the Google Cloud player extractor.',
@@ -154,6 +243,14 @@ const fetchExplicitBridge = (url: string, query: PlayerStatsQuery, params: Recor
   headers: bridgeHeaders(true),
   body: JSON.stringify({
     ...query,
+    player: {
+      name: query.playerAName,
+      club: query.playerAClub,
+    },
+    comparisonPlayers: [
+      { name: query.playerBName, club: query.playerBClub },
+      { name: query.playerCName, club: query.playerCClub },
+    ].filter(player => player.name.trim()),
     query: params,
   }),
   cache: 'no-store',
@@ -166,7 +263,7 @@ const fetchLegacyBridge = (url: string) => fetch(url, {
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -175,13 +272,13 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     return;
   }
 
-  if (req.method !== 'GET') {
-    return sendMethodNotAllowed(res, 'GET, OPTIONS', { error: 'Method not allowed' });
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return sendMethodNotAllowed(res, 'GET, POST, OPTIONS', { error: 'Method not allowed' });
   }
 
   const rawUrl = (req as unknown as { url?: string }).url ?? '';
   const queryString = rawUrl.includes('?') ? rawUrl.slice(rawUrl.indexOf('?') + 1) : '';
-  const query = parseQuery(req);
+  const query = await parseBodyQuery(req);
   const explicitUrl = playerStatsBridgeUrl();
   const legacyUrl = explicitUrl ? '' : legacyBridgeUrl(queryString);
   const url = explicitUrl || legacyUrl;
@@ -192,6 +289,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         ? await fetchExplicitBridge(explicitUrl, query, queryObject(req))
         : await fetchLegacyBridge(url);
       const payload = await upstream.json().catch(() => null);
+      if (explicitUrl && payload) return sendJson(res, upstream.status, payload);
       if (upstream.ok && payload) return sendJson(res, 200, payload);
     } catch (error) {
       console.warn('Player stats bridge unavailable', error);

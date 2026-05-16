@@ -548,6 +548,32 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
         { value: 'COMPARE', label: 'مقارنة لاعبين' },
         { value: 'SCOUT_CARD', label: 'Scout Card / قائمة مراقبة 3 لاعبين' },
       ] },
+      { id: 'providerPolicy', label: 'Provider policy', type: 'select', value: 'auto', options: [
+        { value: 'auto', label: 'Auto router' },
+        { value: 'fbref', label: 'FBref season first' },
+        { value: 'matchBridge', label: 'Match bridge first' },
+        { value: 'demo', label: 'Demo safe fallback' },
+      ] },
+      { id: 'metricPreset', label: 'Smart metric preset', type: 'select', value: 'Attacker Profile', options: [
+        { value: 'Attacker Profile', label: 'Attacker Profile' },
+        { value: 'Playmaker Profile', label: 'Playmaker Profile' },
+        { value: 'Defensive Profile', label: 'Defensive Profile' },
+        { value: 'Goalkeeper Profile', label: 'Goalkeeper Profile' },
+        { value: 'Transfer Scout', label: 'Transfer Scout' },
+        { value: 'Barcelona Fit', label: 'Barcelona Fit' },
+        { value: 'Head-to-Head Comparison', label: 'Head-to-Head Comparison' },
+        { value: 'Full Season Report', label: 'Full Season Report' },
+      ] },
+      { id: 'selectedMetricsJson', label: 'Selected metric keys', type: 'hidden', value: '["goals","assists","shots","shots_on_target","xg","xa","key_passes","dribbles_completed","touches_in_box","goals_per90","assists_per90","impact_index"]' },
+      { id: 'heroMetricsJson', label: 'Hero metric keys', type: 'hidden', value: '["goals","assists","xg","impact_index"]' },
+      { id: 'secondaryMetricsJson', label: 'Secondary metric keys', type: 'hidden', value: '["shots","shots_on_target","key_passes","dribbles_completed","touches_in_box","goals_per90","assists_per90","xa"]' },
+      { id: 'metricNaturalLanguage', label: 'Natural metric search', type: 'hidden', value: '' },
+      { id: 'playerStatsVisualVariant', label: 'Player Stats look', type: 'select', value: 'ULTRA_LAB', options: [
+        { value: 'ULTRA_LAB', label: 'Ultra Lab' },
+        { value: 'GLASS_SCOUT', label: 'Glass Scout' },
+        { value: 'BARCA_RADAR', label: 'Barca Radar' },
+        { value: 'MINIMAL_CAST', label: 'Minimal Cast' },
+      ] },
       { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'PLAYER DATA FILE' },
       { id: 'subheadline', label: 'السطر المساعد', type: 'text', value: 'AI-assisted player identity, WhoScored-style categories, cached portraits and render cutouts.' },
       { id: 'seasonLabel', label: 'الموسم', type: 'text', value: '2025/26' },
@@ -1511,6 +1537,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       { id: 'designStyle', label: 'Design style', type: 'select', value: 'DEAL_BREAKER', options: ['DEAL_BREAKER', 'MARKET_COMMAND_CENTER', 'RUMOUR_RADAR', 'DONE_DEALS_WALL', 'PLAYER_SEASON_CARD', 'PLAYER_IMPACT_CARD'] },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'NEON_GLASS', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'sportmonksPlayerId', label: 'Sportmonks player ID', type: 'text', value: '' },
       { id: 'sportmonksSearch', label: 'Sportmonks search name', type: 'text', value: '' },
       { id: 'playerTeam', label: 'Player team', type: 'text', value: 'Barcelona' },
@@ -1555,6 +1587,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'MARKET_COMMAND_CENTER' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'NEON_GLASS', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'MERCATO DECISION ROOM' },
       { id: 'subheadline', label: 'Subtitle', type: 'text', value: 'Integrated transfer intelligence: probability board, completed deals, expected moves and live market signals.' },
       { id: 'playerName', label: 'Featured player', type: 'text', value: 'Nico Williams' },
@@ -1592,8 +1630,15 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'RUMOUR_RADAR' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'NEON_GLASS', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'PROBABILITY MATRIX' },
       { id: 'playerName', label: 'Featured player', type: 'text', value: 'Nico Williams' },
+      { id: 'playerImage', label: 'Featured player image', type: 'image', value: '' },
       { id: 'fromClub', label: 'From club', type: 'text', value: 'Athletic' },
       { id: 'toClub', label: 'To club', type: 'text', value: 'Barcelona' },
       { id: 'dealValue', label: 'Deal value', type: 'text', value: '58M EUR' },
@@ -1625,6 +1670,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'DONE_DEALS_WALL' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'CLEAN_BROADCAST', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'DONE DEALS TODAY' },
       { id: 'confidence', label: 'Reliability %', type: 'range', value: 92, min: 0, max: 100, step: 1 },
       { id: 'source', label: 'Source', type: 'text', value: 'Official / Reo Show Desk' },
@@ -1655,6 +1706,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'PLAYER_SEASON_CARD' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'LUXE_STUDIO', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'SEASON FORM FILE' },
       { id: 'subheadline', label: 'Subtitle', type: 'text', value: 'Compact scouting card for the current mercato: form, output, availability and transfer signal.' },
       { id: 'playerName', label: 'Player name', type: 'text', value: 'Lamine Yamal' },
@@ -1699,6 +1756,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'PLAYER_IMPACT_CARD' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'TACTICAL_DARK', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'IMPACT FORECAST' },
       { id: 'subheadline', label: 'Subtitle', type: 'text', value: 'A fast-reading scouting panel for transfer shows: minutes, progression, creativity and availability.' },
       { id: 'playerName', label: 'Player name', type: 'text', value: 'Pedri' },
@@ -1743,6 +1806,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'DEAL_BREAKER' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'NEON_GLASS', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'CONTRACT EXIT WATCH' },
       { id: 'subheadline', label: 'Subtitle', type: 'text', value: 'End-of-contract scenario: free transfer angle, probability and live market signal.' },
       { id: 'playerName', label: 'Player name', type: 'text', value: 'Robert Lewandowski' },
@@ -1787,6 +1856,12 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     fields: [
       ...commonFields,
       { id: 'designStyle', label: 'Design style', type: 'hidden', value: 'MARKET_COMMAND_CENTER' },
+      { id: 'visualVariant', label: 'Look variant', type: 'select', value: 'NEON_GLASS', options: [
+        { value: 'NEON_GLASS', label: 'Neon Glass' },
+        { value: 'TACTICAL_DARK', label: 'Tactical Dark' },
+        { value: 'LUXE_STUDIO', label: 'Luxe Studio' },
+        { value: 'CLEAN_BROADCAST', label: 'Clean Broadcast' },
+      ] },
       { id: 'headline', label: 'Main headline', type: 'text', value: 'HERE WE GO BOARD' },
       { id: 'subheadline', label: 'Subtitle', type: 'text', value: 'One featured transfer, live probability and rapid deal signals for a mercato show segment.' },
       { id: 'playerName', label: 'Featured player', type: 'text', value: 'Lamine Yamal' },
