@@ -30,9 +30,9 @@ export const TRANSITIONS: Record<string, string> = {
 };
 
 export const SOUND_EFFECTS = {
-    ENTRY: "https://assets.mixkit.co/active_storage/sfx/3120/3120.wav", 
-    TRANSITION: "https://assets.mixkit.co/active_storage/sfx/3120/3120.wav", 
-    EXIT: "https://assets.mixkit.co/active_storage/sfx/204/204.wav"
+    ENTRY: null,
+    TRANSITION: null,
+    EXIT: null
 };
 
 export const BROADCAST_TRANSITION_OPTIONS = [

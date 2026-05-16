@@ -14,22 +14,13 @@ import { syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
 
-import { unlockAudio } from './services/soundService';
+import { unlockAudio } from './services/audioEngine';
 
 const AudioUnlockOverlay = () => {
     const [visible, setVisible] = useState(true);
     
     const handleUnlock = () => {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContext) {
-            const ctx = new AudioContext();
-            ctx.resume().then(() => {
-                setVisible(false);
-                setTimeout(() => ctx.close(), 1000);
-            });
-        } else {
-            setVisible(false);
-        }
+        unlockAudio().finally(() => setVisible(false));
     };
     
     if (!visible) return null;

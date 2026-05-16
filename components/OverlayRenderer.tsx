@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
 import ElectionOverlay from './ElectionOverlay';
 import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectionStyle } from '../utils/election';
-import { THEMES, SOUND_EFFECTS, ELECTION_SOUND_PATTERNS } from './renderers/OverlayConstants';
+import { THEMES } from './renderers/OverlayConstants';
+import { playCue, stopCue } from '../services/audioEngine';
 import { RendererProps } from './renderers/SharedComponents';
 
 // Renderers
@@ -135,16 +136,19 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]: 'VAR_BUZZ',
   [OverlayType.EXCLUSIVE_ALERT]: 'VAR_BUZZ',
   [OverlayType.SMART_NEWS]: 'TACTICAL_PULSE',
-  [OverlayType.LEADERBOARD]: 'DATA_TICK',
+  [OverlayType.LEADERBOARD]: 'DATA_SLAM',
   [OverlayType.GUESTS]: 'STADIUM_WHOOSH',
-  [OverlayType.UCL_DRAW]: 'STADIUM_WHOOSH',
+  [OverlayType.UCL_DRAW]: 'LUXURY_SWEEP',
   [OverlayType.SOCIAL_MEDIA]: 'LOWER_THIRD_WIPE',
-  [OverlayType.TODAYS_EPISODE]: 'CROWD_RISE',
-  [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
+  [OverlayType.TODAYS_EPISODE]: 'BEFORE_THE_KICKOFF',
+  [OverlayType.PLAYER_PROFILE]: 'PLAYER_ENTRANCE',
   [OverlayType.TOP_VIEWERS]: 'DATA_TICK',
   [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_SWEEP',
   [OverlayType.TRANSFER_NEWS]: 'MERCATO_HIT',
+  [OverlayType.H2H_STATS]: 'DATA_SLAM',
+  [OverlayType.MATCH_STATS]: 'DATA_SLAM',
   [OverlayType.PLAYER_STATS]: 'DATA_SLAM',
+  [OverlayType.BARCA_PREMIUM]: 'LUXURY_SWEEP',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -164,7 +168,10 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.TOP_VIEWERS]: 'SOFT_FADE',
   [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_OUT',
   [OverlayType.TRANSFER_NEWS]: 'LUXURY_OUT',
+  [OverlayType.H2H_STATS]: 'BROADCAST_OUT',
+  [OverlayType.MATCH_STATS]: 'BROADCAST_OUT',
   [OverlayType.PLAYER_STATS]: 'BROADCAST_OUT',
+  [OverlayType.BARCA_PREMIUM]: 'LUXURY_OUT',
 };
 
 const CSS = `
@@ -235,8 +242,6 @@ interface OverlayRendererProps {
   isEditor?: boolean;
 }
 
-let sharedAudioContext: AudioContext | null = null;
-
 const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, isEditor = false }) => {
   const getField = (id: string) => config.fields.find(f => f.id === id)?.value;
   
@@ -245,7 +250,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const posY = Number(getField('positionY') || 0);
   const soundEnabled = getField('soundEnabled') !== false;
   const soundVolume = Number(getField('soundVolume') ?? 0.7);
-  const synthVolume = Math.max(0, Math.min(soundVolume, 3));
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -254,199 +258,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const [animCls, setAnimCls] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const [wasVisible, setWasVisible] = useState(isEditor || config.isVisible);
-
-  const createNoiseBuffer = (ac: AudioContext, duration: number) => {
-      const buffer = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * duration)), ac.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i += 1) {
-          const fade = 1 - i / data.length;
-          data[i] = (Math.random() * 2 - 1) * fade;
-      }
-      return buffer;
-  };
-
-  const playLuxurySound = async (cue: string) => {
-      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextCtor) return false;
-
-      if (!sharedAudioContext) sharedAudioContext = new AudioContextCtor();
-      const ac = sharedAudioContext;
-      if (ac.state === 'suspended') await ac.resume();
-
-      const now = ac.currentTime;
-      const master = ac.createGain();
-      const compressor = ac.createDynamicsCompressor();
-      master.gain.setValueAtTime(synthVolume * 0.62, now);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
-      compressor.threshold.value = -22;
-      compressor.knee.value = 28;
-      compressor.ratio.value = 5;
-      compressor.attack.value = 0.006;
-      compressor.release.value = 0.18;
-      master.connect(compressor);
-      compressor.connect(ac.destination);
-
-      const hit = (start: number, frequency: number, duration: number, gainValue: number) => {
-          const osc = ac.createOscillator();
-          const gain = ac.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(frequency, start);
-          osc.frequency.exponentialRampToValueAtTime(Math.max(24, frequency * 0.58), start + duration);
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-          osc.connect(gain);
-          gain.connect(master);
-          osc.start(start);
-          osc.stop(start + duration + 0.04);
-      };
-
-      const shimmer = (start: number, base: number, duration: number, gainValue: number) => {
-          [1, 1.5, 2, 2.5].forEach((ratio, index) => {
-              const osc = ac.createOscillator();
-              const gain = ac.createGain();
-              const pan = ac.createStereoPanner();
-              osc.type = index % 2 ? 'triangle' : 'sine';
-              osc.frequency.setValueAtTime(base * ratio, start);
-              osc.detune.setValueAtTime(index * 4 - 6, start);
-              pan.pan.setValueAtTime(index % 2 ? 0.35 : -0.3, start);
-              gain.gain.setValueAtTime(0.0001, start);
-              gain.gain.exponentialRampToValueAtTime(gainValue / (index + 1), start + 0.04 + index * 0.015);
-              gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-              osc.connect(gain);
-              gain.connect(pan);
-              pan.connect(master);
-              osc.start(start);
-              osc.stop(start + duration + 0.05);
-          });
-      };
-
-      const sweep = (start: number, duration: number, from: number, to: number, gainValue: number, type: BiquadFilterType) => {
-          const source = ac.createBufferSource();
-          const filter = ac.createBiquadFilter();
-          const gain = ac.createGain();
-          source.buffer = createNoiseBuffer(ac, duration);
-          filter.type = type;
-          filter.frequency.setValueAtTime(from, start);
-          filter.frequency.exponentialRampToValueAtTime(to, start + duration);
-          filter.Q.setValueAtTime(0.75, start);
-          gain.gain.setValueAtTime(0.0001, start);
-          gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.035);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-          source.connect(filter);
-          filter.connect(gain);
-          gain.connect(master);
-          source.start(start);
-          source.stop(start + duration + 0.02);
-      };
-
-      if (cue === 'MERCATO_HIT' || cue === 'ELITE_HIT') {
-          hit(now, 42, 0.42, 1.05);
-          hit(now + 0.035, 118, 0.18, 0.46);
-          shimmer(now + 0.08, 260, 0.54, 0.28);
-          sweep(now + 0.02, 0.52, 2200, 180, 0.32, 'bandpass');
-          sweep(now + 0.12, 0.58, 360, 4800, 0.22, 'highpass');
-      } else if (cue === 'TRANSFER_RISER' || cue === 'CLUB_REVEAL') {
-          hit(now, 56, 0.46, 0.62);
-          shimmer(now + 0.04, 240, 0.72, 0.24);
-          sweep(now, 0.68, 260, 5600, 0.28, 'highpass');
-      } else if (cue === 'DEADLINE_ALARM' || cue === 'PHOTO_FLASH' || cue === 'NEWS_STING' || cue === 'TACTICAL_LOCK') {
-          hit(now, cue === 'PHOTO_FLASH' ? 920 : 86, 0.22, 0.66);
-          hit(now + 0.09, cue === 'DEADLINE_ALARM' ? 780 : 180, 0.14, 0.42);
-          shimmer(now + 0.05, cue === 'NEWS_STING' ? 520 : 360, 0.36, 0.22);
-          sweep(now + 0.01, 0.3, 3400, 520, 0.18, 'bandpass');
-      } else if (cue === 'CINEMA_BOOM') {
-          hit(now, 34, 0.72, 1.1);
-          hit(now + 0.05, 72, 0.38, 0.48);
-          sweep(now, 0.72, 140, 2400, 0.26, 'lowpass');
-      } else if (cue === 'DATA_SLAM') {
-          hit(now, 90, 0.18, 0.7);
-          hit(now + 0.075, 140, 0.12, 0.52);
-          shimmer(now + 0.05, 620, 0.28, 0.28);
-          sweep(now + 0.01, 0.24, 3600, 420, 0.2, 'bandpass');
-      } else if (cue === 'HERE_WE_GO_STING' || cue === 'DEAL_LOCK' || cue === 'CONTRACT_STAMP') {
-          hit(now, 38, 0.58, 1.18);
-          hit(now + 0.035, 86, 0.3, 0.72);
-          hit(now + 0.18, cue === 'CONTRACT_STAMP' ? 132 : 176, 0.18, 0.56);
-          shimmer(now + 0.08, 330, 0.66, 0.32);
-          sweep(now, 0.5, 2800, 160, 0.34, 'bandpass');
-      } else if (cue === 'AGENT_CALL' || cue === 'RUMOUR_GLITCH' || cue === 'MEDICAL_PASS') {
-          hit(now, cue === 'MEDICAL_PASS' ? 64 : 112, 0.28, 0.78);
-          hit(now + 0.1, cue === 'RUMOUR_GLITCH' ? 920 : 440, 0.12, 0.42);
-          hit(now + 0.18, cue === 'RUMOUR_GLITCH' ? 620 : 660, 0.1, 0.34);
-          shimmer(now + 0.08, cue === 'AGENT_CALL' ? 520 : 300, 0.42, 0.2);
-          sweep(now + 0.01, 0.36, 3600, 300, 0.22, 'bandpass');
-      } else if (cue === 'CASH_REGISTER' || cue === 'ULTRA_RISER') {
-          hit(now, 44, 0.5, 1.02);
-          shimmer(now + 0.04, cue === 'CASH_REGISTER' ? 760 : 240, 0.7, 0.34);
-          sweep(now, 0.72, cue === 'ULTRA_RISER' ? 180 : 3400, cue === 'ULTRA_RISER' ? 6200 : 540, 0.36, cue === 'ULTRA_RISER' ? 'highpass' : 'bandpass');
-      } else if (cue === 'LUXURY_IMPACT' || cue === 'VAR_BUZZ') {
-          hit(now, 52, 0.55, 0.95);
-          hit(now + 0.025, 104, 0.22, 0.35);
-          shimmer(now + 0.08, 196, 0.58, 0.18);
-          sweep(now + 0.02, 0.46, 1800, 180, 0.22, 'bandpass');
-      } else if (cue === 'LUXURY_OUT' || cue === 'BROADCAST_OUT' || cue === 'SOFT_FADE') {
-          hit(now, 110, 0.42, 0.3);
-          shimmer(now, 330, 0.38, 0.1);
-          sweep(now, 0.42, 900, 120, 0.12, 'lowpass');
-      } else if (cue === 'SCOREBUG_SNAP' || cue === 'DATA_TICK') {
-          hit(now, 72, 0.32, 0.5);
-          shimmer(now + 0.025, 440, 0.34, 0.16);
-          sweep(now + 0.005, 0.2, 2600, 620, 0.12, 'bandpass');
-      } else {
-          hit(now, 58, 0.62, 0.62);
-          shimmer(now + 0.06, 220, 0.72, 0.18);
-          sweep(now, 0.62, 420, 4200, 0.2, 'highpass');
-          sweep(now + 0.16, 0.52, 3600, 520, 0.14, 'bandpass');
-      }
-
-      window.setTimeout(() => {
-          try { master.disconnect(); compressor.disconnect(); } catch {}
-      }, 1800);
-      return true;
-  };
-
-  const playElectionSynth = async (cue: string) => {
-      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextCtor) return false;
-
-      if (cue.startsWith('LUXURY_') || ['SCOREBUG_SNAP', 'DATA_TICK', 'VAR_BUZZ', 'BROADCAST_OUT', 'MERCATO_HIT', 'TRANSFER_RISER', 'DEADLINE_ALARM', 'HERE_WE_GO_STING', 'CONTRACT_STAMP', 'AGENT_CALL', 'CASH_REGISTER', 'MEDICAL_PASS', 'RUMOUR_GLITCH', 'DEAL_LOCK', 'ULTRA_RISER', 'CLUB_REVEAL', 'PHOTO_FLASH', 'NEWS_STING', 'ELITE_HIT', 'TACTICAL_LOCK', 'CINEMA_BOOM', 'DATA_SLAM'].includes(cue)) {
-          return playLuxurySound(cue);
-      }
-
-      if (!sharedAudioContext) sharedAudioContext = new AudioContextCtor();
-      if (sharedAudioContext.state === 'suspended') await sharedAudioContext.resume();
-
-      const pattern = ELECTION_SOUND_PATTERNS[cue] || ELECTION_SOUND_PATTERNS.RESULTS_STING;
-      const now = sharedAudioContext.currentTime;
-      const master = sharedAudioContext.createGain();
-      master.connect(sharedAudioContext.destination);
-      master.gain.setValueAtTime(synthVolume * 0.28, now);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
-
-      pattern.forEach(step => {
-          const oscillator = sharedAudioContext!.createOscillator();
-          const gain = sharedAudioContext!.createGain();
-          const startAt = now + step.delay;
-          const endAt = startAt + step.duration;
-
-          oscillator.type = step.waveform;
-          oscillator.frequency.setValueAtTime(step.frequency, startAt);
-          if (step.toFrequency) oscillator.frequency.exponentialRampToValueAtTime(step.toFrequency, endAt);
-
-          gain.gain.setValueAtTime(0.0001, startAt);
-          gain.gain.exponentialRampToValueAtTime(step.gain, startAt + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
-
-          oscillator.connect(gain);
-          gain.connect(master);
-          oscillator.start(startAt);
-          oscillator.stop(endAt + 0.03);
-      });
-
-      window.setTimeout(() => master.disconnect(), 1400);
-      return true;
-  };
 
   const resolveEnterClass = () => {
       const selected = String(getField('transitionIn') || 'DEFAULT');
@@ -483,26 +294,13 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       if (!soundEnabled) return;
       try {
           const cue = resolveSynthCue(type);
-          if (!(config.type === OverlayType.TODAYS_EPISODE && type === 'ENTRY' && String(getField('soundInStyle') || 'DEFAULT') === 'DEFAULT')) {
-              const played = await playElectionSynth(cue);
-              if (played) return;
-          }
-
-          if (config.type === OverlayType.TODAYS_EPISODE && type === 'ENTRY') {
-              if (!audioRef.current) return;
-              audioRef.current.src = "/sounds/before_the_kickoff.mp3";
-              audioRef.current.currentTime = 19;
-              audioRef.current.volume = Math.min(soundVolume, 1);
-              await audioRef.current.play();
-              return;
-          } else {
-              if (!audioRef.current) return;
-              audioRef.current.src = SOUND_EFFECTS[type];
-          }
-          if (!audioRef.current) return;
-          audioRef.current.volume = Math.min(soundVolume, 1);
-          audioRef.current.currentTime = 0;
-          await audioRef.current.play();
+          if (type === 'EXIT') stopCue('BEFORE_THE_KICKOFF', 120);
+          await playCue(cue, {
+              volume: soundVolume,
+              loop: cue === 'BEFORE_THE_KICKOFF',
+              loopStart: cue === 'BEFORE_THE_KICKOFF' ? 19 : undefined,
+              loopEnd: cue === 'BEFORE_THE_KICKOFF' ? 79 : undefined,
+          });
       } catch (e) { /* Ignore */ }
   };
 
