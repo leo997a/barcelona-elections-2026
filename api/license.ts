@@ -7,6 +7,33 @@ import {
 } from './_lib/http.js';
 import { createHmac } from 'crypto';
 
+// ─── Rate Limiter (in-memory, per serverless instance) ─────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+const checkRateLimit = (
+  key: string,
+  maxAttempts: number,
+  windowMs: number,
+): boolean => {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true; // allowed
+  }
+  if (entry.count >= maxAttempts) return false; // blocked
+  entry.count++;
+  return true; // allowed
+};
+
+// Cleanup stale entries every 5 minutes to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimitMap) {
+    if (now > v.resetAt) rateLimitMap.delete(k);
+  }
+}, 5 * 60 * 1000);
+
 // ─── License key format: REO-XXXX-XXXX-XXXX-XXXX ─────────────────────────────
 // Payload (before encoding): role|studioId|expiry|nonce
 // HMAC-SHA256 with LICENSE_SECRET → base36 chunk
@@ -84,8 +111,19 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const body = await readJsonBody<LicenseRequestBody>(req).catch(() => null);
   if (!body?.action) return sendJson(res, 400, { error: 'action مطلوب.' });
 
+  // Client IP for rate limiting (Vercel sets x-forwarded-for)
+  const clientIp = String(
+    (Array.isArray(req.headers['x-forwarded-for'])
+      ? req.headers['x-forwarded-for'][0]
+      : req.headers['x-forwarded-for']) ?? 'unknown'
+  ).split(',')[0].trim();
+
   // ── VERIFY ──────────────────────────────────────────────────────────────────
   if (body.action === 'verify') {
+    // Rate limit: 10 verify attempts per IP per minute
+    if (!checkRateLimit(`verify:${clientIp}`, 10, 60_000)) {
+      return sendJson(res, 429, { error: 'محاولات كثيرة. حاول بعد دقيقة.' });
+    }
     const key = body.key?.trim();
     if (!key) return sendJson(res, 400, { error: 'المفتاح مطلوب.' });
 
@@ -114,6 +152,10 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
 
   // ── GENERATE (admin only) ────────────────────────────────────────────────────
   if (body.action === 'generate') {
+    // Rate limit: 3 generate attempts per IP per 5 minutes
+    if (!checkRateLimit(`generate:${clientIp}`, 3, 5 * 60_000)) {
+      return sendJson(res, 429, { error: 'محاولات توليد كثيرة. حاول بعد 5 دقائق.' });
+    }
     const adminSecret = process.env.LICENSE_ADMIN_SECRET;
     if (!adminSecret || body.adminSecret !== adminSecret) {
       return sendJson(res, 403, { error: 'غير مصرح. يلزم سر المسؤول.' });

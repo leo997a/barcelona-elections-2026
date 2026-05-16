@@ -22,6 +22,9 @@ export const sendJson = (response: ServerlessResponse, status: number, payload: 
   response.statusCode = status;
   response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Referrer-Policy', 'no-referrer');
+  response.setHeader('X-Frame-Options', 'DENY');
   response.end(JSON.stringify(payload));
 };
 
@@ -34,6 +37,9 @@ export const sendMethodNotAllowed = (
   response.setHeader('Allow', allow);
   response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Referrer-Policy', 'no-referrer');
+  response.setHeader('X-Frame-Options', 'DENY');
   response.end(JSON.stringify(payload));
 };
 
@@ -78,4 +84,22 @@ export const getBearerToken = (request: ServerlessRequest): string | null => {
   const authHeader = normalizeHeader(request.headers.authorization ?? request.headers.Authorization);
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   return authHeader.slice('Bearer '.length).trim() || null;
+};
+
+/** Set a hardened cookie — HttpOnly + Secure + SameSite=Strict */
+export const setSecureCookie = (
+  response: ServerlessResponse,
+  name: string,
+  value: string,
+  maxAgeSeconds = 86400,
+) => {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    `Path=/`,
+    `HttpOnly`,
+    `Secure`,
+    `SameSite=Strict`,
+    `Max-Age=${maxAgeSeconds}`,
+  ];
+  response.setHeader('Set-Cookie', parts.join('; '));
 };

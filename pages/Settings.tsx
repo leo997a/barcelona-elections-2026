@@ -55,9 +55,11 @@ const RULES_SNIPPET = `{
   }
 }`;
 
-const SERVER_ENV_SNIPPET = `GEMINI_API_KEY=your_gemini_key
-EDITOR_ADMIN_PASSCODE=choose_a_private_passcode
-ADMIN_SESSION_SECRET=choose_a_long_random_secret`;
+const SERVER_ENV_SNIPPET = `GEMINI_API_KEY=SET_IN_VERCEL_ONLY
+EDITOR_ADMIN_PASSCODE=SET_IN_VERCEL_ONLY
+ADMIN_SESSION_SECRET=SET_IN_VERCEL_ONLY
+LICENSE_SECRET=SET_IN_VERCEL_ONLY
+LICENSE_ADMIN_SECRET=SET_IN_VERCEL_ONLY`;
 
 const Settings: React.FC = () => {
   const [configJson, setConfigJson] = useState('');
