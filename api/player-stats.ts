@@ -53,21 +53,24 @@ const getQuery = (req: ServerlessRequest) => {
 
 const parseQuery = (req: ServerlessRequest): PlayerStatsQuery => {
   const query = getQuery(req);
+  const mode = (query.get('mode') || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD');
+  const needsSecondPlayer = mode === 'COMPARE' || mode === 'SCOUT_CARD';
+  const needsThirdPlayer = mode === 'SCOUT_CARD';
   const categories = (query.get('categories') || 'all')
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);
 
   return {
-    mode: (query.get('mode') || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD'),
+    mode,
     season: query.get('season') || '2025/26',
     categories,
     playerAName: query.get('playerAName') || 'Robert Lewandowski',
     playerAClub: query.get('playerAClub') || 'Barcelona',
-    playerBName: query.get('playerBName') || 'Cole Palmer',
-    playerBClub: query.get('playerBClub') || 'Chelsea',
-    playerCName: query.get('playerCName') || 'Lamine Yamal',
-    playerCClub: query.get('playerCClub') || 'Barcelona',
+    playerBName: query.get('playerBName') || (needsSecondPlayer ? 'Cole Palmer' : ''),
+    playerBClub: query.get('playerBClub') || (needsSecondPlayer ? 'Chelsea' : ''),
+    playerCName: query.get('playerCName') || (needsThirdPlayer ? 'Lamine Yamal' : ''),
+    playerCClub: query.get('playerCClub') || (needsThirdPlayer ? 'Barcelona' : ''),
     providerPolicy: query.get('providerPolicy') || 'auto',
     selectedMetrics: listFrom(query.get('selectedMetrics') || query.get('metrics') || ''),
   };
@@ -90,16 +93,19 @@ const parseBodyQuery = async (req: ServerlessRequest): Promise<PlayerStatsQuery>
   if (req.method === 'POST') {
     const body = await readJsonBody<PlayerStatsBody>(req).catch(() => ({} as PlayerStatsBody));
     const comparisons = Array.isArray(body.comparisonPlayers) ? body.comparisonPlayers : [];
+    const mode = String(body.mode || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD');
+    const needsSecondPlayer = mode === 'COMPARE' || mode === 'SCOUT_CARD';
+    const needsThirdPlayer = mode === 'SCOUT_CARD';
     return {
-      mode: String(body.mode || 'SINGLE').replace('SCOUT_SHORTLIST', 'SCOUT_CARD'),
+      mode,
       season: String(body.season || '2025/26'),
       categories: [],
       playerAName: String(body.player?.name || 'Robert Lewandowski'),
       playerAClub: String(body.player?.club || 'Barcelona'),
-      playerBName: String(comparisons[0]?.name || 'Cole Palmer'),
-      playerBClub: String(comparisons[0]?.club || 'Chelsea'),
-      playerCName: String(comparisons[1]?.name || 'Lamine Yamal'),
-      playerCClub: String(comparisons[1]?.club || 'Barcelona'),
+      playerBName: String(comparisons[0]?.name || (needsSecondPlayer ? 'Cole Palmer' : '')),
+      playerBClub: String(comparisons[0]?.club || (needsSecondPlayer ? 'Chelsea' : '')),
+      playerCName: String(comparisons[1]?.name || (needsThirdPlayer ? 'Lamine Yamal' : '')),
+      playerCClub: String(comparisons[1]?.club || (needsThirdPlayer ? 'Barcelona' : '')),
       providerPolicy: String(body.providerPolicy || 'auto'),
       selectedMetrics: listFrom(body.selectedMetrics),
       presentation: body.presentation,

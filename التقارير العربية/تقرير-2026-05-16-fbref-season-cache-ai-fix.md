@@ -60,6 +60,8 @@ playerImageLarge || playerImage || sportmonksPlayer.image_path
 - يستخدم `generatedAt` إذا لم يوجد `updatedAt`.
 - يحافظ على نفس شكل القالب بدون كسر الواجهة.
 
+كما تم إصلاح `/api/player-stats` نفسه حتى لا يضيف لاعبين افتراضيين مثل Cole Palmer وLamine Yamal عند طلب وضع `SINGLE`. الآن اللاعبان الافتراضيان لا يدخلان إلا عند `COMPARE` أو `SCOUT_CARD`، وهذا يمنع warnings وطلبات غير مطلوبة في وضع لاعب واحد.
+
 ## FBref Provider الحقيقي
 
 تم إنشاء Provider حقيقي في:
@@ -150,6 +152,7 @@ auth.valid = true
 
 ```text
 api/ai.ts
+api/player-stats.ts
 components/renderers/TransferNewsRenderer.tsx
 components/renderers/PlayerStatsRenderer.tsx
 constants.ts
