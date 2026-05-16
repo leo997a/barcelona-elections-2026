@@ -173,7 +173,14 @@ const isWeakTextValue = (value: unknown) => {
   if (!text) return true;
   const normalized = normalizeArabicText(text);
   return /^(unknown|unknown player|unknown club|player|club|n\/a|na|null|undefined)$/i.test(text)
-    || ['\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641', '\u0644\u0627\u0639\u0628', '\u0646\u0627\u062F\u064A'].includes(normalized);
+    || [
+      '\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641',
+      '\u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631',
+      '\u063A\u064A\u0631 \u0645\u062D\u062F\u062F',
+      '\u0644\u0627 \u064A\u0648\u062C\u062F',
+      '\u0644\u0627\u0639\u0628',
+      '\u0646\u0627\u062F\u064A',
+    ].includes(normalized);
 };
 
 const firstStrongString = (...values: unknown[]) => {
@@ -944,7 +951,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       const leavingStory = hasLocalLeavingSignal(rawText);
       const fields = { ...(parsed.fields || {}) };
       const resolvedPlayerName = localPlayer?.playerName || parsed.playerName || fields.playerName || playerName;
-      const genericDestination = /غير محدد|unknown|destination|tbc/i.test(String(fields.toClub || ''));
+      const genericDestination = isWeakTextValue(fields.toClub)
+        || /غير محدد|غير متوفر|unknown|destination|tbc/i.test(String(fields.toClub || ''));
 
       if (resolvedPlayerName) {
         parsed.playerName = String(resolvedPlayerName);
