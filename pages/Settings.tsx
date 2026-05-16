@@ -13,13 +13,16 @@ import {
   Lock,
   Unlock,
   Plus,
-  Volume2,
-  Play,
+  Eye,
+  TestTube2,
+  ShieldAlert,
+  Loader2,
 } from 'lucide-react';
 import { licenseService, LicenseState } from '../services/licenseService';
 import { FirebaseWebConfig } from '../types';
 import { syncManager } from '../services/syncManager';
-import { playCue, setMasterVolume, getMasterVolume, PREVIEWABLE_CUES } from '../services/audioEngine';
+import { toSystemRole, can, getRoleDisplayName, type SystemRole } from '../utils/permissions';
+import { adminSessionService } from '../services/adminSession';
 
 const RULES_SNIPPET = `{
   "rules": {
@@ -65,8 +68,55 @@ const Settings: React.FC = () => {
   const [configJson, setConfigJson] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [masterVol, setMasterVol] = useState(() => getMasterVolume());
-  const [playingCue, setPlayingCue] = useState<string | null>(null);
+
+  // ── Secrets Vault State ──
+  const [vaultSecrets, setVaultSecrets] = useState<Array<{name: string; envVar: string; exists: boolean; length: number; last4: string; fingerprint: string; purpose: string; risk: string}>>([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultError, setVaultError] = useState('');
+  const [testResults, setTestResults] = useState<Array<{service: string; configured: boolean; reachable: boolean; auth: {required: boolean; provided: boolean; valid: boolean}; latencyMs: number; error?: string}>>([]);
+  const [testLoading, setTestLoading] = useState(false);
+
+  // ── Role-based access ──
+  const storedLicense = licenseService.getStored();
+  const systemRole: SystemRole = storedLicense?.valid ? toSystemRole(storedLicense.role) : 'VIEWER';
+  const canViewSecrets = can(systemRole, 'SECRETS_VIEW_METADATA');
+  const canTestSecrets = can(systemRole, 'SECRETS_TEST');
+
+  const loadVaultStatus = async () => {
+    setVaultLoading(true);
+    setVaultError('');
+    try {
+      const session = adminSessionService.getStoredSession();
+      if (!session) { setVaultError('يلزم تسجيل دخول المسؤول أولاً.'); return; }
+      const res = await fetch('/api/admin/secrets/status', {
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل تحميل حالة الأسرار');
+      setVaultSecrets(data.secrets || []);
+    } catch (e) {
+      setVaultError(e instanceof Error ? e.message : 'خطأ غير متوقع');
+    } finally {
+      setVaultLoading(false);
+    }
+  };
+
+  const runSecretTests = async () => {
+    setTestLoading(true);
+    try {
+      const session = adminSessionService.getStoredSession();
+      if (!session) return;
+      const res = await fetch('/api/admin/secrets/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` },
+        body: JSON.stringify({ service: 'all' }),
+      });
+      const data = await res.json();
+      if (res.ok) setTestResults(data.results || []);
+    } catch { /* silent */ } finally {
+      setTestLoading(false);
+    }
+  };
 
   // ── License state ──────────────────────────────────────────────────────────
   const [currentLicense, setCurrentLicense] = useState<LicenseState | null>(() => licenseService.getStored());
@@ -530,75 +580,129 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* ── AUDIO ENGINE CONTROL ──────────────────────────────────────────── */}
-      <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 via-gray-950 to-gray-900 p-8 shadow-2xl">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-1 text-xs font-bold text-purple-200">
-          <Volume2 className="h-3.5 w-3.5" />
-          محرك الصوت
-        </div>
-        <h2 className="text-2xl font-black text-white mb-6">🔊 التحكم بالمؤثرات الصوتية</h2>
-
-        {/* Master Volume Slider */}
-        <div className="mb-8 rounded-2xl border border-gray-800 bg-black/30 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-purple-400" />
-              مستوى الصوت الرئيسي (Master Volume)
-            </h3>
-            <span className="font-mono text-lg font-black text-purple-300">{Math.round(masterVol * 100)}%</span>
+      {/* ── ADMIN SECRETS VAULT ──────────────────────────────────────────── */}
+      {canViewSecrets && (
+        <div className="rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-950/50 via-gray-950 to-gray-900 p-8 shadow-2xl">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-200">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            خزنة الأسرار — {getRoleDisplayName(systemRole)}
           </div>
-          <input
-            type="range"
-            min="0"
-            max="150"
-            value={Math.round(masterVol * 100)}
-            onChange={(e) => {
-              const v = Number(e.target.value) / 100;
-              setMasterVol(v);
-              setMasterVolume(v);
-            }}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700 accent-purple-500"
-          />
-          <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-            <span>صامت</span>
-            <span>50%</span>
-            <span>100%</span>
-            <span>150%</span>
-          </div>
-        </div>
+          <h2 className="text-2xl font-black text-white mb-2">🔐 Admin Secrets Vault</h2>
+          <p className="text-sm text-gray-400 mb-6">فحص حالة الأسرار والتوكنات — لا تُعرض القيم الكاملة أبداً.</p>
 
-        {/* Sound Preview Grid */}
-        <div className="space-y-6">
-          {(['broadcast', 'mercato', 'special'] as const).map(cat => {
-            const catLabel = cat === 'broadcast' ? '🎙️ أصوات البث' : cat === 'mercato' ? '⚡ أصوات الميركاتو' : '🎬 أصوات خاصة';
-            const cues = PREVIEWABLE_CUES.filter(c => c.category === cat);
-            return (
-              <div key={cat}>
-                <h3 className="text-sm font-bold text-gray-400 mb-3">{catLabel}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                  {cues.map(cue => (
-                    <button
-                      key={cue.value}
-                      onClick={async () => {
-                        setPlayingCue(cue.value);
-                        await playCue(cue.value, { volume: masterVol, forceSynth: true });
-                        setTimeout(() => setPlayingCue(null), 1200);
-                      }}
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all ${
-                        playingCue === cue.value
-                          ? 'border-purple-500 bg-purple-500/20 text-purple-200 scale-[1.03]'
-                          : 'border-gray-800 bg-black/30 text-gray-400 hover:border-purple-500/40 hover:text-gray-200'
-                      }`}
-                    >
-                      <Play className={`w-3.5 h-3.5 flex-shrink-0 ${playingCue === cue.value ? 'text-purple-400' : ''}`} />
-                      <span className="truncate">{cue.label}</span>
-                    </button>
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={loadVaultStatus}
+              disabled={vaultLoading}
+              className="inline-flex items-center gap-2 rounded-xl bg-red-600/80 hover:bg-red-600 disabled:opacity-40 px-5 py-2.5 text-sm font-bold text-white transition-colors"
+            >
+              {vaultLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              فحص الحالة
+            </button>
+            {canTestSecrets && (
+              <button
+                onClick={runSecretTests}
+                disabled={testLoading}
+                className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 disabled:opacity-40 px-5 py-2.5 text-sm font-bold text-orange-200 transition-colors"
+              >
+                {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube2 className="w-4 h-4" />}
+                اختبار الاتصال
+              </button>
+            )}
+          </div>
+
+          {vaultError && (
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-950/30 p-3 text-sm text-red-200">
+              {vaultError}
+            </div>
+          )}
+
+          {vaultSecrets.length > 0 && (
+            <div className="overflow-x-auto rounded-2xl border border-gray-800">
+              <table className="w-full text-xs" dir="ltr">
+                <thead>
+                  <tr className="border-b border-gray-800 bg-black/40">
+                    <th className="px-4 py-3 text-left text-gray-400 font-bold">Secret</th>
+                    <th className="px-4 py-3 text-center text-gray-400 font-bold">Status</th>
+                    <th className="px-4 py-3 text-center text-gray-400 font-bold">Length</th>
+                    <th className="px-4 py-3 text-center text-gray-400 font-bold">Last 4</th>
+                    <th className="px-4 py-3 text-left text-gray-400 font-bold">Fingerprint</th>
+                    <th className="px-4 py-3 text-center text-gray-400 font-bold">Risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vaultSecrets.map(s => (
+                    <tr key={s.envVar} className="border-b border-gray-800/50 hover:bg-white/[0.02]">
+                      <td className="px-4 py-3">
+                        <div className="font-mono font-bold text-white">{s.envVar}</div>
+                        <div className="text-gray-500 text-[10px]">{s.purpose}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {s.exists
+                          ? <span className="inline-flex items-center gap-1 text-green-400"><CheckCircle2 className="w-3.5 h-3.5" /> SET</span>
+                          : <span className="inline-flex items-center gap-1 text-red-400"><AlertTriangle className="w-3.5 h-3.5" /> MISSING</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3 text-center font-mono text-gray-400">{s.exists ? s.length : '—'}</td>
+                      <td className="px-4 py-3 text-center font-mono text-gray-400">{s.exists ? `…${s.last4}` : '—'}</td>
+                      <td className="px-4 py-3 font-mono text-[10px] text-gray-500">{s.fingerprint || '—'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          s.risk === 'critical' ? 'bg-red-900/40 text-red-300' :
+                          s.risk === 'high' ? 'bg-orange-900/40 text-orange-300' :
+                          'bg-yellow-900/40 text-yellow-300'
+                        }`}>{s.risk.toUpperCase()}</span>
+                      </td>
+                    </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {testResults.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <h3 className="text-sm font-bold text-gray-300">نتائج اختبار الاتصال</h3>
+              {testResults.map(t => (
+                <div key={t.service} className={`rounded-xl border p-4 ${
+                  t.configured && t.reachable && t.auth.valid
+                    ? 'border-green-500/30 bg-green-950/20'
+                    : 'border-red-500/30 bg-red-950/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-sm">{t.service}</span>
+                    <span className="font-mono text-xs text-gray-400">{t.latencyMs}ms</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-4 gap-2 text-[10px]">
+                    <div><span className="text-gray-500">Configured:</span> <span className={t.configured ? 'text-green-400' : 'text-red-400'}>{t.configured ? '✓' : '✗'}</span></div>
+                    <div><span className="text-gray-500">Reachable:</span> <span className={t.reachable ? 'text-green-400' : 'text-red-400'}>{t.reachable ? '✓' : '✗'}</span></div>
+                    <div><span className="text-gray-500">Auth Valid:</span> <span className={t.auth.valid ? 'text-green-400' : 'text-red-400'}>{t.auth.valid ? '✓' : '✗'}</span></div>
+                    {t.error && <div className="text-red-400">{t.error}</div>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
+
+          {/* Rotation Checklist */}
+          <div className="mt-6 rounded-2xl border border-yellow-800/40 bg-yellow-900/10 p-5">
+            <h3 className="text-sm font-bold text-yellow-300 mb-3">📋 خطوات تدوير التوكن (Rotation Checklist)</h3>
+            <ol className="space-y-2 text-xs text-gray-400 list-decimal list-inside" dir="rtl">
+              <li>ولّد توكن جديد (Candidate) من لوحة التحكم</li>
+              <li>انسخ التوكن الجديد فوراً — <span className="text-red-400 font-bold">يظهر مرة واحدة فقط</span></li>
+              <li>ضعه في Vercel → Environment Variables → <code className="text-blue-300">REO_PLAYER_STATS_BRIDGE_TOKEN</code></li>
+              <li>ضعه على VPS → <code className="text-blue-300">REO_PLAYER_STATS_TOKEN</code></li>
+              <li>أعد نشر Vercel و أعد تشغيل VPS</li>
+              <li>اضغط "اختبار الاتصال" للتأكد من <code className="text-green-300">auth.valid=true</code></li>
+              <li>بعد التأكيد، اضغط Confirm Rotation</li>
+            </ol>
+          </div>
         </div>
+      )}
+
+      {/* ── Audio moved notice ── */}
+      <div className="rounded-2xl border border-purple-500/20 bg-purple-900/10 p-6 text-center">
+        <p className="text-sm text-purple-300">🔊 التحكم بالمؤثرات الصوتية انتقل إلى <a href="/BroadcastControl" className="underline font-bold hover:text-purple-200">استوديو البث</a></p>
       </div>
     </div>
   );

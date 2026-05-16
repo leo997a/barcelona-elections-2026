@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star } from 'lucide-react';
+import { Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star, Radio } from 'lucide-react';
 
 interface SidebarProps {
   activePage: string;
@@ -9,11 +9,12 @@ interface SidebarProps {
 }
 
 const NAV = [
-  { id: 'home',         label: 'الرئيسية',         icon: Home,        badge: null },
-  { id: 'library',      label: 'المكتبة',           icon: LayoutGrid,  badge: null },
-  { id: 'operator',     label: 'غرفة التحكم',       icon: Play,        badge: 'LIVE' },
-  { id: 'integrations', label: 'الربط الخارجي',     icon: Cpu,         badge: null },
-  { id: 'settings',     label: 'الحماية والإعدادات', icon: Shield,      badge: null },
+  { id: 'home',             label: 'الرئيسية',         icon: Home,        badge: null },
+  { id: 'library',          label: 'المكتبة',           icon: LayoutGrid,  badge: null },
+  { id: 'operator',         label: 'غرفة التحكم',       icon: Play,        badge: 'LIVE' },
+  { id: 'integrations',     label: 'الربط الخارجي',     icon: Cpu,         badge: null },
+  { id: 'broadcastcontrol', label: 'استوديو البث',      icon: Radio,       badge: null },
+  { id: 'settings',         label: 'الحماية والإعدادات', icon: Shield,      badge: null },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, favoriteCount = 0 }) => {

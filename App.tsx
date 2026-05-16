@@ -8,6 +8,7 @@ import Operator from './pages/Operator';
 import Editor from './pages/Editor';
 import Integrations from './pages/Integrations'; 
 import Settings from './pages/Settings';
+import BroadcastControl from './pages/BroadcastControl';
 import OverlayRenderer from './components/OverlayRenderer';
 import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
 import { syncManager } from './services/syncManager';
@@ -289,6 +290,7 @@ const App: React.FC = () => {
     if (clean === 'operator') return 'operator';
     if (clean === 'integrations') return 'integrations';
     if (clean === 'settings') return 'settings';
+    if (clean === 'broadcastcontrol') return 'broadcastcontrol';
     return 'home';
   };
   const [route, setRouteState] = useState<string>(() => pathnameToRoute(window.location.pathname));
@@ -548,6 +550,8 @@ const App: React.FC = () => {
                )}
 
                {route === 'integrations' && <Integrations overlays={overlays} />}
+
+               {route === 'broadcastcontrol' && <BroadcastControl />}
 
                {route === 'settings' && <Settings />}
              </div>
