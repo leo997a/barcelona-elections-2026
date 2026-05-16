@@ -90,7 +90,38 @@ const CUE_FX_CONFIG: Record<string, { reverb: number; subBass: number }> = {
   CASH_REGISTER:       { reverb: 0.16, subBass: 0.60 },
 };
 
-const getCueFx = (cue: string) => CUE_FX_CONFIG[cue] || { reverb: 0.12, subBass: 0.0 };
+// Read per-cue FX overrides from localStorage (set by BroadcastControl UI)
+// Falls back to CUE_FX_CONFIG defaults if no override or parse error
+const FX_STORAGE_KEY = 'rge_cue_fx_v1';
+let _fxOverridesCache: Record<string, { reverb: number; subBass: number }> | null = null;
+let _fxCacheTs = 0;
+
+const loadFxOverrides = (): Record<string, { reverb: number; subBass: number }> => {
+  // Cache for 2 seconds to avoid reading localStorage on every cue play
+  const now = Date.now();
+  if (_fxOverridesCache && now - _fxCacheTs < 2000) return _fxOverridesCache;
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(FX_STORAGE_KEY);
+    if (!raw) { _fxOverridesCache = {}; _fxCacheTs = now; return {}; }
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) { _fxOverridesCache = {}; _fxCacheTs = now; return {}; }
+    _fxOverridesCache = parsed;
+    _fxCacheTs = now;
+    return parsed;
+  } catch { _fxOverridesCache = {}; _fxCacheTs = now; return {}; }
+};
+
+const getCueFx = (cue: string): { reverb: number; subBass: number } => {
+  const defaults = CUE_FX_CONFIG[cue] || { reverb: 0.12, subBass: 0.0 };
+  const overrides = loadFxOverrides();
+  const ov = overrides[cue];
+  if (!ov || typeof ov.reverb !== 'number' || typeof ov.subBass !== 'number') return defaults;
+  return { reverb: Math.max(0, Math.min(ov.reverb, 1)), subBass: Math.max(0, Math.min(ov.subBass, 1.5)) };
+};
+
+/** Force invalidate FX cache (called after slider change) */
+export const invalidateCueFxCache = () => { _fxOverridesCache = null; _fxCacheTs = 0; };
 
 /** Cues available for preview in the control panel */
 export const PREVIEWABLE_CUES: { value: string; label: string; category: string }[] = [

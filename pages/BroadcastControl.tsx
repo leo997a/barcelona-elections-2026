@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Volume2, Play, Sliders, Radio, Music, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
-import { playCue, setMasterVolume, getMasterVolume, PREVIEWABLE_CUES } from '../services/audioEngine';
+import { playCue, setMasterVolume, getMasterVolume, PREVIEWABLE_CUES, invalidateCueFxCache } from '../services/audioEngine';
 import { licenseService } from '../services/licenseService';
 import { toSystemRole, can, getRoleDisplayName, type SystemRole } from '../utils/permissions';
 
@@ -74,6 +74,7 @@ const BroadcastControl: React.FC = () => {
     setCueFxOverrides(prev => {
       const next = { ...prev, [cueValue]: { ...getCueFx(cueValue), [field]: value } };
       saveCueFx(next);
+      invalidateCueFxCache(); // force audioEngine to re-read on next play
       return next;
     });
   }, [getCueFx]);
@@ -83,6 +84,7 @@ const BroadcastControl: React.FC = () => {
       const next = { ...prev };
       delete next[cueValue];
       saveCueFx(next);
+      invalidateCueFxCache(); // force audioEngine to re-read on next play
       return next;
     });
   }, []);
