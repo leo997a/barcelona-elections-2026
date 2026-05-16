@@ -13,10 +13,13 @@ import {
   Lock,
   Unlock,
   Plus,
+  Volume2,
+  Play,
 } from 'lucide-react';
 import { licenseService, LicenseState } from '../services/licenseService';
 import { FirebaseWebConfig } from '../types';
 import { syncManager } from '../services/syncManager';
+import { playCue, setMasterVolume, getMasterVolume, PREVIEWABLE_CUES } from '../services/audioEngine';
 
 const RULES_SNIPPET = `{
   "rules": {
@@ -60,6 +63,8 @@ const Settings: React.FC = () => {
   const [configJson, setConfigJson] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [masterVol, setMasterVol] = useState(() => getMasterVolume());
+  const [playingCue, setPlayingCue] = useState<string | null>(null);
 
   // ── License state ──────────────────────────────────────────────────────────
   const [currentLicense, setCurrentLicense] = useState<LicenseState | null>(() => licenseService.getStored());
@@ -87,6 +92,22 @@ const Settings: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل توليد المفتاح');
       setGeneratedKey(data.key);
+      // Auto-save the generated key locally so it persists
+      try {
+        const activated = await licenseService.activate(data.key);
+        setCurrentLicense(activated);
+      } catch {
+        // If activation fails (e.g. no server), save directly to localStorage as fallback
+        const fallbackState = {
+          valid: true,
+          role: data.role || genRole,
+          studioId: data.studioId || genStudioId,
+          key: data.key,
+          exp: data.exp || 0,
+        };
+        localStorage.setItem('rge_license_v1', JSON.stringify(fallbackState));
+        setCurrentLicense(fallbackState);
+      }
     } catch (e) {
       setGenError(e instanceof Error ? e.message : 'خطأ غير متوقع');
     } finally {
@@ -271,14 +292,20 @@ const Settings: React.FC = () => {
 
               {generatedKey && (
                 <div className="mt-2 p-4 bg-green-900/20 border border-green-700/40 rounded-xl">
-                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">✅ المفتاح جاهز</p>
+                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">✅ المفتاح جاهز ومحفوظ تلقائياً</p>
                   <div className="font-mono text-lg text-white font-black tracking-widest text-center bg-black/40 rounded-lg py-3 px-2 break-all">
                     {generatedKey}
                   </div>
-                  <button onClick={() => navigator.clipboard.writeText(generatedKey)}
-                    className="w-full mt-2 text-xs text-green-400 border border-green-700/40 rounded-lg py-1.5 hover:bg-green-900/20 transition-colors">
-                    نسخ المفتاح
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => navigator.clipboard.writeText(generatedKey)}
+                      className="flex-1 text-xs text-green-400 border border-green-700/40 rounded-lg py-1.5 hover:bg-green-900/20 transition-colors">
+                      نسخ المفتاح
+                    </button>
+                    <button onClick={() => window.location.reload()}
+                      className="flex-1 text-xs text-blue-400 border border-blue-700/40 rounded-lg py-1.5 hover:bg-blue-900/20 transition-colors">
+                      إعادة تحميل بالمفتاح الجديد
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -498,6 +525,77 @@ const Settings: React.FC = () => {
               {SERVER_ENV_SNIPPET}
             </pre>
           </div>
+        </div>
+      </div>
+
+      {/* ── AUDIO ENGINE CONTROL ──────────────────────────────────────────── */}
+      <div className="rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 via-gray-950 to-gray-900 p-8 shadow-2xl">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-1 text-xs font-bold text-purple-200">
+          <Volume2 className="h-3.5 w-3.5" />
+          محرك الصوت
+        </div>
+        <h2 className="text-2xl font-black text-white mb-6">🔊 التحكم بالمؤثرات الصوتية</h2>
+
+        {/* Master Volume Slider */}
+        <div className="mb-8 rounded-2xl border border-gray-800 bg-black/30 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-purple-400" />
+              مستوى الصوت الرئيسي (Master Volume)
+            </h3>
+            <span className="font-mono text-lg font-black text-purple-300">{Math.round(masterVol * 100)}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="150"
+            value={Math.round(masterVol * 100)}
+            onChange={(e) => {
+              const v = Number(e.target.value) / 100;
+              setMasterVol(v);
+              setMasterVolume(v);
+            }}
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700 accent-purple-500"
+          />
+          <div className="flex justify-between text-[10px] text-gray-600 mt-1">
+            <span>صامت</span>
+            <span>50%</span>
+            <span>100%</span>
+            <span>150%</span>
+          </div>
+        </div>
+
+        {/* Sound Preview Grid */}
+        <div className="space-y-6">
+          {(['broadcast', 'mercato', 'special'] as const).map(cat => {
+            const catLabel = cat === 'broadcast' ? '🎙️ أصوات البث' : cat === 'mercato' ? '⚡ أصوات الميركاتو' : '🎬 أصوات خاصة';
+            const cues = PREVIEWABLE_CUES.filter(c => c.category === cat);
+            return (
+              <div key={cat}>
+                <h3 className="text-sm font-bold text-gray-400 mb-3">{catLabel}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                  {cues.map(cue => (
+                    <button
+                      key={cue.value}
+                      onClick={async () => {
+                        setPlayingCue(cue.value);
+                        await playCue(cue.value, { volume: masterVol, forceSynth: true });
+                        setTimeout(() => setPlayingCue(null), 1200);
+                      }}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all ${
+                        playingCue === cue.value
+                          ? 'border-purple-500 bg-purple-500/20 text-purple-200 scale-[1.03]'
+                          : 'border-gray-800 bg-black/30 text-gray-400 hover:border-purple-500/40 hover:text-gray-200'
+                      }`}
+                    >
+                      <Play className={`w-3.5 h-3.5 flex-shrink-0 ${playingCue === cue.value ? 'text-purple-400' : ''}`} />
+                      <span className="truncate">{cue.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

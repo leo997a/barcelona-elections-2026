@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
-import { resolvePlayerIdentity } from '../../utils/playerIdentity';
+import { resolvePlayerIdentity, loadPlayersFromJson } from '../../utils/playerIdentity';
 
 const BARCA_PLAYER_CACHE_URL = '/player-image-cache/barcelona.json?v=20260516';
 let playerImageCacheMap: Record<string, string> | null = null;
@@ -21,6 +21,8 @@ let cacheLoadAttempted = false;
 const loadPlayerImageCache = async () => {
   if (cacheLoadAttempted) return;
   cacheLoadAttempted = true;
+  // Load full player identity list from JSON
+  loadPlayersFromJson().catch(() => {});
   try {
     const res = await fetch(BARCA_PLAYER_CACHE_URL, { cache: 'force-cache' });
     if (!res.ok) return;

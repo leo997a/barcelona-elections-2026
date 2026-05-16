@@ -61,7 +61,65 @@ type AudioGraph = {
   context: AudioContext;
   masterGain: GainNode;
   compressor: DynamicsCompressorNode;
+  limiter: DynamicsCompressorNode;
 };
+
+// Per-cue reverb/subBass intensity config (0 = off, 1 = full)
+const CUE_FX_CONFIG: Record<string, { reverb: number; subBass: number }> = {
+  GOAL_HORN:           { reverb: 0.28, subBass: 1.0 },
+  BREAKING_NEWS_ALARM: { reverb: 0.22, subBass: 0.72 },
+  MERCATO_HIT:         { reverb: 0.24, subBass: 1.0 },
+  ELITE_HIT:           { reverb: 0.24, subBass: 1.0 },
+  CINEMA_BOOM:         { reverb: 0.32, subBass: 1.2 },
+  HERE_WE_GO_STING:    { reverb: 0.26, subBass: 1.1 },
+  DEAL_LOCK:           { reverb: 0.26, subBass: 1.1 },
+  CONTRACT_STAMP:      { reverb: 0.20, subBass: 1.1 },
+  DATA_SLAM:           { reverb: 0.14, subBass: 0.72 },
+  TRANSFER_RISER:      { reverb: 0.22, subBass: 0.68 },
+  CLUB_REVEAL:         { reverb: 0.22, subBass: 0.68 },
+  STADIUM_WHOOSH:      { reverb: 0.22, subBass: 0.68 },
+  LUXURY_SWEEP:        { reverb: 0.22, subBass: 0.68 },
+  SCOREBUG_SNAP:       { reverb: 0.10, subBass: 0.42 },
+  DATA_TICK:           { reverb: 0.08, subBass: 0.30 },
+  LUXURY_OUT:          { reverb: 0.06, subBass: 0.0 },
+  BROADCAST_OUT:       { reverb: 0.06, subBass: 0.0 },
+  SOFT_FADE:           { reverb: 0.04, subBass: 0.0 },
+  LOWER_THIRD_WIPE:    { reverb: 0.10, subBass: 0.0 },
+  PLAYER_ENTRANCE:     { reverb: 0.18, subBass: 0.50 },
+  ULTRA_RISER:         { reverb: 0.20, subBass: 0.80 },
+  CASH_REGISTER:       { reverb: 0.16, subBass: 0.60 },
+};
+
+const getCueFx = (cue: string) => CUE_FX_CONFIG[cue] || { reverb: 0.12, subBass: 0.0 };
+
+/** Cues available for preview in the control panel */
+export const PREVIEWABLE_CUES: { value: string; label: string; category: string }[] = [
+  { value: 'SCOREBUG_SNAP', label: 'Scorebug Snap', category: 'broadcast' },
+  { value: 'LOWER_THIRD_WIPE', label: 'Lower Third Wipe', category: 'broadcast' },
+  { value: 'STADIUM_WHOOSH', label: 'Stadium Whoosh', category: 'broadcast' },
+  { value: 'DATA_TICK', label: 'Data Tick', category: 'broadcast' },
+  { value: 'DATA_SLAM', label: 'Data Slam', category: 'broadcast' },
+  { value: 'LUXURY_SWEEP', label: 'Luxury Sweep', category: 'broadcast' },
+  { value: 'LUXURY_IMPACT', label: 'Luxury Impact', category: 'broadcast' },
+  { value: 'LUXURY_OUT', label: 'Luxury Out', category: 'broadcast' },
+  { value: 'BROADCAST_OUT', label: 'Broadcast Out', category: 'broadcast' },
+  { value: 'SOFT_FADE', label: 'Soft Fade', category: 'broadcast' },
+  { value: 'MERCATO_HIT', label: 'Mercato Hit', category: 'mercato' },
+  { value: 'HERE_WE_GO_STING', label: 'Here We Go', category: 'mercato' },
+  { value: 'TRANSFER_RISER', label: 'Transfer Riser', category: 'mercato' },
+  { value: 'CONTRACT_STAMP', label: 'Contract Stamp', category: 'mercato' },
+  { value: 'DEAL_LOCK', label: 'Deal Lock', category: 'mercato' },
+  { value: 'AGENT_CALL', label: 'Agent Call', category: 'mercato' },
+  { value: 'CASH_REGISTER', label: 'Cash Register', category: 'mercato' },
+  { value: 'DEADLINE_ALARM', label: 'Deadline Alarm', category: 'mercato' },
+  { value: 'GOAL_HORN', label: 'Goal Horn', category: 'special' },
+  { value: 'BREAKING_NEWS_ALARM', label: 'Breaking News', category: 'special' },
+  { value: 'CINEMA_BOOM', label: 'Cinema Boom', category: 'special' },
+  { value: 'PLAYER_ENTRANCE', label: 'Player Entrance', category: 'special' },
+  { value: 'ELITE_HIT', label: 'Elite Hit', category: 'special' },
+  { value: 'ULTRA_RISER', label: 'Ultra Riser', category: 'special' },
+  { value: 'VAR_BUZZ', label: 'VAR Buzz', category: 'special' },
+];
 
 const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
   SCOREBUG_SNAP: '/sounds/show/scoreboard_in.mp3',
@@ -135,6 +193,14 @@ const getGraph = (): AudioGraph | null => {
     const masterGain = context.createGain();
     const compressor = context.createDynamicsCompressor();
 
+    // Safety Limiter: brick-wall at -1 dB to prevent clipping
+    const limiter = context.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.05;
+
     masterGain.gain.value = masterVolume;
     compressor.threshold.value = -14;
     compressor.knee.value = 18;
@@ -142,9 +208,11 @@ const getGraph = (): AudioGraph | null => {
     compressor.attack.value = 0.002;
     compressor.release.value = 0.18;
 
+    // Chain: masterGain → compressor → limiter → destination
     masterGain.connect(compressor);
-    compressor.connect(context.destination);
-    graph = { context, masterGain, compressor };
+    compressor.connect(limiter);
+    limiter.connect(context.destination);
+    graph = { context, masterGain, compressor, limiter };
 
     // Generate impulse-response buffer for reverb
     const irLen = Math.floor(context.sampleRate * 1.4);
@@ -168,6 +236,8 @@ export const setMasterVolume = (volume: number) => {
     graph.masterGain.gain.setTargetAtTime(masterVolume, graph.context.currentTime, 0.02);
   }
 };
+
+export const getMasterVolume = () => masterVolume;
 
 export const unlockAudio = async () => {
   if (unlockPromise) return unlockPromise;
@@ -338,14 +408,15 @@ const playLuxurySynth = (cue: string, volume: number) => {
 
   const context = audioGraph.context;
   const now = context.currentTime;
+  const fx = getCueFx(cue);
   const master = connectTimedGain(context, 2.2, volume);
 
-  // Add reverb send for spatial depth
-  if (reverbBuffer) {
+  // Per-cue reverb send
+  if (reverbBuffer && fx.reverb > 0) {
     const convolver = context.createConvolver();
     convolver.buffer = reverbBuffer;
     const reverbGain = context.createGain();
-    reverbGain.gain.setValueAtTime(0.18, now);
+    reverbGain.gain.setValueAtTime(fx.reverb, now);
     master.connect(reverbGain);
     reverbGain.connect(convolver);
     convolver.connect(audioGraph.masterGain);
@@ -368,15 +439,16 @@ const playLuxurySynth = (cue: string, volume: number) => {
     osc.stop(start + duration + 0.1);
   };
 
-  // Sub-bass layer for extra punch on big cues
+  // Sub-bass layer scaled by per-cue config
   const subBass = (start: number, frequency: number, duration: number, gainValue: number) => {
+    if (fx.subBass <= 0) return;
     const osc = context.createOscillator();
     const gain = context.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(frequency, start);
     osc.frequency.exponentialRampToValueAtTime(Math.max(20, frequency * 0.6), start + duration);
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(gainValue * fx.subBass, start + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
     osc.connect(gain);
     gain.connect(master);

@@ -68,6 +68,7 @@ export const CLUB_IDENTITIES: ClubIdentity[] = [
   },
 ];
 
+// Minimal seed — full list loaded from /identity/players.json at runtime
 export const PLAYER_IDENTITIES: PlayerIdentity[] = [
   {
     id: 'cole-palmer',
@@ -79,42 +80,6 @@ export const PLAYER_IDENTITIES: PlayerIdentity[] = [
     position: 'AM/RW',
     smallImage: chelseaPlayer('Cole_Palmer_3.png'),
     renderImage: chelseaPlayer('Cole_Palmer_5.png'),
-    clubLogo: premierLogo('Chelsea%20FC.png'),
-  },
-  {
-    id: 'enzo-fernandez',
-    displayName: 'Enzo Fernandez',
-    arabicNames: ['\u0625\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632', '\u0627\u0646\u0632\u0648 \u0641\u064A\u0631\u0646\u0627\u0646\u062F\u064A\u0632'],
-    aliases: ['enzo fernandez', 'enzo fernandez', 'enzo', 'e fernandez'],
-    club: 'chelsea',
-    clubArabic: '\u062A\u0634\u064A\u0644\u0633\u064A',
-    position: 'CM',
-    smallImage: chelseaPlayer('Enzo_Fernandez_5.png'),
-    renderImage: chelseaPlayer('Enzo_Fernandez_5.png'),
-    clubLogo: premierLogo('Chelsea%20FC.png'),
-  },
-  {
-    id: 'moises-caicedo',
-    displayName: 'Moises Caicedo',
-    arabicNames: ['\u0645\u0648\u064A\u0633\u064A\u0633 \u0643\u0627\u064A\u0633\u064A\u062F\u0648', '\u0643\u0627\u064A\u0633\u064A\u062F\u0648'],
-    aliases: ['moises caicedo', 'moises caicedo', 'caicedo', 'm caicedo'],
-    club: 'chelsea',
-    clubArabic: '\u062A\u0634\u064A\u0644\u0633\u064A',
-    position: 'DM/CM',
-    smallImage: chelseaPlayer('Moises_Caicedo.png'),
-    renderImage: chelseaPlayer('Moises_Caicedo.png'),
-    clubLogo: premierLogo('Chelsea%20FC.png'),
-  },
-  {
-    id: 'reece-james',
-    displayName: 'Reece James',
-    arabicNames: ['\u0631\u064A\u0633 \u062C\u064A\u0645\u0633', '\u062C\u064A\u0645\u0633'],
-    aliases: ['reece james', 'r james', 'james'],
-    club: 'chelsea',
-    clubArabic: '\u062A\u0634\u064A\u0644\u0633\u064A',
-    position: 'RB',
-    smallImage: chelseaPlayer('Reece_James_2.png'),
-    renderImage: chelseaPlayer('Reece_James_2.png'),
     clubLogo: premierLogo('Chelsea%20FC.png'),
   },
   {
@@ -153,139 +118,28 @@ export const PLAYER_IDENTITIES: PlayerIdentity[] = [
     renderImage: barcaPlayer('Pedri.png'),
     clubLogo: laLigaLogo('Barcelona.png'),
   },
-  {
-    id: 'dani-olmo',
-    displayName: 'Dani Olmo',
-    arabicNames: ['\u062F\u0627\u0646\u064A \u0623\u0648\u0644\u0645\u0648', '\u0623\u0648\u0644\u0645\u0648'],
-    aliases: ['dani olmo', 'olmo'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'AM/FW',
-    smallImage: barcaPlayer('Dani%20Olmo.png'),
-    renderImage: barcaPlayer('Dani%20Olmo.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'gavi',
-    displayName: 'Gavi',
-    arabicNames: ['\u063A\u0627\u0641\u064A'],
-    aliases: ['gavi', 'pablo gavi'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'CM',
-    smallImage: barcaPlayer('Gavi.png'),
-    renderImage: barcaPlayer('Gavi.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'raphinha',
-    displayName: 'Raphinha',
-    arabicNames: ['\u0631\u0627\u0641\u064A\u0646\u064A\u0627'],
-    aliases: ['raphinha', 'raphael dias belloli'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'RW/LW',
-    smallImage: barcaPlayer('Raphinha.png'),
-    renderImage: barcaPlayer('Raphinha.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'ronald-araujo',
-    displayName: 'Ronald Araujo',
-    arabicNames: ['\u0631\u0648\u0646\u0627\u0644\u062F \u0623\u0631\u0627\u0648\u062E\u0648', '\u0623\u0631\u0627\u0648\u062E\u0648'],
-    aliases: ['ronald araujo', 'araujo'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'CB',
-    smallImage: barcaPlayer('Ronald%20Araujo.png'),
-    renderImage: barcaPlayer('Ronald%20Araujo.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'alejandro-balde',
-    displayName: 'Alejandro Balde',
-    arabicNames: ['\u0628\u0627\u0644\u062F\u064A', '\u0627\u0644\u064A\u062E\u0627\u0646\u062F\u0631\u0648 \u0628\u0627\u0644\u062F\u064A'],
-    aliases: ['alejandro balde', 'balde', 'a balde'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'LB',
-    smallImage: barcaPlayer('Alejandro%20Balde.png'),
-    renderImage: barcaPlayer('Alejandro%20Balde.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'frenkie-de-jong',
-    displayName: 'Frenkie de Jong',
-    arabicNames: ['\u0641\u0631\u064A\u0646\u0643\u064A \u062F\u064A \u064A\u0648\u0646\u062C', '\u062F\u064A \u064A\u0648\u0646\u062C'],
-    aliases: ['frenkie de jong', 'de jong', 'f de jong'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'CM/DM',
-    smallImage: barcaPlayer('Frenkie%20De%20Jong.png'),
-    renderImage: barcaPlayer('Frenkie%20De%20Jong.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'jules-kounde',
-    displayName: 'Jules Kounde',
-    arabicNames: ['\u062C\u0648\u0644 \u0643\u0648\u0646\u062F\u064A', '\u0643\u0648\u0646\u062F\u064A'],
-    aliases: ['jules kounde', 'kounde', 'j kounde'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'CB/RB',
-    smallImage: barcaPlayer('Jules%20Kounde.png'),
-    renderImage: barcaPlayer('Jules%20Kounde.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'marc-casado',
-    displayName: 'Marc Casado',
-    arabicNames: ['\u0645\u0627\u0631\u0643 \u0643\u0627\u0633\u0627\u062F\u0648', '\u0643\u0627\u0633\u0627\u062F\u0648'],
-    aliases: ['marc casado', 'casado'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'DM',
-    smallImage: barcaPlayer('Marc%20Casado.png'),
-    renderImage: barcaPlayer('Marc%20Casado.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'fermin-lopez',
-    displayName: 'Fermin Lopez',
-    arabicNames: ['\u0641\u064A\u0631\u0645\u064A\u0646 \u0644\u0648\u0628\u064A\u0632', '\u0641\u064A\u0631\u0645\u064A\u0646'],
-    aliases: ['fermin lopez', 'fermin'],
-    club: 'barcelona',
-    clubArabic: '\u0628\u0631\u0634\u0644\u0648\u0646\u0629',
-    position: 'AM/CM',
-    smallImage: barcaPlayer('Fermin%20Lopez.png'),
-    renderImage: barcaPlayer('Fermin%20Lopez.png'),
-    clubLogo: laLigaLogo('Barcelona.png'),
-  },
-  {
-    id: 'nico-williams',
-    displayName: 'Nico Williams',
-    arabicNames: ['\u0646\u064A\u0643\u0648 \u0648\u064A\u0644\u064A\u0627\u0645\u0632', '\u0648\u064A\u0644\u064A\u0627\u0645\u0632'],
-    aliases: ['nico williams', 'williams', 'n williams'],
-    club: 'athletic',
-    clubArabic: '\u0623\u062B\u0644\u062A\u064A\u0643',
-    position: 'LW',
-    smallImage: '',
-    renderImage: '',
-    clubLogo: laLigaLogo('Athletic%20Club%20Bilbao.png'),
-  },
-  {
-    id: 'joshua-kimmich',
-    displayName: 'Joshua Kimmich',
-    arabicNames: ['\u062C\u0648\u0634\u0648\u0627 \u0643\u064A\u0645\u064A\u0634', '\u0643\u064A\u0645\u064A\u0634'],
-    aliases: ['joshua kimmich', 'kimmich'],
-    club: 'bayern',
-    clubArabic: '\u0628\u0627\u064A\u0631\u0646',
-    position: 'DM/RB',
-    smallImage: '',
-    renderImage: '',
-    clubLogo: '',
-  },
 ];
+
+// ── Runtime loader: merge players.json into PLAYER_IDENTITIES ─────────────
+let playersJsonLoaded = false;
+
+export const loadPlayersFromJson = async () => {
+  if (playersJsonLoaded) return;
+  playersJsonLoaded = true;
+  try {
+    const res = await fetch('/identity/players.json', { cache: 'force-cache' });
+    if (!res.ok) return;
+    const data = (await res.json()) as PlayerIdentity[];
+    if (!Array.isArray(data)) return;
+    const existingIds = new Set(PLAYER_IDENTITIES.map(p => p.id));
+    for (const entry of data) {
+      if (entry.id && !existingIds.has(entry.id)) {
+        PLAYER_IDENTITIES.push(entry);
+        existingIds.add(entry.id);
+      }
+    }
+  } catch { /* JSON not available — seed list still works */ }
+};
 
 export const normalizeIdentityText = (text: unknown) => String(text ?? '')
   .toLowerCase()
