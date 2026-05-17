@@ -552,7 +552,13 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
         </header>
 
         <main className={`grid min-h-0 gap-5 ${statsMode === 'SINGLE' ? 'grid-cols-[460px_1fr]' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_260px_1fr]' : 'grid-cols-3'}`}>
-          {statsMode === 'SINGLE' && players[0] && (
+          {statsMode === 'SINGLE' && players[0] && (() => {
+            const allMetrics = orderedMetrics(players[0]);
+            const availableMetrics = allMetrics.filter(([_, m]) => m.status === 'available');
+            const missingMetrics = allMetrics.filter(([_, m]) => m.status === 'unavailable' || m.status === 'error');
+            const showUnavailableBox = getField('showUnavailableMetrics') === 'true' && missingMetrics.length > 0;
+            
+            return (
             <>
               <section className="relative overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_90px_rgba(0,0,0,.5)]" style={{ animation: 'playerCardFloat 7s ease-in-out infinite' }}>
                 <div className="absolute left-0 top-0 h-1 w-full" style={{ background: accent }} />
@@ -562,38 +568,50 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                   <p className="mt-4 max-w-[430px] text-lg font-bold leading-snug text-white/62">{players[0].summary || subtitle}</p>
                 </div>
               </section>
-              <section className="grid min-h-0 grid-rows-[auto_1fr] gap-4">
+              <section className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-4">
                 
                 {/* Hero Metrics Area - Centered & Larger */}
-                <div className="grid grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 p-4">
-                  {orderedMetrics(players[0]).slice(0, 4).map(([key, metric], index) => {
-                     const isMissing = metric.status === 'unavailable' || metric.status === 'error';
-                     return (
-                      <div key={key} className="flex flex-col items-center justify-center text-center p-2">
-                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1">{metric.labelAr || metric.label || key.replace(/_/g, ' ')}</div>
-                        <div className={`font-['Barlow_Condensed'] text-[42px] font-black uppercase ${isMissing ? 'text-white/20 text-2xl' : 'text-white'}`} style={!isMissing ? { color: index % 2 ? secondaryAccent : accent } : {}}>
-                          {isMissing ? 'Unavailable' : metric.value}
+                {availableMetrics.length > 0 && (
+                  <div className="grid grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 p-4">
+                    {availableMetrics.slice(0, 4).map(([key, metric], index) => {
+                       return (
+                        <div key={key} className="flex flex-col items-center justify-center text-center p-2">
+                          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1">{metric.labelAr || metric.label || key.replace(/_/g, ' ')}</div>
+                          <div className="font-['Barlow_Condensed'] text-[42px] font-black uppercase text-white" style={{ color: index % 2 ? secondaryAccent : accent }}>
+                            {metric.value}
+                          </div>
+                          <div className="text-[9px] font-bold text-white/30 uppercase mt-1">{metric.source === 'demo' ? 'demo' : metric.source} / {metric.statGroup}</div>
                         </div>
-                        {!isMissing && <div className="text-[9px] font-bold text-white/30 uppercase mt-1">{metric.source === 'demo' ? 'demo' : metric.source} / {metric.statGroup}</div>}
-                        {isMissing && <div className="text-[9px] font-bold text-rose-400/80 uppercase mt-1">{metric.reason === 'stat_group_not_available' ? `Req: ${metric.requiredStatGroup}` : metric.reason}</div>}
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
                 
                 {/* Secondary Metrics Area */}
                 <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden mt-2">
-                  {orderedMetrics(players[0]).slice(4, 16).map(([key, metric], index) => (
+                  {availableMetrics.slice(4, 16).map(([key, metric], index) => (
                     <StatTile key={`${key}-${index}`} metricKey={key} metric={metric} accent={index % 2 ? secondaryAccent : accent} index={index} />
                   ))}
                 </div>
+
+                {/* Missing Advanced Metrics Box */}
+                {showUnavailableBox && (
+                  <div className="mt-auto border border-dashed border-rose-500/30 bg-rose-500/5 p-3 flex flex-col gap-1.5">
+                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Missing Advanced Metrics</div>
+                    <div className="text-[10px] text-white/40 leading-snug">
+                      {missingMetrics.map(([k, m]) => (
+                        <div key={k}>- <strong className="text-white/60">{k.replace(/_/g, ' ')}</strong> requires <span className="text-rose-300/80">{m.requiredStatGroup || m.statGroup}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
             </>
-          )}
+          )})()}
 
           {statsMode === 'COMPARE' && (
             <>
-              <PlayerColumn player={visiblePlayers[0] || buildFallbackPayload(getField).players![0]} metricsOverride={orderedMetrics(visiblePlayers[0] || buildFallbackPayload(getField).players![0])} accent={accent} index={0} />
+              <PlayerColumn player={visiblePlayers[0] || players[0]} metricsOverride={orderedMetrics(visiblePlayers[0] || players[0])} accent={accent} index={0} />
               <div className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden border border-white/10 bg-black/65 p-5">
                 <div className="font-['Barlow_Condensed'] text-[86px] font-black leading-none text-white">VS</div>
                 <div className="my-5 h-44 w-px bg-white/15" />
@@ -607,7 +625,13 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                   ))}
                 </div>
               </div>
-              <PlayerColumn player={visiblePlayers[1] || buildFallbackPayload(getField).players![1]} metricsOverride={orderedMetrics(visiblePlayers[1] || buildFallbackPayload(getField).players![1])} accent={secondaryAccent} index={6} />
+              {visiblePlayers[1] ? (
+                 <PlayerColumn player={visiblePlayers[1]} metricsOverride={orderedMetrics(visiblePlayers[1])} accent={secondaryAccent} index={6} />
+              ) : (
+                 <div className="flex items-center justify-center border border-white/10 bg-black/40 p-5 text-white/20 font-black uppercase tracking-widest text-sm">
+                   Awaiting Player 2
+                 </div>
+              )}
             </>
           )}
 

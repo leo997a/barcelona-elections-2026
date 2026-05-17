@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
@@ -25,41 +25,41 @@ interface EditorProps {
 
 // Extensive List of Currencies for Arab & Global usage
 const CURRENCY_OPTIONS = [
-    { code: 'SAR', label: 'ًں‡¸ًں‡¦ ط±ظٹط§ظ„ ط³ط¹ظˆط¯ظٹ (SAR)' },
-    { code: 'AED', label: 'ًں‡¦ًں‡ھ ط¯ط±ظ‡ظ… ط¥ظ…ط§ط±ط§طھظٹ (AED)' },
-    { code: 'KWD', label: 'ًں‡°ًں‡¼ ط¯ظٹظ†ط§ط± ظƒظˆظٹطھظٹ (KWD)' },
-    { code: 'QAR', label: 'ًں‡¶ًں‡¦ ط±ظٹط§ظ„ ظ‚ط·ط±ظٹ (QAR)' },
-    { code: 'EGP', label: 'ًں‡ھًں‡¬ ط¬ظ†ظٹظ‡ ظ…طµط±ظٹ (EGP)' },
-    { code: 'BHD', label: 'ًں‡§ًں‡­ ط¯ظٹظ†ط§ط± ط¨ط­ط±ظٹظ†ظٹ (BHD)' },
-    { code: 'OMR', label: 'ًں‡´ًں‡² ط±ظٹط§ظ„ ط¹ظ…ط§ظ†ظٹ (OMR)' },
-    { code: 'JOD', label: 'ًں‡¯ًں‡´ ط¯ظٹظ†ط§ط± ط£ط±ط¯ظ†ظٹ (JOD)' },
-    { code: 'USD', label: 'ًں‡؛ًں‡¸ ط¯ظˆظ„ط§ط± ط£ظ…ط±ظٹظƒظٹ (USD)' },
-    { code: 'EUR', label: 'ًں‡ھًں‡؛ ظٹظˆط±ظˆ (EUR)' },
-    { code: 'GBP', label: 'ًں‡¬ًں‡§ ط¬ظ†ظٹظ‡ ط§ط³طھط±ظ„ظٹظ†ظٹ (GBP)' },
-    { code: 'JPY', label: 'ًں‡¯ًں‡µ ظٹظ† ظٹط§ط¨ط§ظ†ظٹ (JPY)' },
-    { code: 'CAD', label: 'ًں‡¨ًں‡¦ ط¯ظˆظ„ط§ط± ظƒظ†ط¯ظٹ (CAD)' },
-    { code: 'AUD', label: 'ًں‡¦ًں‡؛ ط¯ظˆظ„ط§ط± ط£ط³طھط±ط§ظ„ظٹ (AUD)' },
+    { code: 'SAR', label: 'Saudi Riyal (SAR)' },
+    { code: 'AED', label: 'UAE Dirham (AED)' },
+    { code: 'KWD', label: 'Kuwaiti Dinar (KWD)' },
+    { code: 'QAR', label: 'Qatari Riyal (QAR)' },
+    { code: 'EGP', label: 'Egyptian Pound (EGP)' },
+    { code: 'BHD', label: 'Bahraini Dinar (BHD)' },
+    { code: 'OMR', label: 'Omani Rial (OMR)' },
+    { code: 'JOD', label: 'Jordanian Dinar (JOD)' },
+    { code: 'USD', label: 'US Dollar (USD)' },
+    { code: 'EUR', label: 'Euro (EUR)' },
+    { code: 'GBP', label: 'British Pound (GBP)' },
+    { code: 'JPY', label: 'Japanese Yen (JPY)' },
+    { code: 'CAD', label: 'Canadian Dollar (CAD)' },
+    { code: 'AUD', label: 'Australian Dollar (AUD)' },
 ];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
 const CLOUD_MATCH_API_URL = '/api/reo-match/match';
 
 const MATCH_STAT_PRESET_QUICK = [
-  { value: 'SMART', label: 'ط°ظƒظٹ' },
-  { value: 'ATTACK', label: 'ظ‡ط¬ظˆظ…' },
-  { value: 'PASSING', label: 'طھظ…ط±ظٹط±' },
-  { value: 'DEFENSE', label: 'ط¯ظپط§ط¹' },
-  { value: 'DISCIPLINE', label: 'ط­ط±ط§ط³ط©' },
-  { value: 'ALL', label: 'ط§ظ„ظƒظ„' },
+  { value: 'SMART', label: 'Smart' },
+  { value: 'ATTACK', label: 'Attack' },
+  { value: 'PASSING', label: 'Passing' },
+  { value: 'DEFENSE', label: 'Defense' },
+  { value: 'DISCIPLINE', label: 'Discipline' },
+  { value: 'ALL', label: 'All' },
 ];
 
 const PLAYER_STAT_PRESET_QUICK = [
-  { value: 'SMART', label: 'ط°ظƒظٹ' },
-  { value: 'ATTACK', label: 'طھط³ط¯ظٹط¯' },
-  { value: 'PASSING', label: 'طھظ…ط±ظٹط±' },
-  { value: 'DEFENSE', label: 'ط¯ظپط§ط¹' },
-  { value: 'KEEPER', label: 'ط­ط±ط§ط³' },
-  { value: 'ALL', label: 'ط§ظ„ظƒظ„' },
+  { value: 'SMART', label: 'Smart' },
+  { value: 'ATTACK', label: 'Shooting' },
+  { value: 'PASSING', label: 'Passing' },
+  { value: 'DEFENSE', label: 'Defense' },
+  { value: 'KEEPER', label: 'Keeper' },
+  { value: 'ALL', label: 'All' },
 ];
 
 const MATCH_VISUAL_STYLE_QUICK = [
@@ -83,6 +83,7 @@ type MetricCatalogItem = {
 };
 
 const PLAYER_STATS_PRESETS: Record<string, string[]> = {
+  'Basic Setup': ['goals', 'assists', 'minutes', 'appearances', 'starts'],
   'Attacker Profile': ['goals', 'non_penalty_goals', 'assists', 'shots', 'shots_on_target', 'shot_accuracy', 'touches_in_box', 'xg', 'xg_per90', 'goals_per90', 'impact_index'],
   'Playmaker Profile': ['assists', 'xa', 'xa_per90', 'key_passes', 'key_passes_per90', 'chances_created', 'big_chances_created', 'through_balls', 'progressive_passes', 'passes_into_penalty_area'],
   'Defensive Profile': ['tackles', 'tackles_won', 'interceptions', 'clearances', 'blocks', 'pressures', 'recoveries', 'ground_duels_won', 'duel_win_rate', 'fouls_committed'],
@@ -110,17 +111,17 @@ const PLAYER_STATS_CATEGORIES = [
 ];
 
 const METRIC_TEXT_ALIASES: Record<string, string[]> = {
-  xg: ['xg', 'expected goals', 'ط§ظ„ط£ظ‡ط¯ط§ظپ ط§ظ„ظ…طھظˆظ‚ط¹ط©', 'ط§ظ‡ط¯ط§ظپ ظ…طھظˆظ‚ط¹ظ‡'],
-  xa: ['xa', 'expected assists', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„ط­ط§ط³ظ…ط© ط§ظ„ظ…طھظˆظ‚ط¹ط©', 'ط§ط³ظٹط³طھ ظ…طھظˆظ‚ط¹'],
-  shots: ['shots', 'ط§ظ„طھط³ط¯ظٹط¯ط§طھ', 'طھط³ط¯ظٹط¯ط§طھ'],
-  shots_on_target: ['shots on target', 'طھط³ط¯ظٹط¯ط§طھ ط¹ظ„ظ‰ ط§ظ„ظ…ط±ظ…ظ‰', 'ط¹ظ„ظ‰ ط§ظ„ظ…ط±ظ…ظ‰'],
-  dribbles_completed: ['successful dribbles', 'ط§ظ„ظ…ط±ط§ظˆط؛ط§طھ', 'ظ…ط±ط§ظˆط؛ط§طھ', 'ظ…ط±ط§ظˆط؛ط§طھ ظ†ط§ط¬ط­ط©'],
-  key_passes: ['key passes', 'طھظ…ط±ظٹط±ط§طھ ظ…ظپطھط§ط­ظٹط©', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„ظ…ظپطھط§ط­ظٹط©'],
-  progressive_passes: ['progressive passes', 'طھظ…ط±ظٹط±ط§طھ طھظ‚ط¯ظ…ظٹط©', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„طھظ‚ط¯ظ…ظٹط©'],
-  pass_accuracy: ['pass accuracy', 'ط¯ظ‚ط© ط§ظ„طھظ…ط±ظٹط±'],
-  recoveries: ['recoveries', 'ط§ط³طھط±ط¬ط§ط¹ ط§ظ„ظƒط±ط©', 'ط§ط³طھط±ط¬ط§ط¹'],
-  tackles: ['tackles', 'ط§ظپطھظƒط§ظƒط§طھ', 'ط§ظ„ط§ظپطھظƒط§ظƒط§طھ'],
-  saves: ['saves', 'طھطµط¯ظٹط§طھ', 'ط§ظ„طھطµط¯ظٹط§طھ'],
+  xg: ['xg', 'expected goals'],
+  xa: ['xa', 'expected assists'],
+  shots: ['shots'],
+  shots_on_target: ['shots on target'],
+  dribbles_completed: ['successful dribbles'],
+  key_passes: ['key passes'],
+  progressive_passes: ['progressive passes'],
+  pass_accuracy: ['pass accuracy'],
+  recoveries: ['recoveries', 'ط·آ§ط·آ³ط·ع¾ط·آ±ط·آ¬ط·آ§ط·آ¹ ط·آ§ط¸â€‍ط¸ئ’ط·آ±ط·آ©', 'ط·آ§ط·آ³ط·ع¾ط·آ±ط·آ¬ط·آ§ط·آ¹'],
+  tackles: ['tackles', 'ط·آ§ط¸ظ¾ط·ع¾ط¸ئ’ط·آ§ط¸ئ’ط·آ§ط·ع¾', 'ط·آ§ط¸â€‍ط·آ§ط¸ظ¾ط·ع¾ط¸ئ’ط·آ§ط¸ئ’ط·آ§ط·ع¾'],
+  saves: ['saves', 'ط·ع¾ط·آµط·آ¯ط¸ظ¹ط·آ§ط·ع¾', 'ط·آ§ط¸â€‍ط·ع¾ط·آµط·آ¯ط¸ظ¹ط·آ§ط·ع¾'],
 };
 
 const normalizeMetricText = (value: unknown) => String(value ?? '')
@@ -214,29 +215,29 @@ type BridgeStatusSnapshot = {
 };
 
 const PLAYER_AI_ALIASES = [
-  { name: 'Robert Lewandowski', position: 'ST / Forward', club: 'Barcelona', fallbackImage: 'https://sportrenders.com/wp-content/uploads/2025/05/Lewandowski-PNG-Barcelona-Football-Render-5-scaled.png', aliases: ['lewandowski', 'robert lewandowski', 'ظ„ظٹظپط§ظ†ط¯ظˆظپط³ظƒظٹ', 'ط±ظˆط¨ط±طھ ظ„ظٹظپط§ظ†ط¯ظˆظپط³ظƒظٹ'] },
-  { name: 'Lamine Yamal', position: 'RW / Forward', club: 'Barcelona', aliases: ['lamine yamal', 'yamal', 'ظ„ط§ظ…ظٹظ† ظٹط§ظ…ط§ظ„', 'ظٹط§ظ…ط§ظ„'] },
-  { name: 'Pedri', position: 'CM / AM', club: 'Barcelona', aliases: ['pedri', 'ط¨ظٹط¯ط±ظٹ'] },
-  { name: 'Dani Olmo', position: 'AM / Forward', club: 'Barcelona', aliases: ['dani olmo', 'olmo', 'ط¯ط§ظ†ظٹ ط§ظˆظ„ظ…ظˆ', 'ط¯ط§ظ†ظٹ ط£ظˆظ„ظ…ظˆ', 'ط§ظˆظ„ظ…ظˆ', 'ط£ظˆظ„ظ…ظˆ'] },
-  { name: 'Raphinha', position: 'RW / Forward', club: 'Barcelona', aliases: ['raphinha', 'ط±ط§ظپظٹظ†ظٹط§'] },
-  { name: 'Ferran Torres', position: 'Forward', club: 'Barcelona', aliases: ['ferran torres', 'torres', 'ظپظٹط±ط§ظ† طھظˆط±ظٹط³'] },
-  { name: 'Frenkie de Jong', position: 'CM', club: 'Barcelona', aliases: ['frenkie de jong', 'de jong', 'ط¯ظٹ ظٹظˆظ†ط؛', 'ظپط±ظٹظ†ظƒظٹ ط¯ظٹ ظٹظˆظ†ط؛'] },
-  { name: 'Gavi', position: 'CM', club: 'Barcelona', aliases: ['gavi', 'ط؛ط§ظپظٹ', 'ط¬ط§ظپظٹ'] },
-  { name: 'Cole Palmer', position: 'AM / RW', club: 'Chelsea', aliases: ['cole palmer', 'palmer', 'ظƒظˆظ„ ط¨ط§ظ„ظ…ط±', 'ط¨ط§ظ„ظ…ط±'] },
-  { name: 'Enzo Fernandez', position: 'CM', club: 'Chelsea', aliases: ['enzo fernandez', 'enzo fernأ،ndez', 'enzo', 'ط¥ظ†ط²ظˆ ظپظٹط±ظ†ط§ظ†ط¯ظٹط²', 'ط§ظ†ط²ظˆ ظپظٹط±ظ†ط§ظ†ط¯ظٹط²'] },
-  { name: 'Moises Caicedo', position: 'DM / CM', club: 'Chelsea', aliases: ['moises caicedo', 'moisأ©s caicedo', 'caicedo', 'ظƒط§ظٹط³ظٹط¯ظˆ', 'ظ…ظˆظٹط³ظٹط³ ظƒط§ظٹط³ظٹط¯ظˆ'] },
-  { name: 'Reece James', position: 'RB', club: 'Chelsea', aliases: ['reece james', 'james', 'ط±ظٹط³ ط¬ظٹظ…ط³'] },
-  { name: 'Pedro Neto', position: 'LW / RW', club: 'Chelsea', aliases: ['pedro neto', 'neto', 'ط¨ظٹط¯ط±ظˆ ظ†ظٹطھظˆ'] },
-  { name: 'Joao Pedro', position: 'Forward', club: 'Chelsea', aliases: ['joao pedro', 'joأ£o pedro', 'ط¬ظˆط§ظˆ ط¨ظٹط¯ط±ظˆ'] },
-  { name: 'Jadon Sancho', position: 'LW / RW', club: 'Chelsea', aliases: ['jadon sancho', 'sancho', 'ط¬ط§ط¯ظˆظ† ط³ط§ظ†ط´ظˆ', 'ط³ط§ظ†ط´ظˆ'] },
+  { name: 'Robert Lewandowski', position: 'ST / Forward', club: 'Barcelona', fallbackImage: 'https://sportrenders.com/wp-content/uploads/2025/05/Lewandowski-PNG-Barcelona-Football-Render-5-scaled.png', aliases: ['lewandowski', 'robert lewandowski', 'ط¸â€‍ط¸ظ¹ط¸ظ¾ط·آ§ط¸â€ ط·آ¯ط¸ث†ط¸ظ¾ط·آ³ط¸ئ’ط¸ظ¹', 'ط·آ±ط¸ث†ط·آ¨ط·آ±ط·ع¾ ط¸â€‍ط¸ظ¹ط¸ظ¾ط·آ§ط¸â€ ط·آ¯ط¸ث†ط¸ظ¾ط·آ³ط¸ئ’ط¸ظ¹'] },
+  { name: 'Lamine Yamal', position: 'RW / Forward', club: 'Barcelona', aliases: ['lamine yamal', 'yamal', 'ط¸â€‍ط·آ§ط¸â€¦ط¸ظ¹ط¸â€  ط¸ظ¹ط·آ§ط¸â€¦ط·آ§ط¸â€‍', 'ط¸ظ¹ط·آ§ط¸â€¦ط·آ§ط¸â€‍'] },
+  { name: 'Pedri', position: 'CM / AM', club: 'Barcelona', aliases: ['pedri', 'ط·آ¨ط¸ظ¹ط·آ¯ط·آ±ط¸ظ¹'] },
+  { name: 'Dani Olmo', position: 'AM / Forward', club: 'Barcelona', aliases: ['dani olmo', 'olmo', 'ط·آ¯ط·آ§ط¸â€ ط¸ظ¹ ط·آ§ط¸ث†ط¸â€‍ط¸â€¦ط¸ث†', 'ط·آ¯ط·آ§ط¸â€ ط¸ظ¹ ط·آ£ط¸ث†ط¸â€‍ط¸â€¦ط¸ث†', 'ط·آ§ط¸ث†ط¸â€‍ط¸â€¦ط¸ث†', 'ط·آ£ط¸ث†ط¸â€‍ط¸â€¦ط¸ث†'] },
+  { name: 'Raphinha', position: 'RW / Forward', club: 'Barcelona', aliases: ['raphinha', 'ط·آ±ط·آ§ط¸ظ¾ط¸ظ¹ط¸â€ ط¸ظ¹ط·آ§'] },
+  { name: 'Ferran Torres', position: 'Forward', club: 'Barcelona', aliases: ['ferran torres', 'torres', 'ط¸ظ¾ط¸ظ¹ط·آ±ط·آ§ط¸â€  ط·ع¾ط¸ث†ط·آ±ط¸ظ¹ط·آ³'] },
+  { name: 'Frenkie de Jong', position: 'CM', club: 'Barcelona', aliases: ['frenkie de jong', 'de jong', 'ط·آ¯ط¸ظ¹ ط¸ظ¹ط¸ث†ط¸â€ ط·ط›', 'ط¸ظ¾ط·آ±ط¸ظ¹ط¸â€ ط¸ئ’ط¸ظ¹ ط·آ¯ط¸ظ¹ ط¸ظ¹ط¸ث†ط¸â€ ط·ط›'] },
+  { name: 'Gavi', position: 'CM', club: 'Barcelona', aliases: ['gavi', 'ط·ط›ط·آ§ط¸ظ¾ط¸ظ¹', 'ط·آ¬ط·آ§ط¸ظ¾ط¸ظ¹'] },
+  { name: 'Cole Palmer', position: 'AM / RW', club: 'Chelsea', aliases: ['cole palmer', 'palmer', 'ط¸ئ’ط¸ث†ط¸â€‍ ط·آ¨ط·آ§ط¸â€‍ط¸â€¦ط·آ±', 'ط·آ¨ط·آ§ط¸â€‍ط¸â€¦ط·آ±'] },
+  { name: 'Enzo Fernandez', position: 'CM', club: 'Chelsea', aliases: ['enzo fernandez', 'enzo fernط£طŒndez', 'enzo', 'ط·آ¥ط¸â€ ط·آ²ط¸ث† ط¸ظ¾ط¸ظ¹ط·آ±ط¸â€ ط·آ§ط¸â€ ط·آ¯ط¸ظ¹ط·آ²', 'ط·آ§ط¸â€ ط·آ²ط¸ث† ط¸ظ¾ط¸ظ¹ط·آ±ط¸â€ ط·آ§ط¸â€ ط·آ¯ط¸ظ¹ط·آ²'] },
+  { name: 'Moises Caicedo', position: 'DM / CM', club: 'Chelsea', aliases: ['moises caicedo', 'moisط£آ©s caicedo', 'caicedo', 'ط¸ئ’ط·آ§ط¸ظ¹ط·آ³ط¸ظ¹ط·آ¯ط¸ث†', 'ط¸â€¦ط¸ث†ط¸ظ¹ط·آ³ط¸ظ¹ط·آ³ ط¸ئ’ط·آ§ط¸ظ¹ط·آ³ط¸ظ¹ط·آ¯ط¸ث†'] },
+  { name: 'Reece James', position: 'RB', club: 'Chelsea', aliases: ['reece james', 'james', 'ط·آ±ط¸ظ¹ط·آ³ ط·آ¬ط¸ظ¹ط¸â€¦ط·آ³'] },
+  { name: 'Pedro Neto', position: 'LW / RW', club: 'Chelsea', aliases: ['pedro neto', 'neto', 'ط·آ¨ط¸ظ¹ط·آ¯ط·آ±ط¸ث† ط¸â€ ط¸ظ¹ط·ع¾ط¸ث†'] },
+  { name: 'Joao Pedro', position: 'Forward', club: 'Chelsea', aliases: ['joao pedro', 'joط£آ£o pedro', 'ط·آ¬ط¸ث†ط·آ§ط¸ث† ط·آ¨ط¸ظ¹ط·آ¯ط·آ±ط¸ث†'] },
+  { name: 'Jadon Sancho', position: 'LW / RW', club: 'Chelsea', aliases: ['jadon sancho', 'sancho', 'ط·آ¬ط·آ§ط·آ¯ط¸ث†ط¸â€  ط·آ³ط·آ§ط¸â€ ط·آ´ط¸ث†', 'ط·آ³ط·آ§ط¸â€ ط·آ´ط¸ث†'] },
 ];
 
 const CLUB_AI_ALIASES = [
-  { name: 'Barcelona', aliases: ['barcelona', 'barca', 'fc barcelona', 'ط¨ط±ط´ظ„ظˆظ†ط©', 'ط¨ط±ط´ظ„ظˆظ†ظ‡', 'ط§ظ„ط¨ط§ط±ط³ط§'] },
-  { name: 'Chelsea', aliases: ['chelsea', 'chelsea fc', 'طھط´ظٹظ„ط³ظٹ'] },
-  { name: 'Real Madrid', aliases: ['real madrid', 'madrid', 'ط±ظٹط§ظ„ ظ…ط¯ط±ظٹط¯'] },
-  { name: 'Atletico Madrid', aliases: ['atletico madrid', 'ط§طھظ„طھظٹظƒظˆ ظ…ط¯ط±ظٹط¯', 'ط£طھظ„طھظٹظƒظˆ ظ…ط¯ط±ظٹط¯'] },
-  { name: 'Alaves', aliases: ['alaves', 'deportivo alaves', 'ط§ظ„ط§ظپظٹط³', 'ط£ظ„ط§ظپظٹط³'] },
+  { name: 'Barcelona', aliases: ['barcelona', 'barca', 'fc barcelona', 'ط·آ¨ط·آ±ط·آ´ط¸â€‍ط¸ث†ط¸â€ ط·آ©', 'ط·آ¨ط·آ±ط·آ´ط¸â€‍ط¸ث†ط¸â€ ط¸â€،', 'ط·آ§ط¸â€‍ط·آ¨ط·آ§ط·آ±ط·آ³ط·آ§'] },
+  { name: 'Chelsea', aliases: ['chelsea', 'chelsea fc', 'ط·ع¾ط·آ´ط¸ظ¹ط¸â€‍ط·آ³ط¸ظ¹'] },
+  { name: 'Real Madrid', aliases: ['real madrid', 'madrid', 'ط·آ±ط¸ظ¹ط·آ§ط¸â€‍ ط¸â€¦ط·آ¯ط·آ±ط¸ظ¹ط·آ¯'] },
+  { name: 'Atletico Madrid', aliases: ['atletico madrid', 'ط·آ§ط·ع¾ط¸â€‍ط·ع¾ط¸ظ¹ط¸ئ’ط¸ث† ط¸â€¦ط·آ¯ط·آ±ط¸ظ¹ط·آ¯', 'ط·آ£ط·ع¾ط¸â€‍ط·ع¾ط¸ظ¹ط¸ئ’ط¸ث† ط¸â€¦ط·آ¯ط·آ±ط¸ظ¹ط·آ¯'] },
+  { name: 'Alaves', aliases: ['alaves', 'deportivo alaves', 'ط·آ§ط¸â€‍ط·آ§ط¸ظ¾ط¸ظ¹ط·آ³', 'ط·آ£ط¸â€‍ط·آ§ط¸ظ¾ط¸ظ¹ط·آ³'] },
 ];
 
 const textHas = (text: string, needle: string) => text.toLocaleLowerCase().includes(needle.toLocaleLowerCase());
@@ -265,7 +266,7 @@ const findClubAlias = (text: string) => {
 };
 
 const extractPercentSignal = (text: string) => {
-  const match = text.match(/(?:ط¨ظ†ط³ط¨ط©|ط§ط­طھظ…ط§ظ„|ظ†ط³ط¨ط©|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
+  const match = text.match(/(?:ط·آ¨ط¸â€ ط·آ³ط·آ¨ط·آ©|ط·آ§ط·آ­ط·ع¾ط¸â€¦ط·آ§ط¸â€‍|ط¸â€ ط·آ³ط·آ¨ط·آ©|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
   if (!match) return null;
   const value = Number(match[1] || match[2]);
   if (!Number.isFinite(value)) return null;
@@ -273,43 +274,43 @@ const extractPercentSignal = (text: string) => {
 };
 
 const hasLeavingSignal = (text: string) =>
-  /ظ…ط؛ط§ط¯ط±|ظ…ط؛ط§ط¯ط±ط©|ظٹط±ط­ظ„|ط±ط­ظٹظ„|ط®ط±ظˆط¬|ط®ط§ط±ط¬|leav|exit|depart/i.test(text);
+  /ط¸â€¦ط·ط›ط·آ§ط·آ¯ط·آ±|ط¸â€¦ط·ط›ط·آ§ط·آ¯ط·آ±ط·آ©|ط¸ظ¹ط·آ±ط·آ­ط¸â€‍|ط·آ±ط·آ­ط¸ظ¹ط¸â€‍|ط·آ®ط·آ±ط¸ث†ط·آ¬|ط·آ®ط·آ§ط·آ±ط·آ¬|leav|exit|depart/i.test(text);
 
 const hasFreeTransferSignal = (text: string) =>
-  /ظ…ط¬ط§ظ†ط§|ظ…ط¬ط§ظ†ظٹ|ظ†ظ‡ط§ظٹط© ط¹ظ‚ط¯|ط§ظ†طھظ‡ط§ط، ط¹ظ‚ط¯|free|contract|free agent/i.test(text);
+  /ط¸â€¦ط·آ¬ط·آ§ط¸â€ ط·آ§|ط¸â€¦ط·آ¬ط·آ§ط¸â€ ط¸ظ¹|ط¸â€ ط¸â€،ط·آ§ط¸ظ¹ط·آ© ط·آ¹ط¸â€ڑط·آ¯|ط·آ§ط¸â€ ط·ع¾ط¸â€،ط·آ§ط·طŒ ط·آ¹ط¸â€ڑط·آ¯|free|contract|free agent/i.test(text);
 
 const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'dataMode') {
     return {
       id,
-      label: 'ظ…طµط¯ط± ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©',
+      label: 'ط¸â€¦ط·آµط·آ¯ط·آ± ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©',
       type: 'select',
       value,
       options: [
         { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
         { value: 'BRIDGE', label: 'Live Bridge - localhost:3005' },
-        { value: 'PASTE_JSON', label: 'JSON ظٹط¯ظˆظٹ / ظ…ظ„ظپ extractor' },
-        { value: 'DEMO', label: 'ط¨ظٹط§ظ†ط§طھ طھط¬ط±ظٹط¨ظٹط© ظ„ظ„ط§ط®طھط¨ط§ط±' },
+        { value: 'PASTE_JSON', label: 'JSON ط¸ظ¹ط·آ¯ط¸ث†ط¸ظ¹ / ط¸â€¦ط¸â€‍ط¸ظ¾ extractor' },
+        { value: 'DEMO', label: 'ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·ع¾ط·آ¬ط·آ±ط¸ظ¹ط·آ¨ط¸ظ¹ط·آ© ط¸â€‍ط¸â€‍ط·آ§ط·آ®ط·ع¾ط·آ¨ط·آ§ط·آ±' },
       ],
     };
   }
 
   if (id === 'manualJson') {
-    return { id, label: 'JSON ط§ظ„ظ…ط¨ط§ط±ط§ط© ط§ظ„ظ…ط³طھظˆط±ط¯', type: 'textarea', value };
+    return { id, label: 'JSON ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·ع¾ط¸ث†ط·آ±ط·آ¯', type: 'textarea', value };
   }
 
   if (id === 'sourceMatchUrl') {
-    return { id, label: 'ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© WhoScored ظ„ظ„طھط´ط؛ظٹظ„ ط§ظ„ظ…ط¨ط§ط´ط±', type: 'text', value };
+    return { id, label: 'ط·آ±ط·آ§ط·آ¨ط·آ· ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© WhoScored ط¸â€‍ط¸â€‍ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±', type: 'text', value };
   }
 
   if (id === 'apiUrl') {
-    return { id, label: 'ط±ط§ط¨ط· ط®ط§ط¯ظ… ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ', type: 'text', value };
+    return { id, label: 'ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ®ط·آ§ط·آ¯ط¸â€¦ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط¸â€‍ط¸ظ¹', type: 'text', value };
   }
 
   if (id === 'matchMetricPreset') {
     return {
       id,
-      label: 'طھط±ظƒظٹط² ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©',
+      label: 'ط·ع¾ط·آ±ط¸ئ’ط¸ظ¹ط·آ² ط·آ¥ط·آ­ط·آµط·آ§ط·آ¦ط¸ظ¹ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©',
       type: 'select',
       value,
       options: MATCH_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -319,7 +320,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'playerMetricPreset') {
     return {
       id,
-      label: 'طھط±ظƒظٹط² ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†',
+      label: 'ط·ع¾ط·آ±ط¸ئ’ط¸ظ¹ط·آ² ط·آ¥ط·آ­ط·آµط·آ§ط·آ¦ط¸ظ¹ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€‍ط·آ§ط·آ¹ط·آ¨ط¸ظ¹ط¸â€ ',
       type: 'select',
       value,
       options: PLAYER_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -329,12 +330,12 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'teamStatsSide') {
     return {
       id,
-      label: 'طھط±طھظٹط¨ ط¬ظ‡ط§طھ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظپط±ظٹظ‚ظٹظ†',
+      label: 'ط·ع¾ط·آ±ط·ع¾ط¸ظ¹ط·آ¨ ط·آ¬ط¸â€،ط·آ§ط·ع¾ ط·آ¥ط·آ­ط·آµط·آ§ط·آ¦ط¸ظ¹ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ظ¾ط·آ±ط¸ظ¹ط¸â€ڑط¸ظ¹ط¸â€ ',
       type: 'select',
       value,
       options: [
-        { value: 'HOME_LEFT', label: 'ط§ظ„ظ…ط¶ظٹظپ ظٹط³ط§ط±' },
-        { value: 'AWAY_LEFT', label: 'ط§ظ„ط¶ظٹظپ ظٹط³ط§ط±' },
+        { value: 'HOME_LEFT', label: 'ط·آ§ط¸â€‍ط¸â€¦ط·آ¶ط¸ظ¹ط¸ظ¾ ط¸ظ¹ط·آ³ط·آ§ط·آ±' },
+        { value: 'AWAY_LEFT', label: 'ط·آ§ط¸â€‍ط·آ¶ط¸ظ¹ط¸ظ¾ ط¸ظ¹ط·آ³ط·آ§ط·آ±' },
       ],
     };
   }
@@ -398,7 +399,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   }
 
   if (id === 'playerImageMapJson') {
-    return { id, label: 'ط±ظˆط§ط¨ط· طµظˆط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ† JSON', type: 'textarea', value };
+    return { id, label: 'ط·آ±ط¸ث†ط·آ§ط·آ¨ط·آ· ط·آµط¸ث†ط·آ± ط·آ§ط¸â€‍ط¸â€‍ط·آ§ط·آ¹ط·آ¨ط¸ظ¹ط¸â€  JSON', type: 'textarea', value };
   }
 
   if ([
@@ -610,7 +611,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   );
 
   const selectedMetricKeys = useMemo(
-      () => parseMetricKeys(getDraftValue('selectedMetricsJson'), PLAYER_STATS_PRESETS['Attacker Profile']),
+      () => parseMetricKeys(getDraftValue('selectedMetricsJson'), ['goals', 'assists', 'minutes', 'appearances', 'starts']),
       [draftOverlay.fields],
   );
 
@@ -808,7 +809,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const updates: Record<string, unknown> = {
           selectedMetricsJson: JSON.stringify(normalized),
           heroMetricsJson: JSON.stringify(normalized.slice(0, 4)),
-          secondaryMetricsJson: JSON.stringify(normalized.slice(4, 16)),
+          secondaryMetricsJson: JSON.stringify(normalized.slice(4, 8)),
       };
       if (preset) updates.metricPreset = preset;
       handleDraftFieldChanges(updates);
@@ -838,16 +839,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const text = String(getDraftValue('metricNaturalLanguage') || '').trim();
       const keys = resolveMetricTextKeys(text, effectiveMetricCatalog);
       if (!keys.length) {
-          setAiBoxMessage({ type: 'error', text: 'ظ„ظ… ط£ط¬ط¯ ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط·ط§ط¨ظ‚ط©. ط¬ط±ظ‘ط¨: ط§ظ„ط£ظ‡ط¯ط§ظپ ط§ظ„ظ…طھظˆظ‚ط¹ط©طŒ ط§ظ„طھط³ط¯ظٹط¯ط§طھطŒ ط§ظ„ظ…ط±ط§ظˆط؛ط§طھ.' });
+          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
           return;
       }
       writeSelectedMetrics(uniqueMetricKeys([...selectedMetricKeys, ...keys]));
-      setAiBoxMessage({ type: 'success', text: `طھظ…طھ ط¥ط¶ط§ظپط© ${keys.length} ط¥ط­طµط§ط¦ظٹط§طھ ظ…ظ† ط§ظ„ظ†طµ.` });
+      setAiBoxMessage({ type: 'success', text: 'Operation completed successfully.' });
   };
 
   const handleFetchPlayerStats = async () => {
       if (!selectedMetricKeys.length) {
-          setAiBoxMessage({ type: 'error', text: 'ط§ط®طھط± ط¥ط­طµط§ط¦ظٹط© ظˆط§ط­ط¯ط© ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظ‚ط¨ظ„ ط§ظ„ط¬ظ„ط¨.' });
+          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
           return;
       }
 
@@ -894,9 +895,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               playerStatsSourceJson: JSON.stringify(payload, null, 2),
               playerStatsDataMode: 'MANUAL',
           });
-          setAiBoxMessage({ type: 'success', text: `طھظ… ط¬ظ„ط¨ ${selectedMetricKeys.length} ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط®طھط§ط±ط© ظˆط­ظپط¸ظ‡ط§ ظپظٹ ط§ظ„ظ‚ط§ظ„ط¨.` });
+          setAiBoxMessage({ type: 'success', text: 'Operation completed successfully.' });
       } catch (error) {
-          setAiBoxMessage({ type: 'error', text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†.' });
+          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
       } finally {
           setIsFetchingPlayerStats(false);
       }
@@ -974,7 +975,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const prompt = aiBoxInput.trim() || fieldText;
 
       if (!prompt) {
-          setAiBoxMessage({ type: 'error', text: 'ط§ظƒطھط¨ ط®ط¨ط±ط§طŒ ط§ط³ظ… ظ„ط§ط¹ط¨طŒ ط£ظˆ ظ…ظ„ط®طµط§ ظ‚طµظٹط±ط§ ط¯ط§ط®ظ„ طµظ†ط¯ظˆظ‚ AI ط£ظˆظ„ط§.' });
+          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
           return;
       }
 
@@ -1042,7 +1043,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       .slice(0, 8)
                       .map(stat => ({
                           label: String(stat.label),
-                          value: stat.value === null || stat.value === undefined ? 'ط؛ظٹط± ظ…طھظˆظپط±' : String(stat.value),
+                          value: stat.value === null || stat.value === undefined ? 'ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·ع¾ط¸ث†ط¸ظ¾ط·آ±' : String(stat.value),
                           hint: stat.hint || 'AI / source needed',
                       }))
                   : [];
@@ -1070,7 +1071,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               if (isLeavingStory && detectedClub?.name) {
                   updates.fromClub = updates.fromClub || detectedClub.name;
                   const currentToClub = String(updates.toClub || '').trim();
-                  if (!currentToClub || currentToClub === detectedClub.name || /ط؛ظٹط± ظ…ط­ط¯ط¯|unknown|destination|tbc/i.test(currentToClub)) {
+                  if (!currentToClub || currentToClub === detectedClub.name || /ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·آ­ط·آ¯ط·آ¯|unknown|destination|tbc/i.test(currentToClub)) {
                       updates.toClub = isFreeStory ? 'Free agent' : 'Destination TBC';
                   }
               }
@@ -1174,16 +1175,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           const cleanUpdates = cleanAiFieldUpdates(enriched);
 
           if (!Object.keys(cleanUpdates).length) {
-              setAiBoxMessage({ type: 'error', text: 'ط§ظ„ط°ظƒط§ط، ظ„ظ… ظٹط¬ط¯ ط­ظ‚ظˆظ„ط§ ظ…ظ†ط§ط³ط¨ط© ظ„ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨. ط¬ط±ظ‘ط¨ ظ†طµط§ ط£ظˆط¶ط­ ط£ظˆ ط§ط®طھط± ط²ط± ط§ظ„ظ„ط§ط¹ط¨/ط§ظ„ظ…ظٹط±ظƒط§طھظˆ.' });
+              setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
               return;
           }
 
           handleDraftFieldChanges(cleanUpdates);
-          setAiBoxMessage({ type: 'success', text: `طھظ…طھ طھط¹ط¨ط¦ط© ${Object.keys(cleanUpdates).length} ط­ظ‚ظˆظ„ ظˆط±ط¨ط· ط§ظ„ظƒط§ط´ ط¥ظ† طھظˆظپط±.` });
+          setAiBoxMessage({ type: 'success', text: 'Operation completed successfully.' });
       } catch (error) {
           console.error('Universal AI box failed', error);
           setAiError(true);
-          setAiBoxMessage({ type: 'error', text: 'طھط¹ط°ط± طھط´ط؛ظٹظ„ طµظ†ط¯ظˆظ‚ AI. طھط£ظƒط¯ ط£ظ† ظ…ظپط§طھظٹط­ Gemini ظ…ظˆط¬ظˆط¯ط© ظپظٹ Vercel ط«ظ… ط£ط¹ط¯ ط§ظ„ظ†ط´ط±.' });
+          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
       } finally {
           setIsProcessingAI(false);
       }
@@ -1200,7 +1201,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setIsAdminUnlocked(true);
           setAdminPassword('');
       } catch (error) {
-          setPasswordError(error instanceof Error ? error.message : 'طھط¹ط°ط± ظپطھط­ ط¬ظ„ط³ط© ط§ظ„ظ…ط³ط¤ظˆظ„.');
+          setPasswordError(error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط¸ظ¾ط·ع¾ط·آ­ ط·آ¬ط¸â€‍ط·آ³ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·آ¤ط¸ث†ط¸â€‍.');
       } finally {
           setIsAdminAuthorizing(false);
       }
@@ -1407,7 +1408,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const validateMatchStatsJson = (parsed: unknown) => {
     if (!parsed || typeof parsed !== 'object') {
-      throw new Error('ط§ظ„ظ…ظ„ظپ ظ„ط§ ظٹط­طھظˆظٹ JSON طµط§ظ„ط­.');
+      throw new Error('ط·آ§ط¸â€‍ط¸â€¦ط¸â€‍ط¸ظ¾ ط¸â€‍ط·آ§ ط¸ظ¹ط·آ­ط·ع¾ط¸ث†ط¸ظ¹ JSON ط·آµط·آ§ط¸â€‍ط·آ­.');
     }
 
     const data = parsed as Record<string, unknown>;
@@ -1415,7 +1416,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const hasWhoScoredRaw = Boolean(data.events && data.home && data.away);
 
     if (!hasStructuredOutput && !hasWhoScoredRaw) {
-      throw new Error('ظ‡ط°ط§ ط§ظ„ظ…ظ„ظپ ظ„ط§ ظٹط¨ط¯ظˆ ظƒط¨ظٹط§ظ†ط§طھ Match Stats ط£ظˆ WhoScored.');
+      throw new Error('ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€‍ط¸â€¦ط¸â€‍ط¸ظ¾ ط¸â€‍ط·آ§ ط¸ظ¹ط·آ¨ط·آ¯ط¸ث† ط¸ئ’ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ Match Stats ط·آ£ط¸ث† WhoScored.');
     }
   };
 
@@ -1423,7 +1424,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     validateMatchStatsJson(parsed);
     const text = JSON.stringify(parsed, null, 2);
     if (text.length > MAX_MATCH_STATS_JSON_LENGTH) {
-      throw new Error('ط­ط¬ظ… JSON ظƒط¨ظٹط± ظ„ظ„طھط®ط²ظٹظ† ط¯ط§ط®ظ„ ط§ظ„ظ…ظˆظ‚ط¹. ط§ط³طھط®ط¯ظ… ظˆط¶ط¹ Live Bridge ط£ظˆ ظ…ظ„ظپ extractor ط§ظ„ظ…ظ†ط¸ظ….');
+      throw new Error('ط·آ­ط·آ¬ط¸â€¦ JSON ط¸ئ’ط·آ¨ط¸ظ¹ط·آ± ط¸â€‍ط¸â€‍ط·ع¾ط·آ®ط·آ²ط¸ظ¹ط¸â€  ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط¸ث†ط¸â€ڑط·آ¹. ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط¸â€¦ ط¸ث†ط·آ¶ط·آ¹ Live Bridge ط·آ£ط¸ث† ط¸â€¦ط¸â€‍ط¸ظ¾ extractor ط·آ§ط¸â€‍ط¸â€¦ط¸â€ ط·آ¸ط¸â€¦.');
     }
 
     handleDraftFieldChanges({
@@ -1442,16 +1443,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setMatchStatsImportMessage(null);
     try {
       if (file.size > MAX_MATCH_STATS_JSON_LENGTH) {
-        throw new Error('ظ…ظ„ظپ JSON ظƒط¨ظٹط± ط¬ط¯ط§. ط§ط³طھط®ط¯ظ… ظ…ظ„ظپ extractor ط§ظ„ظ…ظ†ط¸ظ… ط£ظˆ ظˆط¶ط¹ Live Bridge.');
+        throw new Error('ط¸â€¦ط¸â€‍ط¸ظ¾ JSON ط¸ئ’ط·آ¨ط¸ظ¹ط·آ± ط·آ¬ط·آ¯ط·آ§. ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط¸â€¦ ط¸â€¦ط¸â€‍ط¸ظ¾ extractor ط·آ§ط¸â€‍ط¸â€¦ط¸â€ ط·آ¸ط¸â€¦ ط·آ£ط¸ث† ط¸ث†ط·آ¶ط·آ¹ Live Bridge.');
       }
 
       const text = await file.text();
       const parsed = JSON.parse(text);
-      applyMatchStatsJson(parsed, 'طھظ… ط§ط³طھظٹط±ط§ط¯ ظ…ظ„ظپ JSON ظˆط±ط¨ط·ظ‡ ط¨ط§ظ„ظ‚ط§ظ„ط¨.');
+      applyMatchStatsJson(parsed, 'ط·ع¾ط¸â€¦ ط·آ§ط·آ³ط·ع¾ط¸ظ¹ط·آ±ط·آ§ط·آ¯ ط¸â€¦ط¸â€‍ط¸ظ¾ JSON ط¸ث†ط·آ±ط·آ¨ط·آ·ط¸â€، ط·آ¨ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨.');
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ط³طھظٹط±ط§ط¯ ظ…ظ„ظپ JSON.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ§ط·آ³ط·ع¾ط¸ظ¹ط·آ±ط·آ§ط·آ¯ ط¸â€¦ط¸â€‍ط¸ظ¾ JSON.',
       });
     } finally {
       setIsImportingMatchStats(false);
@@ -1467,7 +1468,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const getAdminAuthHeaders = () => {
     const session = adminSessionService.getStoredSession();
     if (!session) {
-      throw new Error('ط§ظپطھط­ ظ‚ظپظ„ ط§ظ„ظ…ط³ط¤ظˆظ„ ط£ظˆظ„ط§ ظ„طھط´ط؛ظٹظ„ ط£ظˆ ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
+      throw new Error('ط·آ§ط¸ظ¾ط·ع¾ط·آ­ ط¸â€ڑط¸ظ¾ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·آ¤ط¸ث†ط¸â€‍ ط·آ£ط¸ث†ط¸â€‍ط·آ§ ط¸â€‍ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ£ط¸ث† ط·آ¥ط¸ظ¹ط¸â€ڑط·آ§ط¸ظ¾ ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©.');
     }
     return {
       'Content-Type': 'application/json',
@@ -1489,7 +1490,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     });
     const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
     if (!response.ok) {
-      throw new Error(typeof payload.error === 'string' ? payload.error : 'طھط¹ط°ط± طھظ†ظپظٹط° ط£ظ…ط± ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
+      throw new Error(typeof payload.error === 'string' ? payload.error : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·ع¾ط¸â€ ط¸ظ¾ط¸ظ¹ط·آ° ط·آ£ط¸â€¦ط·آ± ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©.');
     }
     setBridgeStatus(payload);
     return payload;
@@ -1502,15 +1503,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const response = await fetch('/api/reo-match/status', { cache: 'no-store' });
       const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
       if (!response.ok) {
-        throw new Error(typeof payload.error === 'string' ? payload.error : 'طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط­ط§ظ„ط© ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط¸â€ڑط·آ±ط·آ§ط·طŒط·آ© ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©.');
       }
       setBridgeStatus(payload);
-      const statusText = payload.pollingActive || payload.workerAlive ? 'ط§ظ„ط¬ط³ط± ظٹط¹ظ…ظ„ ط§ظ„ط¢ظ†.' : 'ط§ظ„ط¬ط³ط± ظ…طھظˆظ‚ظپ ط­ط§ظ„ظٹط§.';
+      const statusText = payload.pollingActive || payload.workerAlive ? 'ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط¸ظ¹ط·آ¹ط¸â€¦ط¸â€‍ ط·آ§ط¸â€‍ط·آ¢ط¸â€ .' : 'ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط¸â€¦ط·ع¾ط¸ث†ط¸â€ڑط¸ظ¾ ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ§.';
       setMatchStatsImportMessage({ type: 'success', text: statusText });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط­ط§ظ„ط© ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط¸â€ڑط·آ±ط·آ§ط·طŒط·آ© ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1520,7 +1521,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const handleSetMatchStatsBridgeUrl = async () => {
     const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
     if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
-      setMatchStatsImportMessage({ type: 'error', text: 'ط£ط¯ط®ظ„ ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© طµط­ظٹط­ ظ…ظ† WhoScored ط£ظˆظ„ط§.' });
+      setMatchStatsImportMessage({ type: 'error', text: 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ±ط·آ§ط·آ¨ط·آ· ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آµط·آ­ط¸ظ¹ط·آ­ ط¸â€¦ط¸â€  WhoScored ط·آ£ط¸ث†ط¸â€‍ط·آ§.' });
       return;
     }
 
@@ -1533,11 +1534,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         apiUrl: CLOUD_MATCH_API_URL,
         sourceMatchUrl: sourceUrl,
       });
-      setMatchStatsImportMessage({ type: 'success', text: 'طھظ… ط­ظپط¸ ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ ط¬ط³ط± Google Cloud.' });
+      setMatchStatsImportMessage({ type: 'success', text: 'ط·ع¾ط¸â€¦ ط·آ­ط¸ظ¾ط·آ¸ ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ظ¾ط¸ظ¹ ط·آ¬ط·آ³ط·آ± Google Cloud.' });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ ط§ظ„ط¬ط³ط±.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ­ط¸ظ¾ط·آ¸ ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ±.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1549,11 +1550,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setMatchStatsImportMessage(null);
     try {
       await callMatchStatsControl('stop');
-      setMatchStatsImportMessage({ type: 'success', text: 'طھظ… ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط© ظˆظ…طھطµظپط­ ط§ظ„ط§ط³طھط®ط±ط§ط¬.' });
+      setMatchStatsImportMessage({ type: 'success', text: 'ط·ع¾ط¸â€¦ ط·آ¥ط¸ظ¹ط¸â€ڑط·آ§ط¸ظ¾ ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ث†ط¸â€¦ط·ع¾ط·آµط¸ظ¾ط·آ­ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ§ط·آ¬.' });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ¥ط¸ظ¹ط¸â€ڑط·آ§ط¸ظ¾ ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1570,18 +1571,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         const archivePath = archive.path ? `: ${archive.path}` : '';
         setMatchStatsImportMessage({
           type: 'success',
-          text: archive.skipped ? `ط§ظ„ط£ط±ط´ظٹظپ ظ…ظˆط¬ظˆط¯ ظˆظ„ظ… ظٹطھط؛ظٹط±${archivePath}` : `طھظ… ط­ظپط¸ ظ„ظ‚ط·ط© ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub${archivePath}`,
+          text: archive.skipped ? `ط·آ§ط¸â€‍ط·آ£ط·آ±ط·آ´ط¸ظ¹ط¸ظ¾ ط¸â€¦ط¸ث†ط·آ¬ط¸ث†ط·آ¯ ط¸ث†ط¸â€‍ط¸â€¦ ط¸ظ¹ط·ع¾ط·ط›ط¸ظ¹ط·آ±${archivePath}` : `ط·ع¾ط¸â€¦ ط·آ­ط¸ظ¾ط·آ¸ ط¸â€‍ط¸â€ڑط·آ·ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ظ¾ط¸ظ¹ GitHub${archivePath}`,
         });
       } else {
         setMatchStatsImportMessage({
           type: 'error',
-          text: archive?.error || archive?.reason || 'طھط¹ط°ط± ط­ظپط¸ ط£ط±ط´ظٹظپ ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub.',
+          text: archive?.error || archive?.reason || 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ­ط¸ظ¾ط·آ¸ ط·آ£ط·آ±ط·آ´ط¸ظ¹ط¸ظ¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ظ¾ط¸ظ¹ GitHub.',
         });
       }
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط£ط±ط´ظٹظپ ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ­ط¸ظ¾ط·آ¸ ط·آ£ط·آ±ط·آ´ط¸ظ¹ط¸ظ¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط¸ظ¾ط¸ظ¹ GitHub.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1595,15 +1596,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const url = getMatchStatsApiUrl();
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error('ظ„ظ… طھطµظ„ ط¨ظٹط§ظ†ط§طھ ظ…ظ† ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ. ط´ط؛ظ„ START_APP.bat ظˆط§ط¨ط¯ط£ ط§ظ„ط³ط­ط¨ ط£ظˆظ„ط§.');
+        throw new Error('ط¸â€‍ط¸â€¦ ط·ع¾ط·آµط¸â€‍ ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط¸â€‍ط¸ظ¹. ط·آ´ط·ط›ط¸â€‍ START_APP.bat ط¸ث†ط·آ§ط·آ¨ط·آ¯ط·آ£ ط·آ§ط¸â€‍ط·آ³ط·آ­ط·آ¨ ط·آ£ط¸ث†ط¸â€‍ط·آ§.');
       }
 
       const parsed = await response.json();
-      applyMatchStatsJson(parsed, 'طھظ… ط£ط®ط° ظ†ط³ط®ط© ط«ط§ط¨طھط© ظ…ظ† Live Bridge ط¯ط§ط®ظ„ ط§ظ„ظ‚ط§ظ„ط¨.');
+      applyMatchStatsJson(parsed, 'ط·ع¾ط¸â€¦ ط·آ£ط·آ®ط·آ° ط¸â€ ط·آ³ط·آ®ط·آ© ط·آ«ط·آ§ط·آ¨ط·ع¾ط·آ© ط¸â€¦ط¸â€  Live Bridge ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨.');
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ.',
+        text: error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ§ط¸â€‍ط·آ§ط·ع¾ط·آµط·آ§ط¸â€‍ ط·آ¨ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط¸â€‍ط¸ظ¹.',
       });
     } finally {
       setIsImportingMatchStats(false);
@@ -1613,7 +1614,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const handleStartMatchStatsBridge = async () => {
     const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
     if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
-      setMatchStatsImportMessage({ type: 'error', text: 'ط£ط¯ط®ظ„ ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© طµط­ظٹط­ ظ…ظ† WhoScored ط£ظˆظ„ط§.' });
+      setMatchStatsImportMessage({ type: 'error', text: 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ±ط·آ§ط·آ¨ط·آ· ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آµط·آ­ط¸ظ¹ط·آ­ ط¸â€¦ط¸â€  WhoScored ط·آ£ط¸ث†ط¸â€‍ط·آ§.' });
       return;
     }
 
@@ -1627,19 +1628,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const payload = await callMatchStatsControl('start', { url: sourceUrl, intervalSec: 60 }, controller.signal);
       const response = { ok: true };
       if (!response.ok) {
-        throw new Error(payload.error || 'طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط¹ظ„ظ‰ ظ‡ط°ط§ ط§ظ„ط±ط§ط¨ط·.');
+        throw new Error(payload.error || 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ¹ط¸â€‍ط¸â€° ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€‍ط·آ±ط·آ§ط·آ¨ط·آ·.');
       }
 
       handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL, sourceMatchUrl: sourceUrl });
       const bridgeMatch = payload.match || {};
       const teams = bridgeMatch.homeTeam && bridgeMatch.awayTeam ? ` (${bridgeMatch.homeTeam} - ${bridgeMatch.awayTeam})` : '';
-      setMatchStatsImportMessage({ type: 'success', text: `طھظ… طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط± ظˆط§ظ„طھط­ط¯ظٹط« ظƒظ„ ط¯ظ‚ظٹظ‚ط©${teams}.` });
+      setMatchStatsImportMessage({ type: 'success', text: `ط·ع¾ط¸â€¦ ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ± ط¸ث†ط·آ§ط¸â€‍ط·ع¾ط·آ­ط·آ¯ط¸ظ¹ط·آ« ط¸ئ’ط¸â€‍ ط·آ¯ط¸â€ڑط¸ظ¹ط¸â€ڑط·آ©${teams}.` });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
         text: error instanceof Error && error.name === 'AbortError'
-          ? 'ط§ظ†طھظ‡طھ ظ…ظ‡ظ„ط© طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط±. ط؛ط§ظ„ط¨ط§ ط§ظ„طµظپط­ط© ط¨ط·ظٹط¦ط© ط£ظˆ ظ…ط­ظ…ظٹط©. ط¬ط±ظ‘ط¨ ظ…ط±ط© ط£ط®ط±ظ‰ ط£ظˆ ط§ط³طھط®ط¯ظ… EXTRACT_NOW.'
-          : error instanceof Error ? error.message : 'طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط±.',
+          ? 'ط·آ§ط¸â€ ط·ع¾ط¸â€،ط·ع¾ ط¸â€¦ط¸â€،ط¸â€‍ط·آ© ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ±. ط·ط›ط·آ§ط¸â€‍ط·آ¨ط·آ§ ط·آ§ط¸â€‍ط·آµط¸ظ¾ط·آ­ط·آ© ط·آ¨ط·آ·ط¸ظ¹ط·آ¦ط·آ© ط·آ£ط¸ث† ط¸â€¦ط·آ­ط¸â€¦ط¸ظ¹ط·آ©. ط·آ¬ط·آ±ط¸â€کط·آ¨ ط¸â€¦ط·آ±ط·آ© ط·آ£ط·آ®ط·آ±ط¸â€° ط·آ£ط¸ث† ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط¸â€¦ EXTRACT_NOW.'
+          : error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±.',
       });
     } finally {
       window.clearTimeout(timeout);
@@ -1656,14 +1657,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       : 'bg-gray-800 text-gray-300 border-gray-700';
   const bridgeStatusLabel = bridgeStatus
     ? bridgeStatus.pollingActive || bridgeStatus.workerAlive
-      ? 'ظٹط¹ظ…ظ„ ط§ظ„ط¢ظ†'
+      ? 'ط¸ظ¹ط·آ¹ط¸â€¦ط¸â€‍ ط·آ§ط¸â€‍ط·آ¢ط¸â€ '
       : bridgeStatus.stoppedReason === 'match_final'
-        ? 'ط§ظ†طھظ‡طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©'
-        : 'ظ…طھظˆظ‚ظپ'
-    : 'ط؛ظٹط± ظ…ظپط­ظˆطµ';
+        ? 'ط·آ§ط¸â€ ط·ع¾ط¸â€،ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©'
+        : 'ط¸â€¦ط·ع¾ط¸ث†ط¸â€ڑط¸ظ¾'
+    : 'ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط¸ظ¾ط·آ­ط¸ث†ط·آµ';
   const bridgeClock = bridgeMatch?.displayStatus || bridgeMatch?.clock || (bridgeMatch?.minute ? `${bridgeMatch.minute}'` : bridgeMatch?.status);
   const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
-    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` آ· ${bridgeClock}` : ''}`
+    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` ط¢آ· ${bridgeClock}` : ''}`
     : null;
   const bridgeArchive = bridgeStatus?.archive;
   const bridgeControlsLocked = !isAdminUnlocked || isImportingMatchStats || isBridgeActionRunning;
@@ -1671,17 +1672,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
       
-      {/* â•گâ•گ RIGHT CONTROL PANEL (collapsible) â•گâ•گ */}
+      {/* أ¢â€¢ع¯أ¢â€¢ع¯ RIGHT CONTROL PANEL (collapsible) أ¢â€¢ع¯أ¢â€¢ع¯ */}
       <div className={`flex flex-col z-10 bg-[#13151f] border-r border-white/[0.06] shadow-2xl transition-all duration-300 overflow-hidden ${ panelOpen ? 'w-96' : 'w-0' }`}>
        <div className="w-96 flex flex-col h-full">
          <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-4 bg-[#13151f]">
            <button onClick={onBack} className="text-gray-500 hover:text-white text-xs flex items-center gap-1.5 font-bold transition-colors">
-             <ChevronRight className="w-4 h-4" /> ط§ظ„ظ…ظƒطھط¨ط©
+             <ChevronRight className="w-4 h-4" /> ط·آ§ط¸â€‍ط¸â€¦ط¸ئ’ط·ع¾ط·آ¨ط·آ©
            </button>
            <div className="flex items-center gap-2">
                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>ط­ظپط¸ طھظ„ظ‚ط§ط¦ظٹ</span>
+                <span>ط·آ­ط¸ظ¾ط·آ¸ ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹</span>
                </div>
            </div>
         </div>
@@ -1693,18 +1694,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     const field = draftOverlay.fields.find(f => f.id === 'homeScore');
                     if(field) handleDraftFieldChange('homeScore', Number(field.value) + 1);
                 }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
-                    <span className="text-[10px] text-blue-200">طµط§ط­ط¨ ط§ظ„ط£ط±ط¶</span>
-                    <span>+1 ظ‡ط¯ظپ</span>
+                    <span className="text-[10px] text-blue-200">ط·آµط·آ§ط·آ­ط·آ¨ ط·آ§ط¸â€‍ط·آ£ط·آ±ط·آ¶</span>
+                    <span>+1 ط¸â€،ط·آ¯ط¸ظ¾</span>
                 </button>
                 <button onClick={() => {
                     const field = draftOverlay.fields.find(f => f.id === 'awayScore');
                     if(field) handleDraftFieldChange('awayScore', Number(field.value) + 1);
                 }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
-                    <span className="text-[10px] text-red-200">ط§ظ„ط¶ظٹظپ</span>
-                    <span>+1 ظ‡ط¯ظپ</span>
+                    <span className="text-[10px] text-red-200">ط·آ§ط¸â€‍ط·آ¶ط¸ظ¹ط¸ظ¾</span>
+                    <span>+1 ط¸â€،ط·آ¯ط¸ظ¾</span>
                 </button>
-                <button onClick={() => handleDraftFieldChange('period', 'ط§ظ„ط´ظˆط· ط§ظ„ط«ط§ظ†ظٹ')} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-1.5 rounded-lg text-xs col-span-2">
-                    ط¨ط¯ط§ظٹط© ط§ظ„ط´ظˆط· ط§ظ„ط«ط§ظ†ظٹ
+                <button onClick={() => handleDraftFieldChange('period', 'ط·آ§ط¸â€‍ط·آ´ط¸ث†ط·آ· ط·آ§ط¸â€‍ط·آ«ط·آ§ط¸â€ ط¸ظ¹')} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-1.5 rounded-lg text-xs col-span-2">
+                    ط·آ¨ط·آ¯ط·آ§ط¸ظ¹ط·آ© ط·آ§ط¸â€‍ط·آ´ط¸ث†ط·آ· ط·آ§ط¸â€‍ط·آ«ط·آ§ط¸â€ ط¸ظ¹
                 </button>
             </div>
         )}
@@ -1717,9 +1718,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2"
                 >
                     <Sparkles className="w-3.5 h-3.5" />
-                    {isProcessingAI ? 'ط¬ط§ط±ظٹ طھظˆظ„ظٹط¯ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©...' : 'ظ…ظ„ط، ط¨ظٹط§ظ†ط§طھ ظ…ط¨ط§ط±ط§ط© ط¨ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ'}
+                    {isProcessingAI ? 'ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©...' : 'ط¸â€¦ط¸â€‍ط·طŒ ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آ¨ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ§ط·آµط·آ·ط¸â€ ط·آ§ط·آ¹ط¸ظ¹'}
                 </button>
-                {aiError && <div className="text-[11px] text-red-400 text-center">طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ. طھط­ظ‚ظ‚ ظ…ظ† GEMINI_API_KEY ط£ظˆ ط¬ط±ظ‘ط¨ ظ„ط§ط­ظ‚ط§.</div>}
+                {aiError && <div className="text-[11px] text-red-400 text-center">ط·ع¾ط·آ¹ط·آ°ط·آ± ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ§ط·آµط·آ·ط¸â€ ط·آ§ط·آ¹ط¸ظ¹. ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط¸â€¦ط¸â€  GEMINI_API_KEY ط·آ£ط¸ث† ط·آ¬ط·آ±ط¸â€کط·آ¨ ط¸â€‍ط·آ§ط·آ­ط¸â€ڑط·آ§.</div>}
             </div>
         )}
 
@@ -1727,7 +1728,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <div className="shrink-0 border-b border-cyan-900/35 bg-cyan-950/20 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                     <label className="text-xs text-cyan-200 font-black flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" /> طµظ†ط¯ظˆظ‚ AI ط§ظ„ظ…ظˆط­ط¯
+                        <Sparkles className="w-3.5 h-3.5" /> ط·آµط¸â€ ط·آ¯ط¸ث†ط¸â€ڑ AI ط·آ§ط¸â€‍ط¸â€¦ط¸ث†ط·آ­ط·آ¯
                     </label>
                     <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
                         Gemini fallback
@@ -1737,7 +1738,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   value={aiBoxInput}
                   onChange={(event) => setAiBoxInput(event.target.value)}
                   rows={3}
-                  placeholder="ط§ظƒطھط¨ ط®ط¨ط± ط§ظ†طھظ‚ط§ظ„طŒ ط§ط³ظ… ظ„ط§ط¹ط¨ ظˆظ†ط§ط¯ظٹطŒ ط£ظˆ ظ†طµ ط·ظˆظٹظ„ ظ„ظٹطھظ… طھظˆط²ظٹط¹ظ‡ ط¹ظ„ظ‰ ط­ظ‚ظˆظ„ ط§ظ„ظ‚ط§ظ„ط¨ ط§ظ„ط­ط§ظ„ظٹ..."
+                  placeholder="ط·آ§ط¸ئ’ط·ع¾ط·آ¨ ط·آ®ط·آ¨ط·آ± ط·آ§ط¸â€ ط·ع¾ط¸â€ڑط·آ§ط¸â€‍ط·إ’ ط·آ§ط·آ³ط¸â€¦ ط¸â€‍ط·آ§ط·آ¹ط·آ¨ ط¸ث†ط¸â€ ط·آ§ط·آ¯ط¸ظ¹ط·إ’ ط·آ£ط¸ث† ط¸â€ ط·آµ ط·آ·ط¸ث†ط¸ظ¹ط¸â€‍ ط¸â€‍ط¸ظ¹ط·ع¾ط¸â€¦ ط·ع¾ط¸ث†ط·آ²ط¸ظ¹ط·آ¹ط¸â€، ط·آ¹ط¸â€‍ط¸â€° ط·آ­ط¸â€ڑط¸ث†ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹..."
                   className="w-full resize-y rounded-lg border border-cyan-800/45 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400"
                 />
                 <div className="grid grid-cols-3 gap-2">
@@ -1747,7 +1748,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-cyan-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      طھط¹ط¨ط¦ط© ط°ظƒظٹط©
+                      ط·ع¾ط·آ¹ط·آ¨ط·آ¦ط·آ© ط·آ°ط¸ئ’ط¸ظ¹ط·آ©
                     </button>
                     <button
                       type="button"
@@ -1755,7 +1756,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-rose-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-rose-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      ظ„ط§ط¹ط¨ / ظ…ظٹط±ظƒط§طھظˆ
+                      ط¸â€‍ط·آ§ط·آ¹ط·آ¨ / ط¸â€¦ط¸ظ¹ط·آ±ط¸ئ’ط·آ§ط·ع¾ط¸ث†
                     </button>
                     <button
                       type="button"
@@ -1763,7 +1764,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-slate-800 px-2 py-2 text-[10px] font-black text-slate-100 transition-colors hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      ط£ط®ط¨ط§ط± ظ…طھط¹ط¯ط¯ط©
+                      ط·آ£ط·آ®ط·آ¨ط·آ§ط·آ± ط¸â€¦ط·ع¾ط·آ¹ط·آ¯ط·آ¯ط·آ©
                     </button>
                 </div>
                 {aiBoxMessage && (
@@ -1910,7 +1911,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                           className={`rounded-full border px-2.5 py-1 text-[10px] font-black transition-colors ${isMissing ? 'border-rose-500/35 bg-rose-500/10 text-rose-200' : 'border-cyan-500/35 bg-cyan-500/10 text-cyan-100 hover:bg-rose-500/20 hover:text-rose-100'}`}
                                           title={isMissing ? `Warning: Requires missing stat group '${metric?.category}'` : undefined}
                                         >
-                                            {metric?.labelAr || metric?.label || key} ×
+                                            {metric?.labelAr || metric?.label || key} أ—
                                         </button>
                                     );
                                 })}
@@ -1920,7 +1921,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 <input
                                   value={metricSearch}
                                   onChange={(event) => setMetricSearch(event.target.value)}
-                                  placeholder="Search metric / ابحث عن إحصائية"
+                                  placeholder="Search metric / ط§ط¨ط­ط« ط¹ظ† ط¥ط­طµط§ط¦ظٹط©"
                                   className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
                                 />
                                 <div className="grid max-h-60 grid-cols-1 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
@@ -2010,6 +2011,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     <option value="MINIMAL_CAST">Minimal Cast</option>
                                 </select>
                             </div>
+                            <div className="flex items-center justify-between border border-white/5 bg-white/5 p-2 rounded">
+                                <label className="text-[11px] font-black uppercase text-cyan-200">Show Missing Box</label>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDraftFieldChange('showUnavailableMetrics', String(getDraftValue('showUnavailableMetrics') || 'false') === 'true' ? 'false' : 'true')}
+                                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${String(getDraftValue('showUnavailableMetrics') || 'false') === 'true' ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                >
+                                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${String(getDraftValue('showUnavailableMetrics') || 'false') === 'true' ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                                </button>
+                            </div>
                             <div>
                                 <label className="text-xs font-black text-cyan-200 block mb-1">Scale</label>
                                 <input 
@@ -2044,7 +2055,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     <input
                                       value={String(getDraftValue('metricNaturalLanguage') || '')}
                                       onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
-                                      placeholder="الأهداف المتوقعة، التسديدات، المراوغات"
+                                      placeholder="ط§ظ„ط£ظ‡ط¯ط§ظپ ط§ظ„ظ…طھظˆظ‚ط¹ط©طŒ ط§ظ„طھط³ط¯ظٹط¯ط§طھطŒ ط§ظ„ظ…ط±ط§ظˆط؛ط§طھ"
                                       className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
                                     />
                                     <button
@@ -2074,7 +2085,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 />
                 <div className="flex items-center justify-between gap-2">
                     <label className="text-xs text-blue-300 font-bold flex items-center gap-1.5">
-                        <ArrowDownUp className="w-3 h-3" /> ط¥ط¯ط®ط§ظ„ Match Stats
+                        <ArrowDownUp className="w-3 h-3" /> ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ Match Stats
                     </label>
                     <span className="text-[10px] font-mono text-blue-300/70 bg-blue-950/50 px-2 py-0.5 rounded">
                         {String(getDraftValue('dataMode') || 'CLOUD_BRIDGE')}
@@ -2094,7 +2105,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <span className="text-[10px] font-bold">{bridgeStatusLabel}</span>
                     </div>
                     <div className="mt-1 truncate text-[11px] font-bold text-white/80">
-                        {bridgeScore || bridgeStatus?.currentUrl || 'ط§ط¶ط؛ط· ظپط­طµ ط§ظ„ط­ط§ظ„ط© ط£ظˆ ط´ط؛ظ„ ظ…ط¨ط§ط±ط§ط© ط¬ط¯ظٹط¯ط©.'}
+                        {bridgeScore || bridgeStatus?.currentUrl || 'ط·آ§ط·آ¶ط·ط›ط·آ· ط¸ظ¾ط·آ­ط·آµ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ£ط¸ث† ط·آ´ط·ط›ط¸â€‍ ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯ط·آ©.'}
                     </div>
                     {bridgeStatus?.lastError && (
                         <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
@@ -2102,14 +2113,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     {bridgeArchive && (
                         <div className={`mt-1 truncate text-[10px] font-bold ${bridgeArchive.ok ? 'text-emerald-200/90' : 'text-red-300'}`}>
                             {bridgeArchive.ok
-                              ? `GitHub Archive${bridgeArchive.skipped ? ' آ· unchanged' : ''}: ${bridgeArchive.path || 'ready'}`
+                              ? `GitHub Archive${bridgeArchive.skipped ? ' ط¢آ· unchanged' : ''}: ${bridgeArchive.path || 'ready'}`
                               : `Archive error: ${bridgeArchive.error || bridgeArchive.reason || 'not saved'}`}
                         </div>
                     )}
                 </div>
                 <div className="rounded-lg border border-blue-800/35 bg-slate-950/45 p-3 space-y-3">
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-blue-200/80">ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط© ط§ظ„طھظٹ طھط¸ظ‡ط± ظپظٹ ط§ظ„ظ‚ط§ظ„ط¨</div>
+                        <div className="mb-1.5 text-[10px] font-black text-blue-200/80">ط·آ¥ط·آ­ط·آµط·آ§ط·آ¦ط¸ظ¹ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آ§ط¸â€‍ط·ع¾ط¸ظ¹ ط·ع¾ط·آ¸ط¸â€،ط·آ± ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨</div>
                         <div className="grid grid-cols-3 gap-1.5">
                             {MATCH_STAT_PRESET_QUICK.map(option => {
                               const active = String(getDraftValue('matchMetricPreset') || 'SMART') === option.value;
@@ -2127,7 +2138,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-rose-200/80">ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†</div>
+                        <div className="mb-1.5 text-[10px] font-black text-rose-200/80">ط·آ¥ط·آ­ط·آµط·آ§ط·آ¦ط¸ظ¹ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€‍ط·آ§ط·آ¹ط·آ¨ط¸ظ¹ط¸â€ </div>
                         <div className="grid grid-cols-3 gap-1.5">
                             {PLAYER_STAT_PRESET_QUICK.map(option => {
                               const active = String(getDraftValue('playerMetricPreset') || 'SMART') === option.value;
@@ -2145,7 +2156,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-cyan-200/80">طھطµظ…ظٹظ… ط§ظ„ظ‚ط§ظ„ط¨</div>
+                        <div className="mb-1.5 text-[10px] font-black text-cyan-200/80">ط·ع¾ط·آµط¸â€¦ط¸ظ¹ط¸â€¦ ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨</div>
                         <div className="grid grid-cols-5 gap-1.5">
                             {MATCH_VISUAL_STYLE_QUICK.map(option => {
                               const active = String(getDraftValue('visualStyle') || 'DUAL_RAIL') === option.value;
@@ -2163,14 +2174,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-violet-200/80">طھط­ظƒظ… ط§ظ„ط¨ط« ظˆط§ظ„طµط§ظ†ط¹</div>
+                        <div className="mb-1.5 text-[10px] font-black text-violet-200/80">ط·ع¾ط·آ­ط¸ئ’ط¸â€¦ ط·آ§ط¸â€‍ط·آ¨ط·آ« ط¸ث†ط·آ§ط¸â€‍ط·آµط·آ§ط¸â€ ط·آ¹</div>
                         <div className="grid grid-cols-3 gap-1.5">
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('broadcastMotion', !Boolean(getDraftValue('broadcastMotion') ?? true))}
                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('broadcastMotion') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
-                              ط­ط±ظƒط©
+                              ط·آ­ط·آ±ط¸ئ’ط·آ©
                             </button>
                             <button
                               type="button"
@@ -2184,7 +2195,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               onClick={() => handleDraftFieldChange('showCreatorBadge', !Boolean(getDraftValue('showCreatorBadge') ?? true))}
                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('showCreatorBadge') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
-                              ط§ظ„طµط§ظ†ط¹
+                              ط·آ§ط¸â€‍ط·آµط·آ§ط¸â€ ط·آ¹
                             </button>
                         </div>
                         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
@@ -2193,28 +2204,28 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               onClick={() => handleDraftFieldChange('matchPanelScale', Math.max(0.65, Number(getDraftValue('matchPanelScale') || 1) - 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              طھطµط؛ظٹط± ط§ظ„ظ…ط¨ط§ط±ط§ط©
+                              ط·ع¾ط·آµط·ط›ط¸ظ¹ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('matchPanelScale', Math.min(1.6, Number(getDraftValue('matchPanelScale') || 1) + 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              طھظƒط¨ظٹط± ط§ظ„ظ…ط¨ط§ط±ط§ط©
+                              ط·ع¾ط¸ئ’ط·آ¨ط¸ظ¹ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('playerPanelScale', Math.max(0.65, Number(getDraftValue('playerPanelScale') || 1) - 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              طھطµط؛ظٹط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ†
+                              ط·ع¾ط·آµط·ط›ط¸ظ¹ط·آ± ط·آ§ط¸â€‍ط¸â€‍ط·آ§ط·آ¹ط·آ¨ط¸ظ¹ط¸â€ 
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('playerPanelScale', Math.min(1.6, Number(getDraftValue('playerPanelScale') || 1) + 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              طھظƒط¨ظٹط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ†
+                              ط·ع¾ط¸ئ’ط·آ¨ط¸ظ¹ط·آ± ط·آ§ط¸â€‍ط¸â€‍ط·آ§ط·آ¹ط·آ¨ط¸ظ¹ط¸â€ 
                             </button>
                         </div>
                     </div>
@@ -2224,14 +2235,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           onClick={() => handleDraftFieldChange('teamStatsSide', 'HOME_LEFT')}
                           className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'HOME_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                         >
-                          ط§ظ„ظ…ط¶ظٹظپ ظٹط³ط§ط±
+                          ط·آ§ط¸â€‍ط¸â€¦ط·آ¶ط¸ظ¹ط¸ظ¾ ط¸ظ¹ط·آ³ط·آ§ط·آ±
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDraftFieldChange('teamStatsSide', 'AWAY_LEFT')}
                           className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'AWAY_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                         >
-                          ط§ظ„ط¶ظٹظپ ظٹط³ط§ط±
+                          ط·آ§ط¸â€‍ط·آ¶ط¸ظ¹ط¸ظ¾ ط¸ظ¹ط·آ³ط·آ§ط·آ±
                         </button>
                         <button
                           type="button"
@@ -2241,15 +2252,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           })}
                           className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                         >
-                          ط¹ظƒط³ ط§ظ„ط£ظ„ظˆط§ظ†
+                          ط·آ¹ط¸ئ’ط·آ³ ط·آ§ط¸â€‍ط·آ£ط¸â€‍ط¸ث†ط·آ§ط¸â€ 
                         </button>
                     </div>
                 </div>
                 {!isAdminUnlocked && (
                     <form onSubmit={handleAdminLogin} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                        <div className="mb-2 text-[11px] font-bold text-amber-200">ط§ظپطھط­ ظ‚ظپظ„ ط§ظ„طھط­ظƒظ… ظ„طھط؛ظٹظٹط± ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ط£ظˆ طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط±.</div>
+                        <div className="mb-2 text-[11px] font-bold text-amber-200">ط·آ§ط¸ظ¾ط·ع¾ط·آ­ ط¸â€ڑط¸ظ¾ط¸â€‍ ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸ئ’ط¸â€¦ ط¸â€‍ط·ع¾ط·ط›ط¸ظ¹ط¸ظ¹ط·آ± ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ© ط·آ£ط¸ث† ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ±.</div>
                         <div className="mb-2 text-[10px] leading-5 text-amber-100/70">
-                          ط§ظ„ظ…ظپطھط§ط­ ظٹط¤ط®ط° ظ…ظ† ظ…طھط؛ظٹط± Vercel ط¨ط§ط³ظ… EDITOR_ADMIN_PASSCODE ط£ظˆ ADMIN_ACCESS_CODE. ط¥ط°ط§ ظ„ط§ طھط¹ط±ظپظ‡طŒ ط؛ظٹظ‘ط±ظ‡ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…ط´ط±ظˆط¹ ط«ظ… ط£ط¹ط¯ ط§ظ„ظ†ط´ط±.
+                          ط·آ§ط¸â€‍ط¸â€¦ط¸ظ¾ط·ع¾ط·آ§ط·آ­ ط¸ظ¹ط·آ¤ط·آ®ط·آ° ط¸â€¦ط¸â€  ط¸â€¦ط·ع¾ط·ط›ط¸ظ¹ط·آ± Vercel ط·آ¨ط·آ§ط·آ³ط¸â€¦ EDITOR_ADMIN_PASSCODE ط·آ£ط¸ث† ADMIN_ACCESS_CODE. ط·آ¥ط·آ°ط·آ§ ط¸â€‍ط·آ§ ط·ع¾ط·آ¹ط·آ±ط¸ظ¾ط¸â€،ط·إ’ ط·ط›ط¸ظ¹ط¸â€کط·آ±ط¸â€، ط¸â€¦ط¸â€  ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ´ط·آ±ط¸ث†ط·آ¹ ط·آ«ط¸â€¦ ط·آ£ط·آ¹ط·آ¯ ط·آ§ط¸â€‍ط¸â€ ط·آ´ط·آ±.
                         </div>
                         <div className="flex gap-2">
                             <input
@@ -2264,7 +2275,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               disabled={isAdminAuthorizing}
                               className="rounded-md bg-amber-500 px-3 py-2 text-xs font-black text-black disabled:bg-gray-700 disabled:text-gray-400"
                             >
-                              ظپطھط­
+                              ط¸ظ¾ط·ع¾ط·آ­
                             </button>
                         </div>
                         {passwordError && <div className="mt-2 text-[10px] font-bold text-red-300">{passwordError}</div>}
@@ -2277,7 +2288,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Zap className="w-3 h-3" /> طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ظ…ظ† ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط©
+                        <Zap className="w-3 h-3" /> ط·ع¾ط·آ´ط·ط›ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط¸â€¦ط¸â€  ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©
                     </button>
                     <button
                       type="button"
@@ -2285,7 +2296,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="hidden"
                     >
-                        <Monitor className="w-3 h-3" /> ط­ظپط¸ ط§ظ„ط±ط§ط¨ط·
+                        <Monitor className="w-3 h-3" /> ط·آ­ط¸ظ¾ط·آ¸ ط·آ§ط¸â€‍ط·آ±ط·آ§ط·آ¨ط·آ·
                     </button>
                     <button
                       type="button"
@@ -2293,7 +2304,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="bg-red-600/80 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Square className="w-3 h-3" /> ط¥ظٹظ‚ط§ظپ
+                        <Square className="w-3 h-3" /> ط·آ¥ط¸ظ¹ط¸â€ڑط·آ§ط¸ظ¾
                     </button>
                     <button
                       type="button"
@@ -2301,7 +2312,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isBridgeActionRunning}
                       className="bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <RefreshCw className="w-3 h-3" /> ظپط­طµ ط­ط§ظ„ط© Google Cloud
+                        <RefreshCw className="w-3 h-3" /> ط¸ظ¾ط·آ­ط·آµ ط·آ­ط·آ§ط¸â€‍ط·آ© Google Cloud
                     </button>
                     <button
                       type="button"
@@ -2309,7 +2320,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="col-span-2 bg-cyan-700/80 hover:bg-cyan-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <History className="w-3 h-3" /> ط£ط±ط´ظپط© ط§ظ„ط¢ظ† ظپظٹ GitHub
+                        <History className="w-3 h-3" /> ط·آ£ط·آ±ط·آ´ط¸ظ¾ط·آ© ط·آ§ط¸â€‍ط·آ¢ط¸â€  ط¸ظ¾ط¸ظ¹ GitHub
                     </button>
                     <button
                       type="button"
@@ -2317,7 +2328,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isImportingMatchStats}
                       className="hidden"
                     >
-                        <Copy className="w-3 h-3" /> ط§ط³طھظٹط±ط§ط¯ JSON
+                        <Copy className="w-3 h-3" /> ط·آ§ط·آ³ط·ع¾ط¸ظ¹ط·آ±ط·آ§ط·آ¯ JSON
                     </button>
                     <button
                       type="button"
@@ -2325,17 +2336,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isImportingMatchStats}
                       className="hidden"
                     >
-                        <Zap className="w-3 h-3" /> ط³ط­ط¨ ط§ظ„ط¬ط³ط±
+                        <Zap className="w-3 h-3" /> ط·آ³ط·آ­ط·آ¨ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ±
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL });
-                        setMatchStatsImportMessage({ type: 'success', text: 'طھظ… طھظپط¹ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط±.' });
+                        setMatchStatsImportMessage({ type: 'success', text: 'ط·ع¾ط¸â€¦ ط·ع¾ط¸ظ¾ط·آ¹ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¬ط·آ³ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±.' });
                       }}
                       className="hidden"
                     >
-                        <Monitor className="w-3 h-3" /> ظˆط¶ط¹ Live Bridge ط§ظ„ظ…ط¨ط§ط´ط±
+                        <Monitor className="w-3 h-3" /> ط¸ث†ط·آ¶ط·آ¹ Live Bridge ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±
                     </button>
                 </div>
                 {matchStatsImportMessage && (
@@ -2354,21 +2365,21 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <div className="p-4 bg-purple-950/30 border-b border-purple-900/50 space-y-4">
                 <div className="space-y-2">
                     <label className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> طھظˆظ„ظٹط¯ ط§ظ„ط´ط±ط§ط¦ط­ ظ…ظ† ط§ظ„ظ†طµ
+                        <Sparkles className="w-3 h-3" /> ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ´ط·آ±ط·آ§ط·آ¦ط·آ­ ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط¸â€ ط·آµ
                     </label>
                     <button
                       onClick={handleGenerateSmartNewsSlides}
                       disabled={isProcessingAI}
                       className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors"
                     >
-                        {isProcessingAI ? 'ط¬ط§ط±ظٹ طھط¬ظ‡ظٹط² ط§ظ„ط´ط±ط§ط¦ط­...' : 'طھط­ظˆظٹظ„ ط§ظ„ظ†طµ ط¥ظ„ظ‰ ط´ط±ط§ط¦ط­ ط¨ط« ط§ط­طھط±ط§ظپظٹط©'}
+                        {isProcessingAI ? 'ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·ع¾ط·آ¬ط¸â€،ط¸ظ¹ط·آ² ط·آ§ط¸â€‍ط·آ´ط·آ±ط·آ§ط·آ¦ط·آ­...' : 'ط·ع¾ط·آ­ط¸ث†ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ ط·آµ ط·آ¥ط¸â€‍ط¸â€° ط·آ´ط·آ±ط·آ§ط·آ¦ط·آ­ ط·آ¨ط·آ« ط·آ§ط·آ­ط·ع¾ط·آ±ط·آ§ط¸ظ¾ط¸ظ¹ط·آ©'}
                     </button>
-                    {aiError && <div className="text-[11px] text-red-400">ط§ظƒطھط¨ ط§ظ„ظ†طµ ط§ظ„ظƒط§ظ…ظ„ ط£ظˆظ„ط§طŒ ظˆطھط£ظƒط¯ ظ…ظ† ط¥ط¹ط¯ط§ط¯ ظ…ظپطھط§ط­ Gemini ظپظٹ ط§ظ„ط®ط§ط¯ظ….</div>}
+                    {aiError && <div className="text-[11px] text-red-400">ط·آ§ط¸ئ’ط·ع¾ط·آ¨ ط·آ§ط¸â€‍ط¸â€ ط·آµ ط·آ§ط¸â€‍ط¸ئ’ط·آ§ط¸â€¦ط¸â€‍ ط·آ£ط¸ث†ط¸â€‍ط·آ§ط·إ’ ط¸ث†ط·ع¾ط·آ£ط¸ئ’ط·آ¯ ط¸â€¦ط¸â€  ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ ط¸â€¦ط¸ظ¾ط·ع¾ط·آ§ط·آ­ Gemini ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط·آ®ط·آ§ط·آ¯ط¸â€¦.</div>}
                 </div>
 
                 <div className="pt-2 border-t border-purple-900/30">
                     <label className="text-xs text-blue-300 font-bold flex items-center justify-between mb-2">
-                        <span>طھط­ظƒظ… ط§ظ„ط´ط±ط§ط¦ط­</span>
+                        <span>ط·ع¾ط·آ­ط¸ئ’ط¸â€¦ ط·آ§ط¸â€‍ط·آ´ط·آ±ط·آ§ط·آ¦ط·آ­</span>
                         <span className="font-mono text-blue-400 bg-blue-950/50 px-2 py-0.5 rounded text-[10px]">
                              {Number(getDraftValue('currentPage') || 0) + 1} / {JSON.parse(String(getDraftValue('pagesData') || '[]')).length || 1}
                         </span>
@@ -2381,7 +2392,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           }}
                           className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
                         >
-                            <Rewind className="w-3 h-3" /> ط§ظ„ط³ط§ط¨ظ‚
+                            <Rewind className="w-3 h-3" /> ط·آ§ط¸â€‍ط·آ³ط·آ§ط·آ¨ط¸â€ڑ
                         </button>
                         <button 
                           onClick={() => {
@@ -2391,7 +2402,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           }}
                           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
                         >
-                            ط§ظ„طھط§ظ„ظٹ <FastForward className="w-3 h-3" />
+                            ط·آ§ط¸â€‍ط·ع¾ط·آ§ط¸â€‍ط¸ظ¹ <FastForward className="w-3 h-3" />
                         </button>
                     </div>
                 </div>
@@ -2401,7 +2412,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.PLAYER_PROFILE && (
             <div className="p-4 bg-gray-950/50 border-b border-gray-800">
                 <label className="text-xs text-blue-400 font-bold block mb-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> ط§ظ„طھط¹ط¨ط¦ط© ط§ظ„ط°ظƒظٹط© (Presets)
+                    <Zap className="w-3 h-3" /> ط·آ§ط¸â€‍ط·ع¾ط·آ¹ط·آ¨ط·آ¦ط·آ© ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط¸ظ¹ط·آ© (Presets)
                 </label>
                 <select onChange={(e) => {
                     const preset = e.target.value;
@@ -2441,10 +2452,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     }
                     e.target.value = "";
                 }} className="w-full bg-blue-900/20 text-blue-300 border border-blue-500/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-bold">
-                    <option value="">-- ط§ط®طھط± ظ„ط§ط¹ط¨ ظ„ظ„طھط¹ط¨ط¦ط© ط§ظ„طھظ„ظ‚ط§ط¦ظٹط© --</option>
-                    <option value="messi">ظ„ظٹظˆظ†ظٹظ„ ظ…ظٹط³ظٹ (ط£ظٹظ‚ظˆظ†ط©)</option>
-                    <option value="yamal">ظ„ط§ظ…ظٹظ† ظٹط§ظ…ط§ظ„ (ظ…ظˆظ‡ط¨ط©)</option>
-                    <option value="pedri">ط¨ظٹط¯ط±ظٹ (ظ…ط§ظٹط³طھط±ظˆ)</option>
+                    <option value="">-- ط·آ§ط·آ®ط·ع¾ط·آ± ط¸â€‍ط·آ§ط·آ¹ط·آ¨ ط¸â€‍ط¸â€‍ط·ع¾ط·آ¹ط·آ¨ط·آ¦ط·آ© ط·آ§ط¸â€‍ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹ط·آ© --</option>
+                    <option value="messi">ط¸â€‍ط¸ظ¹ط¸ث†ط¸â€ ط¸ظ¹ط¸â€‍ ط¸â€¦ط¸ظ¹ط·آ³ط¸ظ¹ (ط·آ£ط¸ظ¹ط¸â€ڑط¸ث†ط¸â€ ط·آ©)</option>
+                    <option value="yamal">ط¸â€‍ط·آ§ط¸â€¦ط¸ظ¹ط¸â€  ط¸ظ¹ط·آ§ط¸â€¦ط·آ§ط¸â€‍ (ط¸â€¦ط¸ث†ط¸â€،ط·آ¨ط·آ©)</option>
+                    <option value="pedri">ط·آ¨ط¸ظ¹ط·آ¯ط·آ±ط¸ظ¹ (ط¸â€¦ط·آ§ط¸ظ¹ط·آ³ط·ع¾ط·آ±ط¸ث†)</option>
                 </select>
             </div>
         )}
@@ -2452,10 +2463,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.TICKER && (
             <div className="p-4 bg-red-950/30 border-b border-red-900/50">
                 <label className="text-xs text-red-400 font-bold block mb-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> ط®ط¨ط± ط¹ط§ط¬ظ„ ظ…ط¨ط§ط´ط±
+                    <Zap className="w-3 h-3" /> ط·آ®ط·آ¨ط·آ± ط·آ¹ط·آ§ط·آ¬ط¸â€‍ ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±
                 </label>
                 <div className="flex gap-2">
-                    <input type="text" id="quick-ticker" placeholder="ط§ظƒطھط¨ ط§ظ„ط®ط¨ط± ط§ظ„ط¹ط§ط¬ظ„ ظ‡ظ†ط§..." className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-xs focus:border-red-500" onKeyDown={(e) => {
+                    <input type="text" id="quick-ticker" placeholder="ط·آ§ط¸ئ’ط·ع¾ط·آ¨ ط·آ§ط¸â€‍ط·آ®ط·آ¨ط·آ± ط·آ§ط¸â€‍ط·آ¹ط·آ§ط·آ¬ط¸â€‍ ط¸â€،ط¸â€ ط·آ§..." className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-xs focus:border-red-500" onKeyDown={(e) => {
                         if(e.key === 'Enter') {
                             const val = e.currentTarget.value;
                             if(val) {
@@ -2471,7 +2482,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             input.value = '';
                         }
                     }} className="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-2 rounded text-xs transition-colors whitespace-nowrap">
-                        ط¥ط±ط³ط§ظ„ ًںڑ€
+                        ط·آ¥ط·آ±ط·آ³ط·آ§ط¸â€‍ ظ‹ع؛ع‘â‚¬
                     </button>
                 </div>
             </div>
@@ -2480,7 +2491,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.TOP_VIEWERS && (() => {
             const count = Math.min(Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5), 10);
 
-            // â”€â”€ resize image to max 512px and return base64 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // أ¢â€‌â‚¬أ¢â€‌â‚¬ resize image to max 512px and return base64 أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬أ¢â€‌â‚¬
             const resizeToBase64 = (file: File): Promise<string> =>
               new Promise((resolve, reject) => {
                 const img = new Image();
@@ -2497,7 +2508,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 };
                 img.onerror = () => {
                   URL.revokeObjectURL(url);
-                  reject(new Error('طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط¥ط­ط¯ظ‰ ط§ظ„طµظˆط±. ط¬ط±ظ‘ط¨ طµظˆط±ط© JPG ط£ظˆ PNG ط£ظˆ WEBP ظˆط§ط¶ط­ط©.'));
+                  reject(new Error('ط·ع¾ط·آ¹ط·آ°ط·آ± ط¸â€ڑط·آ±ط·آ§ط·طŒط·آ© ط·آ¥ط·آ­ط·آ¯ط¸â€° ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±. ط·آ¬ط·آ±ط¸â€کط·آ¨ ط·آµط¸ث†ط·آ±ط·آ© JPG ط·آ£ط¸ث† PNG ط·آ£ط¸ث† WEBP ط¸ث†ط·آ§ط·آ¶ط·آ­ط·آ©.'));
                 };
                 img.src = url;
               });
@@ -2505,20 +2516,20 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             return (
             <div className="bg-yellow-950/20 border-b border-yellow-900/30">
 
-                {/* â”€â”€ Screenshot drop zone for AI Vision â”€â”€ */}
+                {/* أ¢â€‌â‚¬أ¢â€‌â‚¬ Screenshot drop zone for AI Vision أ¢â€‌â‚¬أ¢â€‌â‚¬ */}
                 <div className="p-4 pb-2">
                   <label className="text-xs text-yellow-400 font-bold flex items-center gap-1.5 mb-2">
-                    <Zap className="w-3 h-3" /> ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ظ„ظ‚ط·ط© ط§ظ„ط´ط§ط´ط© (Gemini Vision)
+                    <Zap className="w-3 h-3" /> ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ§ط·آ¬ ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط¸ظ¾ط·آ§ط·آ¹ط¸â€‍ط¸ظ¹ط¸â€  ط¸â€¦ط¸â€  ط¸â€‍ط¸â€ڑط·آ·ط·آ© ط·آ§ط¸â€‍ط·آ´ط·آ§ط·آ´ط·آ© (Gemini Vision)
                   </label>
-                  <p className="text-gray-500 text-[10px] mb-3">ط§ط±ظپط¹ 1-3 طµظˆط± ظ…ظ† ط´ط§ط´ط© ط§ظ„ط¨ط« â€” ط§ظ„ط°ظƒط§ط، ظٹط³طھط®ط±ط¬ ط§ظ„ط£ط³ظ…ط§ط، ظˆط§ظ„ط£ظˆط³ظ…ط© طھظ„ظ‚ط§ط¦ظٹط§ظ‹</p>
+                  <p className="text-gray-500 text-[10px] mb-3">ط·آ§ط·آ±ط¸ظ¾ط·آ¹ 1-3 ط·آµط¸ث†ط·آ± ط¸â€¦ط¸â€  ط·آ´ط·آ§ط·آ´ط·آ© ط·آ§ط¸â€‍ط·آ¨ط·آ« أ¢â‚¬â€‌ ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط¸ظ¹ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ¬ ط·آ§ط¸â€‍ط·آ£ط·آ³ط¸â€¦ط·آ§ط·طŒ ط¸ث†ط·آ§ط¸â€‍ط·آ£ط¸ث†ط·آ³ط¸â€¦ط·آ© ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹ط·آ§ط¸â€¹</p>
 
                   <label
                     htmlFor="screenshot-upload"
                     className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-yellow-700/40 rounded-xl p-5 cursor-pointer hover:border-yellow-500/60 hover:bg-yellow-900/10 transition-all"
                   >
-                    <span className="text-3xl">ًں“¸</span>
-                    <span className="text-yellow-400 text-xs font-bold">ط§ط¶ط؛ط· ظ„ط§ط®طھظٹط§ط± ط§ظ„طµظˆط± (1-3)</span>
-                    <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP â€” ط­ط¬ظ… ط£ظ‚طµظ‰ 5MB ظ„ظƒظ„ طµظˆط±ط©</span>
+                    <span className="text-3xl">ظ‹ع؛â€œآ¸</span>
+                    <span className="text-yellow-400 text-xs font-bold">ط·آ§ط·آ¶ط·ط›ط·آ· ط¸â€‍ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ± ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ± (1-3)</span>
+                    <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP أ¢â‚¬â€‌ ط·آ­ط·آ¬ط¸â€¦ ط·آ£ط¸â€ڑط·آµط¸â€° 5MB ط¸â€‍ط¸ئ’ط¸â€‍ ط·آµط¸ث†ط·آ±ط·آ©</span>
                   </label>
                   <input
                     ref={screenshotInputRef}
@@ -2533,7 +2544,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       if (!files.length) return;
                       const oversized = files.find(file => file.size > 5 * 1024 * 1024);
                       if (oversized) {
-                        setViewerAiError('ط­ط¬ظ… ظƒظ„ طµظˆط±ط© ظٹط¬ط¨ ط£ظ„ط§ ظٹطھط¬ط§ظˆط² 5MB.');
+                        setViewerAiError('ط·آ­ط·آ¬ط¸â€¦ ط¸ئ’ط¸â€‍ ط·آµط¸ث†ط·آ±ط·آ© ط¸ظ¹ط·آ¬ط·آ¨ ط·آ£ط¸â€‍ط·آ§ ط¸ظ¹ط·ع¾ط·آ¬ط·آ§ط¸ث†ط·آ² 5MB.');
                         input.value = '';
                         return;
                       }
@@ -2557,13 +2568,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           if (Object.keys(updates).length) {
                             handleDraftFieldChanges(updates);
                           } else {
-                            setViewerAiError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط£ط³ظ…ط§ط، ظˆط§ط¶ط­ط© ط¯ط§ط®ظ„ ط§ظ„طµظˆط±.');
+                            setViewerAiError('ط¸â€‍ط¸â€¦ ط¸ظ¹ط·ع¾ط¸â€¦ ط·آ§ط¸â€‍ط·آ¹ط·آ«ط¸ث†ط·آ± ط·آ¹ط¸â€‍ط¸â€° ط·آ£ط·آ³ط¸â€¦ط·آ§ط·طŒ ط¸ث†ط·آ§ط·آ¶ط·آ­ط·آ© ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±.');
                           }
                         } else {
-                          setViewerAiError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط£ط³ظ…ط§ط، ظˆط§ط¶ط­ط© ط¯ط§ط®ظ„ ط§ظ„طµظˆط±.');
+                          setViewerAiError('ط¸â€‍ط¸â€¦ ط¸ظ¹ط·ع¾ط¸â€¦ ط·آ§ط¸â€‍ط·آ¹ط·آ«ط¸ث†ط·آ± ط·آ¹ط¸â€‍ط¸â€° ط·آ£ط·آ³ط¸â€¦ط·آ§ط·طŒ ط¸ث†ط·آ§ط·آ¶ط·آ­ط·آ© ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±.');
                         }
                       } catch (error) {
-                        setViewerAiError(error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ط§ظ„طµظˆط±.');
+                        setViewerAiError(error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ§ط·آ¬ ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط¸ظ¾ط·آ§ط·آ¹ط¸â€‍ط¸ظ¹ط¸â€  ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±.');
                       } finally {
                         setIsExtractingViewers(false);
                         input.value = '';
@@ -2577,22 +2588,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     disabled={isExtractingViewers}
                     className="w-full mt-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors disabled:opacity-40"
                   >
-                    {isExtractingViewers ? 'ًں”چ ط¬ط§ط±ظٹ ط§ظ„ط§ط³طھط®ط±ط§ط¬...' : 'ًں¤– ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ط§ظ„طµظˆط±'}
+                    {isExtractingViewers ? 'ظ‹ع؛â€‌ع† ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·آ§ط¸â€‍ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ§ط·آ¬...' : 'ظ‹ع؛آ¤â€“ ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ±ط·آ§ط·آ¬ ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط¸ظ¾ط·آ§ط·آ¹ط¸â€‍ط¸ظ¹ط¸â€  ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±'}
                   </button>
                   {viewerAiError && <div className="text-[11px] text-red-400 text-center mt-2">{viewerAiError}</div>}
                 </div>
 
-                {/* â”€â”€ Quick name+image entry table â”€â”€ */}
+                {/* أ¢â€‌â‚¬أ¢â€‌â‚¬ Quick name+image entry table أ¢â€‌â‚¬أ¢â€‌â‚¬ */}
                 <div className="px-4 pb-2">
                     <label className="text-xs text-gray-500 font-bold flex items-center gap-1.5 mb-2">
-                      ط£ظˆ ط£ط¯ط®ظ„ ظٹط¯ظˆظٹط§ظ‹:
+                      ط·آ£ط¸ث† ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط¸ظ¹ط·آ¯ط¸ث†ط¸ظ¹ط·آ§ط¸â€¹:
                     </label>
                     <div className="space-y-1.5">
                         {Array.from({ length: count }, (_, i) => {
                             const idx = i + 1;
                             const nameVal = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Name`)?.value || '');
                             const imgVal  = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Image`)?.value || '');
-                            const medal = idx === 1 ? 'ًں‘‘' : idx === 2 ? 'ًں¥ˆ' : idx === 3 ? 'ًں¥‰' : `#${idx}`;
+                            const medal = idx === 1 ? 'ظ‹ع؛â€کâ€ک' : idx === 2 ? 'ظ‹ع؛آ¥ث†' : idx === 3 ? 'ظ‹ع؛آ¥â€°' : `#${idx}`;
                             return (
                                 <div key={idx} className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-yellow-900/20">
                                     <span className="text-xs w-5 text-center flex-shrink-0">{medal}</span>
@@ -2604,11 +2615,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     </div>
                                     <input type="text" value={nameVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Name`, e.target.value)}
-                                        placeholder={`ط§ظ„ط§ط³ظ… ${idx}`}
+                                        placeholder={`ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦ ${idx}`}
                                         className="flex-1 bg-transparent text-white text-xs placeholder-gray-600 focus:outline-none min-w-0" />
                                     <input type="text" value={imgVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Image`, e.target.value)}
-                                        placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©..."
+                                        placeholder="ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±ط·آ©..."
                                         className="flex-1 bg-transparent text-gray-400 text-[10px] placeholder-gray-700 focus:outline-none min-w-0 font-mono"
                                         dir="ltr" />
                                 </div>
@@ -2617,7 +2628,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     </div>
                 </div>
 
-                {/* â”€â”€ AI Badges button â”€â”€ */}
+                {/* أ¢â€‌â‚¬أ¢â€‌â‚¬ AI Badges button أ¢â€‌â‚¬أ¢â€‌â‚¬ */}
                 <div className="px-4 pb-4">
                     <button
                         onClick={async () => {
@@ -2628,7 +2639,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 if (name) viewers.push({ name, rank: i });
                             }
                             if (viewers.length === 0) {
-                                setViewerAiError('ط£ط¯ط®ظ„ ط£ط³ظ…ط§ط، ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ط£ظˆظ„ط§ظ‹.');
+                                setViewerAiError('ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ£ط·آ³ط¸â€¦ط·آ§ط·طŒ ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط¸ظ¾ط·آ§ط·آ¹ط¸â€‍ط¸ظ¹ط¸â€  ط·آ£ط¸ث†ط¸â€‍ط·آ§ط¸â€¹.');
                                 return;
                             }
 
@@ -2648,13 +2659,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     if (Object.keys(updates).length) {
                                         handleDraftFieldChanges(updates);
                                     } else {
-                                        setViewerAiError('ظ„ظ… ظٹط±ط¬ط¹ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ ط£ظˆط³ظ…ط© ظ‚ط§ط¨ظ„ط© ظ„ظ„ط§ط³طھط®ط¯ط§ظ….');
+                                        setViewerAiError('ط¸â€‍ط¸â€¦ ط¸ظ¹ط·آ±ط·آ¬ط·آ¹ ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ§ط·آµط·آ·ط¸â€ ط·آ§ط·آ¹ط¸ظ¹ ط·آ£ط¸ث†ط·آ³ط¸â€¦ط·آ© ط¸â€ڑط·آ§ط·آ¨ط¸â€‍ط·آ© ط¸â€‍ط¸â€‍ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط·آ§ط¸â€¦.');
                                     }
                                 } else {
-                                    setViewerAiError('ظ„ظ… ظٹط±ط¬ط¹ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ ط£ظˆط³ظ…ط© ظ‚ط§ط¨ظ„ط© ظ„ظ„ط§ط³طھط®ط¯ط§ظ….');
+                                    setViewerAiError('ط¸â€‍ط¸â€¦ ط¸ظ¹ط·آ±ط·آ¬ط·آ¹ ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ§ط·آµط·آ·ط¸â€ ط·آ§ط·آ¹ط¸ظ¹ ط·آ£ط¸ث†ط·آ³ط¸â€¦ط·آ© ط¸â€ڑط·آ§ط·آ¨ط¸â€‍ط·آ© ط¸â€‍ط¸â€‍ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط·آ§ط¸â€¦.');
                                 }
                             } catch (error) {
-                                setViewerAiError(error instanceof Error ? error.message : 'طھط¹ط°ط± طھظˆظ„ظٹط¯ ط§ظ„ط£ظˆط³ظ…ط©.');
+                                setViewerAiError(error instanceof Error ? error.message : 'ط·ع¾ط·آ¹ط·آ°ط·آ± ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ£ط¸ث†ط·آ³ط¸â€¦ط·آ©.');
                             } finally {
                                 setIsGeneratingViewerBadges(false);
                             }
@@ -2664,7 +2675,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         disabled={isGeneratingViewerBadges}
                         className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
                     >
-                        {isGeneratingViewerBadges ? 'âœ¨ ط¬ط§ط±ظٹ ط§ظ„طھظˆظ„ظٹط¯...' : 'âڑ، طھظˆظ„ظٹط¯ ط§ظ„ط£ظˆط³ظ…ط© ط¨ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ (ظ„ظ„ط£ط³ظ…ط§ط، ط§ظ„ظ…ط¯ط®ظ„ط©)'}
+                        {isGeneratingViewerBadges ? 'أ¢إ“آ¨ ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯...' : 'أ¢ع‘طŒ ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ£ط¸ث†ط·آ³ط¸â€¦ط·آ© ط·آ¨ط·آ§ط¸â€‍ط·آ°ط¸ئ’ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ§ط·آµط·آ·ط¸â€ ط·آ§ط·آ¹ط¸ظ¹ (ط¸â€‍ط¸â€‍ط·آ£ط·آ³ط¸â€¦ط·آ§ط·طŒ ط·آ§ط¸â€‍ط¸â€¦ط·آ¯ط·آ®ط¸â€‍ط·آ©)'}
                     </button>
                 </div>
             </div>
@@ -2674,42 +2685,42 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
         <div className="flex border-b border-white/[0.06] overflow-x-auto scrollbar-hide bg-[#13151f]">
           {/* ALWAYS: Main data tab */}
-          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں“‌ ط§ظ„ط¨ظٹط§ظ†ط§طھ</button>
+          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€œâ€Œ ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾</button>
 
           {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
-            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں–¼ï¸ڈ ط§ظ„طµظˆط±</button>
+            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€“آ¼أ¯آ¸عˆ ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Appearance tab */}
           {draftOverlay.type !== OverlayType.ELECTION && (
-            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًںژ¨ ط§ظ„ظ…ط¸ظ‡ط±</button>
+            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛عکآ¨ ط·آ§ط¸â€‍ط¸â€¦ط·آ¸ط¸â€،ط·آ±</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Position/Size tab */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale','positionX','positionY','containerWidth','sidebarWidth'].includes(f.id)) && (
-            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں“گ ط§ظ„ط£ط¨ط¹ط§ط¯</button>
+            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€œع¯ ط·آ§ط¸â€‍ط·آ£ط·آ¨ط·آ¹ط·آ§ط·آ¯</button>
           )}
 
           {draftOverlay.type === OverlayType.FOOTBALL_PACKAGE && (
             <>
-              <button onClick={() => setActiveTab('football-main')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط¨ط§ط±ط§ط©</button>
-              <button onClick={() => setActiveTab('football-lineup')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-lineup' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„طھط´ظƒظٹظ„ط©</button>
-              <button onClick={() => setActiveTab('football-score')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-score' ? 'text-yellow-400 border-yellow-500 bg-yellow-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ†طھظٹط¬ط©</button>
+              <button onClick={() => setActiveTab('football-main')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط·آ§ط·آ±ط·آ§ط·آ©</button>
+              <button onClick={() => setActiveTab('football-lineup')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-lineup' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط·ع¾ط·آ´ط¸ئ’ط¸ظ¹ط¸â€‍ط·آ©</button>
+              <button onClick={() => setActiveTab('football-score')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-score' ? 'text-yellow-400 border-yellow-500 bg-yellow-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸â€ ط·ع¾ط¸ظ¹ط·آ¬ط·آ©</button>
             </>
           )}
 
           {/* ALWAYS for non-ELECTION: Sound tab if exists */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
-            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں”ٹ ط§ظ„طµظˆطھ</button>
+            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€‌ظ¹ ط·آ§ط¸â€‍ط·آµط¸ث†ط·ع¾</button>
           )}
 
           {/* Slots / Presets Tab */}
-          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں—‚ï¸ڈ ط§ظ„ظ†ط³ط®</button>
+          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€”â€ڑأ¯آ¸عˆ ط·آ§ط¸â€‍ط¸â€ ط·آ³ط·آ®</button>
 
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
-             <button onClick={() => setActiveTab('sponsors')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sponsors' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں‘¥ ط§ظ„ط¯ط§ط¹ظ…ظٹظ†</button>
+             <button onClick={() => setActiveTab('sponsors')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sponsors' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛â€کآ¥ ط·آ§ط¸â€‍ط·آ¯ط·آ§ط·آ¹ط¸â€¦ط¸ظ¹ط¸â€ </button>
           )}
 
           {/* ELECTION: specialized tabs */}
@@ -2717,12 +2728,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
               return (
                   <>
-                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'candidates' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط±ط´ط­ظˆظ†</button>}
-                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'time' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظˆظ‚طھ</button>}
-                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'content' ? 'text-pink-400 border-pink-500 bg-pink-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط­طھظˆظ‰</button>}
-                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'camera' ? 'text-teal-400 border-teal-500 bg-teal-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظƒط§ظ…ظٹط±ط§</button>}
-                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'turnout' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ط¥ظ‚ط¨ط§ظ„</button>}
-                      <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًںژ¨ ط§ظ„ظ…ط¸ظ‡ط±</button>
+                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'candidates' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط·آ´ط·آ­ط¸ث†ط¸â€ </button>}
+                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'time' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸ث†ط¸â€ڑط·ع¾</button>}
+                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'content' ? 'text-pink-400 border-pink-500 bg-pink-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·ع¾ط¸ث†ط¸â€°</button>}
+                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'camera' ? 'text-teal-400 border-teal-500 bg-teal-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط¸ئ’ط·آ§ط¸â€¦ط¸ظ¹ط·آ±ط·آ§</button>}
+                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'turnout' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط·آ§ط¸â€‍ط·آ¥ط¸â€ڑط·آ¨ط·آ§ط¸â€‍</button>}
+                      <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ظ‹ع؛عکآ¨ ط·آ§ط¸â€‍ط¸â€¦ط·آ¸ط¸â€،ط·آ±</button>
                   </>
               );
           })()}
@@ -2876,13 +2887,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                          <div key={field.id} className="space-y-1">
                              <label className="text-xs text-gray-400 block">{field.label}</label>
                              <div className="flex items-center gap-2">
-                                 <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500" placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©..." />
-                                 <button onClick={() => triggerFileUpload(field.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="ط±ظپط¹ طµظˆط±ط© ظ…ظ† ط§ظ„ط¬ظ‡ط§ط²">
-                                     ط±ظپط¹
+                                 <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500" placeholder="ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±ط·آ©..." />
+                                 <button onClick={() => triggerFileUpload(field.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="ط·آ±ط¸ظ¾ط·آ¹ ط·آµط¸ث†ط·آ±ط·آ© ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط·آ¬ط¸â€،ط·آ§ط·آ²">
+                                     ط·آ±ط¸ظ¾ط·آ¹
                                  </button>
                              </div>
                              {field.value && field.value.toString().startsWith('data:image') && (
-                                 <div className="mt-2 text-[10px] text-green-400">طھظ… ط±ظپط¹ طµظˆط±ط© ظ…ط­ظ„ظٹط©</div>
+                                 <div className="mt-2 text-[10px] text-green-400">ط·ع¾ط¸â€¦ ط·آ±ط¸ظ¾ط·آ¹ ط·آµط¸ث†ط·آ±ط·آ© ط¸â€¦ط·آ­ط¸â€‍ط¸ظ¹ط·آ©</div>
                              )}
                          </div>
                      )
@@ -2912,13 +2923,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                    className="aspect-video bg-gray-800/50 border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-900/10 rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-400 transition-all"
                                  >
                                      <Plus className="w-5 h-5" />
-                                     <span className="text-[10px]">ط¥ط¶ط§ظپط© طµظˆط±ط©</span>
+                                     <span className="text-[10px]">ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط·آµط¸ث†ط·آ±ط·آ©</span>
                                  </button>
                              </div>
                              <div className="flex gap-2 mt-2">
                                  <input 
                                    type="text" 
-                                   placeholder="ط£ظˆ ط§ظ„طµظ‚ ط±ط§ط¨ط· طµظˆط±ط©..." 
+                                   placeholder="ط·آ£ط¸ث† ط·آ§ط¸â€‍ط·آµط¸â€ڑ ط·آ±ط·آ§ط·آ¨ط·آ· ط·آµط¸ث†ط·آ±ط·آ©..." 
                                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-xs text-white focus:border-blue-500"
                                    onKeyDown={(e) => {
                                        if (e.key === 'Enter') {
@@ -2947,16 +2958,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                    <div className="p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-4">
                        <div className="flex items-center gap-2 text-indigo-400">
                            <Layers className="w-5 h-5" />
-                           <h3 className="font-bold text-sm">ط¥ط¯ط§ط±ط© ط§ظ„ظ†ط³ط® (Presets)</h3>
+                           <h3 className="font-bold text-sm">ط·آ¥ط·آ¯ط·آ§ط·آ±ط·آ© ط·آ§ط¸â€‍ط¸â€ ط·آ³ط·آ® (Presets)</h3>
                        </div>
                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                           ظٹظ…ظƒظ†ظƒ ط­ظپط¸ ط§ظ„ط­ط§ظ„ط© ط§ظ„ط­ط§ظ„ظٹط© ط¨ظƒط§ظپط© ظ†طµظˆطµظ‡ط§ ظˆطµظˆط±ظ‡ط§ ظƒظ€ "ظ†ط³ط®ط©" ظ„ظ„طھط¨ط¯ظٹظ„ ط¨ظٹظ†ظ‡ط§ ط¨ط³ط±ط¹ط© ط¨ط¶ط؛ط·ط© ط²ط± ظˆط§ط­ط¯ط©.
+                           ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸ئ’ ط·آ­ط¸ظ¾ط·آ¸ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ© ط·آ¨ط¸ئ’ط·آ§ط¸ظ¾ط·آ© ط¸â€ ط·آµط¸ث†ط·آµط¸â€،ط·آ§ ط¸ث†ط·آµط¸ث†ط·آ±ط¸â€،ط·آ§ ط¸ئ’ط¸â‚¬ "ط¸â€ ط·آ³ط·آ®ط·آ©" ط¸â€‍ط¸â€‍ط·ع¾ط·آ¨ط·آ¯ط¸ظ¹ط¸â€‍ ط·آ¨ط¸ظ¹ط¸â€ ط¸â€،ط·آ§ ط·آ¨ط·آ³ط·آ±ط·آ¹ط·آ© ط·آ¨ط·آ¶ط·ط›ط·آ·ط·آ© ط·آ²ط·آ± ط¸ث†ط·آ§ط·آ­ط·آ¯ط·آ©.
                        </p>
                        <div className="flex gap-2">
                            <input 
                              type="text" 
                              id="new-slot-input"
-                             placeholder="ط§ط³ظ… ط§ظ„ظ†ط³ط®ط© (ظ…ط«ط§ظ„: ط§ظ„ط´ظˆط· ط§ظ„ط£ظˆظ„)..."
+                             placeholder="ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸â€ ط·آ³ط·آ®ط·آ© (ط¸â€¦ط·آ«ط·آ§ط¸â€‍: ط·آ§ط¸â€‍ط·آ´ط¸ث†ط·آ· ط·آ§ط¸â€‍ط·آ£ط¸ث†ط¸â€‍)..."
                              className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:border-indigo-500 transition-colors outline-none"
                            />
                            <button 
@@ -2983,7 +2994,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
                                    <Layers className="w-6 h-6 text-gray-700" />
                                </div>
-                               <p className="text-gray-600 text-xs font-medium">ظ„ط§ طھظˆط¬ط¯ ظ†ط³ط® ظ…ط­ظپظˆط¸ط© ظ„ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨.</p>
+                               <p className="text-gray-600 text-xs font-medium">ط¸â€‍ط·آ§ ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط¸â€ ط·آ³ط·آ® ط¸â€¦ط·آ­ط¸ظ¾ط¸ث†ط·آ¸ط·آ© ط¸â€‍ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط¸â€‍ط·آ¨.</p>
                            </div>
                        ) : (
                            Object.entries(draftOverlay.slots).map(([name, fields]) => (
@@ -2993,7 +3004,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                            <div className={`w-2.5 h-2.5 rounded-full ${draftOverlay.activeSlot === name ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-700'}`} />
                                            <div>
                                                <p className="text-sm font-bold text-white mb-0.5">{name}</p>
-                                               <p className="text-[10px] text-gray-500">{(fields as any[]).length} ط­ظ‚ظ„ ظ…ط®ط²ظ†</p>
+                                               <p className="text-[10px] text-gray-500">{(fields as any[]).length} ط·آ­ط¸â€ڑط¸â€‍ ط¸â€¦ط·آ®ط·آ²ط¸â€ </p>
                                            </div>
                                        </div>
                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -3005,7 +3016,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                  syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors"
-                                             title="طھط­ظ…ظٹظ„ ط§ظ„ظ†ط³ط®ط©"
+                                             title="ط·ع¾ط·آ­ط¸â€¦ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ ط·آ³ط·آ®ط·آ©"
                                            >
                                                <RotateCcw className="w-4 h-4" />
                                            </button>
@@ -3018,7 +3029,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                  syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
-                                             title="ط­ط°ظپ ط§ظ„ظ†ط³ط®ط©"
+                                             title="ط·آ­ط·آ°ط¸ظ¾ ط·آ§ط¸â€‍ط¸â€ ط·آ³ط·آ®ط·آ©"
                                            >
                                                <Trash2 className="w-4 h-4" />
                                            </button>
@@ -3041,18 +3052,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           <div className="mx-auto w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
                               <Lock className="w-6 h-6 text-red-500" />
                           </div>
-                          <h3 className="text-white font-bold">ظ…ظ†ط·ظ‚ط© ظ…ط­ظ…ظٹط©</h3>
-                          <p className="text-xs text-gray-400">ظپظ‚ط· ط§ظ„ظ…ط³ط¤ظˆظ„ ظٹظ…ظƒظ†ظ‡ طھط¹ط¯ظٹظ„ ظ‚ط§ط¦ظ…ط© ط§ظ„ط¯ط§ط¹ظ…ظٹظ†.</p>
+                          <h3 className="text-white font-bold">ط¸â€¦ط¸â€ ط·آ·ط¸â€ڑط·آ© ط¸â€¦ط·آ­ط¸â€¦ط¸ظ¹ط·آ©</h3>
+                          <p className="text-xs text-gray-400">ط¸ظ¾ط¸â€ڑط·آ· ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·آ¤ط¸ث†ط¸â€‍ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸â€، ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ ط¸â€ڑط·آ§ط·آ¦ط¸â€¦ط·آ© ط·آ§ط¸â€‍ط·آ¯ط·آ§ط·آ¹ط¸â€¦ط¸ظ¹ط¸â€ .</p>
                           <form onSubmit={handleAdminLogin} className="space-y-2">
                               <input 
                                 type="password" 
-                                placeholder="ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±" 
+                                placeholder="ط¸ئ’ط¸â€‍ط¸â€¦ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط¸ث†ط·آ±" 
                                 value={adminPassword}
                                 onChange={(e) => setAdminPassword(e.target.value)}
                                 className="w-full bg-black border border-gray-600 rounded p-2 text-white text-center focus:border-red-500 focus:outline-none"
                               />
                               <button type="submit" disabled={isAdminAuthorizing} className="w-full bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white py-2 rounded font-bold transition-colors">
-                                  {isAdminAuthorizing ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظ‚ظ‚...' : 'ظپطھط­ ط§ظ„ط¬ظ„ط³ط©'}
+                                  {isAdminAuthorizing ? 'ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ...' : 'ط¸ظ¾ط·ع¾ط·آ­ ط·آ§ط¸â€‍ط·آ¬ط¸â€‍ط·آ³ط·آ©'}
                               </button>
                               {passwordError && <p className="text-xs text-red-400">{passwordError}</p>}
                           </form>
@@ -3061,18 +3072,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       <div className="space-y-6 animate-fade-in-up">
                           <div className="flex items-center justify-between">
                               <h3 className="text-sm font-bold text-green-400 flex items-center gap-2">
-                                  <Unlock className="w-4 h-4" /> ظˆط¶ط¹ ط§ظ„ظ…ط³ط¤ظˆظ„
+                                  <Unlock className="w-4 h-4" /> ط¸ث†ط·آ¶ط·آ¹ ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط·آ¤ط¸ث†ط¸â€‍
                               </h3>
-                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white">ظ‚ظپظ„</button>
+                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white">ط¸â€ڑط¸ظ¾ط¸â€‍</button>
                           </div>
 
                           {/* Add Form */}
                           <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 space-y-3">
-                              <h4 className="text-xs font-bold text-white mb-2">ط¥ط¶ط§ظپط© ط¯ط§ط¹ظ… ط¬ط¯ظٹط¯</h4>
+                              <h4 className="text-xs font-bold text-white mb-2">ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط·آ¯ط·آ§ط·آ¹ط¸â€¦ ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯</h4>
                               
                               <div className="flex gap-2">
                                  <input 
-                                    type="text" placeholder="ط§ط³ظ… ط§ظ„ط¯ط§ط¹ظ…"
+                                    type="text" placeholder="ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط·آ¯ط·آ§ط·آ¹ط¸â€¦"
                                     value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})}
                                     className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
                                   />
@@ -3080,7 +3091,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                               <div className="flex gap-2">
                                   <input 
-                                    type="number" placeholder="ط§ظ„ظ…ط¨ظ„ط؛"
+                                    type="number" placeholder="ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط¸â€‍ط·ط›"
                                     value={newSponsor.amount} onChange={e => setNewSponsor({...newSponsor, amount: e.target.value})}
                                     className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
                                   />
@@ -3091,13 +3102,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                       {CURRENCY_OPTIONS.map(curr => (
                                           <option key={curr.code} value={curr.code}>{curr.label}</option>
                                       ))}
-                                      <option value="OTH">ط£ط®ط±ظ‰ (USD)</option>
+                                      <option value="OTH">ط·آ£ط·آ®ط·آ±ط¸â€° (USD)</option>
                                   </select>
                               </div>
 
                               {/* LIVE USD PREVIEW */}
                               <div className="flex items-center justify-between px-2 text-[10px] text-gray-400 font-mono bg-black/20 rounded py-1 border border-white/5">
-                                  <span>ط³ظٹط¸ظ‡ط± ظƒظ€:</span>
+                                  <span>ط·آ³ط¸ظ¹ط·آ¸ط¸â€،ط·آ± ط¸ئ’ط¸â‚¬:</span>
                                   <span className="text-green-400 font-bold">
                                       {previewUSD !== null ? `$${previewUSD.toLocaleString()}` : '...'}
                                   </span>
@@ -3105,7 +3116,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                               <div className="relative">
                                   <input 
-                                    type="text" placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط© (ط§ط®طھظٹط§ط±ظٹ)"
+                                    type="text" placeholder="ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)"
                                     value={newSponsor.avatar} onChange={e => setNewSponsor({...newSponsor, avatar: e.target.value})}
                                     className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-500 pl-8"
                                   />
@@ -3117,23 +3128,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 disabled={isAddingSponsor}
                                 className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded flex items-center justify-center gap-2 font-bold transition-all transform active:scale-95"
                               >
-                                  {isAddingSponsor ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظˆظٹظ„ ظˆط§ظ„ط¥ط¶ط§ظپط©...' : <><Plus className="w-4 h-4" /> ط¥ط¶ط§ظپط© ظ„ظ„ظ‚ط§ط¦ظ…ط©</>}
+                                  {isAddingSponsor ? 'ط·آ¬ط·آ§ط·آ±ط¸ظ¹ ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸ث†ط¸ظ¹ط¸â€‍ ط¸ث†ط·آ§ط¸â€‍ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ©...' : <><Plus className="w-4 h-4" /> ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط¸â€‍ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸â€¦ط·آ©</>}
                               </button>
                           </div>
 
                           {/* List */}
                           <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                  <h4 className="text-xs font-bold text-gray-400">ط§ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ط­ط§ظ„ظٹط©</h4>
-                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="طھط±طھظٹط¨ ط­ط³ط¨ ط§ظ„ظ…ط¨ظ„ط؛">
-                                      <ArrowDownUp className="w-3 h-3" /> طھط±طھظٹط¨
+                                  <h4 className="text-xs font-bold text-gray-400">ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸â€¦ط·آ© ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط¸ظ¹ط·آ©</h4>
+                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="ط·ع¾ط·آ±ط·ع¾ط¸ظ¹ط·آ¨ ط·آ­ط·آ³ط·آ¨ ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط¸â€‍ط·ط›">
+                                      <ArrowDownUp className="w-3 h-3" /> ط·ع¾ط·آ±ط·ع¾ط¸ظ¹ط·آ¨
                                   </button>
                               </div>
                               <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
                                   {(() => {
                                       const sponsors: Sponsor[] = JSON.parse(String(getDraftValue('sponsorsData') || '[]'));
                                       return sponsors.length === 0 ? (
-                                          <p className="text-xs text-gray-500 text-center py-4">ط§ظ„ظ‚ط§ط¦ظ…ط© ظپط§ط±ط؛ط©</p>
+                                          <p className="text-xs text-gray-500 text-center py-4">ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸â€¦ط·آ© ط¸ظ¾ط·آ§ط·آ±ط·ط›ط·آ©</p>
                                       ) : (
                                           sponsors.map((s, idx) => (
                                               <React.Fragment key={s.id}>
@@ -3160,25 +3171,25 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                                 setEditSponsorData({ name: s.name, avatar: s.avatar || '' });
                                                             }}
                                                             className="p-1 text-gray-500 hover:text-blue-400"
-                                                            title="طھط¹ط¯ظٹظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ"
+                                                            title="ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾"
                                                           >
                                                               <Edit3 className="w-4 h-4" />
                                                           </button>
                                                           <button 
                                                             onClick={() => setViewingHistoryId(viewingHistoryId === s.id ? null : s.id)}
                                                             className={`p-1 rounded transition-colors ${viewingHistoryId === s.id ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-purple-400'}`}
-                                                            title="ط³ط¬ظ„ ط§ظ„ط¯ط¹ظ…"
+                                                            title="ط·آ³ط·آ¬ط¸â€‍ ط·آ§ط¸â€‍ط·آ¯ط·آ¹ط¸â€¦"
                                                           >
                                                               <History className="w-4 h-4" />
                                                           </button>
                                                           <button 
                                                             onClick={() => setTopUpSponsorId(topUpSponsorId === s.id ? null : s.id)} 
                                                             className={`p-1 rounded transition-colors ${topUpSponsorId === s.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-blue-400'}`}
-                                                            title="ط¥ط¶ط§ظپط© ظ…ط¨ظ„ط؛ (ط¯ط¹ظ… ط¬ط¯ظٹط¯)"
+                                                            title="ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط¸â€¦ط·آ¨ط¸â€‍ط·ط› (ط·آ¯ط·آ¹ط¸â€¦ ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯)"
                                                           >
                                                               <Plus className="w-4 h-4" />
                                                           </button>
-                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="ط­ط°ظپ">
+                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="ط·آ­ط·آ°ط¸ظ¾">
                                                               <Trash2 className="w-4 h-4" />
                                                           </button>
                                                       </div>
@@ -3189,26 +3200,26 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                               {editingSponsorId === s.id && (
                                                   <div className="bg-gray-800 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">طھط¹ط¯ظٹظ„ ط¨ظٹط§ظ†ط§طھ {s.name}</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ {s.name}</span>
                                                           <button onClick={() => setEditingSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
                                                       <input 
                                                         type="text" value={editSponsorData.name} 
                                                         onChange={e => setEditSponsorData({...editSponsorData, name: e.target.value})}
                                                         className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
-                                                        placeholder="ط§ظ„ط§ط³ظ…"
+                                                        placeholder="ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦"
                                                       />
                                                       <input 
                                                         type="text" value={editSponsorData.avatar} 
                                                         onChange={e => setEditSponsorData({...editSponsorData, avatar: e.target.value})}
                                                         className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-400"
-                                                        placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©"
+                                                        placeholder="ط·آ±ط·آ§ط·آ¨ط·آ· ط·آ§ط¸â€‍ط·آµط¸ث†ط·آ±ط·آ©"
                                                       />
                                                       <button 
                                                         onClick={() => handleUpdateSponsorInfo(s.id)}
                                                         className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1.5 rounded text-xs font-bold"
                                                       >
-                                                          طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ
+                                                          ط·ع¾ط·آ­ط·آ¯ط¸ظ¹ط·آ« ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾
                                                       </button>
                                                   </div>
                                               )}
@@ -3218,7 +3229,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                   <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-2">
                                                       <div className="flex items-center justify-between mb-1 border-b border-purple-500/20 pb-1">
                                                           <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
-                                                              <History className="w-3 h-3" /> ط³ط¬ظ„ ط¯ط¹ظ… {s.name}
+                                                              <History className="w-3 h-3" /> ط·آ³ط·آ¬ط¸â€‍ ط·آ¯ط·آ¹ط¸â€¦ {s.name}
                                                           </span>
                                                           <button onClick={() => setViewingHistoryId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
@@ -3250,7 +3261,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                               {topUpSponsorId === s.id && (
                                                   <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">ط¯ط¹ظ… ط¥ط¶ط§ظپظٹ ظ„ظ€ {s.name}</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">ط·آ¯ط·آ¹ط¸â€¦ ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط¸ظ¹ ط¸â€‍ط¸â‚¬ {s.name}</span>
                                                           <button onClick={() => setTopUpSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
                                                       
@@ -3258,7 +3269,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                           <input 
                                                             autoFocus
                                                             type="number" 
-                                                            placeholder="ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…ط¶ط§ظپ..." 
+                                                            placeholder="ط·آ§ط¸â€‍ط¸â€¦ط·آ¨ط¸â€‍ط·ط› ط·آ§ط¸â€‍ط¸â€¦ط·آ¶ط·آ§ط¸ظ¾..." 
                                                             value={topUpAmount}
                                                             onChange={e => setTopUpAmount(e.target.value)}
                                                             className="flex-1 bg-black/40 border border-blue-500/50 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
@@ -3268,7 +3279,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                             disabled={isToppingUp || !topUpAmount}
                                                             className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50"
                                                           >
-                                                              {isToppingUp ? '...' : 'طھط­ط¯ظٹط«'}
+                                                              {isToppingUp ? '...' : 'ط·ع¾ط·آ­ط·آ¯ط¸ظ¹ط·آ«'}
                                                           </button>
                                                       </div>
 
@@ -3304,7 +3315,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
                          <h4 className="text-xs font-bold text-white mb-3 flex items-center gap-2">
                              <Sparkles className="w-3 h-3 text-yellow-500" />
-                             ط£ط­ط¬ط§ظ… ط§ظ„ظ†طµظˆطµ (Typography)
+                             ط·آ£ط·آ­ط·آ¬ط·آ§ط¸â€¦ ط·آ§ط¸â€‍ط¸â€ ط·آµط¸ث†ط·آµ (Typography)
                          </h4>
                          <div className="space-y-3">
                             {['headerFontSize', 'nameFontSize', 'amountFontSize'].map(id => {
@@ -3333,10 +3344,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  {/* Standard Colors */}
                  {draftOverlay.type !== OverlayType.ELECTION && (
                      <div>
-                        <h4 className="text-xs font-bold text-gray-400 mb-2">ط£ظ„ظˆط§ظ† ط§ظ„ط«ظٹظ…</h4>
+                        <h4 className="text-xs font-bold text-gray-400 mb-2">ط·آ£ط¸â€‍ط¸ث†ط·آ§ط¸â€  ط·آ§ط¸â€‍ط·آ«ط¸ظ¹ط¸â€¦</h4>
                          {['primaryColor', 'secondaryColor'].map(key => (
                            <div key={key} className="mb-2">
-                             <label className="text-xs text-gray-500 block mb-1">{key === 'primaryColor' ? 'ط§ظ„ظ„ظˆظ† ط§ظ„ط£ط³ط§ط³ظٹ' : 'ط§ظ„ظ„ظˆظ† ط§ظ„ط«ط§ظ†ظˆظٹ'}</label>
+                             <label className="text-xs text-gray-500 block mb-1">{key === 'primaryColor' ? 'ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط¸â€  ط·آ§ط¸â€‍ط·آ£ط·آ³ط·آ§ط·آ³ط¸ظ¹' : 'ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط¸â€  ط·آ§ط¸â€‍ط·آ«ط·آ§ط¸â€ ط¸ث†ط¸ظ¹'}</label>
                              <div className="flex items-center gap-2 bg-gray-800 p-2 rounded">
                                <input type="color" value={(draftOverlay.theme as any)[key]} onChange={(e) => updateDraftTheme(key, e.target.value)} className="h-6 w-6 rounded border-none cursor-pointer bg-transparent" />
                                <span className="text-xs text-gray-400 font-mono">{(draftOverlay.theme as any)[key]}</span>
@@ -3351,19 +3362,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
        </div>{/* end w-96 inner */}
       </div>{/* end right panel transition wrapper */}
 
-      {/* â•گâ•گ CENTER PANEL (PREVIEW MONITOR) â•گâ•گ */}
+      {/* أ¢â€¢ع¯أ¢â€¢ع¯ CENTER PANEL (PREVIEW MONITOR) أ¢â€¢ع¯أ¢â€¢ع¯ */}
       <div className="flex-1 flex flex-col bg-[#0c0d10] relative overflow-hidden">
          {/* Top Control Bar */}
          <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-5 bg-[#10121a] z-20">
              <div className="flex items-center gap-3">
-                 <button onClick={() => setPanelOpen(p => !p)} className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors" title={panelOpen ? 'ط¥ط®ظپط§ط، ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ' : 'ط¥ط¸ظ‡ط§ط± ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ'}>
+                 <button onClick={() => setPanelOpen(p => !p)} className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors" title={panelOpen ? 'ط·آ¥ط·آ®ط¸ظ¾ط·آ§ط·طŒ ط·آ§ط¸â€‍ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ط·آ§ط·ع¾' : 'ط·آ¥ط·آ¸ط¸â€،ط·آ§ط·آ± ط·آ§ط¸â€‍ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ط·آ§ط·ع¾'}>
                    <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${panelOpen ? '' : 'rotate-180'}`} />
                  </button>
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
-                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">â—ڈ ON AIR</span>}
+                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">أ¢â€”عˆ ON AIR</span>}
                  <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black transition-all ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'}`}>
-                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" />ط¥ظٹظ‚ط§ظپ ط§ظ„ط¨ط«</> : <><EyeOff className="w-3.5 h-3.5" />ط¥ط¸ظ‡ط§ط± ط¹ظ„ظ‰ ط§ظ„ط¨ط«</>}
+                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" />ط·آ¥ط¸ظ¹ط¸â€ڑط·آ§ط¸ظ¾ ط·آ§ط¸â€‍ط·آ¨ط·آ«</> : <><EyeOff className="w-3.5 h-3.5" />ط·آ¥ط·آ¸ط¸â€،ط·آ§ط·آ± ط·آ¹ط¸â€‍ط¸â€° ط·آ§ط¸â€‍ط·آ¨ط·آ«</>}
                  </button>
              </div>
              <div className="flex items-center gap-2">
@@ -3375,7 +3386,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     else window.open(url, '_blank', 'width=1280,height=720');
                  }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors">
                      <Monitor className="w-3.5 h-3.5" />
-                     <span>ظ†ط§ظپط°ط© ط§ظ„ط¨ط«</span>
+                     <span>ط¸â€ ط·آ§ط¸ظ¾ط·آ°ط·آ© ط·آ§ط¸â€‍ط·آ¨ط·آ«</span>
                  </button>
              </div>
          </div>
@@ -3389,7 +3400,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
          </div>
 
-         {/* â”€â”€ Slot Quick-Bar â”€â”€ */}
+         {/* أ¢â€‌â‚¬أ¢â€‌â‚¬ Slot Quick-Bar أ¢â€‌â‚¬أ¢â€‌â‚¬ */}
          <div className="shrink-0 border-t border-white/[0.06] bg-[#10121a] px-4 py-2 flex items-center gap-2 overflow-x-auto">
            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 shrink-0">PRESETS</span>
            <div className="w-px h-3 bg-white/10 shrink-0" />
@@ -3399,7 +3410,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                {draftOverlay.activeSlot === name && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 align-middle" />}{name}
              </button>
            ))}
-           <input value={newSlotName} onChange={e => setNewSlotName(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newSlotName.trim()){ const n=newSlotName.trim(); const upd={...draftOverlay,slots:{...draftOverlay.slots,[n]:JSON.parse(JSON.stringify(draftOverlay.fields))},activeSlot:n}; setDraftOverlay(upd); syncManager.updateOverlay(upd); setNewSlotName(''); }}} placeholder="+ ظ†ط³ط®ط© ط¬ط¯ظٹط¯ط©..." className="bg-transparent text-xs text-gray-400 placeholder-gray-700 focus:outline-none focus:text-white w-28 shrink-0 border-b border-transparent focus:border-indigo-500 pb-0.5 transition-colors" />
+           <input value={newSlotName} onChange={e => setNewSlotName(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newSlotName.trim()){ const n=newSlotName.trim(); const upd={...draftOverlay,slots:{...draftOverlay.slots,[n]:JSON.parse(JSON.stringify(draftOverlay.fields))},activeSlot:n}; setDraftOverlay(upd); syncManager.updateOverlay(upd); setNewSlotName(''); }}} placeholder="+ ط¸â€ ط·آ³ط·آ®ط·آ© ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯ط·آ©..." className="bg-transparent text-xs text-gray-400 placeholder-gray-700 focus:outline-none focus:text-white w-28 shrink-0 border-b border-transparent focus:border-indigo-500 pb-0.5 transition-colors" />
          </div>
        </div>
      </div>
