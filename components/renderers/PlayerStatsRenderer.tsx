@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
+import { getMetricLabel, LABELS } from '../../utils/playerStatsLabels';
 
 type PlayerMetricValue = {
   status: 'available' | 'unavailable' | 'error';
@@ -320,7 +321,9 @@ const ClubMark = ({ player, accent }: { player: PlayerStatsCard; accent: string 
 );
 
 const StatTile = ({ metricKey, metric, accent, index }: { metricKey: string; metric: PlayerMetricValue; accent: string; index: number; key?: React.Key }) => {
-  const displayLabel = metric.labelAr || metric.label || metricKey.replace(/_/g, ' ');
+  const arLabel = getMetricLabel(metricKey, 'ar');
+  const enLabel = getMetricLabel(metricKey, 'en');
+  const displayLabel = arLabel;
   const Icon = statIcon(displayLabel);
   
   if (metric.status === 'unavailable' || metric.status === 'error') {
@@ -332,20 +335,21 @@ const StatTile = ({ metricKey, metric, accent, index }: { metricKey: string; met
               <AlertCircle size={17} color="#666" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{displayLabel}</div>
-              <div className="truncate text-[9px] font-bold text-rose-400/80 uppercase">
-                {metric.reason === 'stat_group_not_available' ? `Requires ${metric.requiredStatGroup}` : metric.reason?.replace(/_/g, ' ') || 'Missing'}
+              <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45" dir="rtl">{displayLabel}</div>
+              <div className="truncate text-[9px] font-bold text-rose-400/80 uppercase" dir="rtl">
+                {metric.reason === 'stat_group_not_available' ? `${LABELS.renderer.requires.ar} ${metric.requiredStatGroup}` : metric.reason?.replace(/_/g, ' ') || 'غير متاح'}
               </div>
             </div>
           </div>
-          <div className="font-['Barlow_Condensed'] text-xl font-black uppercase leading-none text-white/20">Unavailable</div>
+          <div className="font-['Barlow_Condensed'] text-xl font-black uppercase leading-none text-white/20">—</div>
         </div>
       </div>
     );
   }
 
   const width = statPercent(metric.value, index);
-  const caption = [metric.source === 'demo' ? 'demo' : metric.source, metric.statGroup, metric.unit].filter(Boolean).join(' / ');
+  const cleanSource = metric.source === 'demo' || metric.source === 'demoProvider' || metric.source === 'legacy' ? '' : metric.source;
+  const caption = [cleanSource, metric.statGroup !== 'legacy' ? metric.statGroup : ''].filter(Boolean).join(' / ');
   
   return (
     <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4">
@@ -356,8 +360,8 @@ const StatTile = ({ metricKey, metric, accent, index }: { metricKey: string; met
             <Icon size={17} color={accent} />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{displayLabel}</div>
-            <div className="truncate text-[11px] font-bold text-white/34">{caption || 'season data'}</div>
+            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45" dir="rtl">{displayLabel}</div>
+            <div className="truncate text-[9px] font-bold text-white/25">{enLabel}</div>
           </div>
         </div>
         <div className="font-['Barlow_Condensed'] text-[38px] font-black leading-none" style={{ color: accent }}>{metric.value}</div>
@@ -535,9 +539,9 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
            <div className="absolute top-1 right-1 flex items-center gap-2 bg-black/60 border border-white/10 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-[0.1em] backdrop-blur-md z-10">
               <Info size={13} className={coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'} />
               <span className={coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}>
-                 {coverage.status === 'full' ? 'FULL FBREF CACHE' : 'PARTIAL FBREF CACHE'}
+                 {coverage.status === 'full' ? LABELS.renderer.fullFbref.ar : LABELS.renderer.partialFbref.ar}
               </span>
-              <span className="text-white/40 ml-2">Available: {coverage.availableStatGroups?.slice(0, 2).join(', ')}{coverage.availableStatGroups?.length > 2 ? '...' : ''}</span>
+              <span className="text-white/40 ml-2">{LABELS.renderer.available.ar}: {coverage.availableStatGroups?.slice(0, 2).join(', ')}{coverage.availableStatGroups?.length > 2 ? '...' : ''}</span>
            </div>
         )}
 
@@ -547,7 +551,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
               <BrainCircuit size={18} color={accent} />
               <span>AI PLAYER STATS</span>
               <span className="h-1 w-1 rounded-full" style={{ background: accent }} />
-              <span>{payload.source || 'REO Player Data Bridge'}</span>
+              <span>{payload.source === 'demoProvider' || payload.source === 'demo' ? 'REO Data Bridge' : payload.source || 'REO Data Bridge'}</span>
             </div>
             <h1 className="mt-2 font-['Barlow_Condensed'] text-[76px] font-black uppercase leading-none tracking-normal text-white">
               {title}
@@ -593,11 +597,11 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                     {availableMetrics.slice(0, 4).map(([key, metric], index) => {
                        return (
                         <div key={key} className="flex flex-col items-center justify-center text-center p-2">
-                          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1">{metric.labelAr || metric.label || key.replace(/_/g, ' ')}</div>
+                          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1" dir="rtl">{getMetricLabel(key, 'ar')}</div>
                           <div className="font-['Barlow_Condensed'] text-[42px] font-black uppercase text-white" style={{ color: index % 2 ? secondaryAccent : accent }}>
                             {metric.value}
                           </div>
-                          <div className="text-[9px] font-bold text-white/30 uppercase mt-1">{metric.source === 'demo' ? 'demo' : metric.source} / {metric.statGroup}</div>
+                          <div className="text-[9px] font-bold text-white/25 uppercase mt-1">{getMetricLabel(key, 'en')}</div>
                         </div>
                       )
                     })}
@@ -614,10 +618,10 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                 {/* Missing Advanced Metrics Box */}
                 {showUnavailableBox && (
                   <div className="mt-auto border border-dashed border-rose-500/30 bg-rose-500/5 p-3 flex flex-col gap-1.5">
-                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Missing Advanced Metrics</div>
-                    <div className="text-[10px] text-white/40 leading-snug">
+                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest" dir="rtl">{LABELS.renderer.missingAdvanced.ar}</div>
+                    <div className="text-[10px] text-white/40 leading-snug" dir="rtl">
                       {missingMetrics.map(([k, m]) => (
-                        <div key={k}>- <strong className="text-white/60">{k.replace(/_/g, ' ')}</strong> requires <span className="text-rose-300/80">{m.requiredStatGroup || m.statGroup}</span></div>
+                        <div key={k}>- <strong className="text-white/60">{getMetricLabel(k, 'ar')}</strong> {LABELS.renderer.requires.ar} <span className="text-rose-300/80">{m.requiredStatGroup || m.statGroup}</span></div>
                       ))}
                     </div>
                   </div>
@@ -645,8 +649,8 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
               {visiblePlayers[1] ? (
                  <PlayerColumn player={visiblePlayers[1]} metricsOverride={orderedMetrics(visiblePlayers[1])} accent={secondaryAccent} index={6} />
               ) : (
-                 <div className="flex items-center justify-center border border-white/10 bg-black/40 p-5 text-white/20 font-black uppercase tracking-widest text-sm">
-                   Awaiting Player 2
+                 <div className="flex items-center justify-center border border-white/10 bg-black/40 p-5 text-white/20 font-black uppercase tracking-widest text-sm" dir="rtl">
+                   {LABELS.renderer.awaitingPlayer2.ar}
                  </div>
               )}
             </>

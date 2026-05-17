@@ -17,6 +17,25 @@ import {
   findAssetUrl,
 } from '../utils/assetCache';
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
+import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { SortableMetricItem } from '../components/editor/SortableMetricItem';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -1782,63 +1801,155 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.PLAYER_STATS && (() => {
             const parsedSource = JSON.parse(String(getDraftValue('playerStatsSourceJson') || '{}'));
             const coverage = parsedSource.coverage;
+            const statsMode = String(getDraftValue('playerStatsMode') || 'SINGLE');
             const tabs = [
-                { id: 'setup', label: 'Setup' },
-                { id: 'presets', label: 'Presets' },
-                { id: 'metrics', label: 'Metrics' },
-                { id: 'coverage', label: 'Coverage' },
-                { id: 'visuals', label: 'Visuals' },
-                { id: 'advanced', label: 'Advanced' }
+                { id: 'setup',    label: LABELS.tabs.setup.ar },
+                { id: 'presets',  label: LABELS.tabs.presets.ar },
+                { id: 'metrics',  label: LABELS.tabs.metrics.ar },
+                { id: 'coverage', label: LABELS.tabs.coverage.ar },
+                { id: 'visuals',  label: LABELS.tabs.visuals.ar },
+                { id: 'advanced', label: LABELS.tabs.advanced.ar },
             ] as const;
-            
+
+            // Derive hero/secondary/hidden from stored JSON
+            const heroKeys = (JSON.parse(String(getDraftValue('heroMetricsJson') || '[]')) as string[]);
+            const secondaryKeys = (JSON.parse(String(getDraftValue('secondaryMetricsJson') || '[]')) as string[]);
+            const hiddenKeys = (JSON.parse(String(getDraftValue('hiddenMetricsJson') || '[]')) as string[]);
+            const allFetchedMetrics = parsedSource?.players?.[0]?.metrics || {};
+            const missingKeys = Object.entries(allFetchedMetrics)
+              .filter(([_, m]: [string, any]) => m.status === 'unavailable' || m.status === 'error')
+              .map(([k]) => k);
+
+            const writeMetricOrder = (hero: string[], secondary: string[], hidden: string[]) => {
+                handleDraftFieldChanges({
+                    heroMetricsJson: JSON.stringify(hero),
+                    secondaryMetricsJson: JSON.stringify(secondary),
+                    hiddenMetricsJson: JSON.stringify(hidden),
+                    selectedMetricsJson: JSON.stringify([...hero, ...secondary]),
+                });
+            };
+
+            const moveMetric = (key: string, from: 'hero' | 'secondary' | 'hidden', to: 'hero' | 'secondary' | 'hidden') => {
+                const lists = { hero: [...heroKeys], secondary: [...secondaryKeys], hidden: [...hiddenKeys] };
+                lists[from] = lists[from].filter(k => k !== key);
+                if (to === 'hero' && lists.hero.length >= 5) return; // Hero limit
+                if (to === 'secondary' && lists.secondary.length >= 8) return; // Secondary limit
+                lists[to].push(key);
+                writeMetricOrder(lists.hero, lists.secondary, lists.hidden);
+            };
+
+            const reorderMetric = (section: 'hero' | 'secondary', oldIndex: number, newIndex: number) => {
+                if (section === 'hero') {
+                    writeMetricOrder(arrayMove(heroKeys, oldIndex, newIndex), secondaryKeys, hiddenKeys);
+                } else {
+                    writeMetricOrder(heroKeys, arrayMove(secondaryKeys, oldIndex, newIndex), hiddenKeys);
+                }
+            };
+
+            const removeMetric = (key: string) => {
+                writeMetricOrder(
+                    heroKeys.filter(k => k !== key),
+                    secondaryKeys.filter(k => k !== key),
+                    hiddenKeys.filter(k => k !== key),
+                );
+            };
+
+            const handleDragEnd = (section: 'hero' | 'secondary') => (event: DragEndEvent) => {
+                const { active, over } = event;
+                if (!over || active.id === over.id) return;
+                const items = section === 'hero' ? heroKeys : secondaryKeys;
+                const oldIndex = items.indexOf(String(active.id));
+                const newIndex = items.indexOf(String(over.id));
+                if (oldIndex !== -1 && newIndex !== -1) reorderMetric(section, oldIndex, newIndex);
+            };
+
             return (
-            <div className="shrink-0 flex flex-col h-[58vh] border-b border-cyan-900/40 bg-slate-950/70">
-                {/* Tabs Header */}
-                <div className="flex bg-slate-900 border-b border-slate-800">
+            <div className="shrink-0 flex flex-col flex-1 min-h-0 border-b border-cyan-900/40 bg-slate-950/70" dir="rtl">
+                {/* Sticky Tabs Header */}
+                <div className="flex bg-slate-900 border-b border-slate-800 sticky top-0 z-20">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActivePlayerStatsTab(tab.id)}
-                            className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${activePlayerStatsTab === tab.id ? 'bg-cyan-500/10 text-cyan-400 border-b-2 border-cyan-500' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                            className={`flex-1 py-2.5 text-[10px] font-black transition-colors ${activePlayerStatsTab === tab.id ? 'bg-cyan-500/10 text-cyan-400 border-b-2 border-cyan-500' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
                         >
                             {tab.label}
                         </button>
                     ))}
                 </div>
-                
+
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:thin] space-y-4">
-                    
+
+                    {/* ═══ SETUP TAB ═══ */}
                     {activePlayerStatsTab === 'setup' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-black text-cyan-200 block mb-1">Player Mode</label>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.playerMode.ar}</label>
                                 <select
-                                    value={String(getDraftValue('playerStatsMode') || 'SINGLE')}
+                                    value={statsMode}
                                     onChange={(event) => handleDraftFieldChange('playerStatsMode', event.target.value)}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+                                    dir="rtl"
                                 >
-                                    <option value="SINGLE">Single Player</option>
-                                    <option value="COMPARE">Compare 2 Players</option>
-                                    <option value="SCOUT_SHORTLIST">Scout 3 Players</option>
+                                    <option value="SINGLE">{LABELS.setup.singlePlayer.ar}</option>
+                                    <option value="COMPARE">{LABELS.setup.comparePlayers.ar}</option>
+                                    <option value="SCOUT_SHORTLIST">{LABELS.setup.scoutShortlist.ar}</option>
                                 </select>
                             </div>
+
+                            {/* Player A */}
                             <div className="space-y-2">
-                                <label className="text-xs font-black text-cyan-200 block mb-1">Target Player</label>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.targetPlayer.ar}</label>
                                 <input
                                     value={String(getDraftValue('playerAName') || getDraftValue('playerName') || getDraftValue('sourcePlayerName') || '')}
                                     onChange={(event) => handleDraftFieldChange('playerAName', event.target.value)}
-                                    placeholder="Player Name (e.g. Lamine Yamal)"
+                                    placeholder={LABELS.setup.playerName.en}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                    dir="ltr"
                                 />
                                 <input
                                     value={String(getDraftValue('playerAClub') || getDraftValue('playerTeam') || getDraftValue('sourceClubName') || '')}
                                     onChange={(event) => handleDraftFieldChange('playerAClub', event.target.value)}
-                                    placeholder="Club (e.g. Barcelona)"
+                                    placeholder={LABELS.setup.club.en}
                                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                    dir="ltr"
                                 />
                             </div>
-                            
+
+                            {/* Player B — only in Compare/Scout */}
+                            {statsMode !== 'SINGLE' && (
+                                <div className="space-y-2 border-t border-slate-800 pt-3">
+                                    <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.secondPlayer.ar}</label>
+                                    <input
+                                        value={String(getDraftValue('playerBName') || '')}
+                                        onChange={(event) => handleDraftFieldChange('playerBName', event.target.value)}
+                                        placeholder={LABELS.setup.playerName.en}
+                                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                        dir="ltr"
+                                    />
+                                    <input
+                                        value={String(getDraftValue('playerBClub') || '')}
+                                        onChange={(event) => handleDraftFieldChange('playerBClub', event.target.value)}
+                                        placeholder={LABELS.setup.club.en}
+                                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                        dir="ltr"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Season */}
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.season.ar}</label>
+                                <input
+                                    value={String(getDraftValue('seasonLabel') || '2025/26')}
+                                    onChange={(event) => handleDraftFieldChange('seasonLabel', event.target.value)}
+                                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                    dir="ltr"
+                                />
+                            </div>
+
+                            {/* Fetch Button */}
                             <button
                               type="button"
                               onClick={handleFetchPlayerStats}
@@ -1846,15 +1957,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
                             >
                                 <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
-                                {isFetchingPlayerStats ? 'Fetching selected metrics...' : 'Fetch selected player stats'}
+                                {isFetchingPlayerStats ? LABELS.setup.fetching.ar : LABELS.setup.fetch.ar}
                             </button>
                         </div>
                     )}
-                    
+
+                    {/* ═══ PRESETS TAB ═══ */}
                     {activePlayerStatsTab === 'presets' && (
                         <div className="space-y-4">
                             <div>
-                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">Presets</div>
+                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">{LABELS.presets.title.ar}</div>
                                 <div className="grid grid-cols-2 gap-1.5">
                                     {Object.keys(PLAYER_STATS_PRESETS).map(preset => {
                                         const active = String(getDraftValue('metricPreset') || 'Attacker Profile') === preset;
@@ -1872,7 +1984,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 </div>
                             </div>
                             <div>
-                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">Categories</div>
+                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">{LABELS.presets.categories.ar}</div>
                                 <div className="grid grid-cols-3 gap-1.5">
                                     {PLAYER_STATS_CATEGORIES.map(category => {
                                         const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category.key]);
@@ -1892,127 +2004,165 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             </div>
                         </div>
                     )}
-                    
+
+                    {/* ═══ METRICS TAB — Drag & Drop Ordering ═══ */}
                     {activePlayerStatsTab === 'metrics' && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] font-black text-cyan-200">Select Metrics ({selectedMetricKeys.length})</div>
-                            </div>
-                            
-                            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                                {selectedMetricKeys.map(key => {
-                                    const metric = effectiveMetricCatalog.find(item => item.key === key);
-                                    const isMissing = coverage?.missingStatGroups?.includes(metric?.category);
-                                    return (
-                                        <button
-                                          key={key}
-                                          type="button"
-                                          onClick={() => toggleMetricKey(key)}
-                                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black transition-colors ${isMissing ? 'border-rose-500/35 bg-rose-500/10 text-rose-200' : 'border-cyan-500/35 bg-cyan-500/10 text-cyan-100 hover:bg-rose-500/20 hover:text-rose-100'}`}
-                                          title={isMissing ? `Warning: Requires missing stat group '${metric?.category}'` : undefined}
-                                        >
-                                            {metric?.labelAr || metric?.label || key} 
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            
-                            <div className="rounded-xl border border-slate-700/70 bg-slate-900/65 p-3 space-y-3">
-                                <input
-                                  value={metricSearch}
-                                  onChange={(event) => setMetricSearch(event.target.value)}
-                                  placeholder="Search metric /   "
-                                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
-                                />
-                                <div className="grid max-h-60 grid-cols-1 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                                    {filteredMetricCatalog.map(metric => {
-                                        const active = selectedMetricSet.has(metric.key);
-                                        const isMissing = coverage?.missingStatGroups?.includes(metric.category);
-                                        return (
-                                            <button
-                                              key={metric.key}
-                                              type="button"
-                                              onClick={() => toggleMetricKey(metric.key)}
-                                              className={`grid grid-cols-[1fr_auto] rounded-lg border px-2.5 py-2 text-left transition-colors ${active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-800'} ${isMissing && !active ? 'opacity-50 grayscale' : ''}`}
-                                            >
-                                                <span className="min-w-0">
-                                                    <span className="block truncate text-[11px] font-black flex items-center gap-1.5">
-                                                      {metric.labelAr || metric.label}
-                                                      {isMissing && <AlertCircle className="w-3 h-3 text-rose-400" />}
-                                                    </span>
-                                                    <span className="block truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">{metric.key} / {metric.category}</span>
-                                                </span>
-                                                <span className="text-[10px] font-black">{active ? 'ON' : '+'}</span>
-                                            </button>
-                                        );
-                                    })}
+                        <div className="space-y-5">
+                            {/* Hero Metrics Section */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300/90">
+                                        {LABELS.metrics.heroMetrics.ar} <span className="text-white/30">({heroKeys.length}/5)</span>
+                                    </div>
                                 </div>
+                                <DndContext sensors={useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))} collisionDetection={closestCenter} onDragEnd={handleDragEnd('hero')}>
+                                    <SortableContext items={heroKeys} strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-1">
+                                            {heroKeys.map((key, index) => (
+                                                <SortableMetricItem
+                                                    key={key}
+                                                    id={key}
+                                                    section="hero"
+                                                    isFirst={index === 0}
+                                                    isLast={index === heroKeys.length - 1}
+                                                    onMoveUp={() => reorderMetric('hero', index, index - 1)}
+                                                    onMoveDown={() => reorderMetric('hero', index, index + 1)}
+                                                    onMoveTo={(target) => moveMetric(key, 'hero', target)}
+                                                    onRemove={() => removeMetric(key)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </SortableContext>
+                                </DndContext>
                             </div>
-                        </div>
-                    )}
-                    
-                    {activePlayerStatsTab === 'coverage' && (
-                        <div className="space-y-4">
-                            {coverage ? (
-                                <>
-                                    <div className={`p-3 rounded-lg border ${coverage.status === 'full' ? 'bg-emerald-950/40 border-emerald-900/50' : 'bg-amber-950/40 border-amber-900/50'}`}>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Info className={`w-4 h-4 ${coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'}`} />
-                                            <span className={`text-[11px] font-black uppercase ${coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}`}>
-                                                {coverage.status === 'full' ? 'Full Cache Available' : 'Partial Cache Coverage'}
-                                            </span>
+
+                            {/* Secondary Metrics Section */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300/90">
+                                        {LABELS.metrics.secondaryMetrics.ar} <span className="text-white/30">({secondaryKeys.length}/8)</span>
+                                    </div>
+                                </div>
+                                <DndContext sensors={useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))} collisionDetection={closestCenter} onDragEnd={handleDragEnd('secondary')}>
+                                    <SortableContext items={secondaryKeys} strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-1">
+                                            {secondaryKeys.map((key, index) => (
+                                                <SortableMetricItem
+                                                    key={key}
+                                                    id={key}
+                                                    section="secondary"
+                                                    isFirst={index === 0}
+                                                    isLast={index === secondaryKeys.length - 1}
+                                                    onMoveUp={() => reorderMetric('secondary', index, index - 1)}
+                                                    onMoveDown={() => reorderMetric('secondary', index, index + 1)}
+                                                    onMoveTo={(target) => moveMetric(key, 'secondary', target)}
+                                                    onRemove={() => removeMetric(key)}
+                                                />
+                                            ))}
                                         </div>
-                                        <div className="text-[10px] font-bold text-white/50 mb-3">
-                                            This indicates which data sets were successfully synced from the VPS FBref scraper.
-                                        </div>
-                                        
-                                        <div className="space-y-2">
-                                            <div>
-                                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Available Groups</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {coverage.availableStatGroups?.map((group: string) => (
-                                                        <span key={group} className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-bold text-emerald-200">{group}</span>
-                                                    ))}
+                                    </SortableContext>
+                                </DndContext>
+                            </div>
+
+                            {/* Hidden Metrics Section */}
+                            {hiddenKeys.length > 0 && (
+                                <div>
+                                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/30">{LABELS.metrics.hiddenMetrics.ar}</div>
+                                    <div className="space-y-1">
+                                        {hiddenKeys.map(key => (
+                                            <div key={key} className="flex items-center justify-between rounded-lg border border-slate-700/30 bg-slate-800/20 px-2.5 py-1.5 text-[11px] opacity-50" dir="rtl">
+                                                <span className="text-white/60 font-bold">{getMetricLabel(key, 'ar')}</span>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => moveMetric(key, 'hidden', 'secondary')} className="text-[9px] text-emerald-400 font-bold">{LABELS.metrics.unhide.ar}</button>
+                                                    <button onClick={() => removeMetric(key)} className="text-[9px] text-rose-400 font-bold">{LABELS.metrics.remove.ar}</button>
                                                 </div>
                                             </div>
-                                            {coverage.missingStatGroups?.length > 0 && (
-                                                <div className="mt-2">
-                                                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block mb-1">Missing Groups</span>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {coverage.missingStatGroups.map((group: string) => (
-                                                            <span key={group} className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded text-[9px] font-bold text-rose-200">{group}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
-                                </>
-                            ) : (
-                                <div className="text-[11px] font-bold text-slate-400 text-center p-4">
-                                    No coverage data available yet. Fetch stats first to retrieve cache status.
+                                </div>
+                            )}
+
+                            {/* Missing Metrics */}
+                            {missingKeys.length > 0 && (
+                                <div>
+                                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-rose-400/70">{LABELS.metrics.missingMetrics.ar}</div>
+                                    <div className="space-y-1">
+                                        {missingKeys.map(key => {
+                                            const m = allFetchedMetrics[key];
+                                            return (
+                                                <div key={key} className="flex items-center justify-between rounded-lg border border-rose-500/15 bg-rose-500/5 px-2.5 py-1 text-[10px]" dir="rtl">
+                                                    <span className="text-white/50 font-bold">{getMetricLabel(key, 'ar')}</span>
+                                                    <span className="text-rose-300/60 text-[9px]">{LABELS.renderer.requires.ar} {m?.requiredStatGroup || m?.statGroup || '?'}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
                         </div>
                     )}
-                    
+
+                    {/* ═══ COVERAGE TAB ═══ */}
+                    {activePlayerStatsTab === 'coverage' && (
+                        <div className="space-y-4">
+                            {coverage ? (
+                                <>
+                                    <div className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                                        <Info className={`w-4 h-4 ${coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'}`} />
+                                        <span className={`text-[11px] font-black ${coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}`}>
+                                            {coverage.status === 'full' ? LABELS.coverage.fullCache.ar : LABELS.coverage.partialCache.ar}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">{LABELS.coverage.availableGroups.ar}</span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {coverage.availableStatGroups?.map((group: string) => (
+                                                    <span key={group} className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-bold text-emerald-200">{group}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {coverage.missingStatGroups?.length > 0 && (
+                                            <div className="mt-2">
+                                                <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block mb-1">{LABELS.coverage.missingGroups.ar}</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {coverage.missingStatGroups.map((group: string) => (
+                                                        <span key={group} className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded text-[9px] font-bold text-rose-200">{group}</span>
+                                                    ))}
+                                                </div>
+                                                <div className="mt-3 p-2 rounded border border-amber-500/20 bg-amber-500/5 text-[10px] text-amber-200/80 font-bold" dir="rtl">
+                                                    {LABELS.coverage.advancedWarning.ar}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-[11px] font-bold text-slate-400 text-center p-4" dir="rtl">
+                                    {LABELS.coverage.noData.ar}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ═══ VISUALS TAB ═══ */}
                     {activePlayerStatsTab === 'visuals' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-black text-cyan-200 block mb-1">Visual Variant</label>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.visuals.visualVariant.ar}</label>
                                 <select
                                   value={String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB')}
                                   onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
                                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
                                 >
-                                    <option value="ULTRA_LAB">Ultra Lab (Default)</option>
+                                    <option value="ULTRA_LAB">Ultra Lab</option>
                                     <option value="GLASS_SCOUT">Glass Scout</option>
                                     <option value="BARCA_RADAR">Barca Radar</option>
                                     <option value="MINIMAL_CAST">Minimal Cast</option>
                                 </select>
                             </div>
                             <div className="flex items-center justify-between border border-white/5 bg-white/5 p-2 rounded">
-                                <label className="text-[11px] font-black uppercase text-cyan-200">Show Missing Box</label>
+                                <label className="text-[11px] font-black text-cyan-200">{LABELS.visuals.showMissingBox.ar}</label>
                                 <button
                                   type="button"
                                   onClick={() => handleDraftFieldChange('showUnavailableMetrics', String(getDraftValue('showUnavailableMetrics') || 'false') === 'true' ? 'false' : 'true')}
@@ -2022,10 +2172,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 </button>
                             </div>
                             <div>
-                                <label className="text-xs font-black text-cyan-200 block mb-1">Scale</label>
-                                <input 
-                                    type="range" 
-                                    min="0.5" max="1.5" step="0.05" 
+                                <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.visuals.scale.ar}</label>
+                                <input
+                                    type="range"
+                                    min="0.5" max="1.5" step="0.05"
                                     value={Number(getDraftValue('scale') || 1)}
                                     onChange={(e) => handleDraftFieldChange('scale', Number(e.target.value))}
                                     className="w-full"
@@ -2033,7 +2183,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             </div>
                         </div>
                     )}
-                    
+
+                    {/* ═══ ADVANCED TAB ═══ */}
                     {activePlayerStatsTab === 'advanced' && (
                         <div className="space-y-4">
                             <div>
@@ -2055,8 +2206,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     <input
                                       value={String(getDraftValue('metricNaturalLanguage') || '')}
                                       onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
-                                      placeholder="   "
+                                      placeholder="e.g. goals and assists per 90"
                                       className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
+                                      dir="ltr"
                                     />
                                     <button
                                       type="button"
