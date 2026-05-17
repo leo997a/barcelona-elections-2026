@@ -1,8 +1,8 @@
-
+﻿
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square } from 'lucide-react';
+import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square , AlertCircle, Info } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -25,41 +25,41 @@ interface EditorProps {
 
 // Extensive List of Currencies for Arab & Global usage
 const CURRENCY_OPTIONS = [
-    { code: 'SAR', label: '🇸🇦 ريال سعودي (SAR)' },
-    { code: 'AED', label: '🇦🇪 درهم إماراتي (AED)' },
-    { code: 'KWD', label: '🇰🇼 دينار كويتي (KWD)' },
-    { code: 'QAR', label: '🇶🇦 ريال قطري (QAR)' },
-    { code: 'EGP', label: '🇪🇬 جنيه مصري (EGP)' },
-    { code: 'BHD', label: '🇧🇭 دينار بحريني (BHD)' },
-    { code: 'OMR', label: '🇴🇲 ريال عماني (OMR)' },
-    { code: 'JOD', label: '🇯🇴 دينار أردني (JOD)' },
-    { code: 'USD', label: '🇺🇸 دولار أمريكي (USD)' },
-    { code: 'EUR', label: '🇪🇺 يورو (EUR)' },
-    { code: 'GBP', label: '🇬🇧 جنيه استرليني (GBP)' },
-    { code: 'JPY', label: '🇯🇵 ين ياباني (JPY)' },
-    { code: 'CAD', label: '🇨🇦 دولار كندي (CAD)' },
-    { code: 'AUD', label: '🇦🇺 دولار أسترالي (AUD)' },
+    { code: 'SAR', label: 'ًں‡¸ًں‡¦ ط±ظٹط§ظ„ ط³ط¹ظˆط¯ظٹ (SAR)' },
+    { code: 'AED', label: 'ًں‡¦ًں‡ھ ط¯ط±ظ‡ظ… ط¥ظ…ط§ط±ط§طھظٹ (AED)' },
+    { code: 'KWD', label: 'ًں‡°ًں‡¼ ط¯ظٹظ†ط§ط± ظƒظˆظٹطھظٹ (KWD)' },
+    { code: 'QAR', label: 'ًں‡¶ًں‡¦ ط±ظٹط§ظ„ ظ‚ط·ط±ظٹ (QAR)' },
+    { code: 'EGP', label: 'ًں‡ھًں‡¬ ط¬ظ†ظٹظ‡ ظ…طµط±ظٹ (EGP)' },
+    { code: 'BHD', label: 'ًں‡§ًں‡­ ط¯ظٹظ†ط§ط± ط¨ط­ط±ظٹظ†ظٹ (BHD)' },
+    { code: 'OMR', label: 'ًں‡´ًں‡² ط±ظٹط§ظ„ ط¹ظ…ط§ظ†ظٹ (OMR)' },
+    { code: 'JOD', label: 'ًں‡¯ًں‡´ ط¯ظٹظ†ط§ط± ط£ط±ط¯ظ†ظٹ (JOD)' },
+    { code: 'USD', label: 'ًں‡؛ًں‡¸ ط¯ظˆظ„ط§ط± ط£ظ…ط±ظٹظƒظٹ (USD)' },
+    { code: 'EUR', label: 'ًں‡ھًں‡؛ ظٹظˆط±ظˆ (EUR)' },
+    { code: 'GBP', label: 'ًں‡¬ًں‡§ ط¬ظ†ظٹظ‡ ط§ط³طھط±ظ„ظٹظ†ظٹ (GBP)' },
+    { code: 'JPY', label: 'ًں‡¯ًں‡µ ظٹظ† ظٹط§ط¨ط§ظ†ظٹ (JPY)' },
+    { code: 'CAD', label: 'ًں‡¨ًں‡¦ ط¯ظˆظ„ط§ط± ظƒظ†ط¯ظٹ (CAD)' },
+    { code: 'AUD', label: 'ًں‡¦ًں‡؛ ط¯ظˆظ„ط§ط± ط£ط³طھط±ط§ظ„ظٹ (AUD)' },
 ];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
 const CLOUD_MATCH_API_URL = '/api/reo-match/match';
 
 const MATCH_STAT_PRESET_QUICK = [
-  { value: 'SMART', label: 'ذكي' },
-  { value: 'ATTACK', label: 'هجوم' },
-  { value: 'PASSING', label: 'تمرير' },
-  { value: 'DEFENSE', label: 'دفاع' },
-  { value: 'DISCIPLINE', label: 'حراسة' },
-  { value: 'ALL', label: 'الكل' },
+  { value: 'SMART', label: 'ط°ظƒظٹ' },
+  { value: 'ATTACK', label: 'ظ‡ط¬ظˆظ…' },
+  { value: 'PASSING', label: 'طھظ…ط±ظٹط±' },
+  { value: 'DEFENSE', label: 'ط¯ظپط§ط¹' },
+  { value: 'DISCIPLINE', label: 'ط­ط±ط§ط³ط©' },
+  { value: 'ALL', label: 'ط§ظ„ظƒظ„' },
 ];
 
 const PLAYER_STAT_PRESET_QUICK = [
-  { value: 'SMART', label: 'ذكي' },
-  { value: 'ATTACK', label: 'تسديد' },
-  { value: 'PASSING', label: 'تمرير' },
-  { value: 'DEFENSE', label: 'دفاع' },
-  { value: 'KEEPER', label: 'حراس' },
-  { value: 'ALL', label: 'الكل' },
+  { value: 'SMART', label: 'ط°ظƒظٹ' },
+  { value: 'ATTACK', label: 'طھط³ط¯ظٹط¯' },
+  { value: 'PASSING', label: 'طھظ…ط±ظٹط±' },
+  { value: 'DEFENSE', label: 'ط¯ظپط§ط¹' },
+  { value: 'KEEPER', label: 'ط­ط±ط§ط³' },
+  { value: 'ALL', label: 'ط§ظ„ظƒظ„' },
 ];
 
 const MATCH_VISUAL_STYLE_QUICK = [
@@ -110,17 +110,17 @@ const PLAYER_STATS_CATEGORIES = [
 ];
 
 const METRIC_TEXT_ALIASES: Record<string, string[]> = {
-  xg: ['xg', 'expected goals', 'الأهداف المتوقعة', 'اهداف متوقعه'],
-  xa: ['xa', 'expected assists', 'التمريرات الحاسمة المتوقعة', 'اسيست متوقع'],
-  shots: ['shots', 'التسديدات', 'تسديدات'],
-  shots_on_target: ['shots on target', 'تسديدات على المرمى', 'على المرمى'],
-  dribbles_completed: ['successful dribbles', 'المراوغات', 'مراوغات', 'مراوغات ناجحة'],
-  key_passes: ['key passes', 'تمريرات مفتاحية', 'التمريرات المفتاحية'],
-  progressive_passes: ['progressive passes', 'تمريرات تقدمية', 'التمريرات التقدمية'],
-  pass_accuracy: ['pass accuracy', 'دقة التمرير'],
-  recoveries: ['recoveries', 'استرجاع الكرة', 'استرجاع'],
-  tackles: ['tackles', 'افتكاكات', 'الافتكاكات'],
-  saves: ['saves', 'تصديات', 'التصديات'],
+  xg: ['xg', 'expected goals', 'ط§ظ„ط£ظ‡ط¯ط§ظپ ط§ظ„ظ…طھظˆظ‚ط¹ط©', 'ط§ظ‡ط¯ط§ظپ ظ…طھظˆظ‚ط¹ظ‡'],
+  xa: ['xa', 'expected assists', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„ط­ط§ط³ظ…ط© ط§ظ„ظ…طھظˆظ‚ط¹ط©', 'ط§ط³ظٹط³طھ ظ…طھظˆظ‚ط¹'],
+  shots: ['shots', 'ط§ظ„طھط³ط¯ظٹط¯ط§طھ', 'طھط³ط¯ظٹط¯ط§طھ'],
+  shots_on_target: ['shots on target', 'طھط³ط¯ظٹط¯ط§طھ ط¹ظ„ظ‰ ط§ظ„ظ…ط±ظ…ظ‰', 'ط¹ظ„ظ‰ ط§ظ„ظ…ط±ظ…ظ‰'],
+  dribbles_completed: ['successful dribbles', 'ط§ظ„ظ…ط±ط§ظˆط؛ط§طھ', 'ظ…ط±ط§ظˆط؛ط§طھ', 'ظ…ط±ط§ظˆط؛ط§طھ ظ†ط§ط¬ط­ط©'],
+  key_passes: ['key passes', 'طھظ…ط±ظٹط±ط§طھ ظ…ظپطھط§ط­ظٹط©', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„ظ…ظپطھط§ط­ظٹط©'],
+  progressive_passes: ['progressive passes', 'طھظ…ط±ظٹط±ط§طھ طھظ‚ط¯ظ…ظٹط©', 'ط§ظ„طھظ…ط±ظٹط±ط§طھ ط§ظ„طھظ‚ط¯ظ…ظٹط©'],
+  pass_accuracy: ['pass accuracy', 'ط¯ظ‚ط© ط§ظ„طھظ…ط±ظٹط±'],
+  recoveries: ['recoveries', 'ط§ط³طھط±ط¬ط§ط¹ ط§ظ„ظƒط±ط©', 'ط§ط³طھط±ط¬ط§ط¹'],
+  tackles: ['tackles', 'ط§ظپطھظƒط§ظƒط§طھ', 'ط§ظ„ط§ظپطھظƒط§ظƒط§طھ'],
+  saves: ['saves', 'طھطµط¯ظٹط§طھ', 'ط§ظ„طھطµط¯ظٹط§طھ'],
 };
 
 const normalizeMetricText = (value: unknown) => String(value ?? '')
@@ -214,29 +214,29 @@ type BridgeStatusSnapshot = {
 };
 
 const PLAYER_AI_ALIASES = [
-  { name: 'Robert Lewandowski', position: 'ST / Forward', club: 'Barcelona', fallbackImage: 'https://sportrenders.com/wp-content/uploads/2025/05/Lewandowski-PNG-Barcelona-Football-Render-5-scaled.png', aliases: ['lewandowski', 'robert lewandowski', 'ليفاندوفسكي', 'روبرت ليفاندوفسكي'] },
-  { name: 'Lamine Yamal', position: 'RW / Forward', club: 'Barcelona', aliases: ['lamine yamal', 'yamal', 'لامين يامال', 'يامال'] },
-  { name: 'Pedri', position: 'CM / AM', club: 'Barcelona', aliases: ['pedri', 'بيدري'] },
-  { name: 'Dani Olmo', position: 'AM / Forward', club: 'Barcelona', aliases: ['dani olmo', 'olmo', 'داني اولمو', 'داني أولمو', 'اولمو', 'أولمو'] },
-  { name: 'Raphinha', position: 'RW / Forward', club: 'Barcelona', aliases: ['raphinha', 'رافينيا'] },
-  { name: 'Ferran Torres', position: 'Forward', club: 'Barcelona', aliases: ['ferran torres', 'torres', 'فيران توريس'] },
-  { name: 'Frenkie de Jong', position: 'CM', club: 'Barcelona', aliases: ['frenkie de jong', 'de jong', 'دي يونغ', 'فرينكي دي يونغ'] },
-  { name: 'Gavi', position: 'CM', club: 'Barcelona', aliases: ['gavi', 'غافي', 'جافي'] },
-  { name: 'Cole Palmer', position: 'AM / RW', club: 'Chelsea', aliases: ['cole palmer', 'palmer', 'كول بالمر', 'بالمر'] },
-  { name: 'Enzo Fernandez', position: 'CM', club: 'Chelsea', aliases: ['enzo fernandez', 'enzo fernández', 'enzo', 'إنزو فيرنانديز', 'انزو فيرنانديز'] },
-  { name: 'Moises Caicedo', position: 'DM / CM', club: 'Chelsea', aliases: ['moises caicedo', 'moisés caicedo', 'caicedo', 'كايسيدو', 'مويسيس كايسيدو'] },
-  { name: 'Reece James', position: 'RB', club: 'Chelsea', aliases: ['reece james', 'james', 'ريس جيمس'] },
-  { name: 'Pedro Neto', position: 'LW / RW', club: 'Chelsea', aliases: ['pedro neto', 'neto', 'بيدرو نيتو'] },
-  { name: 'Joao Pedro', position: 'Forward', club: 'Chelsea', aliases: ['joao pedro', 'joão pedro', 'جواو بيدرو'] },
-  { name: 'Jadon Sancho', position: 'LW / RW', club: 'Chelsea', aliases: ['jadon sancho', 'sancho', 'جادون سانشو', 'سانشو'] },
+  { name: 'Robert Lewandowski', position: 'ST / Forward', club: 'Barcelona', fallbackImage: 'https://sportrenders.com/wp-content/uploads/2025/05/Lewandowski-PNG-Barcelona-Football-Render-5-scaled.png', aliases: ['lewandowski', 'robert lewandowski', 'ظ„ظٹظپط§ظ†ط¯ظˆظپط³ظƒظٹ', 'ط±ظˆط¨ط±طھ ظ„ظٹظپط§ظ†ط¯ظˆظپط³ظƒظٹ'] },
+  { name: 'Lamine Yamal', position: 'RW / Forward', club: 'Barcelona', aliases: ['lamine yamal', 'yamal', 'ظ„ط§ظ…ظٹظ† ظٹط§ظ…ط§ظ„', 'ظٹط§ظ…ط§ظ„'] },
+  { name: 'Pedri', position: 'CM / AM', club: 'Barcelona', aliases: ['pedri', 'ط¨ظٹط¯ط±ظٹ'] },
+  { name: 'Dani Olmo', position: 'AM / Forward', club: 'Barcelona', aliases: ['dani olmo', 'olmo', 'ط¯ط§ظ†ظٹ ط§ظˆظ„ظ…ظˆ', 'ط¯ط§ظ†ظٹ ط£ظˆظ„ظ…ظˆ', 'ط§ظˆظ„ظ…ظˆ', 'ط£ظˆظ„ظ…ظˆ'] },
+  { name: 'Raphinha', position: 'RW / Forward', club: 'Barcelona', aliases: ['raphinha', 'ط±ط§ظپظٹظ†ظٹط§'] },
+  { name: 'Ferran Torres', position: 'Forward', club: 'Barcelona', aliases: ['ferran torres', 'torres', 'ظپظٹط±ط§ظ† طھظˆط±ظٹط³'] },
+  { name: 'Frenkie de Jong', position: 'CM', club: 'Barcelona', aliases: ['frenkie de jong', 'de jong', 'ط¯ظٹ ظٹظˆظ†ط؛', 'ظپط±ظٹظ†ظƒظٹ ط¯ظٹ ظٹظˆظ†ط؛'] },
+  { name: 'Gavi', position: 'CM', club: 'Barcelona', aliases: ['gavi', 'ط؛ط§ظپظٹ', 'ط¬ط§ظپظٹ'] },
+  { name: 'Cole Palmer', position: 'AM / RW', club: 'Chelsea', aliases: ['cole palmer', 'palmer', 'ظƒظˆظ„ ط¨ط§ظ„ظ…ط±', 'ط¨ط§ظ„ظ…ط±'] },
+  { name: 'Enzo Fernandez', position: 'CM', club: 'Chelsea', aliases: ['enzo fernandez', 'enzo fernأ،ndez', 'enzo', 'ط¥ظ†ط²ظˆ ظپظٹط±ظ†ط§ظ†ط¯ظٹط²', 'ط§ظ†ط²ظˆ ظپظٹط±ظ†ط§ظ†ط¯ظٹط²'] },
+  { name: 'Moises Caicedo', position: 'DM / CM', club: 'Chelsea', aliases: ['moises caicedo', 'moisأ©s caicedo', 'caicedo', 'ظƒط§ظٹط³ظٹط¯ظˆ', 'ظ…ظˆظٹط³ظٹط³ ظƒط§ظٹط³ظٹط¯ظˆ'] },
+  { name: 'Reece James', position: 'RB', club: 'Chelsea', aliases: ['reece james', 'james', 'ط±ظٹط³ ط¬ظٹظ…ط³'] },
+  { name: 'Pedro Neto', position: 'LW / RW', club: 'Chelsea', aliases: ['pedro neto', 'neto', 'ط¨ظٹط¯ط±ظˆ ظ†ظٹطھظˆ'] },
+  { name: 'Joao Pedro', position: 'Forward', club: 'Chelsea', aliases: ['joao pedro', 'joأ£o pedro', 'ط¬ظˆط§ظˆ ط¨ظٹط¯ط±ظˆ'] },
+  { name: 'Jadon Sancho', position: 'LW / RW', club: 'Chelsea', aliases: ['jadon sancho', 'sancho', 'ط¬ط§ط¯ظˆظ† ط³ط§ظ†ط´ظˆ', 'ط³ط§ظ†ط´ظˆ'] },
 ];
 
 const CLUB_AI_ALIASES = [
-  { name: 'Barcelona', aliases: ['barcelona', 'barca', 'fc barcelona', 'برشلونة', 'برشلونه', 'البارسا'] },
-  { name: 'Chelsea', aliases: ['chelsea', 'chelsea fc', 'تشيلسي'] },
-  { name: 'Real Madrid', aliases: ['real madrid', 'madrid', 'ريال مدريد'] },
-  { name: 'Atletico Madrid', aliases: ['atletico madrid', 'اتلتيكو مدريد', 'أتلتيكو مدريد'] },
-  { name: 'Alaves', aliases: ['alaves', 'deportivo alaves', 'الافيس', 'ألافيس'] },
+  { name: 'Barcelona', aliases: ['barcelona', 'barca', 'fc barcelona', 'ط¨ط±ط´ظ„ظˆظ†ط©', 'ط¨ط±ط´ظ„ظˆظ†ظ‡', 'ط§ظ„ط¨ط§ط±ط³ط§'] },
+  { name: 'Chelsea', aliases: ['chelsea', 'chelsea fc', 'طھط´ظٹظ„ط³ظٹ'] },
+  { name: 'Real Madrid', aliases: ['real madrid', 'madrid', 'ط±ظٹط§ظ„ ظ…ط¯ط±ظٹط¯'] },
+  { name: 'Atletico Madrid', aliases: ['atletico madrid', 'ط§طھظ„طھظٹظƒظˆ ظ…ط¯ط±ظٹط¯', 'ط£طھظ„طھظٹظƒظˆ ظ…ط¯ط±ظٹط¯'] },
+  { name: 'Alaves', aliases: ['alaves', 'deportivo alaves', 'ط§ظ„ط§ظپظٹط³', 'ط£ظ„ط§ظپظٹط³'] },
 ];
 
 const textHas = (text: string, needle: string) => text.toLocaleLowerCase().includes(needle.toLocaleLowerCase());
@@ -265,7 +265,7 @@ const findClubAlias = (text: string) => {
 };
 
 const extractPercentSignal = (text: string) => {
-  const match = text.match(/(?:بنسبة|احتمال|نسبة|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
+  const match = text.match(/(?:ط¨ظ†ط³ط¨ط©|ط§ط­طھظ…ط§ظ„|ظ†ط³ط¨ط©|probability|confidence|chance)\s*(\d{1,3})\s*%?|\b(\d{1,3})\s*(?:%|percent|per cent)\b/i);
   if (!match) return null;
   const value = Number(match[1] || match[2]);
   if (!Number.isFinite(value)) return null;
@@ -273,43 +273,43 @@ const extractPercentSignal = (text: string) => {
 };
 
 const hasLeavingSignal = (text: string) =>
-  /مغادر|مغادرة|يرحل|رحيل|خروج|خارج|leav|exit|depart/i.test(text);
+  /ظ…ط؛ط§ط¯ط±|ظ…ط؛ط§ط¯ط±ط©|ظٹط±ط­ظ„|ط±ط­ظٹظ„|ط®ط±ظˆط¬|ط®ط§ط±ط¬|leav|exit|depart/i.test(text);
 
 const hasFreeTransferSignal = (text: string) =>
-  /مجانا|مجاني|نهاية عقد|انتهاء عقد|free|contract|free agent/i.test(text);
+  /ظ…ط¬ط§ظ†ط§|ظ…ط¬ط§ظ†ظٹ|ظ†ظ‡ط§ظٹط© ط¹ظ‚ط¯|ط§ظ†طھظ‡ط§ط، ط¹ظ‚ط¯|free|contract|free agent/i.test(text);
 
 const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'dataMode') {
     return {
       id,
-      label: 'مصدر بيانات المباراة',
+      label: 'ظ…طµط¯ط± ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©',
       type: 'select',
       value,
       options: [
         { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
         { value: 'BRIDGE', label: 'Live Bridge - localhost:3005' },
-        { value: 'PASTE_JSON', label: 'JSON يدوي / ملف extractor' },
-        { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
+        { value: 'PASTE_JSON', label: 'JSON ظٹط¯ظˆظٹ / ظ…ظ„ظپ extractor' },
+        { value: 'DEMO', label: 'ط¨ظٹط§ظ†ط§طھ طھط¬ط±ظٹط¨ظٹط© ظ„ظ„ط§ط®طھط¨ط§ط±' },
       ],
     };
   }
 
   if (id === 'manualJson') {
-    return { id, label: 'JSON المباراة المستورد', type: 'textarea', value };
+    return { id, label: 'JSON ط§ظ„ظ…ط¨ط§ط±ط§ط© ط§ظ„ظ…ط³طھظˆط±ط¯', type: 'textarea', value };
   }
 
   if (id === 'sourceMatchUrl') {
-    return { id, label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value };
+    return { id, label: 'ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© WhoScored ظ„ظ„طھط´ط؛ظٹظ„ ط§ظ„ظ…ط¨ط§ط´ط±', type: 'text', value };
   }
 
   if (id === 'apiUrl') {
-    return { id, label: 'رابط خادم الجسر المحلي', type: 'text', value };
+    return { id, label: 'ط±ط§ط¨ط· ط®ط§ط¯ظ… ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ', type: 'text', value };
   }
 
   if (id === 'matchMetricPreset') {
     return {
       id,
-      label: 'تركيز إحصائيات المباراة',
+      label: 'طھط±ظƒظٹط² ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©',
       type: 'select',
       value,
       options: MATCH_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -319,7 +319,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'playerMetricPreset') {
     return {
       id,
-      label: 'تركيز إحصائيات اللاعبين',
+      label: 'طھط±ظƒظٹط² ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†',
       type: 'select',
       value,
       options: PLAYER_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -329,12 +329,12 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'teamStatsSide') {
     return {
       id,
-      label: 'ترتيب جهات إحصائيات الفريقين',
+      label: 'طھط±طھظٹط¨ ط¬ظ‡ط§طھ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظپط±ظٹظ‚ظٹظ†',
       type: 'select',
       value,
       options: [
-        { value: 'HOME_LEFT', label: 'المضيف يسار' },
-        { value: 'AWAY_LEFT', label: 'الضيف يسار' },
+        { value: 'HOME_LEFT', label: 'ط§ظ„ظ…ط¶ظٹظپ ظٹط³ط§ط±' },
+        { value: 'AWAY_LEFT', label: 'ط§ظ„ط¶ظٹظپ ظٹط³ط§ط±' },
       ],
     };
   }
@@ -398,7 +398,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   }
 
   if (id === 'playerImageMapJson') {
-    return { id, label: 'روابط صور اللاعبين JSON', type: 'textarea', value };
+    return { id, label: 'ط±ظˆط§ط¨ط· طµظˆط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ† JSON', type: 'textarea', value };
   }
 
   if ([
@@ -454,6 +454,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [metricCatalog, setMetricCatalog] = useState<MetricCatalogItem[]>([]);
   const [metricSearch, setMetricSearch] = useState('');
   const [metricAdvancedOpen, setMetricAdvancedOpen] = useState(false);
+  const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'setup' | 'presets' | 'metrics' | 'coverage' | 'visuals' | 'advanced'>('setup');
   const [isFetchingPlayerStats, setIsFetchingPlayerStats] = useState(false);
 
   // Draft State
@@ -837,16 +838,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const text = String(getDraftValue('metricNaturalLanguage') || '').trim();
       const keys = resolveMetricTextKeys(text, effectiveMetricCatalog);
       if (!keys.length) {
-          setAiBoxMessage({ type: 'error', text: 'لم أجد إحصائيات مطابقة. جرّب: الأهداف المتوقعة، التسديدات، المراوغات.' });
+          setAiBoxMessage({ type: 'error', text: 'ظ„ظ… ط£ط¬ط¯ ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط·ط§ط¨ظ‚ط©. ط¬ط±ظ‘ط¨: ط§ظ„ط£ظ‡ط¯ط§ظپ ط§ظ„ظ…طھظˆظ‚ط¹ط©طŒ ط§ظ„طھط³ط¯ظٹط¯ط§طھطŒ ط§ظ„ظ…ط±ط§ظˆط؛ط§طھ.' });
           return;
       }
       writeSelectedMetrics(uniqueMetricKeys([...selectedMetricKeys, ...keys]));
-      setAiBoxMessage({ type: 'success', text: `تمت إضافة ${keys.length} إحصائيات من النص.` });
+      setAiBoxMessage({ type: 'success', text: `طھظ…طھ ط¥ط¶ط§ظپط© ${keys.length} ط¥ط­طµط§ط¦ظٹط§طھ ظ…ظ† ط§ظ„ظ†طµ.` });
   };
 
   const handleFetchPlayerStats = async () => {
       if (!selectedMetricKeys.length) {
-          setAiBoxMessage({ type: 'error', text: 'اختر إحصائية واحدة على الأقل قبل الجلب.' });
+          setAiBoxMessage({ type: 'error', text: 'ط§ط®طھط± ط¥ط­طµط§ط¦ظٹط© ظˆط§ط­ط¯ط© ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ ظ‚ط¨ظ„ ط§ظ„ط¬ظ„ط¨.' });
           return;
       }
 
@@ -893,9 +894,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               playerStatsSourceJson: JSON.stringify(payload, null, 2),
               playerStatsDataMode: 'MANUAL',
           });
-          setAiBoxMessage({ type: 'success', text: `تم جلب ${selectedMetricKeys.length} إحصائيات مختارة وحفظها في القالب.` });
+          setAiBoxMessage({ type: 'success', text: `طھظ… ط¬ظ„ط¨ ${selectedMetricKeys.length} ط¥ط­طµط§ط¦ظٹط§طھ ظ…ط®طھط§ط±ط© ظˆط­ظپط¸ظ‡ط§ ظپظٹ ط§ظ„ظ‚ط§ظ„ط¨.` });
       } catch (error) {
-          setAiBoxMessage({ type: 'error', text: error instanceof Error ? error.message : 'تعذر جلب إحصائيات اللاعبين.' });
+          setAiBoxMessage({ type: 'error', text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¬ظ„ط¨ ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†.' });
       } finally {
           setIsFetchingPlayerStats(false);
       }
@@ -973,7 +974,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const prompt = aiBoxInput.trim() || fieldText;
 
       if (!prompt) {
-          setAiBoxMessage({ type: 'error', text: 'اكتب خبرا، اسم لاعب، أو ملخصا قصيرا داخل صندوق AI أولا.' });
+          setAiBoxMessage({ type: 'error', text: 'ط§ظƒطھط¨ ط®ط¨ط±ط§طŒ ط§ط³ظ… ظ„ط§ط¹ط¨طŒ ط£ظˆ ظ…ظ„ط®طµط§ ظ‚طµظٹط±ط§ ط¯ط§ط®ظ„ طµظ†ط¯ظˆظ‚ AI ط£ظˆظ„ط§.' });
           return;
       }
 
@@ -1041,7 +1042,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       .slice(0, 8)
                       .map(stat => ({
                           label: String(stat.label),
-                          value: stat.value === null || stat.value === undefined ? 'غير متوفر' : String(stat.value),
+                          value: stat.value === null || stat.value === undefined ? 'ط؛ظٹط± ظ…طھظˆظپط±' : String(stat.value),
                           hint: stat.hint || 'AI / source needed',
                       }))
                   : [];
@@ -1069,7 +1070,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               if (isLeavingStory && detectedClub?.name) {
                   updates.fromClub = updates.fromClub || detectedClub.name;
                   const currentToClub = String(updates.toClub || '').trim();
-                  if (!currentToClub || currentToClub === detectedClub.name || /غير محدد|unknown|destination|tbc/i.test(currentToClub)) {
+                  if (!currentToClub || currentToClub === detectedClub.name || /ط؛ظٹط± ظ…ط­ط¯ط¯|unknown|destination|tbc/i.test(currentToClub)) {
                       updates.toClub = isFreeStory ? 'Free agent' : 'Destination TBC';
                   }
               }
@@ -1173,16 +1174,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           const cleanUpdates = cleanAiFieldUpdates(enriched);
 
           if (!Object.keys(cleanUpdates).length) {
-              setAiBoxMessage({ type: 'error', text: 'الذكاء لم يجد حقولا مناسبة لهذا القالب. جرّب نصا أوضح أو اختر زر اللاعب/الميركاتو.' });
+              setAiBoxMessage({ type: 'error', text: 'ط§ظ„ط°ظƒط§ط، ظ„ظ… ظٹط¬ط¯ ط­ظ‚ظˆظ„ط§ ظ…ظ†ط§ط³ط¨ط© ظ„ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨. ط¬ط±ظ‘ط¨ ظ†طµط§ ط£ظˆط¶ط­ ط£ظˆ ط§ط®طھط± ط²ط± ط§ظ„ظ„ط§ط¹ط¨/ط§ظ„ظ…ظٹط±ظƒط§طھظˆ.' });
               return;
           }
 
           handleDraftFieldChanges(cleanUpdates);
-          setAiBoxMessage({ type: 'success', text: `تمت تعبئة ${Object.keys(cleanUpdates).length} حقول وربط الكاش إن توفر.` });
+          setAiBoxMessage({ type: 'success', text: `طھظ…طھ طھط¹ط¨ط¦ط© ${Object.keys(cleanUpdates).length} ط­ظ‚ظˆظ„ ظˆط±ط¨ط· ط§ظ„ظƒط§ط´ ط¥ظ† طھظˆظپط±.` });
       } catch (error) {
           console.error('Universal AI box failed', error);
           setAiError(true);
-          setAiBoxMessage({ type: 'error', text: 'تعذر تشغيل صندوق AI. تأكد أن مفاتيح Gemini موجودة في Vercel ثم أعد النشر.' });
+          setAiBoxMessage({ type: 'error', text: 'طھط¹ط°ط± طھط´ط؛ظٹظ„ طµظ†ط¯ظˆظ‚ AI. طھط£ظƒط¯ ط£ظ† ظ…ظپط§طھظٹط­ Gemini ظ…ظˆط¬ظˆط¯ط© ظپظٹ Vercel ط«ظ… ط£ط¹ط¯ ط§ظ„ظ†ط´ط±.' });
       } finally {
           setIsProcessingAI(false);
       }
@@ -1199,7 +1200,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setIsAdminUnlocked(true);
           setAdminPassword('');
       } catch (error) {
-          setPasswordError(error instanceof Error ? error.message : 'تعذر فتح جلسة المسؤول.');
+          setPasswordError(error instanceof Error ? error.message : 'طھط¹ط°ط± ظپطھط­ ط¬ظ„ط³ط© ط§ظ„ظ…ط³ط¤ظˆظ„.');
       } finally {
           setIsAdminAuthorizing(false);
       }
@@ -1406,7 +1407,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const validateMatchStatsJson = (parsed: unknown) => {
     if (!parsed || typeof parsed !== 'object') {
-      throw new Error('الملف لا يحتوي JSON صالح.');
+      throw new Error('ط§ظ„ظ…ظ„ظپ ظ„ط§ ظٹط­طھظˆظٹ JSON طµط§ظ„ط­.');
     }
 
     const data = parsed as Record<string, unknown>;
@@ -1414,7 +1415,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     const hasWhoScoredRaw = Boolean(data.events && data.home && data.away);
 
     if (!hasStructuredOutput && !hasWhoScoredRaw) {
-      throw new Error('هذا الملف لا يبدو كبيانات Match Stats أو WhoScored.');
+      throw new Error('ظ‡ط°ط§ ط§ظ„ظ…ظ„ظپ ظ„ط§ ظٹط¨ط¯ظˆ ظƒط¨ظٹط§ظ†ط§طھ Match Stats ط£ظˆ WhoScored.');
     }
   };
 
@@ -1422,7 +1423,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     validateMatchStatsJson(parsed);
     const text = JSON.stringify(parsed, null, 2);
     if (text.length > MAX_MATCH_STATS_JSON_LENGTH) {
-      throw new Error('حجم JSON كبير للتخزين داخل الموقع. استخدم وضع Live Bridge أو ملف extractor المنظم.');
+      throw new Error('ط­ط¬ظ… JSON ظƒط¨ظٹط± ظ„ظ„طھط®ط²ظٹظ† ط¯ط§ط®ظ„ ط§ظ„ظ…ظˆظ‚ط¹. ط§ط³طھط®ط¯ظ… ظˆط¶ط¹ Live Bridge ط£ظˆ ظ…ظ„ظپ extractor ط§ظ„ظ…ظ†ط¸ظ….');
     }
 
     handleDraftFieldChanges({
@@ -1441,16 +1442,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setMatchStatsImportMessage(null);
     try {
       if (file.size > MAX_MATCH_STATS_JSON_LENGTH) {
-        throw new Error('ملف JSON كبير جدا. استخدم ملف extractor المنظم أو وضع Live Bridge.');
+        throw new Error('ظ…ظ„ظپ JSON ظƒط¨ظٹط± ط¬ط¯ط§. ط§ط³طھط®ط¯ظ… ظ…ظ„ظپ extractor ط§ظ„ظ…ظ†ط¸ظ… ط£ظˆ ظˆط¶ط¹ Live Bridge.');
       }
 
       const text = await file.text();
       const parsed = JSON.parse(text);
-      applyMatchStatsJson(parsed, 'تم استيراد ملف JSON وربطه بالقالب.');
+      applyMatchStatsJson(parsed, 'طھظ… ط§ط³طھظٹط±ط§ط¯ ظ…ظ„ظپ JSON ظˆط±ط¨ط·ظ‡ ط¨ط§ظ„ظ‚ط§ظ„ط¨.');
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر استيراد ملف JSON.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ط³طھظٹط±ط§ط¯ ظ…ظ„ظپ JSON.',
       });
     } finally {
       setIsImportingMatchStats(false);
@@ -1466,7 +1467,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const getAdminAuthHeaders = () => {
     const session = adminSessionService.getStoredSession();
     if (!session) {
-      throw new Error('افتح قفل المسؤول أولا لتشغيل أو إيقاف جسر المباراة.');
+      throw new Error('ط§ظپطھط­ ظ‚ظپظ„ ط§ظ„ظ…ط³ط¤ظˆظ„ ط£ظˆظ„ط§ ظ„طھط´ط؛ظٹظ„ ط£ظˆ ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
     }
     return {
       'Content-Type': 'application/json',
@@ -1488,7 +1489,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     });
     const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
     if (!response.ok) {
-      throw new Error(typeof payload.error === 'string' ? payload.error : 'تعذر تنفيذ أمر جسر المباراة.');
+      throw new Error(typeof payload.error === 'string' ? payload.error : 'طھط¹ط°ط± طھظ†ظپظٹط° ط£ظ…ط± ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
     }
     setBridgeStatus(payload);
     return payload;
@@ -1501,15 +1502,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const response = await fetch('/api/reo-match/status', { cache: 'no-store' });
       const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
       if (!response.ok) {
-        throw new Error(typeof payload.error === 'string' ? payload.error : 'تعذر قراءة حالة جسر المباراة.');
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط­ط§ظ„ط© ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.');
       }
       setBridgeStatus(payload);
-      const statusText = payload.pollingActive || payload.workerAlive ? 'الجسر يعمل الآن.' : 'الجسر متوقف حاليا.';
+      const statusText = payload.pollingActive || payload.workerAlive ? 'ط§ظ„ط¬ط³ط± ظٹط¹ظ…ظ„ ط§ظ„ط¢ظ†.' : 'ط§ظ„ط¬ط³ط± ظ…طھظˆظ‚ظپ ط­ط§ظ„ظٹط§.';
       setMatchStatsImportMessage({ type: 'success', text: statusText });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر قراءة حالة جسر المباراة.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط­ط§ظ„ط© ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1519,7 +1520,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const handleSetMatchStatsBridgeUrl = async () => {
     const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
     if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
-      setMatchStatsImportMessage({ type: 'error', text: 'أدخل رابط مباراة صحيح من WhoScored أولا.' });
+      setMatchStatsImportMessage({ type: 'error', text: 'ط£ط¯ط®ظ„ ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© طµط­ظٹط­ ظ…ظ† WhoScored ط£ظˆظ„ط§.' });
       return;
     }
 
@@ -1532,11 +1533,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         apiUrl: CLOUD_MATCH_API_URL,
         sourceMatchUrl: sourceUrl,
       });
-      setMatchStatsImportMessage({ type: 'success', text: 'تم حفظ رابط المباراة في جسر Google Cloud.' });
+      setMatchStatsImportMessage({ type: 'success', text: 'طھظ… ط­ظپط¸ ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ ط¬ط³ط± Google Cloud.' });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر حفظ رابط المباراة في الجسر.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ ط§ظ„ط¬ط³ط±.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1548,11 +1549,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setMatchStatsImportMessage(null);
     try {
       await callMatchStatsControl('stop');
-      setMatchStatsImportMessage({ type: 'success', text: 'تم إيقاف جسر المباراة ومتصفح الاستخراج.' });
+      setMatchStatsImportMessage({ type: 'success', text: 'طھظ… ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط© ظˆظ…طھطµظپط­ ط§ظ„ط§ط³طھط®ط±ط§ط¬.' });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر إيقاف جسر المباراة.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط¥ظٹظ‚ط§ظپ ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط±ط§ط©.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1569,18 +1570,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         const archivePath = archive.path ? `: ${archive.path}` : '';
         setMatchStatsImportMessage({
           type: 'success',
-          text: archive.skipped ? `الأرشيف موجود ولم يتغير${archivePath}` : `تم حفظ لقطة المباراة في GitHub${archivePath}`,
+          text: archive.skipped ? `ط§ظ„ط£ط±ط´ظٹظپ ظ…ظˆط¬ظˆط¯ ظˆظ„ظ… ظٹطھط؛ظٹط±${archivePath}` : `طھظ… ط­ظپط¸ ظ„ظ‚ط·ط© ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub${archivePath}`,
         });
       } else {
         setMatchStatsImportMessage({
           type: 'error',
-          text: archive?.error || archive?.reason || 'تعذر حفظ أرشيف المباراة في GitHub.',
+          text: archive?.error || archive?.reason || 'طھط¹ط°ط± ط­ظپط¸ ط£ط±ط´ظٹظپ ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub.',
         });
       }
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر حفظ أرشيف المباراة في GitHub.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط­ظپط¸ ط£ط±ط´ظٹظپ ط§ظ„ظ…ط¨ط§ط±ط§ط© ظپظٹ GitHub.',
       });
     } finally {
       setIsBridgeActionRunning(false);
@@ -1594,15 +1595,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const url = getMatchStatsApiUrl();
       const response = await fetch(url, { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error('لم تصل بيانات من الجسر المحلي. شغل START_APP.bat وابدأ السحب أولا.');
+        throw new Error('ظ„ظ… طھطµظ„ ط¨ظٹط§ظ†ط§طھ ظ…ظ† ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ. ط´ط؛ظ„ START_APP.bat ظˆط§ط¨ط¯ط£ ط§ظ„ط³ط­ط¨ ط£ظˆظ„ط§.');
       }
 
       const parsed = await response.json();
-      applyMatchStatsJson(parsed, 'تم أخذ نسخة ثابتة من Live Bridge داخل القالب.');
+      applyMatchStatsJson(parsed, 'طھظ… ط£ط®ط° ظ†ط³ط®ط© ط«ط§ط¨طھط© ظ…ظ† Live Bridge ط¯ط§ط®ظ„ ط§ظ„ظ‚ط§ظ„ط¨.');
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'تعذر الاتصال بالجسر المحلي.',
+        text: error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط­ظ„ظٹ.',
       });
     } finally {
       setIsImportingMatchStats(false);
@@ -1612,7 +1613,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const handleStartMatchStatsBridge = async () => {
     const sourceUrl = String(getDraftValue('sourceMatchUrl') || '').trim();
     if (!sourceUrl || !/whoscored\.com/i.test(sourceUrl)) {
-      setMatchStatsImportMessage({ type: 'error', text: 'أدخل رابط مباراة صحيح من WhoScored أولا.' });
+      setMatchStatsImportMessage({ type: 'error', text: 'ط£ط¯ط®ظ„ ط±ط§ط¨ط· ظ…ط¨ط§ط±ط§ط© طµط­ظٹط­ ظ…ظ† WhoScored ط£ظˆظ„ط§.' });
       return;
     }
 
@@ -1626,19 +1627,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       const payload = await callMatchStatsControl('start', { url: sourceUrl, intervalSec: 60 }, controller.signal);
       const response = { ok: true };
       if (!response.ok) {
-        throw new Error(payload.error || 'تعذر تشغيل الجسر على هذا الرابط.');
+        throw new Error(payload.error || 'طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط¹ظ„ظ‰ ظ‡ط°ط§ ط§ظ„ط±ط§ط¨ط·.');
       }
 
       handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL, sourceMatchUrl: sourceUrl });
       const bridgeMatch = payload.match || {};
       const teams = bridgeMatch.homeTeam && bridgeMatch.awayTeam ? ` (${bridgeMatch.homeTeam} - ${bridgeMatch.awayTeam})` : '';
-      setMatchStatsImportMessage({ type: 'success', text: `تم تشغيل الجسر المباشر والتحديث كل دقيقة${teams}.` });
+      setMatchStatsImportMessage({ type: 'success', text: `طھظ… طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط± ظˆط§ظ„طھط­ط¯ظٹط« ظƒظ„ ط¯ظ‚ظٹظ‚ط©${teams}.` });
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
         text: error instanceof Error && error.name === 'AbortError'
-          ? 'انتهت مهلة تشغيل الجسر. غالبا الصفحة بطيئة أو محمية. جرّب مرة أخرى أو استخدم EXTRACT_NOW.'
-          : error instanceof Error ? error.message : 'تعذر تشغيل الجسر المباشر.',
+          ? 'ط§ظ†طھظ‡طھ ظ…ظ‡ظ„ط© طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط±. ط؛ط§ظ„ط¨ط§ ط§ظ„طµظپط­ط© ط¨ط·ظٹط¦ط© ط£ظˆ ظ…ط­ظ…ظٹط©. ط¬ط±ظ‘ط¨ ظ…ط±ط© ط£ط®ط±ظ‰ ط£ظˆ ط§ط³طھط®ط¯ظ… EXTRACT_NOW.'
+          : error instanceof Error ? error.message : 'طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط±.',
       });
     } finally {
       window.clearTimeout(timeout);
@@ -1655,14 +1656,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       : 'bg-gray-800 text-gray-300 border-gray-700';
   const bridgeStatusLabel = bridgeStatus
     ? bridgeStatus.pollingActive || bridgeStatus.workerAlive
-      ? 'يعمل الآن'
+      ? 'ظٹط¹ظ…ظ„ ط§ظ„ط¢ظ†'
       : bridgeStatus.stoppedReason === 'match_final'
-        ? 'انتهت المباراة'
-        : 'متوقف'
-    : 'غير مفحوص';
+        ? 'ط§ظ†طھظ‡طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©'
+        : 'ظ…طھظˆظ‚ظپ'
+    : 'ط؛ظٹط± ظ…ظپط­ظˆطµ';
   const bridgeClock = bridgeMatch?.displayStatus || bridgeMatch?.clock || (bridgeMatch?.minute ? `${bridgeMatch.minute}'` : bridgeMatch?.status);
   const bridgeScore = bridgeMatch?.homeTeam && bridgeMatch?.awayTeam
-    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` · ${bridgeClock}` : ''}`
+    ? `${bridgeMatch.homeTeam} ${bridgeMatch.homeScore ?? 0}-${bridgeMatch.awayScore ?? 0} ${bridgeMatch.awayTeam}${bridgeClock ? ` آ· ${bridgeClock}` : ''}`
     : null;
   const bridgeArchive = bridgeStatus?.archive;
   const bridgeControlsLocked = !isAdminUnlocked || isImportingMatchStats || isBridgeActionRunning;
@@ -1670,17 +1671,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c0d10]">
       
-      {/* ══ RIGHT CONTROL PANEL (collapsible) ══ */}
+      {/* â•گâ•گ RIGHT CONTROL PANEL (collapsible) â•گâ•گ */}
       <div className={`flex flex-col z-10 bg-[#13151f] border-r border-white/[0.06] shadow-2xl transition-all duration-300 overflow-hidden ${ panelOpen ? 'w-96' : 'w-0' }`}>
        <div className="w-96 flex flex-col h-full">
          <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-4 bg-[#13151f]">
            <button onClick={onBack} className="text-gray-500 hover:text-white text-xs flex items-center gap-1.5 font-bold transition-colors">
-             <ChevronRight className="w-4 h-4" /> المكتبة
+             <ChevronRight className="w-4 h-4" /> ط§ظ„ظ…ظƒطھط¨ط©
            </button>
            <div className="flex items-center gap-2">
                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>حفظ تلقائي</span>
+                <span>ط­ظپط¸ طھظ„ظ‚ط§ط¦ظٹ</span>
                </div>
            </div>
         </div>
@@ -1692,18 +1693,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     const field = draftOverlay.fields.find(f => f.id === 'homeScore');
                     if(field) handleDraftFieldChange('homeScore', Number(field.value) + 1);
                 }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
-                    <span className="text-[10px] text-blue-200">صاحب الأرض</span>
-                    <span>+1 هدف</span>
+                    <span className="text-[10px] text-blue-200">طµط§ط­ط¨ ط§ظ„ط£ط±ط¶</span>
+                    <span>+1 ظ‡ط¯ظپ</span>
                 </button>
                 <button onClick={() => {
                     const field = draftOverlay.fields.find(f => f.id === 'awayScore');
                     if(field) handleDraftFieldChange('awayScore', Number(field.value) + 1);
                 }} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg transition-colors flex flex-col items-center">
-                    <span className="text-[10px] text-red-200">الضيف</span>
-                    <span>+1 هدف</span>
+                    <span className="text-[10px] text-red-200">ط§ظ„ط¶ظٹظپ</span>
+                    <span>+1 ظ‡ط¯ظپ</span>
                 </button>
-                <button onClick={() => handleDraftFieldChange('period', 'الشوط الثاني')} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-1.5 rounded-lg text-xs col-span-2">
-                    بداية الشوط الثاني
+                <button onClick={() => handleDraftFieldChange('period', 'ط§ظ„ط´ظˆط· ط§ظ„ط«ط§ظ†ظٹ')} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-1.5 rounded-lg text-xs col-span-2">
+                    ط¨ط¯ط§ظٹط© ط§ظ„ط´ظˆط· ط§ظ„ط«ط§ظ†ظٹ
                 </button>
             </div>
         )}
@@ -1716,9 +1717,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2"
                 >
                     <Sparkles className="w-3.5 h-3.5" />
-                    {isProcessingAI ? 'جاري توليد بيانات المباراة...' : 'ملء بيانات مباراة بالذكاء الاصطناعي'}
+                    {isProcessingAI ? 'ط¬ط§ط±ظٹ طھظˆظ„ظٹط¯ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط©...' : 'ظ…ظ„ط، ط¨ظٹط§ظ†ط§طھ ظ…ط¨ط§ط±ط§ط© ط¨ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ'}
                 </button>
-                {aiError && <div className="text-[11px] text-red-400 text-center">تعذر تشغيل الذكاء الاصطناعي. تحقق من GEMINI_API_KEY أو جرّب لاحقا.</div>}
+                {aiError && <div className="text-[11px] text-red-400 text-center">طھط¹ط°ط± طھط´ط؛ظٹظ„ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ. طھط­ظ‚ظ‚ ظ…ظ† GEMINI_API_KEY ط£ظˆ ط¬ط±ظ‘ط¨ ظ„ط§ط­ظ‚ط§.</div>}
             </div>
         )}
 
@@ -1726,7 +1727,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <div className="shrink-0 border-b border-cyan-900/35 bg-cyan-950/20 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                     <label className="text-xs text-cyan-200 font-black flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" /> صندوق AI الموحد
+                        <Sparkles className="w-3.5 h-3.5" /> طµظ†ط¯ظˆظ‚ AI ط§ظ„ظ…ظˆط­ط¯
                     </label>
                     <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
                         Gemini fallback
@@ -1736,7 +1737,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   value={aiBoxInput}
                   onChange={(event) => setAiBoxInput(event.target.value)}
                   rows={3}
-                  placeholder="اكتب خبر انتقال، اسم لاعب ونادي، أو نص طويل ليتم توزيعه على حقول القالب الحالي..."
+                  placeholder="ط§ظƒطھط¨ ط®ط¨ط± ط§ظ†طھظ‚ط§ظ„طŒ ط§ط³ظ… ظ„ط§ط¹ط¨ ظˆظ†ط§ط¯ظٹطŒ ط£ظˆ ظ†طµ ط·ظˆظٹظ„ ظ„ظٹطھظ… طھظˆط²ظٹط¹ظ‡ ط¹ظ„ظ‰ ط­ظ‚ظˆظ„ ط§ظ„ظ‚ط§ظ„ط¨ ط§ظ„ط­ط§ظ„ظٹ..."
                   className="w-full resize-y rounded-lg border border-cyan-800/45 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400"
                 />
                 <div className="grid grid-cols-3 gap-2">
@@ -1746,7 +1747,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-cyan-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      تعبئة ذكية
+                      طھط¹ط¨ط¦ط© ط°ظƒظٹط©
                     </button>
                     <button
                       type="button"
@@ -1754,7 +1755,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-rose-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-rose-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      لاعب / ميركاتو
+                      ظ„ط§ط¹ط¨ / ظ…ظٹط±ظƒط§طھظˆ
                     </button>
                     <button
                       type="button"
@@ -1762,7 +1763,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-slate-800 px-2 py-2 text-[10px] font-black text-slate-100 transition-colors hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                      أخبار متعددة
+                      ط£ط®ط¨ط§ط± ظ…طھط¹ط¯ط¯ط©
                     </button>
                 </div>
                 {aiBoxMessage && (
@@ -1777,168 +1778,290 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
         )}
 
-        {draftOverlay.type === OverlayType.PLAYER_STATS && (
-            <div className="shrink-0 max-h-[58vh] overflow-y-auto border-b border-cyan-900/40 bg-slate-950/70 p-4 [scrollbar-width:thin] space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <div className="text-xs font-black text-cyan-200">Smart Player Stats Selection</div>
-                        <div className="mt-0.5 text-[10px] font-bold text-slate-400">اختر قبل الجلب. لا يتم طلب كل الإحصائيات دفعة واحدة.</div>
-                    </div>
-                    <div className="rounded-lg border border-cyan-700/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-black text-cyan-100">
-                        {selectedMetricKeys.length} metrics
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={String(getDraftValue('providerPolicy') || 'auto')}
-                      onChange={(event) => handleDraftFieldChange('providerPolicy', event.target.value)}
-                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-[11px] font-bold text-white"
-                    >
-                        <option value="auto">Auto router</option>
-                        <option value="fbref">FBref season first</option>
-                        <option value="matchBridge">Match bridge first</option>
-                        <option value="demo">Demo fallback</option>
-                    </select>
-                    <select
-                      value={String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB')}
-                      onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
-                      className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-[11px] font-bold text-white"
-                    >
-                        <option value="ULTRA_LAB">Ultra Lab</option>
-                        <option value="GLASS_SCOUT">Glass Scout</option>
-                        <option value="BARCA_RADAR">Barca Radar</option>
-                        <option value="MINIMAL_CAST">Minimal Cast</option>
-                    </select>
-                </div>
-
-                <div>
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">Presets</div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {Object.keys(PLAYER_STATS_PRESETS).map(preset => {
-                            const active = String(getDraftValue('metricPreset') || 'Attacker Profile') === preset;
-                            return (
-                                <button
-                                  key={preset}
-                                  type="button"
-                                  onClick={() => applyMetricPreset(preset)}
-                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
-                                >
-                                    {preset}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div>
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">Categories</div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {PLAYER_STATS_CATEGORIES.map(category => {
-                            const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category.key]);
-                            const active = categoryKeys.length > 0 && categoryKeys.some(key => selectedMetricSet.has(key));
-                            return (
-                                <button
-                                  key={category.key}
-                                  type="button"
-                                  onClick={() => toggleMetricCategory(category.key)}
-                                  className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-emerald-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
-                                >
-                                    {category.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-700/70 bg-slate-900/55 p-3 space-y-2">
-                    <div className="text-[10px] font-black text-slate-300">Arabic / English metric text</div>
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
-                        <input
-                          value={String(getDraftValue('metricNaturalLanguage') || '')}
-                          onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
-                          placeholder="الأهداف المتوقعة، التسديدات، المراوغات"
-                          className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
-                        />
+        {draftOverlay.type === OverlayType.PLAYER_STATS && (() => {
+            const parsedSource = JSON.parse(String(getDraftValue('playerStatsSourceJson') || '{}'));
+            const coverage = parsedSource.coverage;
+            const tabs = [
+                { id: 'setup', label: 'Setup' },
+                { id: 'presets', label: 'Presets' },
+                { id: 'metrics', label: 'Metrics' },
+                { id: 'coverage', label: 'Coverage' },
+                { id: 'visuals', label: 'Visuals' },
+                { id: 'advanced', label: 'Advanced' }
+            ] as const;
+            
+            return (
+            <div className="shrink-0 flex flex-col h-[58vh] border-b border-cyan-900/40 bg-slate-950/70">
+                {/* Tabs Header */}
+                <div className="flex bg-slate-900 border-b border-slate-800">
+                    {tabs.map(tab => (
                         <button
-                          type="button"
-                          onClick={applyMetricNaturalLanguage}
-                          className="rounded-lg bg-cyan-600 px-3 py-2 text-[10px] font-black text-white hover:bg-cyan-500"
+                            key={tab.id}
+                            onClick={() => setActivePlayerStatsTab(tab.id)}
+                            className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${activePlayerStatsTab === tab.id ? 'bg-cyan-500/10 text-cyan-400 border-b-2 border-cyan-500' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
                         >
-                          Add
+                            {tab.label}
                         </button>
-                    </div>
+                    ))}
                 </div>
-
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <div className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-200/80">Selected chips</div>
-                        <button
-                          type="button"
-                          onClick={() => setMetricAdvancedOpen(value => !value)}
-                          className="rounded-md border border-slate-700 px-2 py-1 text-[10px] font-black text-slate-200 hover:bg-slate-800"
-                        >
-                          {metricAdvancedOpen ? 'Close advanced' : 'Advanced search'}
-                        </button>
-                    </div>
-                    <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                        {selectedMetricKeys.map(key => {
-                            const metric = effectiveMetricCatalog.find(item => item.key === key);
-                            return (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  onClick={() => toggleMetricKey(key)}
-                                  className="rounded-full border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-black text-cyan-100 hover:bg-rose-500/20 hover:text-rose-100"
+                
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:thin] space-y-4">
+                    
+                    {activePlayerStatsTab === 'setup' && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">Player Mode</label>
+                                <select
+                                    value={String(getDraftValue('playerStatsMode') || 'SINGLE')}
+                                    onChange={(event) => handleDraftFieldChange('playerStatsMode', event.target.value)}
+                                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
                                 >
-                                    {metric?.labelAr || metric?.label || key} ×
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {metricAdvancedOpen && (
-                    <div className="rounded-xl border border-slate-700/70 bg-slate-900/65 p-3 space-y-3">
-                        <input
-                          value={metricSearch}
-                          onChange={(event) => setMetricSearch(event.target.value)}
-                          placeholder="Search metric / ابحث عن إحصائية"
-                          className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
-                        />
-                        <div className="grid max-h-60 grid-cols-1 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                            {filteredMetricCatalog.map(metric => {
-                                const active = selectedMetricSet.has(metric.key);
-                                return (
-                                    <button
-                                      key={metric.key}
-                                      type="button"
-                                      onClick={() => toggleMetricKey(metric.key)}
-                                      className={`grid grid-cols-[1fr_auto] rounded-lg border px-2.5 py-2 text-left transition-colors ${active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-800'}`}
-                                    >
-                                        <span className="min-w-0">
-                                            <span className="block truncate text-[11px] font-black">{metric.labelAr || metric.label}</span>
-                                            <span className="block truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">{metric.key} / {metric.category}</span>
-                                        </span>
-                                        <span className="text-[10px] font-black">{active ? 'ON' : '+'}</span>
-                                    </button>
-                                );
-                            })}
+                                    <option value="SINGLE">Single Player</option>
+                                    <option value="COMPARE">Compare 2 Players</option>
+                                    <option value="SCOUT_SHORTLIST">Scout 3 Players</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-cyan-200 block mb-1">Target Player</label>
+                                <input
+                                    value={String(getDraftValue('playerAName') || getDraftValue('playerName') || getDraftValue('sourcePlayerName') || '')}
+                                    onChange={(event) => handleDraftFieldChange('playerAName', event.target.value)}
+                                    placeholder="Player Name (e.g. Lamine Yamal)"
+                                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                />
+                                <input
+                                    value={String(getDraftValue('playerAClub') || getDraftValue('playerTeam') || getDraftValue('sourceClubName') || '')}
+                                    onChange={(event) => handleDraftFieldChange('playerAClub', event.target.value)}
+                                    placeholder="Club (e.g. Barcelona)"
+                                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                />
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={handleFetchPlayerStats}
+                              disabled={isFetchingPlayerStats || !selectedMetricKeys.length}
+                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
+                                {isFetchingPlayerStats ? 'Fetching selected metrics...' : 'Fetch selected player stats'}
+                            </button>
                         </div>
-                    </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleFetchPlayerStats}
-                  disabled={isFetchingPlayerStats || !selectedMetricKeys.length}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
-                >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
-                    {isFetchingPlayerStats ? 'Fetching selected metrics...' : 'Fetch selected player stats'}
-                </button>
+                    )}
+                    
+                    {activePlayerStatsTab === 'presets' && (
+                        <div className="space-y-4">
+                            <div>
+                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">Presets</div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    {Object.keys(PLAYER_STATS_PRESETS).map(preset => {
+                                        const active = String(getDraftValue('metricPreset') || 'Attacker Profile') === preset;
+                                        return (
+                                            <button
+                                              key={preset}
+                                              type="button"
+                                              onClick={() => applyMetricPreset(preset)}
+                                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                                            >
+                                                {preset}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">Categories</div>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {PLAYER_STATS_CATEGORIES.map(category => {
+                                        const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category.key]);
+                                        const active = categoryKeys.length > 0 && categoryKeys.some(key => selectedMetricSet.has(key));
+                                        return (
+                                            <button
+                                              key={category.key}
+                                              type="button"
+                                              onClick={() => toggleMetricCategory(category.key)}
+                                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-emerald-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                                            >
+                                                {category.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activePlayerStatsTab === 'metrics' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-[10px] font-black text-cyan-200">Select Metrics ({selectedMetricKeys.length})</div>
+                            </div>
+                            
+                            <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                                {selectedMetricKeys.map(key => {
+                                    const metric = effectiveMetricCatalog.find(item => item.key === key);
+                                    const isMissing = coverage?.missingStatGroups?.includes(metric?.category);
+                                    return (
+                                        <button
+                                          key={key}
+                                          type="button"
+                                          onClick={() => toggleMetricKey(key)}
+                                          className={`rounded-full border px-2.5 py-1 text-[10px] font-black transition-colors ${isMissing ? 'border-rose-500/35 bg-rose-500/10 text-rose-200' : 'border-cyan-500/35 bg-cyan-500/10 text-cyan-100 hover:bg-rose-500/20 hover:text-rose-100'}`}
+                                          title={isMissing ? `Warning: Requires missing stat group '${metric?.category}'` : undefined}
+                                        >
+                                            {metric?.labelAr || metric?.label || key} ×
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            
+                            <div className="rounded-xl border border-slate-700/70 bg-slate-900/65 p-3 space-y-3">
+                                <input
+                                  value={metricSearch}
+                                  onChange={(event) => setMetricSearch(event.target.value)}
+                                  placeholder="Search metric / ابحث عن إحصائية"
+                                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
+                                />
+                                <div className="grid max-h-60 grid-cols-1 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                                    {filteredMetricCatalog.map(metric => {
+                                        const active = selectedMetricSet.has(metric.key);
+                                        const isMissing = coverage?.missingStatGroups?.includes(metric.category);
+                                        return (
+                                            <button
+                                              key={metric.key}
+                                              type="button"
+                                              onClick={() => toggleMetricKey(metric.key)}
+                                              className={`grid grid-cols-[1fr_auto] rounded-lg border px-2.5 py-2 text-left transition-colors ${active ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-100' : 'border-slate-700 bg-slate-950/70 text-slate-200 hover:bg-slate-800'} ${isMissing && !active ? 'opacity-50 grayscale' : ''}`}
+                                            >
+                                                <span className="min-w-0">
+                                                    <span className="block truncate text-[11px] font-black flex items-center gap-1.5">
+                                                      {metric.labelAr || metric.label}
+                                                      {isMissing && <AlertCircle className="w-3 h-3 text-rose-400" />}
+                                                    </span>
+                                                    <span className="block truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">{metric.key} / {metric.category}</span>
+                                                </span>
+                                                <span className="text-[10px] font-black">{active ? 'ON' : '+'}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activePlayerStatsTab === 'coverage' && (
+                        <div className="space-y-4">
+                            {coverage ? (
+                                <>
+                                    <div className={`p-3 rounded-lg border ${coverage.status === 'full' ? 'bg-emerald-950/40 border-emerald-900/50' : 'bg-amber-950/40 border-amber-900/50'}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Info className={`w-4 h-4 ${coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'}`} />
+                                            <span className={`text-[11px] font-black uppercase ${coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}`}>
+                                                {coverage.status === 'full' ? 'Full Cache Available' : 'Partial Cache Coverage'}
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-white/50 mb-3">
+                                            This indicates which data sets were successfully synced from the VPS FBref scraper.
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">Available Groups</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {coverage.availableStatGroups?.map((group: string) => (
+                                                        <span key={group} className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[9px] font-bold text-emerald-200">{group}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {coverage.missingStatGroups?.length > 0 && (
+                                                <div className="mt-2">
+                                                    <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest block mb-1">Missing Groups</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {coverage.missingStatGroups.map((group: string) => (
+                                                            <span key={group} className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded text-[9px] font-bold text-rose-200">{group}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-[11px] font-bold text-slate-400 text-center p-4">
+                                    No coverage data available yet. Fetch stats first to retrieve cache status.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {activePlayerStatsTab === 'visuals' && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">Visual Variant</label>
+                                <select
+                                  value={String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB')}
+                                  onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
+                                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+                                >
+                                    <option value="ULTRA_LAB">Ultra Lab (Default)</option>
+                                    <option value="GLASS_SCOUT">Glass Scout</option>
+                                    <option value="BARCA_RADAR">Barca Radar</option>
+                                    <option value="MINIMAL_CAST">Minimal Cast</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">Scale</label>
+                                <input 
+                                    type="range" 
+                                    min="0.5" max="1.5" step="0.05" 
+                                    value={Number(getDraftValue('scale') || 1)}
+                                    onChange={(e) => handleDraftFieldChange('scale', Number(e.target.value))}
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activePlayerStatsTab === 'advanced' && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1">Provider Policy</label>
+                                <select
+                                  value={String(getDraftValue('providerPolicy') || 'auto')}
+                                  onChange={(event) => handleDraftFieldChange('providerPolicy', event.target.value)}
+                                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+                                >
+                                    <option value="auto">Auto router (Bridge first, then FBref)</option>
+                                    <option value="fbref">Strict: FBref season only</option>
+                                    <option value="matchBridge">Strict: Match bridge only</option>
+                                    <option value="demo">Demo fallback</option>
+                                </select>
+                            </div>
+                            <div className="rounded-xl border border-slate-700/70 bg-slate-900/55 p-3 space-y-2">
+                                <div className="text-[10px] font-black text-slate-300">Natural Language Metric Parser</div>
+                                <div className="grid grid-cols-[1fr_auto] gap-2">
+                                    <input
+                                      value={String(getDraftValue('metricNaturalLanguage') || '')}
+                                      onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
+                                      placeholder="الأهداف المتوقعة، التسديدات، المراوغات"
+                                      className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={applyMetricNaturalLanguage}
+                                      className="rounded-lg bg-cyan-600 px-3 py-2 text-[10px] font-black text-white hover:bg-cyan-500"
+                                    >
+                                      Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-        )}
+            );
+        })()}
 
         {draftOverlay.type === OverlayType.MATCH_STATS && (
             <div className="shrink-0 max-h-[62vh] overflow-y-auto border-b border-blue-900/40 bg-blue-950/25 p-4 [scrollbar-width:thin] space-y-3">
@@ -1951,7 +2074,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 />
                 <div className="flex items-center justify-between gap-2">
                     <label className="text-xs text-blue-300 font-bold flex items-center gap-1.5">
-                        <ArrowDownUp className="w-3 h-3" /> إدخال Match Stats
+                        <ArrowDownUp className="w-3 h-3" /> ط¥ط¯ط®ط§ظ„ Match Stats
                     </label>
                     <span className="text-[10px] font-mono text-blue-300/70 bg-blue-950/50 px-2 py-0.5 rounded">
                         {String(getDraftValue('dataMode') || 'CLOUD_BRIDGE')}
@@ -1971,7 +2094,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <span className="text-[10px] font-bold">{bridgeStatusLabel}</span>
                     </div>
                     <div className="mt-1 truncate text-[11px] font-bold text-white/80">
-                        {bridgeScore || bridgeStatus?.currentUrl || 'اضغط فحص الحالة أو شغل مباراة جديدة.'}
+                        {bridgeScore || bridgeStatus?.currentUrl || 'ط§ط¶ط؛ط· ظپط­طµ ط§ظ„ط­ط§ظ„ط© ط£ظˆ ط´ط؛ظ„ ظ…ط¨ط§ط±ط§ط© ط¬ط¯ظٹط¯ط©.'}
                     </div>
                     {bridgeStatus?.lastError && (
                         <div className="mt-1 truncate text-[10px] font-bold text-red-300">{bridgeStatus.lastError}</div>
@@ -1979,14 +2102,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     {bridgeArchive && (
                         <div className={`mt-1 truncate text-[10px] font-bold ${bridgeArchive.ok ? 'text-emerald-200/90' : 'text-red-300'}`}>
                             {bridgeArchive.ok
-                              ? `GitHub Archive${bridgeArchive.skipped ? ' · unchanged' : ''}: ${bridgeArchive.path || 'ready'}`
+                              ? `GitHub Archive${bridgeArchive.skipped ? ' آ· unchanged' : ''}: ${bridgeArchive.path || 'ready'}`
                               : `Archive error: ${bridgeArchive.error || bridgeArchive.reason || 'not saved'}`}
                         </div>
                     )}
                 </div>
                 <div className="rounded-lg border border-blue-800/35 bg-slate-950/45 p-3 space-y-3">
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-blue-200/80">إحصائيات المباراة التي تظهر في القالب</div>
+                        <div className="mb-1.5 text-[10px] font-black text-blue-200/80">ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ…ط¨ط§ط±ط§ط© ط§ظ„طھظٹ طھط¸ظ‡ط± ظپظٹ ط§ظ„ظ‚ط§ظ„ط¨</div>
                         <div className="grid grid-cols-3 gap-1.5">
                             {MATCH_STAT_PRESET_QUICK.map(option => {
                               const active = String(getDraftValue('matchMetricPreset') || 'SMART') === option.value;
@@ -2004,7 +2127,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-rose-200/80">إحصائيات اللاعبين</div>
+                        <div className="mb-1.5 text-[10px] font-black text-rose-200/80">ط¥ط­طµط§ط¦ظٹط§طھ ط§ظ„ظ„ط§ط¹ط¨ظٹظ†</div>
                         <div className="grid grid-cols-3 gap-1.5">
                             {PLAYER_STAT_PRESET_QUICK.map(option => {
                               const active = String(getDraftValue('playerMetricPreset') || 'SMART') === option.value;
@@ -2022,7 +2145,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-cyan-200/80">تصميم القالب</div>
+                        <div className="mb-1.5 text-[10px] font-black text-cyan-200/80">طھطµظ…ظٹظ… ط§ظ„ظ‚ط§ظ„ط¨</div>
                         <div className="grid grid-cols-5 gap-1.5">
                             {MATCH_VISUAL_STYLE_QUICK.map(option => {
                               const active = String(getDraftValue('visualStyle') || 'DUAL_RAIL') === option.value;
@@ -2040,14 +2163,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     </div>
                     <div>
-                        <div className="mb-1.5 text-[10px] font-black text-violet-200/80">تحكم البث والصانع</div>
+                        <div className="mb-1.5 text-[10px] font-black text-violet-200/80">طھط­ظƒظ… ط§ظ„ط¨ط« ظˆط§ظ„طµط§ظ†ط¹</div>
                         <div className="grid grid-cols-3 gap-1.5">
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('broadcastMotion', !Boolean(getDraftValue('broadcastMotion') ?? true))}
                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('broadcastMotion') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
-                              حركة
+                              ط­ط±ظƒط©
                             </button>
                             <button
                               type="button"
@@ -2061,7 +2184,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               onClick={() => handleDraftFieldChange('showCreatorBadge', !Boolean(getDraftValue('showCreatorBadge') ?? true))}
                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${Boolean(getDraftValue('showCreatorBadge') ?? true) ? 'bg-violet-500 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                             >
-                              الصانع
+                              ط§ظ„طµط§ظ†ط¹
                             </button>
                         </div>
                         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
@@ -2070,28 +2193,28 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               onClick={() => handleDraftFieldChange('matchPanelScale', Math.max(0.65, Number(getDraftValue('matchPanelScale') || 1) - 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              تصغير المباراة
+                              طھطµط؛ظٹط± ط§ظ„ظ…ط¨ط§ط±ط§ط©
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('matchPanelScale', Math.min(1.6, Number(getDraftValue('matchPanelScale') || 1) + 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              تكبير المباراة
+                              طھظƒط¨ظٹط± ط§ظ„ظ…ط¨ط§ط±ط§ط©
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('playerPanelScale', Math.max(0.65, Number(getDraftValue('playerPanelScale') || 1) - 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              تصغير اللاعبين
+                              طھطµط؛ظٹط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ†
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDraftFieldChange('playerPanelScale', Math.min(1.6, Number(getDraftValue('playerPanelScale') || 1) + 0.05))}
                               className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                             >
-                              تكبير اللاعبين
+                              طھظƒط¨ظٹط± ط§ظ„ظ„ط§ط¹ط¨ظٹظ†
                             </button>
                         </div>
                     </div>
@@ -2101,14 +2224,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           onClick={() => handleDraftFieldChange('teamStatsSide', 'HOME_LEFT')}
                           className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'HOME_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                         >
-                          المضيف يسار
+                          ط§ظ„ظ…ط¶ظٹظپ ظٹط³ط§ط±
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDraftFieldChange('teamStatsSide', 'AWAY_LEFT')}
                           className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${String(getDraftValue('teamStatsSide') || 'HOME_LEFT') === 'AWAY_LEFT' ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
                         >
-                          الضيف يسار
+                          ط§ظ„ط¶ظٹظپ ظٹط³ط§ط±
                         </button>
                         <button
                           type="button"
@@ -2118,15 +2241,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           })}
                           className="rounded-md bg-gray-800 px-2 py-1.5 text-[10px] font-black text-gray-200 transition-colors hover:bg-gray-700"
                         >
-                          عكس الألوان
+                          ط¹ظƒط³ ط§ظ„ط£ظ„ظˆط§ظ†
                         </button>
                     </div>
                 </div>
                 {!isAdminUnlocked && (
                     <form onSubmit={handleAdminLogin} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                        <div className="mb-2 text-[11px] font-bold text-amber-200">افتح قفل التحكم لتغيير رابط المباراة أو تشغيل الجسر.</div>
+                        <div className="mb-2 text-[11px] font-bold text-amber-200">ط§ظپطھط­ ظ‚ظپظ„ ط§ظ„طھط­ظƒظ… ظ„طھط؛ظٹظٹط± ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط© ط£ظˆ طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط±.</div>
                         <div className="mb-2 text-[10px] leading-5 text-amber-100/70">
-                          المفتاح يؤخذ من متغير Vercel باسم EDITOR_ADMIN_PASSCODE أو ADMIN_ACCESS_CODE. إذا لا تعرفه، غيّره من إعدادات المشروع ثم أعد النشر.
+                          ط§ظ„ظ…ظپطھط§ط­ ظٹط¤ط®ط° ظ…ظ† ظ…طھط؛ظٹط± Vercel ط¨ط§ط³ظ… EDITOR_ADMIN_PASSCODE ط£ظˆ ADMIN_ACCESS_CODE. ط¥ط°ط§ ظ„ط§ طھط¹ط±ظپظ‡طŒ ط؛ظٹظ‘ط±ظ‡ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…ط´ط±ظˆط¹ ط«ظ… ط£ط¹ط¯ ط§ظ„ظ†ط´ط±.
                         </div>
                         <div className="flex gap-2">
                             <input
@@ -2141,7 +2264,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               disabled={isAdminAuthorizing}
                               className="rounded-md bg-amber-500 px-3 py-2 text-xs font-black text-black disabled:bg-gray-700 disabled:text-gray-400"
                             >
-                              فتح
+                              ظپطھط­
                             </button>
                         </div>
                         {passwordError && <div className="mt-2 text-[10px] font-bold text-red-300">{passwordError}</div>}
@@ -2154,7 +2277,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Zap className="w-3 h-3" /> تشغيل الجسر من رابط المباراة
+                        <Zap className="w-3 h-3" /> طھط´ط؛ظٹظ„ ط§ظ„ط¬ط³ط± ظ…ظ† ط±ط§ط¨ط· ط§ظ„ظ…ط¨ط§ط±ط§ط©
                     </button>
                     <button
                       type="button"
@@ -2162,7 +2285,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="hidden"
                     >
-                        <Monitor className="w-3 h-3" /> حفظ الرابط
+                        <Monitor className="w-3 h-3" /> ط­ظپط¸ ط§ظ„ط±ط§ط¨ط·
                     </button>
                     <button
                       type="button"
@@ -2170,7 +2293,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="bg-red-600/80 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Square className="w-3 h-3" /> إيقاف
+                        <Square className="w-3 h-3" /> ط¥ظٹظ‚ط§ظپ
                     </button>
                     <button
                       type="button"
@@ -2178,7 +2301,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isBridgeActionRunning}
                       className="bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <RefreshCw className="w-3 h-3" /> فحص حالة Google Cloud
+                        <RefreshCw className="w-3 h-3" /> ظپط­طµ ط­ط§ظ„ط© Google Cloud
                     </button>
                     <button
                       type="button"
@@ -2186,7 +2309,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={bridgeControlsLocked}
                       className="col-span-2 bg-cyan-700/80 hover:bg-cyan-600 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <History className="w-3 h-3" /> أرشفة الآن في GitHub
+                        <History className="w-3 h-3" /> ط£ط±ط´ظپط© ط§ظ„ط¢ظ† ظپظٹ GitHub
                     </button>
                     <button
                       type="button"
@@ -2194,7 +2317,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isImportingMatchStats}
                       className="hidden"
                     >
-                        <Copy className="w-3 h-3" /> استيراد JSON
+                        <Copy className="w-3 h-3" /> ط§ط³طھظٹط±ط§ط¯ JSON
                     </button>
                     <button
                       type="button"
@@ -2202,17 +2325,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isImportingMatchStats}
                       className="hidden"
                     >
-                        <Zap className="w-3 h-3" /> سحب الجسر
+                        <Zap className="w-3 h-3" /> ط³ط­ط¨ ط§ظ„ط¬ط³ط±
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         handleDraftFieldChanges({ dataMode: 'CLOUD_BRIDGE', apiUrl: CLOUD_MATCH_API_URL });
-                        setMatchStatsImportMessage({ type: 'success', text: 'تم تفعيل الجسر المباشر.' });
+                        setMatchStatsImportMessage({ type: 'success', text: 'طھظ… طھظپط¹ظٹظ„ ط§ظ„ط¬ط³ط± ط§ظ„ظ…ط¨ط§ط´ط±.' });
                       }}
                       className="hidden"
                     >
-                        <Monitor className="w-3 h-3" /> وضع Live Bridge المباشر
+                        <Monitor className="w-3 h-3" /> ظˆط¶ط¹ Live Bridge ط§ظ„ظ…ط¨ط§ط´ط±
                     </button>
                 </div>
                 {matchStatsImportMessage && (
@@ -2231,21 +2354,21 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <div className="p-4 bg-purple-950/30 border-b border-purple-900/50 space-y-4">
                 <div className="space-y-2">
                     <label className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> توليد الشرائح من النص
+                        <Sparkles className="w-3 h-3" /> طھظˆظ„ظٹط¯ ط§ظ„ط´ط±ط§ط¦ط­ ظ…ظ† ط§ظ„ظ†طµ
                     </label>
                     <button
                       onClick={handleGenerateSmartNewsSlides}
                       disabled={isProcessingAI}
                       className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs transition-colors"
                     >
-                        {isProcessingAI ? 'جاري تجهيز الشرائح...' : 'تحويل النص إلى شرائح بث احترافية'}
+                        {isProcessingAI ? 'ط¬ط§ط±ظٹ طھط¬ظ‡ظٹط² ط§ظ„ط´ط±ط§ط¦ط­...' : 'طھط­ظˆظٹظ„ ط§ظ„ظ†طµ ط¥ظ„ظ‰ ط´ط±ط§ط¦ط­ ط¨ط« ط§ط­طھط±ط§ظپظٹط©'}
                     </button>
-                    {aiError && <div className="text-[11px] text-red-400">اكتب النص الكامل أولا، وتأكد من إعداد مفتاح Gemini في الخادم.</div>}
+                    {aiError && <div className="text-[11px] text-red-400">ط§ظƒطھط¨ ط§ظ„ظ†طµ ط§ظ„ظƒط§ظ…ظ„ ط£ظˆظ„ط§طŒ ظˆطھط£ظƒط¯ ظ…ظ† ط¥ط¹ط¯ط§ط¯ ظ…ظپطھط§ط­ Gemini ظپظٹ ط§ظ„ط®ط§ط¯ظ….</div>}
                 </div>
 
                 <div className="pt-2 border-t border-purple-900/30">
                     <label className="text-xs text-blue-300 font-bold flex items-center justify-between mb-2">
-                        <span>تحكم الشرائح</span>
+                        <span>طھط­ظƒظ… ط§ظ„ط´ط±ط§ط¦ط­</span>
                         <span className="font-mono text-blue-400 bg-blue-950/50 px-2 py-0.5 rounded text-[10px]">
                              {Number(getDraftValue('currentPage') || 0) + 1} / {JSON.parse(String(getDraftValue('pagesData') || '[]')).length || 1}
                         </span>
@@ -2258,7 +2381,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           }}
                           className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
                         >
-                            <Rewind className="w-3 h-3" /> السابق
+                            <Rewind className="w-3 h-3" /> ط§ظ„ط³ط§ط¨ظ‚
                         </button>
                         <button 
                           onClick={() => {
@@ -2268,7 +2391,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           }}
                           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
                         >
-                            التالي <FastForward className="w-3 h-3" />
+                            ط§ظ„طھط§ظ„ظٹ <FastForward className="w-3 h-3" />
                         </button>
                     </div>
                 </div>
@@ -2278,7 +2401,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.PLAYER_PROFILE && (
             <div className="p-4 bg-gray-950/50 border-b border-gray-800">
                 <label className="text-xs text-blue-400 font-bold block mb-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> التعبئة الذكية (Presets)
+                    <Zap className="w-3 h-3" /> ط§ظ„طھط¹ط¨ط¦ط© ط§ظ„ط°ظƒظٹط© (Presets)
                 </label>
                 <select onChange={(e) => {
                     const preset = e.target.value;
@@ -2318,10 +2441,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     }
                     e.target.value = "";
                 }} className="w-full bg-blue-900/20 text-blue-300 border border-blue-500/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-bold">
-                    <option value="">-- اختر لاعب للتعبئة التلقائية --</option>
-                    <option value="messi">ليونيل ميسي (أيقونة)</option>
-                    <option value="yamal">لامين يامال (موهبة)</option>
-                    <option value="pedri">بيدري (مايسترو)</option>
+                    <option value="">-- ط§ط®طھط± ظ„ط§ط¹ط¨ ظ„ظ„طھط¹ط¨ط¦ط© ط§ظ„طھظ„ظ‚ط§ط¦ظٹط© --</option>
+                    <option value="messi">ظ„ظٹظˆظ†ظٹظ„ ظ…ظٹط³ظٹ (ط£ظٹظ‚ظˆظ†ط©)</option>
+                    <option value="yamal">ظ„ط§ظ…ظٹظ† ظٹط§ظ…ط§ظ„ (ظ…ظˆظ‡ط¨ط©)</option>
+                    <option value="pedri">ط¨ظٹط¯ط±ظٹ (ظ…ط§ظٹط³طھط±ظˆ)</option>
                 </select>
             </div>
         )}
@@ -2329,10 +2452,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.TICKER && (
             <div className="p-4 bg-red-950/30 border-b border-red-900/50">
                 <label className="text-xs text-red-400 font-bold block mb-2 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> خبر عاجل مباشر
+                    <Zap className="w-3 h-3" /> ط®ط¨ط± ط¹ط§ط¬ظ„ ظ…ط¨ط§ط´ط±
                 </label>
                 <div className="flex gap-2">
-                    <input type="text" id="quick-ticker" placeholder="اكتب الخبر العاجل هنا..." className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-xs focus:border-red-500" onKeyDown={(e) => {
+                    <input type="text" id="quick-ticker" placeholder="ط§ظƒطھط¨ ط§ظ„ط®ط¨ط± ط§ظ„ط¹ط§ط¬ظ„ ظ‡ظ†ط§..." className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-xs focus:border-red-500" onKeyDown={(e) => {
                         if(e.key === 'Enter') {
                             const val = e.currentTarget.value;
                             if(val) {
@@ -2348,7 +2471,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             input.value = '';
                         }
                     }} className="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-2 rounded text-xs transition-colors whitespace-nowrap">
-                        إرسال 🚀
+                        ط¥ط±ط³ط§ظ„ ًںڑ€
                     </button>
                 </div>
             </div>
@@ -2357,7 +2480,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         {draftOverlay.type === OverlayType.TOP_VIEWERS && (() => {
             const count = Math.min(Number(draftOverlay.fields.find(f => f.id === 'viewerCount')?.value || 5), 10);
 
-            // ── resize image to max 512px and return base64 ──────────────────
+            // â”€â”€ resize image to max 512px and return base64 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const resizeToBase64 = (file: File): Promise<string> =>
               new Promise((resolve, reject) => {
                 const img = new Image();
@@ -2374,7 +2497,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 };
                 img.onerror = () => {
                   URL.revokeObjectURL(url);
-                  reject(new Error('تعذر قراءة إحدى الصور. جرّب صورة JPG أو PNG أو WEBP واضحة.'));
+                  reject(new Error('طھط¹ط°ط± ظ‚ط±ط§ط،ط© ط¥ط­ط¯ظ‰ ط§ظ„طµظˆط±. ط¬ط±ظ‘ط¨ طµظˆط±ط© JPG ط£ظˆ PNG ط£ظˆ WEBP ظˆط§ط¶ط­ط©.'));
                 };
                 img.src = url;
               });
@@ -2382,20 +2505,20 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             return (
             <div className="bg-yellow-950/20 border-b border-yellow-900/30">
 
-                {/* ── Screenshot drop zone for AI Vision ── */}
+                {/* â”€â”€ Screenshot drop zone for AI Vision â”€â”€ */}
                 <div className="p-4 pb-2">
                   <label className="text-xs text-yellow-400 font-bold flex items-center gap-1.5 mb-2">
-                    <Zap className="w-3 h-3" /> استخراج المتفاعلين من لقطة الشاشة (Gemini Vision)
+                    <Zap className="w-3 h-3" /> ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ظ„ظ‚ط·ط© ط§ظ„ط´ط§ط´ط© (Gemini Vision)
                   </label>
-                  <p className="text-gray-500 text-[10px] mb-3">ارفع 1-3 صور من شاشة البث — الذكاء يستخرج الأسماء والأوسمة تلقائياً</p>
+                  <p className="text-gray-500 text-[10px] mb-3">ط§ط±ظپط¹ 1-3 طµظˆط± ظ…ظ† ط´ط§ط´ط© ط§ظ„ط¨ط« â€” ط§ظ„ط°ظƒط§ط، ظٹط³طھط®ط±ط¬ ط§ظ„ط£ط³ظ…ط§ط، ظˆط§ظ„ط£ظˆط³ظ…ط© طھظ„ظ‚ط§ط¦ظٹط§ظ‹</p>
 
                   <label
                     htmlFor="screenshot-upload"
                     className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-yellow-700/40 rounded-xl p-5 cursor-pointer hover:border-yellow-500/60 hover:bg-yellow-900/10 transition-all"
                   >
-                    <span className="text-3xl">📸</span>
-                    <span className="text-yellow-400 text-xs font-bold">اضغط لاختيار الصور (1-3)</span>
-                    <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP — حجم أقصى 5MB لكل صورة</span>
+                    <span className="text-3xl">ًں“¸</span>
+                    <span className="text-yellow-400 text-xs font-bold">ط§ط¶ط؛ط· ظ„ط§ط®طھظٹط§ط± ط§ظ„طµظˆط± (1-3)</span>
+                    <span className="text-gray-600 text-[10px]">JPG / PNG / WEBP â€” ط­ط¬ظ… ط£ظ‚طµظ‰ 5MB ظ„ظƒظ„ طµظˆط±ط©</span>
                   </label>
                   <input
                     ref={screenshotInputRef}
@@ -2410,7 +2533,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       if (!files.length) return;
                       const oversized = files.find(file => file.size > 5 * 1024 * 1024);
                       if (oversized) {
-                        setViewerAiError('حجم كل صورة يجب ألا يتجاوز 5MB.');
+                        setViewerAiError('ط­ط¬ظ… ظƒظ„ طµظˆط±ط© ظٹط¬ط¨ ط£ظ„ط§ ظٹطھط¬ط§ظˆط² 5MB.');
                         input.value = '';
                         return;
                       }
@@ -2434,13 +2557,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           if (Object.keys(updates).length) {
                             handleDraftFieldChanges(updates);
                           } else {
-                            setViewerAiError('لم يتم العثور على أسماء واضحة داخل الصور.');
+                            setViewerAiError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط£ط³ظ…ط§ط، ظˆط§ط¶ط­ط© ط¯ط§ط®ظ„ ط§ظ„طµظˆط±.');
                           }
                         } else {
-                          setViewerAiError('لم يتم العثور على أسماء واضحة داخل الصور.');
+                          setViewerAiError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط£ط³ظ…ط§ط، ظˆط§ط¶ط­ط© ط¯ط§ط®ظ„ ط§ظ„طµظˆط±.');
                         }
                       } catch (error) {
-                        setViewerAiError(error instanceof Error ? error.message : 'تعذر استخراج المتفاعلين من الصور.');
+                        setViewerAiError(error instanceof Error ? error.message : 'طھط¹ط°ط± ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ط§ظ„طµظˆط±.');
                       } finally {
                         setIsExtractingViewers(false);
                         input.value = '';
@@ -2454,22 +2577,22 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     disabled={isExtractingViewers}
                     className="w-full mt-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 font-bold py-2 rounded-lg text-xs transition-colors disabled:opacity-40"
                   >
-                    {isExtractingViewers ? '🔍 جاري الاستخراج...' : '🤖 استخراج المتفاعلين من الصور'}
+                    {isExtractingViewers ? 'ًں”چ ط¬ط§ط±ظٹ ط§ظ„ط§ط³طھط®ط±ط§ط¬...' : 'ًں¤– ط§ط³طھط®ط±ط§ط¬ ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ظ…ظ† ط§ظ„طµظˆط±'}
                   </button>
                   {viewerAiError && <div className="text-[11px] text-red-400 text-center mt-2">{viewerAiError}</div>}
                 </div>
 
-                {/* ── Quick name+image entry table ── */}
+                {/* â”€â”€ Quick name+image entry table â”€â”€ */}
                 <div className="px-4 pb-2">
                     <label className="text-xs text-gray-500 font-bold flex items-center gap-1.5 mb-2">
-                      أو أدخل يدوياً:
+                      ط£ظˆ ط£ط¯ط®ظ„ ظٹط¯ظˆظٹط§ظ‹:
                     </label>
                     <div className="space-y-1.5">
                         {Array.from({ length: count }, (_, i) => {
                             const idx = i + 1;
                             const nameVal = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Name`)?.value || '');
                             const imgVal  = String(draftOverlay.fields.find(f => f.id === `viewer${idx}Image`)?.value || '');
-                            const medal = idx === 1 ? '👑' : idx === 2 ? '🥈' : idx === 3 ? '🥉' : `#${idx}`;
+                            const medal = idx === 1 ? 'ًں‘‘' : idx === 2 ? 'ًں¥ˆ' : idx === 3 ? 'ًں¥‰' : `#${idx}`;
                             return (
                                 <div key={idx} className="flex items-center gap-2 bg-black/20 rounded-lg p-2 border border-yellow-900/20">
                                     <span className="text-xs w-5 text-center flex-shrink-0">{medal}</span>
@@ -2481,11 +2604,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     </div>
                                     <input type="text" value={nameVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Name`, e.target.value)}
-                                        placeholder={`الاسم ${idx}`}
+                                        placeholder={`ط§ظ„ط§ط³ظ… ${idx}`}
                                         className="flex-1 bg-transparent text-white text-xs placeholder-gray-600 focus:outline-none min-w-0" />
                                     <input type="text" value={imgVal}
                                         onChange={e => handleDraftFieldChange(`viewer${idx}Image`, e.target.value)}
-                                        placeholder="رابط الصورة..."
+                                        placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©..."
                                         className="flex-1 bg-transparent text-gray-400 text-[10px] placeholder-gray-700 focus:outline-none min-w-0 font-mono"
                                         dir="ltr" />
                                 </div>
@@ -2494,7 +2617,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     </div>
                 </div>
 
-                {/* ── AI Badges button ── */}
+                {/* â”€â”€ AI Badges button â”€â”€ */}
                 <div className="px-4 pb-4">
                     <button
                         onClick={async () => {
@@ -2505,7 +2628,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 if (name) viewers.push({ name, rank: i });
                             }
                             if (viewers.length === 0) {
-                                setViewerAiError('أدخل أسماء المتفاعلين أولاً.');
+                                setViewerAiError('ط£ط¯ط®ظ„ ط£ط³ظ…ط§ط، ط§ظ„ظ…طھظپط§ط¹ظ„ظٹظ† ط£ظˆظ„ط§ظ‹.');
                                 return;
                             }
 
@@ -2525,13 +2648,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     if (Object.keys(updates).length) {
                                         handleDraftFieldChanges(updates);
                                     } else {
-                                        setViewerAiError('لم يرجع الذكاء الاصطناعي أوسمة قابلة للاستخدام.');
+                                        setViewerAiError('ظ„ظ… ظٹط±ط¬ط¹ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ ط£ظˆط³ظ…ط© ظ‚ط§ط¨ظ„ط© ظ„ظ„ط§ط³طھط®ط¯ط§ظ….');
                                     }
                                 } else {
-                                    setViewerAiError('لم يرجع الذكاء الاصطناعي أوسمة قابلة للاستخدام.');
+                                    setViewerAiError('ظ„ظ… ظٹط±ط¬ط¹ ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ ط£ظˆط³ظ…ط© ظ‚ط§ط¨ظ„ط© ظ„ظ„ط§ط³طھط®ط¯ط§ظ….');
                                 }
                             } catch (error) {
-                                setViewerAiError(error instanceof Error ? error.message : 'تعذر توليد الأوسمة.');
+                                setViewerAiError(error instanceof Error ? error.message : 'طھط¹ط°ط± طھظˆظ„ظٹط¯ ط§ظ„ط£ظˆط³ظ…ط©.');
                             } finally {
                                 setIsGeneratingViewerBadges(false);
                             }
@@ -2541,7 +2664,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         disabled={isGeneratingViewerBadges}
                         className="w-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 font-bold py-2 rounded-lg text-xs transition-colors mt-1"
                     >
-                        {isGeneratingViewerBadges ? '✨ جاري التوليد...' : '⚡ توليد الأوسمة بالذكاء الاصطناعي (للأسماء المدخلة)'}
+                        {isGeneratingViewerBadges ? 'âœ¨ ط¬ط§ط±ظٹ ط§ظ„طھظˆظ„ظٹط¯...' : 'âڑ، طھظˆظ„ظٹط¯ ط§ظ„ط£ظˆط³ظ…ط© ط¨ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ (ظ„ظ„ط£ط³ظ…ط§ط، ط§ظ„ظ…ط¯ط®ظ„ط©)'}
                     </button>
                 </div>
             </div>
@@ -2551,42 +2674,42 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
         <div className="flex border-b border-white/[0.06] overflow-x-auto scrollbar-hide bg-[#13151f]">
           {/* ALWAYS: Main data tab */}
-          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>📝 البيانات</button>
+          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں“‌ ط§ظ„ط¨ظٹط§ظ†ط§طھ</button>
 
           {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
-            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🖼️ الصور</button>
+            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں–¼ï¸ڈ ط§ظ„طµظˆط±</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Appearance tab */}
           {draftOverlay.type !== OverlayType.ELECTION && (
-            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🎨 المظهر</button>
+            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًںژ¨ ط§ظ„ظ…ط¸ظ‡ط±</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Position/Size tab */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale','positionX','positionY','containerWidth','sidebarWidth'].includes(f.id)) && (
-            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>📐 الأبعاد</button>
+            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں“گ ط§ظ„ط£ط¨ط¹ط§ط¯</button>
           )}
 
           {draftOverlay.type === OverlayType.FOOTBALL_PACKAGE && (
             <>
-              <button onClick={() => setActiveTab('football-main')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المباراة</button>
-              <button onClick={() => setActiveTab('football-lineup')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-lineup' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>التشكيلة</button>
-              <button onClick={() => setActiveTab('football-score')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-score' ? 'text-yellow-400 border-yellow-500 bg-yellow-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>النتيجة</button>
+              <button onClick={() => setActiveTab('football-main')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-main' || activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط¨ط§ط±ط§ط©</button>
+              <button onClick={() => setActiveTab('football-lineup')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-lineup' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„طھط´ظƒظٹظ„ط©</button>
+              <button onClick={() => setActiveTab('football-score')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'football-score' ? 'text-yellow-400 border-yellow-500 bg-yellow-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ†طھظٹط¬ط©</button>
             </>
           )}
 
           {/* ALWAYS for non-ELECTION: Sound tab if exists */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
-            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🔊 الصوت</button>
+            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں”ٹ ط§ظ„طµظˆطھ</button>
           )}
 
           {/* Slots / Presets Tab */}
-          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🗂️ النسخ</button>
+          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں—‚ï¸ڈ ط§ظ„ظ†ط³ط®</button>
 
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
-             <button onClick={() => setActiveTab('sponsors')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sponsors' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>👥 الداعمين</button>
+             <button onClick={() => setActiveTab('sponsors')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sponsors' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًں‘¥ ط§ظ„ط¯ط§ط¹ظ…ظٹظ†</button>
           )}
 
           {/* ELECTION: specialized tabs */}
@@ -2594,12 +2717,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               const designStyle = String(draftOverlay.fields.find(f => f.id === 'designStyle')?.value || '');
               return (
                   <>
-                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'candidates' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المرشحون</button>}
-                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'time' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الوقت</button>}
-                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'content' ? 'text-pink-400 border-pink-500 bg-pink-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>المحتوى</button>}
-                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'camera' ? 'text-teal-400 border-teal-500 bg-teal-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الكاميرا</button>}
-                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'turnout' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>الإقبال</button>}
-                      <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>🎨 المظهر</button>
+                      {(designStyle === 'SPLIT_BAR_LEFT' || designStyle === 'STATEMENT_FULL' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('candidates')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'candidates' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط±ط´ط­ظˆظ†</button>}
+                      {designStyle === 'COUNTDOWN_TOP' && <button onClick={() => setActiveTab('time')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'time' ? 'text-orange-400 border-orange-500 bg-orange-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظˆظ‚طھ</button>}
+                      {(designStyle === 'LEAKS_FULL' || designStyle === 'STATEMENT_FULL' || designStyle === 'STUDIO_BACKGROUND' || designStyle === 'LIVE_TRANSITION' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('content')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'content' ? 'text-pink-400 border-pink-500 bg-pink-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظ…ط­طھظˆظ‰</button>}
+                      {designStyle === 'STUDIO_BACKGROUND' && <button onClick={() => setActiveTab('camera')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'camera' ? 'text-teal-400 border-teal-500 bg-teal-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ظƒط§ظ…ظٹط±ط§</button>}
+                      {(designStyle === 'VOTER_TURNOUT' || designStyle === 'RESULTS_HUB') && <button onClick={() => setActiveTab('turnout')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'turnout' ? 'text-emerald-400 border-emerald-500 bg-emerald-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ط§ظ„ط¥ظ‚ط¨ط§ظ„</button>}
+                      <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>ًںژ¨ ط§ظ„ظ…ط¸ظ‡ط±</button>
                   </>
               );
           })()}
@@ -2753,13 +2876,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                          <div key={field.id} className="space-y-1">
                              <label className="text-xs text-gray-400 block">{field.label}</label>
                              <div className="flex items-center gap-2">
-                                 <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500" placeholder="رابط الصورة..." />
-                                 <button onClick={() => triggerFileUpload(field.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="رفع صورة من الجهاز">
-                                     رفع
+                                 <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500" placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©..." />
+                                 <button onClick={() => triggerFileUpload(field.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="ط±ظپط¹ طµظˆط±ط© ظ…ظ† ط§ظ„ط¬ظ‡ط§ط²">
+                                     ط±ظپط¹
                                  </button>
                              </div>
                              {field.value && field.value.toString().startsWith('data:image') && (
-                                 <div className="mt-2 text-[10px] text-green-400">تم رفع صورة محلية</div>
+                                 <div className="mt-2 text-[10px] text-green-400">طھظ… ط±ظپط¹ طµظˆط±ط© ظ…ط­ظ„ظٹط©</div>
                              )}
                          </div>
                      )
@@ -2789,13 +2912,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                    className="aspect-video bg-gray-800/50 border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-900/10 rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-400 transition-all"
                                  >
                                      <Plus className="w-5 h-5" />
-                                     <span className="text-[10px]">إضافة صورة</span>
+                                     <span className="text-[10px]">ط¥ط¶ط§ظپط© طµظˆط±ط©</span>
                                  </button>
                              </div>
                              <div className="flex gap-2 mt-2">
                                  <input 
                                    type="text" 
-                                   placeholder="أو الصق رابط صورة..." 
+                                   placeholder="ط£ظˆ ط§ظ„طµظ‚ ط±ط§ط¨ط· طµظˆط±ط©..." 
                                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-xs text-white focus:border-blue-500"
                                    onKeyDown={(e) => {
                                        if (e.key === 'Enter') {
@@ -2824,16 +2947,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                    <div className="p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-4">
                        <div className="flex items-center gap-2 text-indigo-400">
                            <Layers className="w-5 h-5" />
-                           <h3 className="font-bold text-sm">إدارة النسخ (Presets)</h3>
+                           <h3 className="font-bold text-sm">ط¥ط¯ط§ط±ط© ط§ظ„ظ†ط³ط® (Presets)</h3>
                        </div>
                        <p className="text-[11px] text-gray-400 leading-relaxed">
-                           يمكنك حفظ الحالة الحالية بكافة نصوصها وصورها كـ "نسخة" للتبديل بينها بسرعة بضغطة زر واحدة.
+                           ظٹظ…ظƒظ†ظƒ ط­ظپط¸ ط§ظ„ط­ط§ظ„ط© ط§ظ„ط­ط§ظ„ظٹط© ط¨ظƒط§ظپط© ظ†طµظˆطµظ‡ط§ ظˆطµظˆط±ظ‡ط§ ظƒظ€ "ظ†ط³ط®ط©" ظ„ظ„طھط¨ط¯ظٹظ„ ط¨ظٹظ†ظ‡ط§ ط¨ط³ط±ط¹ط© ط¨ط¶ط؛ط·ط© ط²ط± ظˆط§ط­ط¯ط©.
                        </p>
                        <div className="flex gap-2">
                            <input 
                              type="text" 
                              id="new-slot-input"
-                             placeholder="اسم النسخة (مثال: الشوط الأول)..."
+                             placeholder="ط§ط³ظ… ط§ظ„ظ†ط³ط®ط© (ظ…ط«ط§ظ„: ط§ظ„ط´ظˆط· ط§ظ„ط£ظˆظ„)..."
                              className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:border-indigo-500 transition-colors outline-none"
                            />
                            <button 
@@ -2860,7 +2983,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
                                    <Layers className="w-6 h-6 text-gray-700" />
                                </div>
-                               <p className="text-gray-600 text-xs font-medium">لا توجد نسخ محفوظة لهذا القالب.</p>
+                               <p className="text-gray-600 text-xs font-medium">ظ„ط§ طھظˆط¬ط¯ ظ†ط³ط® ظ…ط­ظپظˆط¸ط© ظ„ظ‡ط°ط§ ط§ظ„ظ‚ط§ظ„ط¨.</p>
                            </div>
                        ) : (
                            Object.entries(draftOverlay.slots).map(([name, fields]) => (
@@ -2870,7 +2993,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                            <div className={`w-2.5 h-2.5 rounded-full ${draftOverlay.activeSlot === name ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-700'}`} />
                                            <div>
                                                <p className="text-sm font-bold text-white mb-0.5">{name}</p>
-                                               <p className="text-[10px] text-gray-500">{(fields as any[]).length} حقل مخزن</p>
+                                               <p className="text-[10px] text-gray-500">{(fields as any[]).length} ط­ظ‚ظ„ ظ…ط®ط²ظ†</p>
                                            </div>
                                        </div>
                                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2882,7 +3005,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                  syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors"
-                                             title="تحميل النسخة"
+                                             title="طھط­ظ…ظٹظ„ ط§ظ„ظ†ط³ط®ط©"
                                            >
                                                <RotateCcw className="w-4 h-4" />
                                            </button>
@@ -2895,7 +3018,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                  syncManager.updateOverlay(updatedOverlay);
                                              }}
                                              className="p-2 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors"
-                                             title="حذف النسخة"
+                                             title="ط­ط°ظپ ط§ظ„ظ†ط³ط®ط©"
                                            >
                                                <Trash2 className="w-4 h-4" />
                                            </button>
@@ -2918,18 +3041,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           <div className="mx-auto w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
                               <Lock className="w-6 h-6 text-red-500" />
                           </div>
-                          <h3 className="text-white font-bold">منطقة محمية</h3>
-                          <p className="text-xs text-gray-400">فقط المسؤول يمكنه تعديل قائمة الداعمين.</p>
+                          <h3 className="text-white font-bold">ظ…ظ†ط·ظ‚ط© ظ…ط­ظ…ظٹط©</h3>
+                          <p className="text-xs text-gray-400">ظپظ‚ط· ط§ظ„ظ…ط³ط¤ظˆظ„ ظٹظ…ظƒظ†ظ‡ طھط¹ط¯ظٹظ„ ظ‚ط§ط¦ظ…ط© ط§ظ„ط¯ط§ط¹ظ…ظٹظ†.</p>
                           <form onSubmit={handleAdminLogin} className="space-y-2">
                               <input 
                                 type="password" 
-                                placeholder="كلمة المرور" 
+                                placeholder="ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±" 
                                 value={adminPassword}
                                 onChange={(e) => setAdminPassword(e.target.value)}
                                 className="w-full bg-black border border-gray-600 rounded p-2 text-white text-center focus:border-red-500 focus:outline-none"
                               />
                               <button type="submit" disabled={isAdminAuthorizing} className="w-full bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 text-white py-2 rounded font-bold transition-colors">
-                                  {isAdminAuthorizing ? 'جاري التحقق...' : 'فتح الجلسة'}
+                                  {isAdminAuthorizing ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظ‚ظ‚...' : 'ظپطھط­ ط§ظ„ط¬ظ„ط³ط©'}
                               </button>
                               {passwordError && <p className="text-xs text-red-400">{passwordError}</p>}
                           </form>
@@ -2938,18 +3061,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       <div className="space-y-6 animate-fade-in-up">
                           <div className="flex items-center justify-between">
                               <h3 className="text-sm font-bold text-green-400 flex items-center gap-2">
-                                  <Unlock className="w-4 h-4" /> وضع المسؤول
+                                  <Unlock className="w-4 h-4" /> ظˆط¶ط¹ ط§ظ„ظ…ط³ط¤ظˆظ„
                               </h3>
-                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white">قفل</button>
+                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white">ظ‚ظپظ„</button>
                           </div>
 
                           {/* Add Form */}
                           <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 space-y-3">
-                              <h4 className="text-xs font-bold text-white mb-2">إضافة داعم جديد</h4>
+                              <h4 className="text-xs font-bold text-white mb-2">ط¥ط¶ط§ظپط© ط¯ط§ط¹ظ… ط¬ط¯ظٹط¯</h4>
                               
                               <div className="flex gap-2">
                                  <input 
-                                    type="text" placeholder="اسم الداعم"
+                                    type="text" placeholder="ط§ط³ظ… ط§ظ„ط¯ط§ط¹ظ…"
                                     value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})}
                                     className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
                                   />
@@ -2957,7 +3080,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                               <div className="flex gap-2">
                                   <input 
-                                    type="number" placeholder="المبلغ"
+                                    type="number" placeholder="ط§ظ„ظ…ط¨ظ„ط؛"
                                     value={newSponsor.amount} onChange={e => setNewSponsor({...newSponsor, amount: e.target.value})}
                                     className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
                                   />
@@ -2968,13 +3091,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                       {CURRENCY_OPTIONS.map(curr => (
                                           <option key={curr.code} value={curr.code}>{curr.label}</option>
                                       ))}
-                                      <option value="OTH">أخرى (USD)</option>
+                                      <option value="OTH">ط£ط®ط±ظ‰ (USD)</option>
                                   </select>
                               </div>
 
                               {/* LIVE USD PREVIEW */}
                               <div className="flex items-center justify-between px-2 text-[10px] text-gray-400 font-mono bg-black/20 rounded py-1 border border-white/5">
-                                  <span>سيظهر كـ:</span>
+                                  <span>ط³ظٹط¸ظ‡ط± ظƒظ€:</span>
                                   <span className="text-green-400 font-bold">
                                       {previewUSD !== null ? `$${previewUSD.toLocaleString()}` : '...'}
                                   </span>
@@ -2982,7 +3105,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                               <div className="relative">
                                   <input 
-                                    type="text" placeholder="رابط الصورة (اختياري)"
+                                    type="text" placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط© (ط§ط®طھظٹط§ط±ظٹ)"
                                     value={newSponsor.avatar} onChange={e => setNewSponsor({...newSponsor, avatar: e.target.value})}
                                     className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-500 pl-8"
                                   />
@@ -2994,23 +3117,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 disabled={isAddingSponsor}
                                 className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded flex items-center justify-center gap-2 font-bold transition-all transform active:scale-95"
                               >
-                                  {isAddingSponsor ? 'جاري التحويل والإضافة...' : <><Plus className="w-4 h-4" /> إضافة للقائمة</>}
+                                  {isAddingSponsor ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظˆظٹظ„ ظˆط§ظ„ط¥ط¶ط§ظپط©...' : <><Plus className="w-4 h-4" /> ط¥ط¶ط§ظپط© ظ„ظ„ظ‚ط§ط¦ظ…ط©</>}
                               </button>
                           </div>
 
                           {/* List */}
                           <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                  <h4 className="text-xs font-bold text-gray-400">القائمة الحالية</h4>
-                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="ترتيب حسب المبلغ">
-                                      <ArrowDownUp className="w-3 h-3" /> ترتيب
+                                  <h4 className="text-xs font-bold text-gray-400">ط§ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ط­ط§ظ„ظٹط©</h4>
+                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="طھط±طھظٹط¨ ط­ط³ط¨ ط§ظ„ظ…ط¨ظ„ط؛">
+                                      <ArrowDownUp className="w-3 h-3" /> طھط±طھظٹط¨
                                   </button>
                               </div>
                               <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
                                   {(() => {
                                       const sponsors: Sponsor[] = JSON.parse(String(getDraftValue('sponsorsData') || '[]'));
                                       return sponsors.length === 0 ? (
-                                          <p className="text-xs text-gray-500 text-center py-4">القائمة فارغة</p>
+                                          <p className="text-xs text-gray-500 text-center py-4">ط§ظ„ظ‚ط§ط¦ظ…ط© ظپط§ط±ط؛ط©</p>
                                       ) : (
                                           sponsors.map((s, idx) => (
                                               <React.Fragment key={s.id}>
@@ -3037,25 +3160,25 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                                 setEditSponsorData({ name: s.name, avatar: s.avatar || '' });
                                                             }}
                                                             className="p-1 text-gray-500 hover:text-blue-400"
-                                                            title="تعديل البيانات"
+                                                            title="طھط¹ط¯ظٹظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ"
                                                           >
                                                               <Edit3 className="w-4 h-4" />
                                                           </button>
                                                           <button 
                                                             onClick={() => setViewingHistoryId(viewingHistoryId === s.id ? null : s.id)}
                                                             className={`p-1 rounded transition-colors ${viewingHistoryId === s.id ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-purple-400'}`}
-                                                            title="سجل الدعم"
+                                                            title="ط³ط¬ظ„ ط§ظ„ط¯ط¹ظ…"
                                                           >
                                                               <History className="w-4 h-4" />
                                                           </button>
                                                           <button 
                                                             onClick={() => setTopUpSponsorId(topUpSponsorId === s.id ? null : s.id)} 
                                                             className={`p-1 rounded transition-colors ${topUpSponsorId === s.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-blue-400'}`}
-                                                            title="إضافة مبلغ (دعم جديد)"
+                                                            title="ط¥ط¶ط§ظپط© ظ…ط¨ظ„ط؛ (ط¯ط¹ظ… ط¬ط¯ظٹط¯)"
                                                           >
                                                               <Plus className="w-4 h-4" />
                                                           </button>
-                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="حذف">
+                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="ط­ط°ظپ">
                                                               <Trash2 className="w-4 h-4" />
                                                           </button>
                                                       </div>
@@ -3066,26 +3189,26 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                               {editingSponsorId === s.id && (
                                                   <div className="bg-gray-800 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">تعديل بيانات {s.name}</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">طھط¹ط¯ظٹظ„ ط¨ظٹط§ظ†ط§طھ {s.name}</span>
                                                           <button onClick={() => setEditingSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
                                                       <input 
                                                         type="text" value={editSponsorData.name} 
                                                         onChange={e => setEditSponsorData({...editSponsorData, name: e.target.value})}
                                                         className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
-                                                        placeholder="الاسم"
+                                                        placeholder="ط§ظ„ط§ط³ظ…"
                                                       />
                                                       <input 
                                                         type="text" value={editSponsorData.avatar} 
                                                         onChange={e => setEditSponsorData({...editSponsorData, avatar: e.target.value})}
                                                         className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-400"
-                                                        placeholder="رابط الصورة"
+                                                        placeholder="ط±ط§ط¨ط· ط§ظ„طµظˆط±ط©"
                                                       />
                                                       <button 
                                                         onClick={() => handleUpdateSponsorInfo(s.id)}
                                                         className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1.5 rounded text-xs font-bold"
                                                       >
-                                                          تحديث البيانات
+                                                          طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ
                                                       </button>
                                                   </div>
                                               )}
@@ -3095,7 +3218,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                   <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-2">
                                                       <div className="flex items-center justify-between mb-1 border-b border-purple-500/20 pb-1">
                                                           <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
-                                                              <History className="w-3 h-3" /> سجل دعم {s.name}
+                                                              <History className="w-3 h-3" /> ط³ط¬ظ„ ط¯ط¹ظ… {s.name}
                                                           </span>
                                                           <button onClick={() => setViewingHistoryId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
@@ -3127,7 +3250,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                               {topUpSponsorId === s.id && (
                                                   <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">دعم إضافي لـ {s.name}</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">ط¯ط¹ظ… ط¥ط¶ط§ظپظٹ ظ„ظ€ {s.name}</span>
                                                           <button onClick={() => setTopUpSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
                                                       
@@ -3135,7 +3258,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                           <input 
                                                             autoFocus
                                                             type="number" 
-                                                            placeholder="المبلغ المضاف..." 
+                                                            placeholder="ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…ط¶ط§ظپ..." 
                                                             value={topUpAmount}
                                                             onChange={e => setTopUpAmount(e.target.value)}
                                                             className="flex-1 bg-black/40 border border-blue-500/50 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
@@ -3145,7 +3268,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                             disabled={isToppingUp || !topUpAmount}
                                                             className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50"
                                                           >
-                                                              {isToppingUp ? '...' : 'تحديث'}
+                                                              {isToppingUp ? '...' : 'طھط­ط¯ظٹط«'}
                                                           </button>
                                                       </div>
 
@@ -3181,7 +3304,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
                          <h4 className="text-xs font-bold text-white mb-3 flex items-center gap-2">
                              <Sparkles className="w-3 h-3 text-yellow-500" />
-                             أحجام النصوص (Typography)
+                             ط£ط­ط¬ط§ظ… ط§ظ„ظ†طµظˆطµ (Typography)
                          </h4>
                          <div className="space-y-3">
                             {['headerFontSize', 'nameFontSize', 'amountFontSize'].map(id => {
@@ -3210,10 +3333,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  {/* Standard Colors */}
                  {draftOverlay.type !== OverlayType.ELECTION && (
                      <div>
-                        <h4 className="text-xs font-bold text-gray-400 mb-2">ألوان الثيم</h4>
+                        <h4 className="text-xs font-bold text-gray-400 mb-2">ط£ظ„ظˆط§ظ† ط§ظ„ط«ظٹظ…</h4>
                          {['primaryColor', 'secondaryColor'].map(key => (
                            <div key={key} className="mb-2">
-                             <label className="text-xs text-gray-500 block mb-1">{key === 'primaryColor' ? 'اللون الأساسي' : 'اللون الثانوي'}</label>
+                             <label className="text-xs text-gray-500 block mb-1">{key === 'primaryColor' ? 'ط§ظ„ظ„ظˆظ† ط§ظ„ط£ط³ط§ط³ظٹ' : 'ط§ظ„ظ„ظˆظ† ط§ظ„ط«ط§ظ†ظˆظٹ'}</label>
                              <div className="flex items-center gap-2 bg-gray-800 p-2 rounded">
                                <input type="color" value={(draftOverlay.theme as any)[key]} onChange={(e) => updateDraftTheme(key, e.target.value)} className="h-6 w-6 rounded border-none cursor-pointer bg-transparent" />
                                <span className="text-xs text-gray-400 font-mono">{(draftOverlay.theme as any)[key]}</span>
@@ -3228,19 +3351,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
        </div>{/* end w-96 inner */}
       </div>{/* end right panel transition wrapper */}
 
-      {/* ══ CENTER PANEL (PREVIEW MONITOR) ══ */}
+      {/* â•گâ•گ CENTER PANEL (PREVIEW MONITOR) â•گâ•گ */}
       <div className="flex-1 flex flex-col bg-[#0c0d10] relative overflow-hidden">
          {/* Top Control Bar */}
          <div className="h-12 border-b border-white/[0.06] flex items-center justify-between px-5 bg-[#10121a] z-20">
              <div className="flex items-center gap-3">
-                 <button onClick={() => setPanelOpen(p => !p)} className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors" title={panelOpen ? 'إخفاء الإعدادات' : 'إظهار الإعدادات'}>
+                 <button onClick={() => setPanelOpen(p => !p)} className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors" title={panelOpen ? 'ط¥ط®ظپط§ط، ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ' : 'ط¥ط¸ظ‡ط§ط± ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ'}>
                    <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${panelOpen ? '' : 'rotate-180'}`} />
                  </button>
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
-                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">● ON AIR</span>}
+                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">â—ڈ ON AIR</span>}
                  <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black transition-all ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'}`}>
-                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" />إيقاف البث</> : <><EyeOff className="w-3.5 h-3.5" />إظهار على البث</>}
+                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" />ط¥ظٹظ‚ط§ظپ ط§ظ„ط¨ط«</> : <><EyeOff className="w-3.5 h-3.5" />ط¥ط¸ظ‡ط§ط± ط¹ظ„ظ‰ ط§ظ„ط¨ط«</>}
                  </button>
              </div>
              <div className="flex items-center gap-2">
@@ -3252,7 +3375,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     else window.open(url, '_blank', 'width=1280,height=720');
                  }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors">
                      <Monitor className="w-3.5 h-3.5" />
-                     <span>نافذة البث</span>
+                     <span>ظ†ط§ظپط°ط© ط§ظ„ط¨ط«</span>
                  </button>
              </div>
          </div>
@@ -3266,7 +3389,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
          </div>
 
-         {/* ── Slot Quick-Bar ── */}
+         {/* â”€â”€ Slot Quick-Bar â”€â”€ */}
          <div className="shrink-0 border-t border-white/[0.06] bg-[#10121a] px-4 py-2 flex items-center gap-2 overflow-x-auto">
            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 shrink-0">PRESETS</span>
            <div className="w-px h-3 bg-white/10 shrink-0" />
@@ -3276,7 +3399,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                {draftOverlay.activeSlot === name && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 align-middle" />}{name}
              </button>
            ))}
-           <input value={newSlotName} onChange={e => setNewSlotName(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newSlotName.trim()){ const n=newSlotName.trim(); const upd={...draftOverlay,slots:{...draftOverlay.slots,[n]:JSON.parse(JSON.stringify(draftOverlay.fields))},activeSlot:n}; setDraftOverlay(upd); syncManager.updateOverlay(upd); setNewSlotName(''); }}} placeholder="+ نسخة جديدة..." className="bg-transparent text-xs text-gray-400 placeholder-gray-700 focus:outline-none focus:text-white w-28 shrink-0 border-b border-transparent focus:border-indigo-500 pb-0.5 transition-colors" />
+           <input value={newSlotName} onChange={e => setNewSlotName(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newSlotName.trim()){ const n=newSlotName.trim(); const upd={...draftOverlay,slots:{...draftOverlay.slots,[n]:JSON.parse(JSON.stringify(draftOverlay.fields))},activeSlot:n}; setDraftOverlay(upd); syncManager.updateOverlay(upd); setNewSlotName(''); }}} placeholder="+ ظ†ط³ط®ط© ط¬ط¯ظٹط¯ط©..." className="bg-transparent text-xs text-gray-400 placeholder-gray-700 focus:outline-none focus:text-white w-28 shrink-0 border-b border-transparent focus:border-indigo-500 pb-0.5 transition-colors" />
          </div>
        </div>
      </div>

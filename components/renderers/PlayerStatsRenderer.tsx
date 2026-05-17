@@ -14,33 +14,31 @@ import {
   TrendingUp,
   UserRound,
   Zap,
+  Info,
+  AlertCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
 
-type PlayerStatItem = {
-  key?: string;
-  label: string;
+type PlayerMetricValue = {
+  status: 'available' | 'unavailable' | 'error';
+  value?: string | number;
+  source?: string;
+  statGroup?: string;
+  reason?: string;
+  requiredStatGroup?: string;
+  requiredColumn?: string;
+  message?: string;
+  label?: string; // Add optional fields from legacy
   labelAr?: string;
-  value: string | number;
-  hint?: string;
   category?: string;
-  per90?: string | number;
   unit?: string;
-  provider?: string;
-  confidence?: number;
-  updatedAt?: string;
 };
 
-type PlayerMetricStat = {
-  label?: string;
-  labelAr?: string;
-  value?: string | number;
-  unit?: string;
-  category?: string;
-  provider?: string;
-  confidence?: number;
-  updatedAt?: string;
+type CoverageBlock = {
+  status: string;
+  availableStatGroups: string[];
+  missingStatGroups: string[];
 };
 
 type PlayerStatsCard = {
@@ -52,7 +50,8 @@ type PlayerStatsCard = {
   season?: string;
   headline?: string;
   summary?: string;
-  stats?: PlayerStatItem[] | Record<string, PlayerMetricStat>;
+  metrics?: Record<string, PlayerMetricValue>;
+  stats?: any; // Legacy
 };
 
 type PlayerStatsPayload = {
@@ -61,6 +60,7 @@ type PlayerStatsPayload = {
   updatedAt?: string;
   generatedAt?: string;
   season?: string;
+  coverage?: CoverageBlock;
   players?: PlayerStatsCard[];
   notes?: string[];
   warnings?: string[];
@@ -90,79 +90,74 @@ const parseJson = <T,>(value: unknown): T | null => {
   }
 };
 
-const splitStats = (value: unknown): PlayerStatItem[] => {
-  const parsed = parseJson<unknown>(value);
-  if (Array.isArray(parsed)) {
-    return parsed
-      .map((item): PlayerStatItem | null => {
-        if (!item || typeof item !== 'object') return null;
-        const record = item as Record<string, unknown>;
-        const label = String(record.label || record.name || '').trim();
-        const statValue = String(record.value ?? record.total ?? '').trim();
-        if (!label || !statValue) return null;
-        return {
-          label,
-          value: statValue,
-          hint: String(record.hint || record.unit || record.caption || '').trim() || undefined,
-          category: String(record.category || '').trim() || undefined,
-          per90: record.per90 as string | number | undefined,
-        };
-      })
-      .filter((item): item is PlayerStatItem => Boolean(item));
-  }
+const DEFAULT_METRICS: Record<string, PlayerMetricValue> = {
+  goals: { status: 'available', value: '25', source: 'fbref', statGroup: 'standard' },
+  shots_per90: { status: 'available', value: '3.8', source: 'fbref', statGroup: 'shooting' },
+  key_passes: { status: 'available', value: '41', source: 'fbref', statGroup: 'passing' },
+  progressive_passes: { status: 'available', value: '68', source: 'fbref', statGroup: 'passing' },
+  duels_won: { status: 'available', value: '54', source: 'fbref', statGroup: 'defense' },
+  recoveries: { status: 'available', value: '132', source: 'fbref', statGroup: 'defense' },
+  touches_in_box: { status: 'available', value: '178', source: 'fbref', statGroup: 'attack' },
+  minutes: { status: 'available', value: '2,640', source: 'fbref', statGroup: 'standard' },
+};
 
-  if (parsed && typeof parsed === 'object') {
-    return Object.entries(parsed as Record<string, unknown>).map(([key, value]) => {
-      if (value && typeof value === 'object') {
-        const record = value as Record<string, unknown>;
-        return {
-          key,
-          label: String(record.label || key.replace(/_/g, ' ')),
-          labelAr: String(record.labelAr || record.label || key.replace(/_/g, ' ')),
-          value: String(record.value ?? 'pending'),
-          hint: String(record.provider || record.category || record.unit || '').trim() || undefined,
-          category: String(record.category || '').trim() || undefined,
-          unit: String(record.unit || '').trim() || undefined,
-          provider: String(record.provider || '').trim() || undefined,
-          confidence: Number(record.confidence || 0) || undefined,
-          updatedAt: String(record.updatedAt || '').trim() || undefined,
-        };
+const normalizePlayerStatsResponse = (payload: any): PlayerStatsPayload | null => {
+  if (!payload || typeof payload !== 'object') return null;
+  
+  const clone = { ...payload } as PlayerStatsPayload;
+  
+  if (Array.isArray(clone.players)) {
+    clone.players = clone.players.map(player => {
+      // If it already has metrics, it's the new format
+      if (player.metrics) return player;
+      
+      // If it has stats, it's the legacy format. We adapt it.
+      const adaptedMetrics: Record<string, PlayerMetricValue> = {};
+      if (Array.isArray(player.stats)) {
+        player.stats.forEach((stat: any, index: number) => {
+          const key = stat.key || stat.label?.toLowerCase().replace(/\\s+/g, '_') || `stat_${index}`;
+          adaptedMetrics[key] = {
+            status: stat.value === 'unavailable' || stat.value === 'pending' ? 'unavailable' : 'available',
+            value: stat.value,
+            source: stat.provider === 'demoProvider' || stat.provider === 'demo' ? 'demo' : (stat.provider || 'legacy'),
+            statGroup: stat.category || 'legacy',
+            reason: stat.warning || 'legacy_data',
+            label: stat.label,
+            labelAr: stat.labelAr,
+            category: stat.category,
+            unit: stat.unit
+          };
+        });
+      } else if (player.stats && typeof player.stats === 'object') {
+        Object.entries(player.stats).forEach(([key, val]: [string, any]) => {
+          if (val && typeof val === 'object') {
+            adaptedMetrics[key] = {
+              status: val.value === 'unavailable' || val.value === 'pending' ? 'unavailable' : 'available',
+              value: val.value,
+              source: val.provider === 'demoProvider' || val.provider === 'demo' ? 'demo' : (val.provider || 'legacy'),
+              statGroup: val.category || 'legacy',
+              reason: val.warning || 'legacy_data',
+              label: val.label,
+              labelAr: val.labelAr,
+              category: val.category,
+              unit: val.unit
+            };
+          } else {
+             adaptedMetrics[key] = {
+              status: 'available',
+              value: String(val),
+              source: 'legacy'
+            };
+          }
+        });
       }
-      return {
-        key,
-        label: key.replace(/_/g, ' '),
-        value: String(value),
-      };
+      
+      return { ...player, metrics: Object.keys(adaptedMetrics).length > 0 ? adaptedMetrics : DEFAULT_METRICS };
     });
   }
-
-  const raw = String(value || '').trim();
-  if (!raw) return [];
-  return raw
-    .split(/\n|;/)
-    .map((line): PlayerStatItem | null => {
-      const [label, statValue, hint, category] = line.split('|').map(part => part?.trim());
-      return label && statValue ? { label, value: statValue, hint: hint || undefined, category: category || undefined } : null;
-    })
-    .filter((item): item is PlayerStatItem => Boolean(item));
+  
+  return clone;
 };
-
-const normalizeStats = (value: PlayerStatsCard['stats']): PlayerStatItem[] => {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === 'object') return splitStats(JSON.stringify(value));
-  return [];
-};
-
-const DEFAULT_STATS: PlayerStatItem[] = [
-  { label: 'Goals', value: '25', hint: 'season total', category: 'attack' },
-  { label: 'Shots / 90', value: '3.8', hint: 'volume', category: 'attack' },
-  { label: 'Key passes', value: '41', hint: 'chance creation', category: 'passing' },
-  { label: 'Progressive passes', value: '68', hint: 'build-up', category: 'passing' },
-  { label: 'Duels won', value: '54%', hint: 'contests', category: 'defense' },
-  { label: 'Recoveries', value: '132', hint: 'ball wins', category: 'defense' },
-  { label: 'Touches in box', value: '178', hint: 'danger zone', category: 'attack' },
-  { label: 'Minutes', value: '2,640', hint: 'season load', category: 'season' },
-];
 
 const statIcon = (label: string): LucideIcon => {
   const key = label.toLowerCase();
@@ -176,9 +171,9 @@ const statIcon = (label: string): LucideIcon => {
 
 const statPercent = (value: unknown, index: number) => {
   const raw = String(value || '').replace(/,/g, '');
-  const percent = raw.match(/(\d+(?:\.\d+)?)\s*%/);
+  const percent = raw.match(/(\\d+(?:\\.\\d+)?)\\s*%/);
   if (percent) return clamp(Number(percent[1]), 4, 100);
-  const numeric = Number(raw.match(/\d+(?:\.\d+)?/)?.[0] || 0);
+  const numeric = Number(raw.match(/\\d+(?:\\.\\d+)?/)?.[0] || 0);
   if (!numeric) return 34 + ((index * 9) % 38);
   return clamp(numeric > 100 ? 55 + (numeric % 40) : numeric * 8, 10, 100);
 };
@@ -201,11 +196,13 @@ const buildPlayer = (
   image: String(getField(`player${slot}Image`) || fallback.image || ''),
   clubLogo: String(getField(`player${slot}ClubLogo`) || fallback.clubLogo || ''),
   season: String(getField('seasonLabel') || fallback.season || '2025/26'),
-  stats: splitStats(getField(`player${slot}StatsJson`)).length ? splitStats(getField(`player${slot}StatsJson`)) : fallback.stats,
+  metrics: parseJson<any>(getField(`player${slot}StatsJson`)) ? normalizePlayerStatsResponse({ players: [{ stats: parseJson(getField(`player${slot}StatsJson`)) }] })?.players?.[0]?.metrics : fallback.metrics,
 });
 
 const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsPayload => {
-  const baseStats = splitStats(getField('playerStatsJson'));
+  const legacyStats = parseJson<any>(getField('playerStatsJson'));
+  const parsedMetrics = legacyStats ? normalizePlayerStatsResponse({ players: [{ stats: legacyStats }] })?.players?.[0]?.metrics : null;
+  
   const playerA: PlayerStatsCard = {
     name: String(getField('playerAName') || getField('playerName') || getField('sourcePlayerName') || 'Robert Lewandowski'),
     club: String(getField('playerAClub') || getField('playerTeam') || getField('sourceClubName') || 'Barcelona'),
@@ -213,7 +210,7 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
     image: String(getField('playerAImage') || getField('playerImageLarge') || getField('playerImage') || ''),
     clubLogo: String(getField('playerAClubLogo') || getField('clubLogo') || ''),
     season: String(getField('seasonLabel') || '2025/26'),
-    stats: baseStats.length ? baseStats : DEFAULT_STATS,
+    metrics: parsedMetrics || DEFAULT_METRICS,
   };
 
   return {
@@ -221,6 +218,7 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
     source: String(getField('dataSourceName') || 'REO Player Data Bridge'),
     updatedAt: new Date().toISOString(),
     season: String(getField('seasonLabel') || '2025/26'),
+    coverage: { status: 'partial', availableStatGroups: ['standard'], missingStatGroups: ['advanced'] },
     players: [
       playerA,
       buildPlayer(getField, 'B', {
@@ -228,28 +226,20 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
         club: 'Chelsea',
         position: 'AM / RW',
         season: playerA.season,
-        stats: [
-          { label: 'Goals', value: '16', hint: 'season', category: 'attack' },
-          { label: 'Assists', value: '8', hint: 'season', category: 'attack' },
-          { label: 'Key passes', value: '58', hint: 'creation', category: 'passing' },
-          { label: 'Chances created', value: '70', hint: 'final third', category: 'passing' },
-          { label: 'Dribbles', value: '64', hint: 'completed', category: 'attack' },
-          { label: 'Minutes', value: '2,820', hint: 'season load', category: 'season' },
-        ],
+        metrics: {
+          goals: { status: 'available', value: '16', source: 'fbref', statGroup: 'standard' },
+          assists: { status: 'available', value: '8', source: 'fbref', statGroup: 'standard' },
+        },
       }),
       buildPlayer(getField, 'C', {
         name: 'Lamine Yamal',
         club: 'Barcelona',
         position: 'RW',
         season: playerA.season,
-        stats: [
-          { label: 'Goals', value: '14', hint: 'season', category: 'attack' },
-          { label: 'Assists', value: '9', hint: 'season', category: 'attack' },
-          { label: 'Successful dribbles', value: '72', hint: '1v1', category: 'attack' },
-          { label: 'Key passes', value: '61', hint: 'creation', category: 'passing' },
-          { label: 'Progressive carries', value: '88', hint: 'advance', category: 'possession' },
-          { label: 'Minutes', value: '2,418', hint: 'season load', category: 'season' },
-        ],
+        metrics: {
+          goals: { status: 'available', value: '14', source: 'fbref', statGroup: 'standard' },
+          assists: { status: 'available', value: '9', source: 'fbref', statGroup: 'standard' },
+        },
       }),
     ],
   };
@@ -257,34 +247,19 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
 
 const normalizePayload = (payload: PlayerStatsPayload | null, getField: RendererProps['getField']) => {
   const fallback = buildFallbackPayload(getField);
-  if (!payload || typeof payload !== 'object') return fallback;
-  const players = Array.isArray(payload.players) && payload.players.length ? payload.players : fallback.players;
+  const normalized = normalizePlayerStatsResponse(payload);
+  if (!normalized || typeof normalized !== 'object') return fallback;
+  const players = Array.isArray(normalized.players) && normalized.players.length ? normalized.players : fallback.players;
   return {
     ...fallback,
-    ...payload,
-    players: players.map((player, index) => ({
+    ...normalized,
+    players: players?.map((player, index) => ({
       ...fallback.players?.[index],
       ...player,
-      stats: normalizeStats(player.stats).length ? normalizeStats(player.stats) : fallback.players?.[index]?.stats || DEFAULT_STATS,
+      metrics: player.metrics && Object.keys(player.metrics).length > 0 ? player.metrics : fallback.players?.[index]?.metrics || DEFAULT_METRICS,
     })),
   };
 };
-
-const selectedCategories = (getField: RendererProps['getField']) => [
-  ['attack', 'includeAttack'],
-  ['shooting', 'includeShooting'],
-  ['chance_creation', 'includeChanceCreation'],
-  ['passing', 'includePassing'],
-  ['dribbling', 'includeDribbling'],
-  ['defense', 'includeDefense'],
-  ['duels', 'includeDuels'],
-  ['possession', 'includePossession'],
-  ['discipline', 'includeDiscipline'],
-  ['goalkeeping', 'includeGoalkeeping'],
-  ['season', 'includeSeasonTotals'],
-  ['per90', 'includePer90'],
-  ['advanced', 'includeAdvanced'],
-].filter(([, fieldId]) => getField(fieldId) !== false).map(([category]) => category);
 
 const PlayerImage = ({ player, accent, large = false }: { player: PlayerStatsCard; accent: string; large?: boolean }) => (
   <div className={`relative overflow-hidden border border-white/10 bg-white/[0.04] ${large ? 'h-full' : 'h-32'}`}>
@@ -327,11 +302,34 @@ const ClubMark = ({ player, accent }: { player: PlayerStatsCard; accent: string 
   </div>
 );
 
-const StatTile = ({ stat, accent, index }: { key?: React.Key; stat: PlayerStatItem; accent: string; index: number }) => {
-  const Icon = statIcon(stat.label);
-  const width = statPercent(stat.value, index);
-  const title = stat.labelAr || stat.label;
-  const caption = [stat.provider, stat.category, stat.unit].filter(Boolean).join(' / ') || stat.hint || 'season data';
+const StatTile = ({ metricKey, metric, accent, index }: { metricKey: string; metric: PlayerMetricValue; accent: string; index: number; key?: React.Key }) => {
+  const displayLabel = metric.labelAr || metric.label || metricKey.replace(/_/g, ' ');
+  const Icon = statIcon(displayLabel);
+  
+  if (metric.status === 'unavailable' || metric.status === 'error') {
+    return (
+      <div className="relative overflow-hidden border border-white/5 bg-black/40 p-4 opacity-50 grayscale">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/5 bg-white/[0.03]">
+              <AlertCircle size={17} color="#666" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{displayLabel}</div>
+              <div className="truncate text-[9px] font-bold text-rose-400/80 uppercase">
+                {metric.reason === 'stat_group_not_available' ? `Requires ${metric.requiredStatGroup}` : metric.reason?.replace(/_/g, ' ') || 'Missing'}
+              </div>
+            </div>
+          </div>
+          <div className="font-['Barlow_Condensed'] text-2xl font-black leading-none text-white/20">--</div>
+        </div>
+      </div>
+    );
+  }
+
+  const width = statPercent(metric.value, index);
+  const caption = [metric.source === 'demo' ? 'demo' : metric.source, metric.statGroup, metric.unit].filter(Boolean).join(' / ');
+  
   return (
     <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4">
       <div className="absolute inset-y-0 left-0 w-1" style={{ background: accent }} />
@@ -341,11 +339,11 @@ const StatTile = ({ stat, accent, index }: { key?: React.Key; stat: PlayerStatIt
             <Icon size={17} color={accent} />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{title}</div>
-            <div className="truncate text-[11px] font-bold text-white/34">{caption}</div>
+            <div className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/45">{displayLabel}</div>
+            <div className="truncate text-[11px] font-bold text-white/34">{caption || 'season data'}</div>
           </div>
         </div>
-        <div className="font-['Barlow_Condensed'] text-[38px] font-black leading-none" style={{ color: accent }}>{stat.value}</div>
+        <div className="font-['Barlow_Condensed'] text-[38px] font-black leading-none" style={{ color: accent }}>{metric.value}</div>
       </div>
       <div className="mt-3 h-1.5 bg-white/10">
         <div className="h-full transition-[width] duration-700 ease-out" style={{ width: `${width}%`, background: accent }} />
@@ -358,31 +356,35 @@ const PlayerColumn = ({
   player,
   accent,
   index,
-  statsOverride,
+  metricsOverride,
 }: {
-  key?: React.Key;
   player: PlayerStatsCard;
   accent: string;
   index: number;
-  statsOverride?: PlayerStatItem[];
-}) => (
-  <div className="relative grid min-h-0 grid-rows-[160px_auto_1fr] overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_80px_rgba(0,0,0,.45)]">
-    <div className="absolute left-0 top-0 h-1 w-full" style={{ background: accent }} />
-    <PlayerImage player={player} accent={accent} />
-    <div className="border-b border-white/10 p-5">
-      <ClubMark player={player} accent={accent} />
-      <div className="mt-3 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/42">
-        <span>{player.position || 'Player profile'}</span>
-        <span>{player.season || 'Season'}</span>
+  metricsOverride?: Array<[string, PlayerMetricValue]>;
+  key?: React.Key;
+}) => {
+  const displayMetrics = metricsOverride || Object.entries(player.metrics || DEFAULT_METRICS);
+  
+  return (
+    <div className="relative grid min-h-0 grid-rows-[160px_auto_1fr] overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_80px_rgba(0,0,0,.45)]">
+      <div className="absolute left-0 top-0 h-1 w-full" style={{ background: accent }} />
+      <PlayerImage player={player} accent={accent} />
+      <div className="border-b border-white/10 p-5">
+        <ClubMark player={player} accent={accent} />
+        <div className="mt-3 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/42">
+          <span>{player.position || 'Player profile'}</span>
+          <span>{player.season || 'Season'}</span>
+        </div>
+      </div>
+      <div className="grid min-h-0 gap-2 overflow-hidden p-4">
+        {displayMetrics.slice(0, 6).map(([key, metric], statIndex) => (
+          <StatTile key={`${player.name}-${key}-${statIndex}`} metricKey={key} metric={metric} accent={accent} index={statIndex + index} />
+        ))}
       </div>
     </div>
-    <div className="grid min-h-0 gap-2 overflow-hidden p-4">
-      {(statsOverride?.length ? statsOverride : normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS).slice(0, 6).map((stat, statIndex) => (
-        <StatTile key={`${player.name}-${stat.label}-${statIndex}`} stat={stat} accent={accent} index={statIndex + index} />
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   getField,
@@ -398,7 +400,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   const scale = clamp(toNumber(getField('scale'), 1), 0.5, 3);
   const positionX = toNumber(getField('positionX'), 0);
   const positionY = toNumber(getField('positionY'), 0);
-  const categories = selectedCategories(getField);
+  
   const selectedMetrics = parseJson<string[]>(getField('selectedMetricsJson')) || [];
   const heroMetrics = parseJson<string[]>(getField('heroMetricsJson')) || selectedMetrics.slice(0, 4);
   const secondaryMetrics = parseJson<string[]>(getField('secondaryMetricsJson')) || selectedMetrics.slice(4, 16);
@@ -470,16 +472,18 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   const visiblePlayers = statsMode === 'SINGLE' ? players.slice(0, 1) : statsMode === 'COMPARE' ? players.slice(0, 2) : players.slice(0, 3);
   const title = String(getField('headline') || (statsMode === 'COMPARE' ? 'PLAYER DUEL' : statsMode === 'SCOUT_SHORTLIST' ? 'SCOUT SHORTLIST' : 'PLAYER DATA FILE'));
   const subtitle = String(getField('subheadline') || 'WhoScored-style player data bridge with AI-assisted identity and cached broadcast assets');
+  
   const activeHeroMetrics = payload.presentation?.heroMetrics?.length ? payload.presentation.heroMetrics : heroMetrics;
   const activeSecondaryMetrics = payload.presentation?.secondaryMetrics?.length ? payload.presentation.secondaryMetrics : secondaryMetrics;
-  const orderedStats = (player: PlayerStatsCard) => {
-    const stats = normalizeStats(player.stats).length ? normalizeStats(player.stats) : DEFAULT_STATS;
-    const byKey = new Map(stats.map(stat => [stat.key || stat.label, stat]));
+  
+  const orderedMetrics = (player: PlayerStatsCard): Array<[string, PlayerMetricValue]> => {
+    const metricsMap = player.metrics || DEFAULT_METRICS;
     const ordered = [...activeHeroMetrics, ...activeSecondaryMetrics]
-      .map(key => byKey.get(key))
-      .filter((stat): stat is PlayerStatItem => Boolean(stat));
-    return ordered.length ? ordered : stats;
+      .filter(key => metricsMap[key])
+      .map(key => [key, metricsMap[key]] as [string, PlayerMetricValue]);
+    return ordered.length ? ordered : Object.entries(metricsMap);
   };
+
   const frameClass = visualVariant === 'GLASS_SCOUT'
     ? 'bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,.18),transparent_34%),#071018]'
     : visualVariant === 'BARCA_RADAR'
@@ -487,6 +491,8 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       : visualVariant === 'MINIMAL_CAST'
         ? 'bg-[#0b0d12]'
         : 'bg-[#080a0f]';
+        
+  const coverage = payload.coverage;
 
   return (
     <div
@@ -507,6 +513,17 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       <div className="absolute inset-y-0 left-[-30%] w-[70%] bg-[linear-gradient(100deg,transparent,rgba(34,211,238,.16),transparent)] blur-sm" style={{ animation: 'playerDataScan 6s linear infinite' }} />
 
       <div className="relative mx-auto grid h-full w-[1760px] max-w-[96vw] grid-rows-[112px_1fr] gap-5 py-10">
+        
+        {coverage && (
+           <div className="absolute top-1 right-1 flex items-center gap-2 bg-black/60 border border-white/10 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-[0.1em] backdrop-blur-md z-10">
+              <Info size={13} className={coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'} />
+              <span className={coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}>
+                 {coverage.status === 'full' ? 'FULL FBREF CACHE' : 'PARTIAL FBREF CACHE'}
+              </span>
+              <span className="text-white/40 ml-2">Available: {coverage.availableStatGroups?.slice(0, 2).join(', ')}{coverage.availableStatGroups?.length > 2 ? '...' : ''}</span>
+           </div>
+        )}
+
         <header className="grid grid-cols-[1fr_auto] items-end border-b border-white/10 pb-5">
           <div>
             <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.24em] text-white/42">
@@ -534,7 +551,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
           </div>
         </header>
 
-        <main className={`grid min-h-0 gap-5 ${statsMode === 'SINGLE' ? 'grid-cols-[520px_1fr]' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_260px_1fr]' : 'grid-cols-3'}`}>
+        <main className={`grid min-h-0 gap-5 ${statsMode === 'SINGLE' ? 'grid-cols-[460px_1fr]' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_260px_1fr]' : 'grid-cols-3'}`}>
           {statsMode === 'SINGLE' && players[0] && (
             <>
               <section className="relative overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_90px_rgba(0,0,0,.5)]" style={{ animation: 'playerCardFloat 7s ease-in-out infinite' }}>
@@ -546,21 +563,28 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                 </div>
               </section>
               <section className="grid min-h-0 grid-rows-[auto_1fr] gap-4">
-                <div className="grid grid-cols-4 gap-3">
-                  {categories.slice(0, 4).map((category, index) => {
-                    const Icon = index === 0 ? Swords : index === 1 ? Repeat : index === 2 ? ShieldCheck : TrendingUp;
-                    return (
-                      <div key={category} className="border border-white/10 bg-white/[0.045] p-4">
-                        <Icon size={20} color={index % 2 ? secondaryAccent : accent} />
-                        <div className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/40">{category}</div>
-                        <div className="font-['Barlow_Condensed'] text-3xl font-black uppercase text-white">ON</div>
+                
+                {/* Hero Metrics Area - Centered & Larger */}
+                <div className="grid grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 p-4">
+                  {orderedMetrics(players[0]).slice(0, 4).map(([key, metric], index) => {
+                     const isMissing = metric.status === 'unavailable' || metric.status === 'error';
+                     return (
+                      <div key={key} className="flex flex-col items-center justify-center text-center p-2">
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1">{metric.labelAr || metric.label || key.replace(/_/g, ' ')}</div>
+                        <div className={`font-['Barlow_Condensed'] text-5xl font-black uppercase ${isMissing ? 'text-white/20' : 'text-white'}`} style={!isMissing ? { color: index % 2 ? secondaryAccent : accent } : {}}>
+                          {isMissing ? '--' : metric.value}
+                        </div>
+                        {!isMissing && <div className="text-[9px] font-bold text-white/30 uppercase mt-1">{metric.source === 'demo' ? 'demo' : metric.source} / {metric.statGroup}</div>}
+                        {isMissing && <div className="text-[9px] font-bold text-rose-400/80 uppercase mt-1">{metric.reason === 'stat_group_not_available' ? `Req: ${metric.requiredStatGroup}` : metric.reason}</div>}
                       </div>
-                    );
+                    )
                   })}
                 </div>
-                <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden">
-                  {orderedStats(players[0]).slice(0, 12).map((stat, index) => (
-                    <StatTile key={`${stat.label}-${index}`} stat={stat} accent={index % 2 ? secondaryAccent : accent} index={index} />
+                
+                {/* Secondary Metrics Area */}
+                <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden mt-2">
+                  {orderedMetrics(players[0]).slice(4, 16).map(([key, metric], index) => (
+                    <StatTile key={`${key}-${index}`} metricKey={key} metric={metric} accent={index % 2 ? secondaryAccent : accent} index={index} />
                   ))}
                 </div>
               </section>
@@ -569,26 +593,26 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
 
           {statsMode === 'COMPARE' && (
             <>
-              <PlayerColumn player={visiblePlayers[0] || buildFallbackPayload(getField).players![0]} statsOverride={orderedStats(visiblePlayers[0] || buildFallbackPayload(getField).players![0])} accent={accent} index={0} />
+              <PlayerColumn player={visiblePlayers[0] || buildFallbackPayload(getField).players![0]} metricsOverride={orderedMetrics(visiblePlayers[0] || buildFallbackPayload(getField).players![0])} accent={accent} index={0} />
               <div className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden border border-white/10 bg-black/65 p-5">
                 <div className="font-['Barlow_Condensed'] text-[86px] font-black leading-none text-white">VS</div>
                 <div className="my-5 h-44 w-px bg-white/15" />
                 <Gauge size={46} color={accent} />
                 <div className="mt-5 text-center text-[10px] font-black uppercase tracking-[0.22em] text-white/44">Selected data</div>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  {(selectedMetrics.length ? selectedMetrics : categories).slice(0, 6).map((metric, index) => (
+                  {(selectedMetrics.length ? selectedMetrics : []).slice(0, 6).map((metric, index) => (
                     <span key={metric} className="border border-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: index % 2 ? secondaryAccent : accent }}>
                       {metric.replace(/_/g, ' ')}
                     </span>
                   ))}
                 </div>
               </div>
-              <PlayerColumn player={visiblePlayers[1] || buildFallbackPayload(getField).players![1]} statsOverride={orderedStats(visiblePlayers[1] || buildFallbackPayload(getField).players![1])} accent={secondaryAccent} index={6} />
+              <PlayerColumn player={visiblePlayers[1] || buildFallbackPayload(getField).players![1]} metricsOverride={orderedMetrics(visiblePlayers[1] || buildFallbackPayload(getField).players![1])} accent={secondaryAccent} index={6} />
             </>
           )}
 
           {statsMode === 'SCOUT_SHORTLIST' && visiblePlayers.map((player, index) => (
-            <PlayerColumn key={`${player.name}-${index}`} player={player} statsOverride={orderedStats(player)} accent={index === 0 ? accent : index === 1 ? secondaryAccent : '#facc15'} index={index * 4} />
+            <PlayerColumn key={`${player.name}-${index}`} player={player} metricsOverride={orderedMetrics(player)} accent={index === 0 ? accent : index === 1 ? secondaryAccent : '#facc15'} index={index * 4} />
           ))}
         </main>
       </div>
