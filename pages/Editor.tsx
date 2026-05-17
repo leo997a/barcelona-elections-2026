@@ -474,9 +474,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [metricCatalog, setMetricCatalog] = useState<MetricCatalogItem[]>([]);
   const [metricSearch, setMetricSearch] = useState('');
   const [metricAdvancedOpen, setMetricAdvancedOpen] = useState(false);
-  const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'setup' | 'presets' | 'metrics' | 'coverage' | 'visuals' | 'advanced'>('setup');
+  const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'setup' | 'presets' | 'metrics' | 'coverage' | 'visuals'>('setup');
   const [isFetchingPlayerStats, setIsFetchingPlayerStats] = useState(false);
   const dndSensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const [sidebarSplitPct, setSidebarSplitPct] = useState(50); // % of height for top panel
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -1707,7 +1709,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
            </div>
         </div>
 
-        {/* QUICK ACTIONS PANEL */}
+                 <div className="flex flex-col overflow-hidden" style={{ height: `${sidebarSplitPct}%` }}>
+         <div className="flex-1 overflow-y-auto [scrollbar-width:thin]">
+         {/* QUICK ACTIONS PANEL */}
         {draftOverlay.type === OverlayType.SCOREBOARD && (
             <div className="p-4 bg-gray-950/50 border-b border-gray-800 grid grid-cols-2 gap-2">
                 <button onClick={() => {
@@ -1748,10 +1752,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <div className="shrink-0 border-b border-cyan-900/35 bg-cyan-950/20 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                     <label className="text-xs text-cyan-200 font-black flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" />  AI 
+                        <Sparkles className="w-3.5 h-3.5" /> مساعد الذكاء
                     </label>
                     <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
-                        Gemini fallback
+                        AI
                     </span>
                 </div>
                 <textarea
@@ -1809,7 +1813,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 { id: 'metrics',  label: LABELS.tabs.metrics.ar },
                 { id: 'coverage', label: LABELS.tabs.coverage.ar },
                 { id: 'visuals',  label: LABELS.tabs.visuals.ar },
-                { id: 'advanced', label: LABELS.tabs.advanced.ar },
             ] as const;
 
             // Derive hero/secondary/hidden from stored JSON
@@ -2185,43 +2188,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         </div>
                     )}
 
-                    {/* ═══ ADVANCED TAB ═══ */}
-                    {activePlayerStatsTab === 'advanced' && (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-black text-cyan-200 block mb-1">Provider Policy</label>
-                                <select
-                                  value={String(getDraftValue('providerPolicy') || 'auto')}
-                                  onChange={(event) => handleDraftFieldChange('providerPolicy', event.target.value)}
-                                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
-                                >
-                                    <option value="auto">Auto router (Bridge first, then FBref)</option>
-                                    <option value="fbref">Strict: FBref season only</option>
-                                    <option value="matchBridge">Strict: Match bridge only</option>
-                                    <option value="demo">Demo fallback</option>
-                                </select>
-                            </div>
-                            <div className="rounded-xl border border-slate-700/70 bg-slate-900/55 p-3 space-y-2">
-                                <div className="text-[10px] font-black text-slate-300">Natural Language Metric Parser</div>
-                                <div className="grid grid-cols-[1fr_auto] gap-2">
-                                    <input
-                                      value={String(getDraftValue('metricNaturalLanguage') || '')}
-                                      onChange={(event) => handleDraftFieldChange('metricNaturalLanguage', event.target.value)}
-                                      placeholder="e.g. goals and assists per 90"
-                                      className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-[11px] text-white outline-none focus:border-cyan-400"
-                                      dir="ltr"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={applyMetricNaturalLanguage}
-                                      className="rounded-lg bg-cyan-600 px-3 py-2 text-[10px] font-black text-white hover:bg-cyan-500"
-                                    >
-                                      Add
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
             );
@@ -2836,23 +2802,44 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         })()}
 
 
+         </div></div>
+         {/* RESIZABLE SPLITTER */}
+         <div
+           className="h-2 cursor-row-resize bg-white/[0.04] hover:bg-cyan-500/20 transition-colors flex items-center justify-center group shrink-0"
+           onMouseDown={(e) => {
+             e.preventDefault();
+             const sidebar = e.currentTarget.parentElement;
+             if (!sidebar) return;
+             const rect = sidebar.getBoundingClientRect();
+             const onMove = (ev: MouseEvent) => {
+               const pct = ((ev.clientY - rect.top) / rect.height) * 100;
+               setSidebarSplitPct(Math.max(15, Math.min(85, pct)));
+             };
+             const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+             document.addEventListener("mousemove", onMove);
+             document.addEventListener("mouseup", onUp);
+           }}
+         >
+           <div className="w-8 h-0.5 rounded-full bg-white/20 group-hover:bg-cyan-400/60 transition-colors" />
+         </div>
+         <div className="flex flex-col overflow-hidden" style={{ height: `${100 - sidebarSplitPct}%` }}>
         <div className="flex border-b border-white/[0.06] overflow-x-auto scrollbar-hide bg-[#13151f]">
           {/* ALWAYS: Main data tab */}
-          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Data</button>
+          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>بيانات</button>
 
           {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
-            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Images</button>
+            <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صور</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Appearance tab */}
           {draftOverlay.type !== OverlayType.ELECTION && (
-            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Style</button>
+            <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>تنسيق</button>
           )}
 
           {/* ALWAYS for non-ELECTION: Position/Size tab */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth'].includes(f.id)) && (
-            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Position</button>
+            <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>موضع</button>
           )}
 
           {draftOverlay.type === OverlayType.FOOTBALL_PACKAGE && (
@@ -2865,11 +2852,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
           {/* ALWAYS for non-ELECTION: Sound tab if exists */}
           {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
-            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Sound</button>
+            <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صوت</button>
           )}
 
           {/* Slots / Presets Tab */}
-          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>Slots</button>
+          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>قوالب</button>
 
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
@@ -3512,6 +3499,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              </div>
           )}
         </div>
+        </div>{/* end lower panel */}
        </div>{/* end w-96 inner */}
       </div>{/* end right panel transition wrapper */}
 
