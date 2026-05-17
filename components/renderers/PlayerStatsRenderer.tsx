@@ -491,8 +491,8 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
 
   const players = payload.players || [];
   const visiblePlayers = statsMode === 'SINGLE' ? players.slice(0, 1) : statsMode === 'COMPARE' ? players.slice(0, 2) : players.slice(0, 3);
-  const title = String(getField('headline') || (statsMode === 'COMPARE' ? 'PLAYER DUEL' : statsMode === 'SCOUT_SHORTLIST' ? 'SCOUT SHORTLIST' : 'PLAYER DATA FILE'));
-  const subtitle = String(getField('subheadline') || 'WhoScored-style player data bridge with AI-assisted identity and cached broadcast assets');
+  const title = String(getField('headline') || (statsMode === 'COMPARE' ? LABELS.renderer.playerDuel.ar : statsMode === 'SCOUT_SHORTLIST' ? LABELS.renderer.scoutShortlist.ar : LABELS.renderer.playerDataFile.ar));
+  const subtitle = String(getField('subheadline') || '');
   
   const activeHeroMetrics = payload.presentation?.heroMetrics?.length ? payload.presentation.heroMetrics : heroMetrics;
   const activeSecondaryMetrics = payload.presentation?.secondaryMetrics?.length ? payload.presentation.secondaryMetrics : secondaryMetrics;
@@ -533,99 +533,109 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,.045)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
       <div className="absolute inset-y-0 left-[-30%] w-[70%] bg-[linear-gradient(100deg,transparent,rgba(34,211,238,.16),transparent)] blur-sm" style={{ animation: 'playerDataScan 6s linear infinite' }} />
 
-      <div className="relative mx-auto grid h-full w-[1760px] max-w-[96vw] grid-rows-[112px_1fr] gap-5 py-10">
-        
-        {coverage && (
-           <div className="absolute top-1 right-1 flex items-center gap-2 bg-black/60 border border-white/10 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-[0.1em] backdrop-blur-md z-10">
-              <Info size={13} className={coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'} />
-              <span className={coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}>
-                 {coverage.status === 'full' ? LABELS.renderer.fullFbref.ar : LABELS.renderer.partialFbref.ar}
-              </span>
-              <span className="text-white/40 ml-2">{LABELS.renderer.available.ar}: {coverage.availableStatGroups?.slice(0, 2).join(', ')}{coverage.availableStatGroups?.length > 2 ? '...' : ''}</span>
-           </div>
-        )}
+      <div className="relative mx-auto flex h-full w-[1760px] max-w-[96vw] flex-col gap-0 py-6">
 
-        <header className="grid grid-cols-[1fr_auto] items-end border-b border-white/10 pb-5">
-          <div>
-            <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.24em] text-white/42">
-              <BrainCircuit size={18} color={accent} />
-              <span>AI PLAYER STATS</span>
-              <span className="h-1 w-1 rounded-full" style={{ background: accent }} />
-              <span>{payload.source === 'demoProvider' || payload.source === 'demo' ? 'REO Data Bridge' : payload.source || 'REO Data Bridge'}</span>
-            </div>
-            <h1 className="mt-2 font-['Barlow_Condensed'] text-[76px] font-black uppercase leading-none tracking-normal text-white">
-              {title}
-            </h1>
+        {/* ── Compact Header ── */}
+        <header className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 shrink-0">
+          <div className="flex items-center gap-4">
+            <BrainCircuit size={16} color={accent} />
+            <h1 className="font-['Barlow_Condensed'] text-[52px] font-black uppercase leading-none text-white" dir="rtl">{title}</h1>
           </div>
-          <div className="grid min-w-[340px] grid-cols-2 gap-2 text-right">
-            <div className="border border-white/10 bg-black/55 p-4">
-              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/38">Mode</div>
-              <div className="font-['Barlow_Condensed'] text-3xl font-black uppercase text-white">{statsMode.replace(/_/g, ' ')}</div>
-            </div>
-            <div className="border border-white/10 bg-black/55 p-4">
-              <div className="flex items-center justify-end gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/38">
-                <Radio size={14} color={accent} />
-                <span>Updated</span>
+          <div className="flex items-center gap-3">
+            {coverage && (
+              <div className="flex items-center gap-2 bg-black/50 border border-white/8 px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-[0.1em] backdrop-blur-md">
+                <Info size={11} className={coverage.status === 'full' ? 'text-emerald-400' : 'text-amber-400'} />
+                <span className={coverage.status === 'full' ? 'text-emerald-200' : 'text-amber-200'}>
+                  {coverage.status === 'full' ? LABELS.renderer.fullFbref.ar : LABELS.renderer.partialFbref.ar}
+                </span>
+                <span className="text-white/30">{coverage.availableStatGroups?.join(', ')}</span>
               </div>
-              <div className="font-['Barlow_Condensed'] text-3xl font-black uppercase text-white">{formatTime(payload.updatedAt || payload.generatedAt)}</div>
+            )}
+            <div className="text-[9px] font-bold text-white/25 uppercase tracking-widest">
+              {payload.source === 'demoProvider' || payload.source === 'demo' ? '' : payload.source || ''}
             </div>
           </div>
         </header>
 
-        <main className={`grid min-h-0 gap-5 ${statsMode === 'SINGLE' ? 'grid-cols-[460px_1fr]' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_260px_1fr]' : 'grid-cols-3'}`}>
+        <main className={`flex-1 min-h-0 grid gap-4 ${statsMode === 'SINGLE' ? 'grid-cols-[340px_1fr]' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_200px_1fr]' : 'grid-cols-3'}`}>
           {statsMode === 'SINGLE' && players[0] && (() => {
             const allMetrics = orderedMetrics(players[0]);
             const availableMetrics = allMetrics.filter(([_, m]) => m.status === 'available');
+            const heroSlice = availableMetrics.slice(0, activeHeroMetrics.length || 4);
+            const secondarySlice = availableMetrics.slice(heroSlice.length, heroSlice.length + (activeSecondaryMetrics.length || 8));
             const missingMetrics = allMetrics.filter(([_, m]) => m.status === 'unavailable' || m.status === 'error');
             const showUnavailableBox = getField('showUnavailableMetrics') === 'true' && missingMetrics.length > 0;
-            
+
             return (
             <>
-              <section className="relative overflow-hidden border border-white/10 bg-black/70 shadow-[0_28px_90px_rgba(0,0,0,.5)]" style={{ animation: 'playerCardFloat 7s ease-in-out infinite' }}>
-                <div className="absolute left-0 top-0 h-1 w-full" style={{ background: accent }} />
-                <PlayerImage player={players[0]} accent={accent} large />
-                <div className="absolute inset-x-0 bottom-0 p-7">
-                  <ClubMark player={players[0]} accent={accent} />
-                  <p className="mt-4 max-w-[430px] text-lg font-bold leading-snug text-white/62">{players[0].summary || subtitle}</p>
+              {/* LEFT: Player Card */}
+              <section className="relative flex flex-col overflow-hidden border border-white/10 bg-black/70 shadow-[0_20px_60px_rgba(0,0,0,.5)]">
+                <div className="absolute left-0 top-0 h-1 w-full z-10" style={{ background: accent }} />
+                <div className="relative flex-1 overflow-hidden">
+                  {players[0].image ? (
+                    <img src={players[0].image} alt="" className="absolute inset-0 h-full w-full object-contain object-bottom drop-shadow-[0_20px_40px_rgba(0,0,0,.6)]" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : (
+                    <div className="flex h-full items-center justify-center"><UserRound size={80} color={accent} /></div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                </div>
+                <div className="relative p-5 bg-black/80 border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    {players[0].clubLogo && <img src={players[0].clubLogo} alt="" className="h-10 w-10 object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">{players[0].club}</div>
+                      <div className="font-['Barlow_Condensed'] text-[26px] font-black uppercase leading-none text-white">{players[0].name}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex gap-4 text-[9px] font-black uppercase tracking-[0.15em] text-white/30">
+                    <span>{players[0].position || ''}</span>
+                    <span>{players[0].season || ''}</span>
+                  </div>
                 </div>
               </section>
-              <section className="grid min-h-0 grid-rows-[auto_1fr_auto] gap-4">
-                
-                {/* Hero Metrics Area - Centered & Larger */}
-                {availableMetrics.length > 0 && (
-                  <div className="grid grid-cols-4 gap-3 bg-white/[0.02] border border-white/5 p-4">
-                    {availableMetrics.slice(0, 4).map(([key, metric], index) => {
-                       return (
-                        <div key={key} className="flex flex-col items-center justify-center text-center p-2">
-                          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1" dir="rtl">{getMetricLabel(key, 'ar')}</div>
-                          <div className="font-['Barlow_Condensed'] text-[42px] font-black uppercase text-white" style={{ color: index % 2 ? secondaryAccent : accent }}>
-                            {metric.value}
-                          </div>
-                          <div className="text-[9px] font-bold text-white/25 uppercase mt-1">{getMetricLabel(key, 'en')}</div>
-                        </div>
-                      )
-                    })}
+
+              {/* RIGHT: Stats Grid */}
+              <section className="flex flex-col gap-3 min-h-0 overflow-hidden">
+                {/* Hero Metrics */}
+                {heroSlice.length > 0 && (
+                  <div className={`grid gap-3 shrink-0 ${heroSlice.length <= 3 ? 'grid-cols-3' : heroSlice.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+                    {heroSlice.map(([key, metric], index) => (
+                      <div key={key} className="flex flex-col items-center justify-center text-center p-4 border border-white/8 bg-white/[0.02]">
+                        <div className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40 mb-2" dir="rtl">{getMetricLabel(key, 'ar')}</div>
+                        <div className="font-['Barlow_Condensed'] text-[48px] font-black leading-none" style={{ color: index % 2 ? secondaryAccent : accent }}>{metric.value}</div>
+                        <div className="text-[8px] font-bold text-white/20 uppercase mt-1.5">{getMetricLabel(key, 'en')}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
-                
-                {/* Secondary Metrics Area */}
-                <div className="grid min-h-0 grid-cols-2 gap-3 overflow-hidden mt-2">
-                  {availableMetrics.slice(4, 16).map(([key, metric], index) => (
-                    <StatTile key={`${key}-${index}`} metricKey={key} metric={metric} accent={index % 2 ? secondaryAccent : accent} index={index} />
+
+                {/* Secondary Metrics */}
+                <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-hidden auto-rows-min">
+                  {secondarySlice.map(([key, metric], index) => (
+                    <div key={key} className="flex items-center gap-3 border border-white/8 bg-black/50 px-4 py-3">
+                      <div className="flex-1 min-w-0" dir="rtl">
+                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-white/40 truncate">{getMetricLabel(key, 'ar')}</div>
+                        <div className="text-[8px] font-bold text-white/20 truncate">{getMetricLabel(key, 'en')}</div>
+                      </div>
+                      <div className="font-['Barlow_Condensed'] text-[32px] font-black leading-none shrink-0" style={{ color: index % 2 ? secondaryAccent : accent }}>{metric.value}</div>
+                    </div>
                   ))}
                 </div>
 
-                {/* Missing Advanced Metrics Box */}
+                {/* Missing Box */}
                 {showUnavailableBox && (
-                  <div className="mt-auto border border-dashed border-rose-500/30 bg-rose-500/5 p-3 flex flex-col gap-1.5">
-                    <div className="text-[10px] font-black text-rose-400 uppercase tracking-widest" dir="rtl">{LABELS.renderer.missingAdvanced.ar}</div>
-                    <div className="text-[10px] text-white/40 leading-snug" dir="rtl">
-                      {missingMetrics.map(([k, m]) => (
-                        <div key={k}>- <strong className="text-white/60">{getMetricLabel(k, 'ar')}</strong> {LABELS.renderer.requires.ar} <span className="text-rose-300/80">{m.requiredStatGroup || m.statGroup}</span></div>
-                      ))}
+                  <div className="border border-dashed border-rose-500/20 bg-rose-500/5 px-3 py-2 shrink-0">
+                    <div className="text-[9px] font-black text-rose-400/70 uppercase" dir="rtl">{LABELS.renderer.missingAdvanced.ar}</div>
+                    <div className="text-[9px] text-white/30 mt-1" dir="rtl">
+                      {missingMetrics.slice(0, 3).map(([k]) => getMetricLabel(k, 'ar')).join(' • ')}
                     </div>
                   </div>
                 )}
+
+                {/* Source Footer */}
+                <div className="text-[8px] font-bold text-white/15 uppercase tracking-widest text-right shrink-0" dir="rtl">
+                  {payload.source && payload.source !== 'demo' && payload.source !== 'demoProvider' ? `${LABELS.renderer.available.ar}: ${payload.source}` : ''}
+                </div>
               </section>
             </>
           )})()}
