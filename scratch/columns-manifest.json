@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-05-17T03:27:24.674226+00:00",
+  "season": "2025-26",
+  "statGroups": {
+    "shooting": {
+      "file": "fbref-shooting-2025-26.json",
+      "ok": true,
+      "available": false,
+      "playerCount": 3,
+      "minPlayerCount": 500,
+      "source": "soccerdata",
+      "columns": [
+        "league",
+        "season",
+        "team",
+        "player",
+        "nation",
+        "pos",
+        "age",
+        "born",
+        "90s",
+        "standard_gls",
+        "standard_sh",
+        "standard_sot",
+        "standard_sot%",
+        "standard_sh/90",
+        "standard_sot/90",
+        "standard_g/sh",
+        "standard_g/sot",
+        "standard_pk",
+        "standard_pkatt"
+      ]
+    },
+    "standard": {
+      "file": "fbref-standard-2025-26.json",
+      "ok": true,
+      "available": true,
+      "playerCount": 860,
+      "minPlayerCount": 500,
+      "source": "soccerdata",
+      "columns": [
+        "league",
+        "season",
+        "team",
+        "player",
+        "nation",
+        "pos",
+        "age",
+        "born",
+        "playing time_mp",
+        "playing time_starts",
+        "playing time_min",
+        "playing time_90s",
+        "performance_gls",
+        "performance_ast",
+        "performance_g+a",
+        "performance_g-pk",
+        "performance_pk",
+        "performance_pkatt",
+        "performance_crdy",
+        "performance_crdr",
+        "per 90 minutes_gls",
+        "per 90 minutes_ast",
+        "per 90 minutes_g+a",
+        "per 90 minutes_g-pk",
+        "per 90 minutes_g+a-pk"
+      ]
+    }
+  }
+}

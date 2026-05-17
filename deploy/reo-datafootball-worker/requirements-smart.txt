@@ -1,0 +1,6 @@
+# Smart Agent dependencies (includes soccerdata + SeleniumBase)
+soccerdata>=1.9.0
+pandas>=2.0.0
+lxml>=4.9.4
+requests>=2.31.0
+fake-useragent>=2.0.0

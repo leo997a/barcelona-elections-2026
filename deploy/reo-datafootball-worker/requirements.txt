@@ -1,0 +1,6 @@
+# reo-datafootball-worker dependencies
+# FBref season stats scraper — no Selenium, no Chrome, requests only.
+pandas>=2.0.0
+requests>=2.31.0
+lxml>=4.9.0
+fake-useragent>=1.4.0

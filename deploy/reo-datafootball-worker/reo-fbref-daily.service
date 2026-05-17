@@ -1,0 +1,21 @@
+[Unit]
+Description=REO FBref Smart Agent Daily Cache Refresh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ritchardakram1997
+WorkingDirectory=/opt/reo-datafootball-worker
+ExecStart=/usr/bin/bash /opt/reo-datafootball-worker/run_daily_limited.sh
+TimeoutStartSec=35min
+KillMode=control-group
+Nice=10
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+Environment=LANG=C.UTF-8
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=80%

@@ -1,0 +1,46 @@
+{
+  "leagues": [
+    {
+      "id": "la-liga",
+      "name": "La Liga",
+      "season": "2025-26",
+      "url": "https://fbref.com/en/comps/12/stats/La-Liga-Stats",
+      "table_index": 0
+    },
+    {
+      "id": "premier-league",
+      "name": "Premier League",
+      "season": "2025-26",
+      "url": "https://fbref.com/en/comps/9/stats/Premier-League-Stats",
+      "table_index": 0
+    },
+    {
+      "id": "bundesliga",
+      "name": "Bundesliga",
+      "season": "2025-26",
+      "url": "https://fbref.com/en/comps/20/stats/Bundesliga-Stats",
+      "table_index": 0
+    },
+    {
+      "id": "serie-a",
+      "name": "Serie A",
+      "season": "2025-26",
+      "url": "https://fbref.com/en/comps/11/stats/Serie-A-Stats",
+      "table_index": 0
+    },
+    {
+      "id": "ligue-1",
+      "name": "Ligue 1",
+      "season": "2025-26",
+      "url": "https://fbref.com/en/comps/13/stats/Ligue-1-Stats",
+      "table_index": 0
+    }
+  ],
+  "cache_dir": "/opt/reo-data-cache/fbref",
+  "lock_file": "/opt/reo-data-cache/.lock",
+  "log_file": "/opt/reo-data-cache/worker.log",
+  "last_updated_file": "/opt/reo-data-cache/last_updated.json",
+  "delay_between_requests": 5,
+  "request_timeout": 30,
+  "max_retries": 2
+}

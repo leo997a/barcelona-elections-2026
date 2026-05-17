@@ -1,0 +1,11 @@
+{
+  "gcpInstance": "openclaw-server",
+  "gcpZone": "us-west1-a",
+  "localCacheDir": ".cache/fbref",
+  "remoteArchive": "/tmp/reo-fbref-cache.tar.gz",
+  "remoteCacheDir": "/opt/reo-data-cache/fbref",
+  "fetchStrategy": "soccerdata_first",
+  "season": "2025-26",
+  "headless": true,
+  "nextMissingBatchSize": 1
+}

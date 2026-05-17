@@ -108,6 +108,11 @@ const normalizePlayerStatsResponse = (payload: any): PlayerStatsPayload | null =
   
   if (Array.isArray(clone.players)) {
     clone.players = clone.players.map(player => {
+      // Fix Unknown position: try to extract from player's own pos field
+      if (!player.position || player.position === 'Unknown') {
+        player.position = (player as any).pos || player.position || 'Unknown';
+      }
+
       // If it already has metrics, it's the new format
       if (player.metrics) return player;
       
@@ -182,7 +187,7 @@ const formatTime = (value?: string) => {
   if (!value) return 'LIVE DATA';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
 
 const buildPlayer = (
@@ -202,6 +207,7 @@ const buildPlayer = (
 const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsPayload => {
   const legacyStats = parseJson<any>(getField('playerStatsJson'));
   const parsedMetrics = legacyStats ? normalizePlayerStatsResponse({ players: [{ stats: legacyStats }] })?.players?.[0]?.metrics : null;
+  const mode = String(getField('playerStatsMode') || 'SINGLE');
   
   const playerA: PlayerStatsCard = {
     name: String(getField('playerAName') || getField('playerName') || getField('sourcePlayerName') || 'Robert Lewandowski'),
@@ -213,35 +219,34 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
     metrics: parsedMetrics || DEFAULT_METRICS,
   };
 
+  // Build players list based on mode -- SINGLE mode gets only player A
+  const playersList: PlayerStatsCard[] = [playerA];
+  if (mode === 'COMPARE' || mode === 'SCOUT_SHORTLIST') {
+    playersList.push(buildPlayer(getField, 'B', {
+      name: '',
+      club: '',
+      position: '',
+      season: playerA.season,
+      metrics: {},
+    }));
+  }
+  if (mode === 'SCOUT_SHORTLIST') {
+    playersList.push(buildPlayer(getField, 'C', {
+      name: '',
+      club: '',
+      position: '',
+      season: playerA.season,
+      metrics: {},
+    }));
+  }
+
   return {
-    mode: String(getField('playerStatsMode') || 'SINGLE'),
+    mode,
     source: String(getField('dataSourceName') || 'REO Player Data Bridge'),
     updatedAt: new Date().toISOString(),
     season: String(getField('seasonLabel') || '2025/26'),
     coverage: { status: 'partial', availableStatGroups: ['standard'], missingStatGroups: ['advanced'] },
-    players: [
-      playerA,
-      buildPlayer(getField, 'B', {
-        name: 'Cole Palmer',
-        club: 'Chelsea',
-        position: 'AM / RW',
-        season: playerA.season,
-        metrics: {
-          goals: { status: 'available', value: '16', source: 'fbref', statGroup: 'standard' },
-          assists: { status: 'available', value: '8', source: 'fbref', statGroup: 'standard' },
-        },
-      }),
-      buildPlayer(getField, 'C', {
-        name: 'Lamine Yamal',
-        club: 'Barcelona',
-        position: 'RW',
-        season: playerA.season,
-        metrics: {
-          goals: { status: 'available', value: '14', source: 'fbref', statGroup: 'standard' },
-          assists: { status: 'available', value: '9', source: 'fbref', statGroup: 'standard' },
-        },
-      }),
-    ],
+    players: playersList.filter(p => p.name.trim()),
   };
 };
 
@@ -249,15 +254,27 @@ const normalizePayload = (payload: PlayerStatsPayload | null, getField: Renderer
   const fallback = buildFallbackPayload(getField);
   const normalized = normalizePlayerStatsResponse(payload);
   if (!normalized || typeof normalized !== 'object') return fallback;
-  const players = Array.isArray(normalized.players) && normalized.players.length ? normalized.players : fallback.players;
-  return {
-    ...fallback,
-    ...normalized,
-    players: players?.map((player, index) => ({
-      ...fallback.players?.[index],
+
+  // If API returned real players with real metrics, use them directly
+  const hasRealPlayers = Array.isArray(normalized.players) && normalized.players.length > 0;
+  if (!hasRealPlayers) return fallback;
+
+  // Enrich API players with editor fields (image, clubLogo) but NEVER override metrics
+  const enrichedPlayers = normalized.players!.map((player, index) => {
+    const slot = index === 0 ? 'A' : index === 1 ? 'B' : 'C';
+    return {
       ...player,
-      metrics: player.metrics && Object.keys(player.metrics).length > 0 ? player.metrics : fallback.players?.[index]?.metrics || DEFAULT_METRICS,
-    })),
+      image: player.image || String(getField(`player${slot}Image`) || getField('playerImageLarge') || getField('playerImage') || ''),
+      clubLogo: player.clubLogo || String(getField(`player${slot}ClubLogo`) || getField('clubLogo') || ''),
+      metrics: player.metrics && Object.keys(player.metrics).length > 0 ? player.metrics : DEFAULT_METRICS,
+    };
+  });
+
+  return {
+    ...normalized,
+    source: normalized.source || fallback.source,
+    coverage: normalized.coverage || fallback.coverage,
+    players: enrichedPlayers,
   };
 };
 

@@ -1,0 +1,310 @@
+{
+  "goals": {
+    "label": "Goals",
+    "labelAr": "???????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_gls",
+    "category": "attack"
+  },
+  "assists": {
+    "label": "Assists",
+    "labelAr": "????????? ???????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_ast",
+    "category": "chance_creation"
+  },
+  "goals_assists": {
+    "label": "Goals + Assists",
+    "labelAr": "????? + ?????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_g+a",
+    "category": "attack"
+  },
+  "non_penalty_goals": {
+    "label": "Non-Penalty Goals",
+    "labelAr": "????? ??? ????? ????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_g-pk",
+    "category": "attack"
+  },
+  "yellow_cards": {
+    "label": "Yellow Cards",
+    "labelAr": "???????? ???????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_crdy",
+    "category": "discipline"
+  },
+  "red_cards": {
+    "label": "Red Cards",
+    "labelAr": "???????? ???????",
+    "statGroup": "standard",
+    "sourceColumn": "performance_crdr",
+    "category": "discipline"
+  },
+  "goals_per90": {
+    "label": "Goals per 90",
+    "labelAr": "????? ??? 90 ?????",
+    "statGroup": "standard",
+    "sourceColumn": "per 90 minutes_gls",
+    "category": "per90"
+  },
+  "assists_per90": {
+    "label": "Assists per 90",
+    "labelAr": "????? ??? 90 ?????",
+    "statGroup": "standard",
+    "sourceColumn": "per 90 minutes_ast",
+    "category": "per90"
+  },
+  "shots": {
+    "label": "Shots",
+    "labelAr": "?????????",
+    "statGroup": "shooting",
+    "sourceColumn": "standard_sh",
+    "category": "shooting"
+  },
+  "shots_on_target": {
+    "label": "Shots on Target",
+    "labelAr": "??????? ??? ??????",
+    "statGroup": "shooting",
+    "sourceColumn": "standard_sot",
+    "category": "shooting"
+  },
+  "shots_on_target_pct": {
+    "label": "Shots on Target %",
+    "labelAr": "??? ??????? ??? ??????",
+    "statGroup": "shooting",
+    "sourceColumn": "standard_sot%",
+    "category": "shooting"
+  },
+  "shots_per90": {
+    "label": "Shots per 90",
+    "labelAr": "??????? ??? 90 ?????",
+    "statGroup": "shooting",
+    "sourceColumn": "standard_sh/90",
+    "category": "per90"
+  },
+  "goals_per_shot": {
+    "label": "Goals per Shot",
+    "labelAr": "????? ??? ??????",
+    "statGroup": "shooting",
+    "sourceColumn": "standard_g/sh",
+    "category": "advanced_metrics"
+  },
+  "passes_completed": {
+    "label": "Passes Completed",
+    "labelAr": "??????? ??????",
+    "statGroup": "passing",
+    "sourceColumn": "total_cmp",
+    "category": "passing"
+  },
+  "passes_attempted": {
+    "label": "Passes Attempted",
+    "labelAr": "??????? ???????",
+    "statGroup": "passing",
+    "sourceColumn": "total_att",
+    "category": "passing"
+  },
+  "pass_completion_pct": {
+    "label": "Pass Completion %",
+    "labelAr": "??? ???????",
+    "statGroup": "passing",
+    "sourceColumn": "total_cmp%",
+    "category": "passing"
+  },
+  "progressive_passes": {
+    "label": "Progressive Passes",
+    "labelAr": "??????? ??????",
+    "statGroup": "passing",
+    "sourceColumn": "prgp",
+    "category": "passing"
+  },
+  "key_passes": {
+    "label": "Key Passes",
+    "labelAr": "????????? ?????????",
+    "statGroup": "passing",
+    "sourceColumn": "kp",
+    "category": "chance_creation"
+  },
+  "passes_into_final_third": {
+    "label": "Passes into Final Third",
+    "labelAr": "??????? ????? ??????",
+    "statGroup": "passing",
+    "sourceColumn": "1/3",
+    "category": "chance_creation"
+  },
+  "shot_creating_actions": {
+    "label": "Shot-Creating Actions",
+    "labelAr": "????? ????? ???????",
+    "statGroup": "gca",
+    "sourceColumn": "sca_sca",
+    "category": "chance_creation"
+  },
+  "goal_creating_actions": {
+    "label": "Goal-Creating Actions",
+    "labelAr": "????? ????? ???????",
+    "statGroup": "gca",
+    "sourceColumn": "gca_gca",
+    "category": "chance_creation"
+  },
+  "tackles": {
+    "label": "Tackles",
+    "labelAr": "??????????",
+    "statGroup": "defense",
+    "sourceColumn": "tackles_tkl",
+    "category": "defense"
+  },
+  "tackles_won": {
+    "label": "Tackles Won",
+    "labelAr": "???????? ?????",
+    "statGroup": "defense",
+    "sourceColumn": "tackles_tklw",
+    "category": "defense"
+  },
+  "blocks": {
+    "label": "Blocks",
+    "labelAr": "???????? ????????",
+    "statGroup": "defense",
+    "sourceColumn": "blocks_blocks",
+    "category": "defense"
+  },
+  "interceptions": {
+    "label": "Interceptions",
+    "labelAr": "??????????",
+    "statGroup": "defense",
+    "sourceColumn": "int",
+    "category": "defense"
+  },
+  "clearances": {
+    "label": "Clearances",
+    "labelAr": "????? ?????",
+    "statGroup": "defense",
+    "sourceColumn": "clr",
+    "category": "defense"
+  },
+  "touches": {
+    "label": "Touches",
+    "labelAr": "???????",
+    "statGroup": "possession",
+    "sourceColumn": "touches_touches",
+    "category": "possession"
+  },
+  "take_ons_attempted": {
+    "label": "Take-Ons Attempted",
+    "labelAr": "??????? ????????",
+    "statGroup": "possession",
+    "sourceColumn": "take-ons_att",
+    "category": "dribbling"
+  },
+  "take_ons_successful": {
+    "label": "Successful Take-Ons",
+    "labelAr": "??????? ?????",
+    "statGroup": "possession",
+    "sourceColumn": "take-ons_succ",
+    "category": "dribbling"
+  },
+  "carries": {
+    "label": "Carries",
+    "labelAr": "??? ?????",
+    "statGroup": "possession",
+    "sourceColumn": "carries_carries",
+    "category": "possession"
+  },
+  "progressive_carries": {
+    "label": "Progressive Carries",
+    "labelAr": "??? ????? ?????",
+    "statGroup": "possession",
+    "sourceColumn": "carries_prgc",
+    "category": "possession"
+  },
+  "crosses": {
+    "label": "Crosses",
+    "labelAr": "????????",
+    "statGroup": "pass_types",
+    "sourceColumn": "crs",
+    "category": "passing"
+  },
+  "through_balls": {
+    "label": "Through Balls",
+    "labelAr": "??????? ?????",
+    "statGroup": "pass_types",
+    "sourceColumn": "pass types_tb",
+    "category": "passing"
+  },
+  "minutes": {
+    "label": "Minutes",
+    "labelAr": "???????",
+    "statGroup": "standard",
+    "sourceColumn": "playing time_min",
+    "category": "playing_time"
+  },
+  "starts": {
+    "label": "Starts",
+    "labelAr": "????????? ??????",
+    "statGroup": "standard",
+    "sourceColumn": "playing time_starts",
+    "category": "playing_time"
+  },
+  "aerials_won": {
+    "label": "Aerials Won",
+    "labelAr": "?????????? ???????? ???????",
+    "statGroup": "misc",
+    "sourceColumn": "aerial duels_won",
+    "category": "duels"
+  },
+  "aerials_lost": {
+    "label": "Aerials Lost",
+    "labelAr": "?????????? ???????? ???????",
+    "statGroup": "misc",
+    "sourceColumn": "aerial duels_lost",
+    "category": "duels"
+  },
+  "fouls_committed": {
+    "label": "Fouls Committed",
+    "labelAr": "??????? ????????",
+    "statGroup": "misc",
+    "sourceColumn": "performance_fls",
+    "category": "discipline"
+  },
+  "fouls_drawn": {
+    "label": "Fouls Drawn",
+    "labelAr": "????? ??? ????? ??????",
+    "statGroup": "misc",
+    "sourceColumn": "performance_fld",
+    "category": "duels"
+  },
+  "keeper_saves": {
+    "label": "Saves",
+    "labelAr": "?????? ??????",
+    "statGroup": "keeper",
+    "sourceColumn": "performance_saves",
+    "category": "goalkeeping"
+  },
+  "keeper_save_pct": {
+    "label": "Save %",
+    "labelAr": "???? ????????",
+    "statGroup": "keeper",
+    "sourceColumn": "performance_save%",
+    "category": "goalkeeping"
+  },
+  "keeper_clean_sheets": {
+    "label": "Clean Sheets",
+    "labelAr": "???? ?????",
+    "statGroup": "keeper",
+    "sourceColumn": "performance_cs",
+    "category": "goalkeeping"
+  },
+  "keeper_psxg": {
+    "label": "Post-Shot xG",
+    "labelAr": "??????? ???????? ??? ???????",
+    "statGroup": "keeper_adv",
+    "sourceColumn": "expected_psxg",
+    "category": "advanced_metrics"
+  },
+  "appearances": {
+    "label": "Appearances",
+    "labelAr": "المباريات",
+    "statGroup": "standard",
+    "sourceColumn": "playing time_mp",
+    "category": "playing_time"
+  }
+}

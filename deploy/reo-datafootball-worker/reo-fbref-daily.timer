@@ -1,0 +1,11 @@
+[Unit]
+Description=Run REO FBref Smart Agent once daily
+
+[Timer]
+OnCalendar=*-*-* 06:30:00 UTC
+Persistent=false
+RandomizedDelaySec=10min
+Unit=reo-fbref-daily.service
+
+[Install]
+WantedBy=timers.target
