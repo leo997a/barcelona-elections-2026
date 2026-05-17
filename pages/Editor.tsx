@@ -476,6 +476,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [metricAdvancedOpen, setMetricAdvancedOpen] = useState(false);
   const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'setup' | 'presets' | 'metrics' | 'coverage' | 'visuals' | 'advanced'>('setup');
   const [isFetchingPlayerStats, setIsFetchingPlayerStats] = useState(false);
+  const dndSensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
@@ -2015,7 +2016,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                         {LABELS.metrics.heroMetrics.ar} <span className="text-white/30">({heroKeys.length}/5)</span>
                                     </div>
                                 </div>
-                                <DndContext sensors={useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))} collisionDetection={closestCenter} onDragEnd={handleDragEnd('hero')}>
+                                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd('hero')}>
                                     <SortableContext items={heroKeys} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-1">
                                             {heroKeys.map((key, index) => (
@@ -2043,7 +2044,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                         {LABELS.metrics.secondaryMetrics.ar} <span className="text-white/30">({secondaryKeys.length}/8)</span>
                                     </div>
                                 </div>
-                                <DndContext sensors={useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))} collisionDetection={closestCenter} onDragEnd={handleDragEnd('secondary')}>
+                                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd('secondary')}>
                                     <SortableContext items={secondaryKeys} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-1">
                                             {secondaryKeys.map((key, index) => (
