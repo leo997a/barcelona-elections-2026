@@ -31,3 +31,13 @@ __pycache__/
 .env*
 !.env.example
 scripts/gen-key.js
+
+# DataFootball Worker — local files (never commit)
+deploy/reo-datafootball-worker/local.sync.json
+deploy/reo-datafootball-worker/.cache/
+deploy/reo-datafootball-worker/.venv/
+deploy/reo-datafootball-worker/venv/
+deploy/reo-datafootball-worker/.manual/
+
+# External references (cloned repos, not committed)
+references/_external/

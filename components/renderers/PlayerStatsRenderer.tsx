@@ -321,7 +321,7 @@ const StatTile = ({ metricKey, metric, accent, index }: { metricKey: string; met
               </div>
             </div>
           </div>
-          <div className="font-['Barlow_Condensed'] text-2xl font-black leading-none text-white/20">--</div>
+          <div className="font-['Barlow_Condensed'] text-xl font-black uppercase leading-none text-white/20">Unavailable</div>
         </div>
       </div>
     );
@@ -571,8 +571,8 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                      return (
                       <div key={key} className="flex flex-col items-center justify-center text-center p-2">
                         <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40 mb-1">{metric.labelAr || metric.label || key.replace(/_/g, ' ')}</div>
-                        <div className={`font-['Barlow_Condensed'] text-5xl font-black uppercase ${isMissing ? 'text-white/20' : 'text-white'}`} style={!isMissing ? { color: index % 2 ? secondaryAccent : accent } : {}}>
-                          {isMissing ? '--' : metric.value}
+                        <div className={`font-['Barlow_Condensed'] text-[42px] font-black uppercase ${isMissing ? 'text-white/20 text-2xl' : 'text-white'}`} style={!isMissing ? { color: index % 2 ? secondaryAccent : accent } : {}}>
+                          {isMissing ? 'Unavailable' : metric.value}
                         </div>
                         {!isMissing && <div className="text-[9px] font-bold text-white/30 uppercase mt-1">{metric.source === 'demo' ? 'demo' : metric.source} / {metric.statGroup}</div>}
                         {isMissing && <div className="text-[9px] font-bold text-rose-400/80 uppercase mt-1">{metric.reason === 'stat_group_not_available' ? `Req: ${metric.requiredStatGroup}` : metric.reason}</div>}
