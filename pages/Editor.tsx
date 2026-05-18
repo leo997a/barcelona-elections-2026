@@ -2155,15 +2155,39 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             <div>
                                 <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.visuals.visualVariant.ar}</label>
                                 <select
-                                  value={String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB')}
+                                  value={String(getDraftValue('playerStatsVisualVariant') || 'CLEAN_BROADCAST')}
                                   onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
                                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
                                 >
+                                    <option value="CLEAN_BROADCAST">Clean Broadcast</option>
                                     <option value="ULTRA_LAB">Ultra Lab</option>
+                                    <option value="COMPACT_CARD">Compact Card</option>
                                     <option value="GLASS_SCOUT">Glass Scout</option>
                                     <option value="BARCA_RADAR">Barca Radar</option>
                                     <option value="MINIMAL_CAST">Minimal Cast</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-black text-cyan-200 block mb-1" dir="rtl">لغة العنوان</label>
+                                <select
+                                  value={String(getDraftValue('titleMode') || 'arabic')}
+                                  onChange={(event) => handleDraftFieldChange('titleMode', event.target.value)}
+                                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+                                  dir="rtl"
+                                >
+                                    <option value="arabic">عربي (افتراضي)</option>
+                                    <option value="english">English</option>
+                                    <option value="custom">مخصص</option>
+                                </select>
+                                {String(getDraftValue('titleMode') || 'arabic') === 'custom' && (
+                                  <input
+                                    value={String(getDraftValue('headline') || '')}
+                                    onChange={(event) => handleDraftFieldChange('headline', event.target.value)}
+                                    placeholder="اكتب العنوان المخصص"
+                                    className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white outline-none focus:border-cyan-400"
+                                    dir="rtl"
+                                  />
+                                )}
                             </div>
                             <div className="flex items-center justify-between border border-white/5 bg-white/5 p-2 rounded">
                                 <label className="text-[11px] font-black text-cyan-200">{LABELS.visuals.showMissingBox.ar}</label>
