@@ -16,6 +16,8 @@ import random
 import time
 from pathlib import Path
 
+import pandas as pd
+
 from .base_provider import BaseProvider, StatGroupResult, get_logger
 from .coverage_utils import canonical_stat_group
 
@@ -49,6 +51,45 @@ def _normalize_season(season_str):
     return s
 
 
+def _safe_native(value):
+    """
+    Convert a pandas / numpy scalar (or NA / NaN / NaT) to a JSON-friendly
+    Python value.
+
+    Rules:
+    - pd.NA, np.nan, NaT, None  -> None
+    - numpy scalars (int64, float64, bool_) -> int / float / bool
+    - strings, ints, floats, bools                 -> as-is
+    - anything else                                 -> str(value)
+
+    Designed so the result can be passed to json.dumps without raising and
+    without triggering pandas' "boolean value of NA is ambiguous" error.
+    """
+    if value is None:
+        return None
+    # pd.isna handles: None, pd.NA, np.nan, pd.NaT, datetime NaT.
+    # Wrap in try/except because pd.isna on lists/arrays returns an array,
+    # which we then cannot use as a single boolean.
+    try:
+        is_na = pd.isna(value)
+    except (TypeError, ValueError):
+        is_na = False
+    # If pd.isna returned an array (e.g. for list-like values), bool() would
+    # raise. Treat the value as "not NA" in that case.
+    if isinstance(is_na, bool) and is_na:
+        return None
+    # Numpy scalars expose .item(); use it to get a native Python type.
+    item = getattr(value, "item", None)
+    if callable(item):
+        try:
+            return item()
+        except (TypeError, ValueError):
+            pass
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)
+
+
 def _df_to_players(df, stat_group):
     """Convert soccerdata DataFrame to list of player dicts."""
     players = []
@@ -69,18 +110,20 @@ def _df_to_players(df, stat_group):
                     new_cols.append(str(col))
             df_reset.columns = new_cols
 
-        # Convert to records
-        logger.info("[INFO] Columns discovered for %s: %s", stat_group, ", ".join([str(c) for c in df_reset.columns]))
-        for _, row in df_reset.iterrows():
+        # Lowercase column names once so per-row conversion is fast and safe.
+        column_keys = [str(c).lower() for c in df_reset.columns]
+
+        logger.info("[INFO] Columns discovered for %s: %s", stat_group, ", ".join(column_keys))
+
+        # Convert to records using itertuples for speed AND deterministic
+        # access by column index (avoids pandas Series boolean evaluation).
+        column_count = len(column_keys)
+        for row_tuple in df_reset.itertuples(index=False, name=None):
+            # row_tuple is a plain Python tuple; values may still be numpy/pandas
+            # scalars but never a Series, so pd.isna is safe.
             player = {}
-            for col in df_reset.columns:
-                val = row[col]
-                # Convert numpy types to Python native
-                if hasattr(val, 'item'):
-                    val = val.item()
-                if val != val:  # NaN check
-                    val = None
-                player[str(col).lower()] = val
+            for idx in range(column_count):
+                player[column_keys[idx]] = _safe_native(row_tuple[idx])
             players.append(player)
 
     except Exception as e:

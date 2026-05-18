@@ -38,6 +38,8 @@ deploy/reo-datafootball-worker/.cache/
 deploy/reo-datafootball-worker/.venv/
 deploy/reo-datafootball-worker/venv/
 deploy/reo-datafootball-worker/.manual/
+deploy/reo-datafootball-worker/.state/
+deploy/reo-datafootball-worker/.logs/
 
 # External references (cloned repos, not committed)
 references/_external/
