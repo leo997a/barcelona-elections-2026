@@ -652,6 +652,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
 
+  // Phase E.1: hide bottom tabs in Player Stats easy mode
+  const isPlayerStatsEasyMode = draftOverlay.type === OverlayType.PLAYER_STATS && String(getDraftValue('playerStatsLabUiMode') || 'easy') === 'easy';
+
   const getCurrentFieldValues = () =>
       Object.fromEntries(draftOverlay.fields.map(field => [field.id, field.value]));
 
@@ -1031,7 +1034,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               playerStatsSourceJson: JSON.stringify(payload, null, 2),
               playerStatsDataMode: 'MANUAL',
           });
-          setAiBoxMessage({ type: 'success', text: 'تم تحديث القالب من المصدر بنجاح.' });
+          // Count available metrics in the response for a clear success message.
+          const availableCount = payload?.players?.[0]?.metrics
+              ? Object.values(payload.players[0].metrics).filter((m: any) => m?.status === 'available').length
+              : selectedMetricKeys.length;
+          setAiBoxMessage({ type: 'success', text: `تم تحديث القالب بـ ${availableCount} إحصائيات متاحة.` });
       } catch (error) {
           setAiBoxMessage({ type: 'error', text: 'تعذّر تحديث القالب من المصدر. تحقق من الاتصال أو الإعدادات.' });
       } finally {
@@ -2037,15 +2044,35 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                     {/* Coverage summary in easy mode (one-line, friendly) */}
                     {isEasy && coverage && (
-                        <div className="flex items-center gap-2 rounded-lg border border-amber-700/30 bg-amber-950/20 px-3 py-1.5">
-                            <Info className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                        <div className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 ${
+                            coverage.status === 'full' || (availableStatGroups && availableStatGroups.length >= 5)
+                                ? 'border-emerald-700/30 bg-emerald-950/20'
+                                : 'border-amber-700/30 bg-amber-950/20'
+                        }`}>
+                            <Info className={`w-3.5 h-3.5 shrink-0 ${
+                                coverage.status === 'full' || (availableStatGroups && availableStatGroups.length >= 5)
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                            }`} />
                             <div className="flex-1 min-w-0">
-                                <div className="text-[10px] font-black text-amber-200 truncate">
-                                    {coverage.status === 'full' ? 'البيانات الكاملة متاحة' : 'البيانات الأساسية متاحة'}
+                                <div className={`text-[10px] font-black truncate ${
+                                    coverage.status === 'full' || (availableStatGroups && availableStatGroups.length >= 5)
+                                        ? 'text-emerald-200'
+                                        : 'text-amber-200'
+                                }`}>
+                                    {coverage.status === 'full'
+                                        ? 'البيانات الكاملة متاحة'
+                                        : availableStatGroups && availableStatGroups.length >= 5
+                                            ? 'البيانات الأساسية والمتقدمة متاحة جزئيًا'
+                                            : 'البيانات الأساسية متاحة'}
                                 </div>
-                                {coverage.status !== 'full' && (
-                                    <div className="text-[9px] text-amber-300/70 font-bold truncate">
-                                        التسديد والتمرير والدفاع ستظهر بعد اكتمال الكاش المتقدم.
+                                {coverage.status !== 'full' && availableStatGroups && (
+                                    <div className="text-[9px] text-amber-300/60 font-bold" dir="rtl">
+                                        {availableStatGroups.length >= 5
+                                            ? `متاح: الموسم، التسديد، الدقائق، الانضباط، الحراس • ناقص: التمرير، صناعة الفرص، الدفاع، الاستحواذ`
+                                            : availableStatGroups.length >= 2
+                                                ? `متاح: ${availableStatGroups.length} مجموعات • ناقص: ${coverage.missingStatGroups?.length || '?'} مجموعات`
+                                                : 'التسديد والتمرير والدفاع ستظهر بعد اكتمال الكاش المتقدم.'}
                                     </div>
                                 )}
                             </div>
@@ -3100,21 +3127,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
          </div>
          <div className="flex flex-col overflow-hidden" style={{ height: `${100 - sidebarSplitPct}%` }}>
         <div className="flex border-b border-white/[0.06] overflow-x-auto scrollbar-hide bg-[#13151f]">
-          {/* ALWAYS: Main data tab */}
-          <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>بيانات</button>
+          {/* ALWAYS: Main data tab — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && (
+            <button onClick={() => setActiveTab('fields')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'fields' ? 'text-blue-400 border-blue-500 bg-blue-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>بيانات</button>
+          )}
 
-          {/* ALWAYS for non-ELECTION: Images tab (if has image fields) */}
-          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
+          {/* ALWAYS for non-ELECTION: Images tab (if has image fields) — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
             <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صور</button>
           )}
 
-          {/* ALWAYS for non-ELECTION: Appearance tab */}
-          {draftOverlay.type !== OverlayType.ELECTION && (
+          {/* ALWAYS for non-ELECTION: Appearance tab — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && (
             <button onClick={() => setActiveTab('style')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'style' ? 'text-purple-400 border-purple-500 bg-purple-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>تنسيق</button>
           )}
 
-          {/* ALWAYS for non-ELECTION: Position/Size tab */}
-          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth'].includes(f.id)) && (
+          {/* ALWAYS for non-ELECTION: Position/Size tab — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth'].includes(f.id)) && (
             <button onClick={() => setActiveTab('position')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'position' ? 'text-cyan-400 border-cyan-500 bg-cyan-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>موضع</button>
           )}
 
@@ -3126,13 +3155,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </>
           )}
 
-          {/* ALWAYS for non-ELECTION: Sound tab if exists */}
-          {draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
+          {/* ALWAYS for non-ELECTION: Sound tab if exists — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
             <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صوت</button>
           )}
 
-          {/* Slots / Presets Tab */}
-          <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>قوالب</button>
+          {/* Slots / Presets Tab — hidden in Player Stats easy mode */}
+          {!isPlayerStatsEasyMode && (
+            <button onClick={() => setActiveTab('slots')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'slots' ? 'text-indigo-400 border-indigo-500 bg-indigo-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>قوالب</button>
+          )}
 
           {/* LEADERBOARD: Sponsors tab */}
           {draftOverlay.type === OverlayType.LEADERBOARD && (
