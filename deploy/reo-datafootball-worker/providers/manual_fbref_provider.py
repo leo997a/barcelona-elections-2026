@@ -29,6 +29,17 @@ logger = get_logger("manual_fbref_provider")
 
 MANUAL_DIR_NAME = ".manual/fbref"
 
+# CAPTCHA / block markers — if any of these appear in the HTML, the file is rejected.
+CAPTCHA_MARKERS = [
+    "just a moment",
+    "verify you are human",
+    "cf-turnstile",
+    "challenge-platform",
+    "access denied",
+    "cloudflare",
+    "ray id",
+]
+
 # FBref table IDs used in saved HTML pages (same as direct_big5 provider).
 TABLE_IDS = {
     "standard": "stats_standard",
@@ -104,6 +115,12 @@ def _parse_html(html_path, stat_group):
     """Parse a saved FBref HTML page and extract the stats table."""
     html_text = html_path.read_text(encoding="utf-8", errors="replace")
 
+    # CAPTCHA / block detection — reject the file immediately.
+    html_lower = html_text[:50000].lower()  # Check first 50KB only for speed.
+    for marker in CAPTCHA_MARKERS:
+        if marker in html_lower:
+            return None, f"CAPTCHA_OR_BLOCK_PAGE: found '{marker}' in {html_path.name}"
+
     # Try to find the specific table by ID first.
     table_id = TABLE_IDS.get(stat_group, "")
     df = None
@@ -178,12 +195,38 @@ class ManualFBrefProvider(BaseProvider):
         manual_dir = Path(self._manual_dir) if self._manual_dir else Path(MANUAL_DIR_NAME)
 
         if not manual_dir.exists():
-            logger.warning("[WARN] Manual FBref directory not found: %s", manual_dir)
-            logger.info("[INFO] Create it and place HTML/CSV files inside:")
-            logger.info("[INFO]   %s/passing.html (or .csv)", manual_dir)
+            manual_dir.mkdir(parents=True, exist_ok=True)
+
+        # Phase H.2: Auto-extract fbref_manual_bundle.zip if present.
+        zip_path = manual_dir / "fbref_manual_bundle.zip"
+        if zip_path.exists():
+            logger.info("[INFO] Found bundle ZIP: %s", zip_path.name)
+            try:
+                import zipfile
+                staging = manual_dir / "_zip_staging"
+                if staging.exists():
+                    import shutil
+                    shutil.rmtree(staging)
+                staging.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(zip_path, "r") as zf:
+                    zf.extractall(staging)
+                    logger.info("[OK] Extracted %d files from ZIP", len(zf.namelist()))
+                # Move HTML/CSV from staging (and one level of subdirs) to manual_dir.
+                import shutil
+                for f in staging.rglob("*"):
+                    if f.is_file() and f.suffix.lower() in (".html", ".csv"):
+                        dest = manual_dir / f.name.lower()
+                        shutil.copy2(f, dest)
+                        logger.info("[INFO] Staged: %s", dest.name)
+                shutil.rmtree(staging, ignore_errors=True)
+            except Exception as e:
+                logger.error("[FAIL] Could not extract ZIP: %s", str(e))
+
+        if not any(manual_dir.glob("*.html")) and not any(manual_dir.glob("*.csv")):
+            logger.warning("[WARN] No HTML/CSV files in: %s", manual_dir)
             for sg in stat_groups:
                 r = StatGroupResult(sg, self.source, self.name, season)
-                r.error = f"Manual directory not found: {manual_dir}"
+                r.error = f"No HTML/CSV files in {manual_dir}"
                 results[sg] = r
                 total_failed += 1
             return {"provider": self.name, "results": results, "total_ok": 0, "total_failed": total_failed}
