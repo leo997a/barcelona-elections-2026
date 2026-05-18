@@ -2066,63 +2066,25 @@ const buildTransferTargetsTemplate = (
   ],
 });
 
+// 3 قوالب أساسية فقط — كل واحد يحتوي على كل الثيمات الـ 5 داخل قائمة منسدلة
 const TRANSFER_TARGETS_TEMPLATES: OverlayConfig[] = [
-  // Sequence mode — 5 themes
   buildTransferTargetsTemplate(
-    'template-transfer-targets-sequence-neon',
-    'أهداف النادي - تتابع | Neon Glass',
-    'شريط جانبي زجاجي نيوني. كل هدف يظهر بعد الآخر مع مؤثر صوتي مخصص.',
+    'template-transfer-targets-sequence',
+    'أهداف النادي — ظهور متتابع بصوت',
+    'شريط جانبي يسار. كل هدف يظهر بعد الآخر مع تأثير صوتي مخصص. 5 ثيمات بصرية في الإعدادات.',
     '🎯', 'SEQUENCE', 'NEON_GLASS', '#22d3ee',
   ),
   buildTransferTargetsTemplate(
-    'template-transfer-targets-sequence-tactical',
-    'أهداف النادي - تتابع | Tactical Dark',
-    'تصميم تكتيكي داكن، مناسب لتغطيات تحليلية احترافية.',
-    '🎯', 'SEQUENCE', 'TACTICAL_DARK', '#ff4b3e',
-  ),
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-sequence-gold',
-    'أهداف النادي - تتابع | Luxe Gold',
-    'تصميم ذهبي فاخر بإضاءة ساحرة، مثالي للحلقات الكبرى.',
-    '🎯', 'SEQUENCE', 'LUXE_GOLD', '#edb111',
-  ),
-  // Slide mode — 5 themes
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-slide-neon',
-    'أهداف النادي - سلايد | Neon Glass',
-    'سلايد عصري نيوني لمركز واحد بكل أهدافه دفعة واحدة.',
-    '🎯', 'SLIDE', 'NEON_GLASS', '#22d3ee',
-  ),
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-slide-clean',
-    'أهداف النادي - سلايد | Clean Broadcast',
-    'تصميم بث نظيف احترافي بألوان زرقاء أنيقة.',
+    'template-transfer-targets-slide',
+    'أهداف النادي — سلايد لمركز واحد',
+    'يعرض كل أهداف مركز واحد دفعة واحدة بانتقال متدرج. 5 ثيمات بصرية في الإعدادات.',
     '🎯', 'SLIDE', 'CLEAN_BROADCAST', '#3b82f6',
   ),
   buildTransferTargetsTemplate(
-    'template-transfer-targets-slide-fire',
-    'أهداف النادي - سلايد | Gradient Fire',
-    'تدرج ناري دراماتيكي، مناسب للأخبار الساخنة في الميركاتو.',
-    '🎯', 'SLIDE', 'GRADIENT_FIRE', '#ef4444',
-  ),
-  // Cycle mode — 5 themes
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-cycle-tactical',
-    'أهداف النادي - دوران | Tactical Dark',
-    'الشريط يدور تلقائياً بين المراكز كل 30 ثانية. تصميم تكتيكي.',
+    'template-transfer-targets-cycle',
+    'أهداف النادي — دوران تلقائي',
+    'الشريط يدور تلقائياً بين كل المراكز كل 30 ثانية (قابل للتعديل). 5 ثيمات بصرية.',
     '🎯', 'CYCLE', 'TACTICAL_DARK', '#ff4b3e',
-  ),
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-cycle-gold',
-    'أهداف النادي - دوران | Luxe Gold',
-    'دوران بين المراكز بتصميم ذهبي فاخر.',
-    '🎯', 'CYCLE', 'LUXE_GOLD', '#edb111',
-  ),
-  buildTransferTargetsTemplate(
-    'template-transfer-targets-cycle-neon',
-    'أهداف النادي - دوران | Neon Glass',
-    'دوران تلقائي بتصميم نيوني عصري.',
-    '🎯', 'CYCLE', 'NEON_GLASS', '#22d3ee',
   ),
 ];
 
@@ -2178,15 +2140,35 @@ const buildBreakingHereWeGoTemplate = (
     // Intro sequence
     { id: 'introDuration', label: 'مدة المقدمة الدرامية (ms)', type: 'range', value: 2200, min: 1000, max: 4500, step: 100 },
 
-    // Pro deep voice
+    // Pro broadcast voice (StreamElements TTS — real human voices, free, no API key)
     { id: 'voiceEnabled', label: 'تفعيل الصوت الاحترافي', type: 'boolean', value: true },
-    { id: 'voiceMode', label: 'نمط الصوت', type: 'select', value: 'BROWSER_TTS_DEEP', options: [
-      { value: 'BROWSER_TTS_DEEP', label: '🎙️ Browser TTS Deep — صوت متصفح عميق + Stinger' },
-      { value: 'STUDIO_STINGER',   label: '💥 Studio Stinger Only — مؤثر استوديو فقط' },
-      { value: 'FORMANT_PHRASE',   label: '🎬 Formant Phrase — صوت تلفظ سينمائي صناعي' },
+    { id: 'voiceMode', label: 'نمط الصوت', type: 'select', value: 'BROADCAST', options: [
+      { value: 'BROADCAST',         label: '🎙️ Broadcast — صوت بشري حقيقي + Stinger (موصى به)' },
+      { value: 'STINGER_ONLY',      label: '💥 Stinger Only — مؤثر استوديو فقط بدون كلام' },
+      { value: 'BROWSER_TTS_DEEP',  label: '🤖 Browser TTS — احتياطي بدون إنترنت' },
+    ] },
+    { id: 'voiceId', label: 'الصوت', type: 'select', value: 'Brian', options: [
+      // English — male
+      { value: 'Brian',   label: '🇬🇧 Brian — إنجليزي بريطاني عميق (موصى به)' },
+      { value: 'Joey',    label: '🇺🇸 Joey — أمريكي للإعلانات' },
+      { value: 'Matthew', label: '🇺🇸 Matthew — أمريكي رسمي' },
+      { value: 'Russell', label: '🇦🇺 Russell — أسترالي حازم' },
+      // English — female
+      { value: 'Salli',   label: '🇺🇸 Salli — أمريكي نسائي' },
+      { value: 'Amy',     label: '🇬🇧 Amy — بريطاني نسائي' },
+      // Arabic
+      { value: 'Naayf',   label: '🇸🇦 Naayf — عربي رجالي طبيعي (موصى به)' },
+      { value: 'Hoda',    label: '🇪🇬 Hoda — عربي نسائي مصري' },
+      // Other languages
+      { value: 'Enrique',   label: '🇪🇸 Enrique — إسباني رجالي' },
+      { value: 'Penelope',  label: '🇲🇽 Penelope — إسباني نسائي' },
+      { value: 'Bruno',     label: '🇮🇹 Bruno — إيطالي رجالي' },
+      { value: 'Mathieu',   label: '🇫🇷 Mathieu — فرنسي رجالي' },
+      { value: 'Hans',      label: '🇩🇪 Hans — ألماني رجالي' },
+      { value: 'Cristiano', label: '🇧🇷 Cristiano — برتغالي برازيلي' },
     ] },
     { id: 'voiceText', label: 'النص المنطوق', type: 'text', value: 'Here we go' },
-    { id: 'voiceLang', label: 'لغة النطق', type: 'select', value: 'en-US', options: [
+    { id: 'voiceLang', label: 'لغة النطق (للاحتياطي فقط)', type: 'select', value: 'en-US', options: [
       { value: 'en-US', label: 'إنجليزي (US)' },
       { value: 'en-GB', label: 'إنجليزي (UK)' },
       { value: 'ar-SA', label: 'عربي (SA)' },
@@ -2197,7 +2179,7 @@ const buildBreakingHereWeGoTemplate = (
       { value: 'de-DE', label: 'ألماني' },
     ] },
     { id: 'voiceVolume', label: 'حجم الصوت المنطوق', type: 'range', value: 0.95, min: 0, max: 1.4, step: 0.05 },
-    { id: 'voiceDeepness', label: 'عمق الصوت (نزول النغمة)', type: 'range', value: 4, min: 0, max: 12, step: 1 },
+    { id: 'voicePitchShift', label: 'تعديل النغمة (semitones، سالب = أعمق)', type: 'range', value: 0, min: -6, max: 6, step: 1 },
 
     { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
     { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
@@ -2212,90 +2194,34 @@ const buildBreakingHereWeGoTemplate = (
   ],
 });
 
+// 3 قوالب أساسية فقط — كل واحد يحتوي على كل الثيمات الـ 5 داخل قائمة منسدلة
 const BREAKING_HERE_WE_GO_TEMPLATES: OverlayConfig[] = [
-  // BREAKING — 5 themes
   buildBreakingHereWeGoTemplate(
-    'template-breaking-cinematic-red',
-    'خبر عاجل - Cinematic Red',
-    'مقدمة صوتية درامية + تصميم سينمائي أحمر + بطاقة خبر بصورة وعنوان.',
+    'template-breaking-news',
+    'خبر عاجل — Here We Go',
+    'مقدمة صوتية درامية + بطاقة خبر عاجل. 5 ثيمات بصرية للاختيار من الإعدادات.',
     '🚨', 'BREAKING',
     'صفقة كبرى تنتظر الإعلان رسمياً',
     'وفقاً لمصادر موثوقة، اللاعب سيوقع عقده الجديد خلال الساعات القادمة بعد اتفاق شامل بين الأطراف.',
     'CINEMATIC_RED',
   ),
   buildBreakingHereWeGoTemplate(
-    'template-breaking-neon-cyber',
-    'خبر عاجل - Neon Cyber',
-    'تصميم نيوني سايبر بانتقالات رقمية حديثة، مناسب لقنوات التقنية والميركاتو.',
-    '🚨', 'BREAKING',
-    'تطور مفاجئ في سوق الانتقالات',
-    'مصادر داخلية تكشف عن صفقة لم تكن في الحسبان قد تغير وجه الموسم القادم.',
-    'NEON_CYBER',
-  ),
-  buildBreakingHereWeGoTemplate(
-    'template-breaking-mono',
-    'خبر عاجل - Mono Broadcast',
-    'تصميم أحادي اللون أنيق وكلاسيكي، نمط قنوات الأخبار الكبرى.',
-    '🚨', 'BREAKING',
-    'خبر عاجل من غرفة المفاوضات',
-    'تطور غير متوقع بحسب مصدر مقرب من المفاوضات الجارية.',
-    'MONO_BROADCAST',
-  ),
-  // OFFICIAL — 5 themes
-  buildBreakingHereWeGoTemplate(
-    'template-official-blue',
-    'خبر رسمي - Official Blue',
-    'إعلان رسمي بتصميم أزرق احترافي وصوت "Here We Go" الفخم.',
+    'template-breaking-official',
+    'خبر رسمي — إعلان النادي',
+    'إعلان رسمي بصوت "Here We Go" الفخم. 5 ثيمات بصرية في الإعدادات.',
     '✅', 'OFFICIAL',
     'إعلان رسمي من النادي',
     'أعلن النادي رسمياً عن إتمام الصفقة وتم توقيع جميع الأوراق القانونية بنجاح.',
     'OFFICIAL_BLUE',
   ),
   buildBreakingHereWeGoTemplate(
-    'template-official-luxe-gold',
-    'خبر رسمي - Luxe Gold',
-    'إعلان رسمي بتصميم ذهبي فاخر مناسب للحلقات الكبرى والإعلانات المهمة.',
-    '✅', 'OFFICIAL',
-    'إعلان رسمي بصفقة تاريخية',
-    'وقع اللاعب رسمياً على عقده الجديد ضمن مراسم استثنائية في مقر النادي.',
-    'LUXE_GOLD',
-  ),
-  buildBreakingHereWeGoTemplate(
-    'template-official-mono',
-    'خبر رسمي - Mono Broadcast',
-    'إعلان رسمي بتصميم أحادي كلاسيكي وصوت ثابت.',
-    '✅', 'OFFICIAL',
-    'بيان رسمي من النادي',
-    'أصدر النادي بياناً رسمياً يؤكد إتمام التعاقد وفق الشروط المتفق عليها.',
-    'MONO_BROADCAST',
-  ),
-  // IMPORTANT — 5 themes
-  buildBreakingHereWeGoTemplate(
-    'template-important-cinematic',
-    'خبر مهم - Cinematic Red',
-    'خبر مهم بتصميم سينمائي أحمر، يلفت الأنظار دون التضخيم.',
+    'template-breaking-important',
+    'خبر مهم — تطور حصري',
+    'خبر مهم يلفت الأنظار. 5 ثيمات بصرية للاختيار من الإعدادات.',
     '🔔', 'IMPORTANT',
     'تطور مهم في الصفقة',
     'تشير المعطيات إلى تقدم جوهري في المفاوضات مع تفاصيل جديدة من غرفة المفاوضات خلال الساعات القادمة.',
-    'CINEMATIC_RED',
-  ),
-  buildBreakingHereWeGoTemplate(
-    'template-important-luxe',
-    'خبر مهم - Luxe Gold',
-    'خبر مهم بإطار ذهبي فاخر يضفي على الإعلان قيمة بصرية عالية.',
-    '🔔', 'IMPORTANT',
-    'تحديث مهم من فريق التفاوض',
-    'الجلسة الأخيرة بين الطرفين أنجزت التفاصيل المالية الجوهرية وتبقى تفاصيل بسيطة قبل الإعلان.',
     'LUXE_GOLD',
-  ),
-  buildBreakingHereWeGoTemplate(
-    'template-important-cyber',
-    'خبر مهم - Neon Cyber',
-    'خبر مهم بأسلوب نيون سايبر متطور.',
-    '🔔', 'IMPORTANT',
-    'إشارة قوية من السوق',
-    'تكشف بيانات السوق عن تحرك جدي قد يفضي إلى صفقة كبرى خلال الأيام القادمة.',
-    'NEON_CYBER',
   ),
 ];
 

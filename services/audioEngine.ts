@@ -728,37 +728,9 @@ const playPatternSynth = (cue: string, volume: number) => {
 //  Each cue has a per-cue config that maps it to a "shape" (HIT, RISER,
 //  PULSE, SWEEP, FANFARE, WHISTLE, CHANT, TICK, REVEAL, GLITCH, DROP).
 //
-const BROADCAST_PRO_SHAPES: Record<string, string> = {
-  BREAKING_RISER:    'RISER',
-  BREAKING_HIT:      'HIT',
-  BREAKING_PULSE:    'PULSE',
-  BREAKING_WHOOSH:   'SWEEP',
-  OFFICIAL_STAMP:    'HIT',
-  IMPORTANT_PING:    'PING',
-  NEWS_TICKER:       'TICK',
-  TARGET_REVEAL:     'REVEAL',
-  TARGET_LOCK:       'LOCK',
-  TARGET_SCAN:       'SCAN',
-  POSITION_SWITCH:   'SWITCH',
-  SCOUT_BEEP:        'PING',
-  TRANSFER_REVEAL:   'REVEAL',
-  GOAL_FANFARE:      'FANFARE',
-  STADIUM_CHEER:     'CHANT',
-  STADIUM_CHANT:     'CHANT',
-  WHISTLE_SHORT:     'WHISTLE_S',
-  WHISTLE_LONG:      'WHISTLE_L',
-  KICKOFF_HORN:      'HORN',
-  PA_ANNOUNCEMENT:   'BELLS',
-  TROPHY_FANFARE:    'FANFARE',
-  CINEMATIC_DROP:    'DROP',
-  CINEMATIC_RISE:    'RISER',
-  IMPACT_BOOM:       'HIT',
-  GLITCH_TRANSITION: 'GLITCH',
-  DIGITAL_SWEEP:     'SWEEP',
-  MAGIC_REVEAL:      'BELLS',
-  SUSPENSE_RISE:     'RISER',
-  TIMER_TICK:        'TICK',
-  COUNTDOWN_FINAL:   'FANFARE',
+const BROADCAST_PRO_SHAPES_LEGACY: Record<string, string> = {
+  // Kept only as a comment reference. Each cue now has its own per-cue
+  // recipe inside playBroadcastPro for a unique sonic signature.
 };
 
 const buildSaturationCurve = (amount: number): Float32Array => {
@@ -776,7 +748,6 @@ const playBroadcastPro = (cue: string, volume: number): boolean => {
   const audioGraph = getGraph();
   if (!audioGraph) return false;
 
-  const shape = BROADCAST_PRO_SHAPES[cue] || 'HIT';
   const ctx = audioGraph.context;
   const now = ctx.currentTime;
   const vol = clampVolume(volume);
@@ -875,129 +846,260 @@ const playBroadcastPro = (cue: string, volume: number): boolean => {
     src.stop(start + dur + 0.05);
   };
 
-  // ── Shape implementations ─────────────────────────────────────────────────
-  switch (shape) {
-    case 'HIT':
-      sub(now, 38, 0.45, 1.05);
-      tone(now, 56, 0.32, 0.85, 'sawtooth', 38);
-      tone(now + 0.04, 132, 0.28, 0.42, 'triangle', 86);
-      tone(now + 0.18, 360, 0.5, 0.32, 'sine', 220);
-      noiseSweep(now, 0.5, 1800, 220, 0.32, 0.9);
+  // ── Per-cue sound recipes — each cue has a unique sonic signature ──────
+  switch (cue) {
+    // ─── BREAKING / NEWS family ─────────────────────────────────────
+    case 'BREAKING_HIT':
+      // Heavy news impact — short and punchy
+      sub(now, 32, 0.4, 1.1);
+      tone(now, 56, 0.28, 0.92, 'sawtooth', 38);
+      tone(now + 0.04, 142, 0.22, 0.42, 'triangle', 90);
+      tone(now + 0.18, 540, 0.42, 0.28, 'sine', 320);
+      noiseSweep(now, 0.42, 2200, 220, 0.36, 0.85);
       break;
-    case 'RISER':
-      sub(now, 44, 0.7, 0.7);
-      tone(now, 92, 0.62, 0.5, 'sawtooth', 220);
-      tone(now + 0.18, 240, 0.55, 0.42, 'triangle', 880);
-      tone(now + 0.42, 1080, 0.32, 0.32, 'sine', 1480);
-      noiseSweep(now, 0.85, 240, 5200, 0.32, 0.7);
+    case 'BREAKING_RISER':
+      // Slow tense rise into a hit
+      sub(now, 36, 0.95, 0.62);
+      tone(now, 64, 0.85, 0.42, 'sawtooth', 220);
+      tone(now + 0.25, 180, 0.65, 0.36, 'triangle', 880);
+      tone(now + 0.55, 880, 0.42, 0.4, 'sine', 1480);
+      noiseSweep(now, 1.05, 180, 5200, 0.36, 0.62);
+      // Final hit
+      sub(now + 0.95, 38, 0.3, 0.95);
+      tone(now + 0.95, 64, 0.18, 0.7, 'sawtooth', 32);
       break;
-    case 'PULSE':
-      [0, 0.16, 0.32].forEach(d => {
-        tone(now + d, 220, 0.08, 0.5, 'square');
-        tone(now + d, 880, 0.08, 0.32, 'sine');
+    case 'BREAKING_PULSE':
+      // 4 quick alarm pulses + sub drop
+      [0, 0.14, 0.28, 0.42].forEach(d => {
+        tone(now + d, 880, 0.07, 0.5, 'square');
+        tone(now + d, 1320, 0.07, 0.18, 'sine');
       });
-      sub(now + 0.42, 50, 0.3, 0.62);
-      noiseSweep(now + 0.42, 0.4, 2400, 480, 0.22, 0.8);
+      sub(now + 0.55, 50, 0.4, 0.7);
+      noiseSweep(now + 0.5, 0.45, 2800, 480, 0.22, 0.8);
       break;
-    case 'SWEEP':
-      sub(now, 60, 0.5, 0.55);
-      tone(now, 880, 0.45, 0.42, 'triangle', 240);
-      noiseSweep(now, 0.75, 3600, 320, 0.42, 0.85);
-      noiseSweep(now + 0.12, 0.5, 480, 2800, 0.22, 0.9);
+    case 'BREAKING_WHOOSH':
+      // Long air whoosh into a low thud
+      sub(now + 0.7, 60, 0.35, 0.85);
+      tone(now + 0.7, 96, 0.25, 0.62, 'sawtooth', 50);
+      noiseSweep(now, 0.95, 4800, 280, 0.5, 0.7);
+      noiseSweep(now + 0.18, 0.6, 320, 3200, 0.22, 0.85);
       break;
-    case 'PING':
-      tone(now, 880, 0.16, 0.42, 'sine');
-      tone(now + 0.06, 1320, 0.22, 0.36, 'sine');
-      tone(now + 0.18, 1760, 0.26, 0.28, 'triangle');
-      sub(now, 110, 0.18, 0.38);
+    case 'OFFICIAL_STAMP':
+      // Two-stage thud — like a stamp being pressed
+      sub(now, 42, 0.18, 0.95);
+      tone(now, 110, 0.12, 0.78, 'square', 70);
+      // gap, then deeper second stamp
+      sub(now + 0.22, 32, 0.35, 1.15);
+      tone(now + 0.22, 84, 0.22, 0.85, 'sawtooth', 50);
+      noiseSweep(now + 0.22, 0.45, 1600, 240, 0.28, 0.8);
       break;
-    case 'TICK':
-      tone(now, 1320, 0.045, 0.32, 'square');
-      tone(now + 0.06, 880, 0.05, 0.26, 'square');
+    case 'IMPORTANT_PING':
+      // Two-tone bell ping (high-low)
+      tone(now, 1480, 0.12, 0.5, 'sine');
+      tone(now, 2960, 0.12, 0.18, 'triangle');
+      tone(now + 0.18, 880, 0.32, 0.42, 'sine');
+      tone(now + 0.18, 1760, 0.32, 0.16, 'triangle');
+      sub(now + 0.18, 110, 0.3, 0.32);
       break;
-    case 'REVEAL':
-      sub(now, 38, 0.5, 0.85);
-      tone(now, 56, 0.36, 0.78, 'sawtooth', 42);
-      tone(now + 0.16, 220, 0.42, 0.42, 'triangle', 480);
-      tone(now + 0.32, 660, 0.38, 0.36, 'sine', 1080);
-      tone(now + 0.5, 1320, 0.32, 0.28, 'sine', 1760);
-      noiseSweep(now + 0.04, 0.6, 1800, 5800, 0.22, 0.85);
-      break;
-    case 'LOCK':
-      tone(now, 320, 0.07, 0.36, 'square');
-      tone(now + 0.1, 480, 0.07, 0.36, 'square');
-      tone(now + 0.2, 720, 0.18, 0.42, 'triangle', 1080);
-      sub(now + 0.36, 56, 0.26, 0.78);
-      tone(now + 0.36, 132, 0.22, 0.45, 'sawtooth', 88);
-      break;
-    case 'SCAN':
-      [0, 0.1, 0.2, 0.3].forEach((d, i) => tone(now + d, 620 + i * 140, 0.1, 0.28, 'sine'));
-      tone(now + 0.42, 1320, 0.22, 0.32, 'triangle');
-      noiseSweep(now, 0.5, 480, 2400, 0.16, 0.95);
-      break;
-    case 'SWITCH':
-      tone(now, 220, 0.16, 0.36, 'sawtooth', 480);
-      tone(now + 0.1, 540, 0.22, 0.32, 'triangle', 880);
-      tone(now + 0.28, 880, 0.18, 0.28, 'sine');
-      sub(now, 80, 0.3, 0.42);
-      break;
-    case 'FANFARE':
-      sub(now, 55, 0.95, 0.62);
-      tone(now, 220, 0.18, 0.55, 'square');
-      tone(now + 0.18, 330, 0.18, 0.55, 'square');
-      tone(now + 0.36, 440, 0.36, 0.6, 'square');
-      tone(now + 0.36, 660, 0.36, 0.42, 'sawtooth');
-      noiseSweep(now + 0.6, 0.5, 480, 3200, 0.18, 0.8);
-      break;
-    case 'CHANT':
-      sub(now, 55, 1.0, 0.42);
-      [0, 0.32, 0.64].forEach((d, i) => {
-        tone(now + d, 180 + i * 40, 0.28, 0.45, 'sawtooth');
-        tone(now + d, 360 + i * 80, 0.28, 0.22, 'triangle');
+    case 'NEWS_TICKER':
+      // Three short clicks
+      [0, 0.08, 0.16].forEach((d, i) => {
+        tone(now + d, 980 - i * 80, 0.045, 0.32, 'square');
       });
-      noiseSweep(now, 1.1, 240, 1800, 0.2, 0.7);
       break;
-    case 'WHISTLE_S':
-      tone(now, 2400, 0.18, 0.5, 'sine');
-      tone(now, 4800, 0.18, 0.18, 'sine');
-      noiseSweep(now, 0.18, 2200, 2600, 0.12, 1.4);
+
+    // ─── MERCATO / TRANSFER family ──────────────────────────────────
+    case 'TARGET_REVEAL':
+      // Soft rise + crystal ping (the "discovery" sound)
+      tone(now, 220, 0.18, 0.32, 'triangle', 440);
+      tone(now + 0.16, 660, 0.22, 0.42, 'sine', 880);
+      tone(now + 0.34, 1320, 0.32, 0.36, 'sine', 1760);
+      sub(now + 0.34, 88, 0.32, 0.42);
+      noiseSweep(now, 0.5, 880, 4800, 0.18, 0.95);
       break;
-    case 'WHISTLE_L':
-      tone(now, 2400, 0.7, 0.55, 'sine', 2480);
-      tone(now, 4800, 0.7, 0.18, 'sine', 4960);
-      noiseSweep(now, 0.7, 2200, 2600, 0.12, 1.4);
+    case 'TARGET_LOCK':
+      // 2 beeps then a deep lock-in thud
+      tone(now, 880, 0.07, 0.42, 'square');
+      tone(now + 0.12, 1320, 0.07, 0.42, 'square');
+      sub(now + 0.32, 48, 0.32, 0.95);
+      tone(now + 0.32, 160, 0.18, 0.6, 'sawtooth', 80);
       break;
-    case 'HORN':
-      sub(now, 55, 0.6, 0.7);
-      tone(now, 110, 0.42, 0.65, 'sawtooth');
-      tone(now, 220, 0.42, 0.42, 'sawtooth');
-      tone(now + 0.42, 165, 0.42, 0.62, 'sawtooth');
-      tone(now + 0.42, 330, 0.42, 0.36, 'sawtooth');
-      break;
-    case 'BELLS':
-      [0, 0.18, 0.4].forEach((d, i) => {
-        const f = [660, 880, 1320][i];
-        tone(now + d, f, 0.36, 0.34, 'sine');
-        tone(now + d, f * 2, 0.36, 0.16, 'triangle');
-      });
-      sub(now + 0.4, 110, 0.3, 0.42);
-      break;
-    case 'DROP':
-      sub(now, 220, 0.55, 0.85, );
-      tone(now, 440, 0.42, 0.62, 'sawtooth', 36);
-      tone(now + 0.18, 220, 0.5, 0.45, 'triangle', 60);
-      tone(now + 0.4, 38, 0.4, 1.0, 'sine');
-      noiseSweep(now, 0.7, 5200, 200, 0.42, 0.7);
-      break;
-    case 'GLITCH':
+    case 'TARGET_SCAN':
+      // Stepping scanner sweeping up
       [0, 0.08, 0.16, 0.24, 0.32].forEach((d, i) => {
-        const f = [620, 320, 880, 240, 540][i];
-        tone(now + d, f, 0.05, 0.36, 'square');
+        tone(now + d, 480 + i * 180, 0.06, 0.32, 'square');
       });
-      noiseSweep(now + 0.4, 0.18, 460, 280, 0.22, 1.2);
+      tone(now + 0.42, 1480, 0.18, 0.36, 'triangle');
+      noiseSweep(now, 0.5, 320, 2400, 0.14, 1.0);
       break;
+    case 'POSITION_SWITCH':
+      // Quick swoosh + low whoosh — for transitions between positions
+      tone(now, 220, 0.14, 0.32, 'sawtooth', 540);
+      tone(now + 0.08, 540, 0.18, 0.36, 'triangle', 880);
+      sub(now, 70, 0.34, 0.55);
+      noiseSweep(now, 0.42, 1200, 4800, 0.22, 0.9);
+      break;
+    case 'SCOUT_BEEP':
+      // Quick sonar-style beep
+      tone(now, 720, 0.08, 0.28, 'sine');
+      tone(now + 0.14, 1080, 0.1, 0.32, 'sine');
+      break;
+    case 'TRANSFER_REVEAL':
+      // Big transfer announcement — riser + horn-like fanfare
+      sub(now, 50, 0.6, 0.85);
+      tone(now, 80, 0.5, 0.7, 'sawtooth', 60);
+      tone(now + 0.2, 220, 0.45, 0.5, 'triangle', 480);
+      tone(now + 0.4, 660, 0.4, 0.45, 'sine', 1080);
+      tone(now + 0.6, 880, 0.35, 0.42, 'square');
+      tone(now + 0.6, 1320, 0.35, 0.28, 'sawtooth');
+      noiseSweep(now, 0.85, 320, 5200, 0.32, 0.78);
+      break;
+
+    // ─── FOOTBALL / STADIUM family ──────────────────────────────────
+    case 'GOAL_FANFARE':
+      // Huge stadium goal celebration
+      sub(now, 48, 1.1, 0.85);
+      tone(now, 220, 0.22, 0.62, 'square');
+      tone(now + 0.22, 330, 0.22, 0.62, 'square');
+      tone(now + 0.44, 440, 0.45, 0.7, 'square');
+      tone(now + 0.44, 660, 0.45, 0.5, 'sawtooth');
+      noiseSweep(now + 0.7, 0.6, 480, 3600, 0.22, 0.78);
+      break;
+    case 'STADIUM_CHEER':
+      // Wave of crowd noise (sustained, no melody)
+      sub(now, 42, 1.4, 0.5);
+      noiseSweep(now, 1.4, 200, 600, 0.45, 0.5);
+      noiseSweep(now + 0.2, 1.2, 800, 2200, 0.32, 0.55);
+      noiseSweep(now + 0.4, 1.0, 2200, 4800, 0.18, 0.6);
+      break;
+    case 'STADIUM_CHANT':
+      // 4-beat ultra chant pattern
+      sub(now, 60, 1.4, 0.42);
+      [0, 0.36, 0.72, 1.08].forEach((d, i) => {
+        tone(now + d, 220, 0.28, 0.5, 'sawtooth');
+        tone(now + d, 330, 0.28, 0.32, 'triangle');
+      });
+      noiseSweep(now, 1.4, 240, 1400, 0.2, 0.65);
+      break;
+    case 'WHISTLE_SHORT':
+      tone(now, 2400, 0.16, 0.55, 'sine', 2480);
+      tone(now, 4800, 0.16, 0.18, 'triangle', 4960);
+      noiseSweep(now, 0.16, 2200, 2700, 0.1, 1.4);
+      break;
+    case 'WHISTLE_LONG':
+      tone(now, 2400, 0.85, 0.6, 'sine', 2520);
+      tone(now, 4800, 0.85, 0.18, 'triangle', 5040);
+      noiseSweep(now, 0.85, 2200, 2700, 0.1, 1.4);
+      break;
+    case 'KICKOFF_HORN':
+      // Two-blast ship horn for kickoff
+      sub(now, 55, 0.4, 0.7);
+      tone(now, 110, 0.32, 0.7, 'sawtooth');
+      tone(now, 220, 0.32, 0.45, 'sawtooth');
+      // gap then second blast (different pitch)
+      sub(now + 0.45, 50, 0.42, 0.7);
+      tone(now + 0.45, 165, 0.42, 0.65, 'sawtooth');
+      tone(now + 0.45, 330, 0.42, 0.42, 'sawtooth');
+      break;
+    case 'PA_ANNOUNCEMENT':
+      // 3-tone PA chime (high-mid-low like real airport bells)
+      tone(now, 1320, 0.32, 0.45, 'sine');
+      tone(now + 0.34, 1080, 0.32, 0.45, 'sine');
+      tone(now + 0.68, 880, 0.42, 0.4, 'sine');
+      // each with a gentle harmonic
+      tone(now, 2640, 0.32, 0.18, 'triangle');
+      tone(now + 0.34, 2160, 0.32, 0.18, 'triangle');
+      tone(now + 0.68, 1760, 0.42, 0.16, 'triangle');
+      break;
+    case 'TROPHY_FANFARE':
+      // Cinematic trophy fanfare — major chord arpeggio
+      sub(now, 55, 1.4, 0.55);
+      // C-major triad ascending
+      tone(now, 261, 0.18, 0.5, 'square');
+      tone(now + 0.16, 329, 0.18, 0.5, 'square');
+      tone(now + 0.32, 392, 0.32, 0.55, 'square');
+      tone(now + 0.62, 523, 0.55, 0.62, 'square');
+      // brass-style harmony
+      tone(now + 0.32, 196, 0.42, 0.32, 'sawtooth');
+      tone(now + 0.62, 261, 0.55, 0.36, 'sawtooth');
+      noiseSweep(now + 0.85, 0.55, 480, 4200, 0.18, 0.8);
+      break;
+
+    // ─── CINEMATIC family ───────────────────────────────────────────
+    case 'CINEMATIC_DROP':
+      // Inception-style brrrrm — the iconic deep drop
+      sub(now, 220, 0.45, 0.95);
+      tone(now, 440, 0.4, 0.62, 'sawtooth', 32);
+      tone(now + 0.2, 220, 0.55, 0.42, 'triangle', 50);
+      sub(now + 0.45, 30, 0.85, 1.2);
+      noiseSweep(now, 0.65, 5200, 180, 0.5, 0.65);
+      break;
+    case 'CINEMATIC_RISE':
+      // Long cinematic riser
+      sub(now, 50, 1.4, 0.55);
+      tone(now, 70, 1.0, 0.45, 'sawtooth', 240);
+      tone(now + 0.3, 220, 0.85, 0.42, 'triangle', 880);
+      tone(now + 0.7, 880, 0.6, 0.4, 'sine', 1480);
+      noiseSweep(now, 1.4, 220, 6800, 0.45, 0.62);
+      break;
+    case 'IMPACT_BOOM':
+      // Earth-shaking boom
+      sub(now, 28, 0.6, 1.3);
+      tone(now, 38, 0.45, 1.05, 'sawtooth', 22);
+      tone(now + 0.04, 76, 0.32, 0.65, 'triangle');
+      tone(now + 0.18, 220, 0.5, 0.32, 'sine', 110);
+      noiseSweep(now, 0.7, 1800, 120, 0.45, 0.78);
+      break;
+    case 'GLITCH_TRANSITION':
+      // Digital chirps that scramble
+      [0, 0.06, 0.13, 0.2, 0.27, 0.34].forEach((d, i) => {
+        const f = [620, 280, 980, 220, 540, 1280][i];
+        tone(now + d, f, 0.04, 0.42, 'square');
+      });
+      noiseSweep(now + 0.4, 0.22, 460, 240, 0.3, 1.2);
+      tone(now + 0.4, 60, 0.18, 0.5, 'sawtooth', 38);
+      break;
+    case 'DIGITAL_SWEEP':
+      // Smooth digital high-to-low sweep
+      tone(now, 4800, 0.5, 0.42, 'sawtooth', 240);
+      tone(now + 0.1, 2400, 0.45, 0.36, 'triangle', 320);
+      sub(now + 0.4, 60, 0.4, 0.5);
+      noiseSweep(now, 0.6, 6800, 320, 0.32, 0.7);
+      break;
+    case 'MAGIC_REVEAL':
+      // Sparkle ascending bells
+      [0, 0.12, 0.25, 0.4, 0.55].forEach((d, i) => {
+        const f = [660, 880, 1320, 1760, 2640][i];
+        tone(now + d, f, 0.32, 0.34, 'sine');
+        tone(now + d, f * 1.5, 0.32, 0.14, 'triangle');
+      });
+      sub(now + 0.6, 110, 0.4, 0.36);
+      break;
+    case 'SUSPENSE_RISE':
+      // Slow tension build, no pay-off
+      sub(now, 50, 1.6, 0.7);
+      tone(now, 80, 1.4, 0.45, 'sine', 220);
+      tone(now + 0.4, 220, 1.2, 0.32, 'triangle', 540);
+      noiseSweep(now + 0.4, 1.2, 320, 1800, 0.18, 0.85);
+      break;
+
+    // ─── UTILITY family ─────────────────────────────────────────────
+    case 'TIMER_TICK':
+      // Subtle tick for clocks
+      tone(now, 1320, 0.04, 0.22, 'square');
+      break;
+    case 'COUNTDOWN_FINAL':
+      // 3 short beeps then a long horn
+      [0, 0.18, 0.36].forEach(d => {
+        tone(now + d, 880, 0.08, 0.42, 'square');
+      });
+      sub(now + 0.55, 55, 0.55, 0.7);
+      tone(now + 0.55, 1320, 0.55, 0.62, 'square');
+      tone(now + 0.55, 880, 0.55, 0.42, 'sawtooth');
+      break;
+
     default:
-      // Fallback: smooth swell
+      // Fallback for any unmapped cue
       sub(now, 55, 0.7, 0.5);
       tone(now, 220, 0.5, 0.4, 'triangle', 660);
       noiseSweep(now, 0.7, 320, 3200, 0.22, 0.8);

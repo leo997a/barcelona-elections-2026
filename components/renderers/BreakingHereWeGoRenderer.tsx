@@ -164,11 +164,12 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
 
   // Voice configuration
   const voiceEnabled = getField('voiceEnabled') !== false;
-  const voiceMode = String(getField('voiceMode') || 'BROWSER_TTS_DEEP');
+  const voiceMode = String(getField('voiceMode') || 'BROADCAST');
+  const voiceId = String(getField('voiceId') || 'Brian');
   const voiceText = String(getField('voiceText') || 'Here we go');
   const voiceLang = String(getField('voiceLang') || 'en-US');
   const voiceVolume = Number(getField('voiceVolume') ?? 0.95);
-  const voiceDeepness = Number(getField('voiceDeepness') ?? 4);
+  const voicePitchShift = Number(getField('voicePitchShift') ?? 0);
 
   const [phase, setPhase] = useState<'intro' | 'content'>('intro');
   const introDuration = Number(getField('introDuration') || 2200);
@@ -193,9 +194,10 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
       window.setTimeout(() => {
         playAnnouncement(voiceText, {
           mode: voiceMode as any,
+          voiceId,
           lang: voiceLang,
           volume: voiceVolume,
-          deepness: voiceDeepness,
+          pitchShift: voicePitchShift,
           noStinger: !showStingerLayer,
         }).catch(() => undefined);
       }, 220);
@@ -203,7 +205,7 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
 
     const t = window.setTimeout(() => setPhase('content'), Math.max(1000, introDuration));
     return () => window.clearTimeout(t);
-  }, [config.isVisible, isEditor, voiceEnabled, voiceText, voiceLang, voiceMode, voiceVolume, voiceDeepness, introDuration, showStingerLayer]);
+  }, [config.isVisible, isEditor, voiceEnabled, voiceText, voiceId, voiceLang, voiceMode, voiceVolume, voicePitchShift, introDuration, showStingerLayer]);
 
   return (
     <div style={containerStyle}>
