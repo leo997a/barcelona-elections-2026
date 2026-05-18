@@ -714,11 +714,343 @@ const playPatternSynth = (cue: string, volume: number) => {
   return true;
 };
 
+// ─── Broadcast Pro synth ─────────────────────────────────────────────────────
+//
+//  Higher-quality, channel-grade synthesis for sports / news broadcast cues.
+//  Layers used:
+//    • Sub bass body (sine, 28-50 Hz) for weight
+//    • Body kick (saw + lowpass) for the "punch"
+//    • Mid presence layer (triangle/saw) for clarity in small speakers
+//    • Air noise sweep through bandpass for "WHOOSH"
+//    • Plate-style convolution reverb on a parallel send (per-cue strength)
+//    • Soft tape saturation via WaveShaper for warmth (no harsh digital edge)
+//
+//  Each cue has a per-cue config that maps it to a "shape" (HIT, RISER,
+//  PULSE, SWEEP, FANFARE, WHISTLE, CHANT, TICK, REVEAL, GLITCH, DROP).
+//
+const BROADCAST_PRO_SHAPES: Record<string, string> = {
+  BREAKING_RISER:    'RISER',
+  BREAKING_HIT:      'HIT',
+  BREAKING_PULSE:    'PULSE',
+  BREAKING_WHOOSH:   'SWEEP',
+  OFFICIAL_STAMP:    'HIT',
+  IMPORTANT_PING:    'PING',
+  NEWS_TICKER:       'TICK',
+  TARGET_REVEAL:     'REVEAL',
+  TARGET_LOCK:       'LOCK',
+  TARGET_SCAN:       'SCAN',
+  POSITION_SWITCH:   'SWITCH',
+  SCOUT_BEEP:        'PING',
+  TRANSFER_REVEAL:   'REVEAL',
+  GOAL_FANFARE:      'FANFARE',
+  STADIUM_CHEER:     'CHANT',
+  STADIUM_CHANT:     'CHANT',
+  WHISTLE_SHORT:     'WHISTLE_S',
+  WHISTLE_LONG:      'WHISTLE_L',
+  KICKOFF_HORN:      'HORN',
+  PA_ANNOUNCEMENT:   'BELLS',
+  TROPHY_FANFARE:    'FANFARE',
+  CINEMATIC_DROP:    'DROP',
+  CINEMATIC_RISE:    'RISER',
+  IMPACT_BOOM:       'HIT',
+  GLITCH_TRANSITION: 'GLITCH',
+  DIGITAL_SWEEP:     'SWEEP',
+  MAGIC_REVEAL:      'BELLS',
+  SUSPENSE_RISE:     'RISER',
+  TIMER_TICK:        'TICK',
+  COUNTDOWN_FINAL:   'FANFARE',
+};
+
+const buildSaturationCurve = (amount: number): Float32Array => {
+  const samples = 1024;
+  const curve = new Float32Array(samples);
+  const k = amount * 12;
+  for (let i = 0; i < samples; i += 1) {
+    const x = (i * 2) / samples - 1;
+    curve[i] = ((3 + k) * x * 20 * (Math.PI / 180)) / (Math.PI + k * Math.abs(x));
+  }
+  return curve;
+};
+
+const playBroadcastPro = (cue: string, volume: number): boolean => {
+  const audioGraph = getGraph();
+  if (!audioGraph) return false;
+
+  const shape = BROADCAST_PRO_SHAPES[cue] || 'HIT';
+  const ctx = audioGraph.context;
+  const now = ctx.currentTime;
+  const vol = clampVolume(volume);
+  const fx = getCueFx(cue);
+
+  // Build a clean per-cue mini-bus
+  const bus = ctx.createGain();
+  bus.gain.setValueAtTime(0.0001, now);
+  bus.gain.exponentialRampToValueAtTime(vol * 0.92, now + 0.02);
+  bus.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+
+  // Tape saturation for warmth
+  const saturator = ctx.createWaveShaper();
+  saturator.curve = buildSaturationCurve(0.35);
+  saturator.oversample = '2x';
+
+  // Presence boost (mid-high clarity, around 2.4 kHz)
+  const presence = ctx.createBiquadFilter();
+  presence.type = 'peaking';
+  presence.frequency.value = 2400;
+  presence.Q.value = 1.1;
+  presence.gain.value = 3.5;
+
+  // Low-shelf for warm body
+  const lowShelf = ctx.createBiquadFilter();
+  lowShelf.type = 'lowshelf';
+  lowShelf.frequency.value = 220;
+  lowShelf.gain.value = 4;
+
+  bus.connect(saturator);
+  saturator.connect(lowShelf);
+  lowShelf.connect(presence);
+  presence.connect(audioGraph.masterGain);
+
+  // Plate reverb send (per-cue)
+  if (reverbBuffer && fx.reverb > 0) {
+    const convolver = ctx.createConvolver();
+    convolver.buffer = reverbBuffer;
+    const sendGain = ctx.createGain();
+    sendGain.gain.setValueAtTime(fx.reverb * 0.85, now);
+    presence.connect(sendGain);
+    sendGain.connect(convolver);
+    convolver.connect(audioGraph.masterGain);
+  }
+
+  // Helper voicings for shapes
+  const tone = (start: number, freq: number, dur: number, gain: number, type: OscillatorType = 'sine', toFreq?: number) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    if (toFreq !== undefined) osc.frequency.exponentialRampToValueAtTime(Math.max(20, toFreq), start + dur);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+    g.gain.setValueAtTime(gain * 0.85, start + dur * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.connect(g);
+    g.connect(bus);
+    osc.start(start);
+    osc.stop(start + dur + 0.06);
+  };
+
+  const sub = (start: number, freq: number, dur: number, gain: number) => {
+    if (fx.subBass <= 0 && gain < 0.6) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(18, freq * 0.6), start + dur);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(gain * Math.max(0.45, fx.subBass), start + 0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.connect(g);
+    g.connect(bus);
+    osc.start(start);
+    osc.stop(start + dur + 0.06);
+  };
+
+  const noiseSweep = (start: number, dur: number, fromHz: number, toHz: number, gain: number, q = 0.9) => {
+    const buf = createNoiseBuffer(ctx, dur);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'bandpass';
+    flt.Q.value = q;
+    flt.frequency.setValueAtTime(fromHz, start);
+    flt.frequency.exponentialRampToValueAtTime(Math.max(20, toHz), start + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(gain, start + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    src.connect(flt);
+    flt.connect(g);
+    g.connect(bus);
+    src.start(start);
+    src.stop(start + dur + 0.05);
+  };
+
+  // ── Shape implementations ─────────────────────────────────────────────────
+  switch (shape) {
+    case 'HIT':
+      sub(now, 38, 0.45, 1.05);
+      tone(now, 56, 0.32, 0.85, 'sawtooth', 38);
+      tone(now + 0.04, 132, 0.28, 0.42, 'triangle', 86);
+      tone(now + 0.18, 360, 0.5, 0.32, 'sine', 220);
+      noiseSweep(now, 0.5, 1800, 220, 0.32, 0.9);
+      break;
+    case 'RISER':
+      sub(now, 44, 0.7, 0.7);
+      tone(now, 92, 0.62, 0.5, 'sawtooth', 220);
+      tone(now + 0.18, 240, 0.55, 0.42, 'triangle', 880);
+      tone(now + 0.42, 1080, 0.32, 0.32, 'sine', 1480);
+      noiseSweep(now, 0.85, 240, 5200, 0.32, 0.7);
+      break;
+    case 'PULSE':
+      [0, 0.16, 0.32].forEach(d => {
+        tone(now + d, 220, 0.08, 0.5, 'square');
+        tone(now + d, 880, 0.08, 0.32, 'sine');
+      });
+      sub(now + 0.42, 50, 0.3, 0.62);
+      noiseSweep(now + 0.42, 0.4, 2400, 480, 0.22, 0.8);
+      break;
+    case 'SWEEP':
+      sub(now, 60, 0.5, 0.55);
+      tone(now, 880, 0.45, 0.42, 'triangle', 240);
+      noiseSweep(now, 0.75, 3600, 320, 0.42, 0.85);
+      noiseSweep(now + 0.12, 0.5, 480, 2800, 0.22, 0.9);
+      break;
+    case 'PING':
+      tone(now, 880, 0.16, 0.42, 'sine');
+      tone(now + 0.06, 1320, 0.22, 0.36, 'sine');
+      tone(now + 0.18, 1760, 0.26, 0.28, 'triangle');
+      sub(now, 110, 0.18, 0.38);
+      break;
+    case 'TICK':
+      tone(now, 1320, 0.045, 0.32, 'square');
+      tone(now + 0.06, 880, 0.05, 0.26, 'square');
+      break;
+    case 'REVEAL':
+      sub(now, 38, 0.5, 0.85);
+      tone(now, 56, 0.36, 0.78, 'sawtooth', 42);
+      tone(now + 0.16, 220, 0.42, 0.42, 'triangle', 480);
+      tone(now + 0.32, 660, 0.38, 0.36, 'sine', 1080);
+      tone(now + 0.5, 1320, 0.32, 0.28, 'sine', 1760);
+      noiseSweep(now + 0.04, 0.6, 1800, 5800, 0.22, 0.85);
+      break;
+    case 'LOCK':
+      tone(now, 320, 0.07, 0.36, 'square');
+      tone(now + 0.1, 480, 0.07, 0.36, 'square');
+      tone(now + 0.2, 720, 0.18, 0.42, 'triangle', 1080);
+      sub(now + 0.36, 56, 0.26, 0.78);
+      tone(now + 0.36, 132, 0.22, 0.45, 'sawtooth', 88);
+      break;
+    case 'SCAN':
+      [0, 0.1, 0.2, 0.3].forEach((d, i) => tone(now + d, 620 + i * 140, 0.1, 0.28, 'sine'));
+      tone(now + 0.42, 1320, 0.22, 0.32, 'triangle');
+      noiseSweep(now, 0.5, 480, 2400, 0.16, 0.95);
+      break;
+    case 'SWITCH':
+      tone(now, 220, 0.16, 0.36, 'sawtooth', 480);
+      tone(now + 0.1, 540, 0.22, 0.32, 'triangle', 880);
+      tone(now + 0.28, 880, 0.18, 0.28, 'sine');
+      sub(now, 80, 0.3, 0.42);
+      break;
+    case 'FANFARE':
+      sub(now, 55, 0.95, 0.62);
+      tone(now, 220, 0.18, 0.55, 'square');
+      tone(now + 0.18, 330, 0.18, 0.55, 'square');
+      tone(now + 0.36, 440, 0.36, 0.6, 'square');
+      tone(now + 0.36, 660, 0.36, 0.42, 'sawtooth');
+      noiseSweep(now + 0.6, 0.5, 480, 3200, 0.18, 0.8);
+      break;
+    case 'CHANT':
+      sub(now, 55, 1.0, 0.42);
+      [0, 0.32, 0.64].forEach((d, i) => {
+        tone(now + d, 180 + i * 40, 0.28, 0.45, 'sawtooth');
+        tone(now + d, 360 + i * 80, 0.28, 0.22, 'triangle');
+      });
+      noiseSweep(now, 1.1, 240, 1800, 0.2, 0.7);
+      break;
+    case 'WHISTLE_S':
+      tone(now, 2400, 0.18, 0.5, 'sine');
+      tone(now, 4800, 0.18, 0.18, 'sine');
+      noiseSweep(now, 0.18, 2200, 2600, 0.12, 1.4);
+      break;
+    case 'WHISTLE_L':
+      tone(now, 2400, 0.7, 0.55, 'sine', 2480);
+      tone(now, 4800, 0.7, 0.18, 'sine', 4960);
+      noiseSweep(now, 0.7, 2200, 2600, 0.12, 1.4);
+      break;
+    case 'HORN':
+      sub(now, 55, 0.6, 0.7);
+      tone(now, 110, 0.42, 0.65, 'sawtooth');
+      tone(now, 220, 0.42, 0.42, 'sawtooth');
+      tone(now + 0.42, 165, 0.42, 0.62, 'sawtooth');
+      tone(now + 0.42, 330, 0.42, 0.36, 'sawtooth');
+      break;
+    case 'BELLS':
+      [0, 0.18, 0.4].forEach((d, i) => {
+        const f = [660, 880, 1320][i];
+        tone(now + d, f, 0.36, 0.34, 'sine');
+        tone(now + d, f * 2, 0.36, 0.16, 'triangle');
+      });
+      sub(now + 0.4, 110, 0.3, 0.42);
+      break;
+    case 'DROP':
+      sub(now, 220, 0.55, 0.85, );
+      tone(now, 440, 0.42, 0.62, 'sawtooth', 36);
+      tone(now + 0.18, 220, 0.5, 0.45, 'triangle', 60);
+      tone(now + 0.4, 38, 0.4, 1.0, 'sine');
+      noiseSweep(now, 0.7, 5200, 200, 0.42, 0.7);
+      break;
+    case 'GLITCH':
+      [0, 0.08, 0.16, 0.24, 0.32].forEach((d, i) => {
+        const f = [620, 320, 880, 240, 540][i];
+        tone(now + d, f, 0.05, 0.36, 'square');
+      });
+      noiseSweep(now + 0.4, 0.18, 460, 280, 0.22, 1.2);
+      break;
+    default:
+      // Fallback: smooth swell
+      sub(now, 55, 0.7, 0.5);
+      tone(now, 220, 0.5, 0.4, 'triangle', 660);
+      noiseSweep(now, 0.7, 320, 3200, 0.22, 0.8);
+  }
+
+  window.setTimeout(() => {
+    try { bus.disconnect(); } catch { /* noop */ }
+  }, 3200);
+
+  markCueActive(cue, 1400);
+  return true;
+};
+
 const playSynthCue = (cue: string, volume: number) => {
   if (cue === 'HARD_CUT') {
     markCueActive(cue, DEFAULT_COOLDOWN_MS);
     return true;
   }
+
+  const broadcastProCues = new Set([
+    'BREAKING_RISER',
+    'BREAKING_PULSE',
+    'BREAKING_HIT',
+    'BREAKING_WHOOSH',
+    'OFFICIAL_STAMP',
+    'IMPORTANT_PING',
+    'NEWS_TICKER',
+    'TARGET_REVEAL',
+    'TARGET_LOCK',
+    'TARGET_SCAN',
+    'POSITION_SWITCH',
+    'SCOUT_BEEP',
+    'TRANSFER_REVEAL',
+    'GOAL_FANFARE',
+    'STADIUM_CHEER',
+    'STADIUM_CHANT',
+    'WHISTLE_SHORT',
+    'WHISTLE_LONG',
+    'KICKOFF_HORN',
+    'PA_ANNOUNCEMENT',
+    'TROPHY_FANFARE',
+    'CINEMATIC_DROP',
+    'CINEMATIC_RISE',
+    'IMPACT_BOOM',
+    'GLITCH_TRANSITION',
+    'DIGITAL_SWEEP',
+    'MAGIC_REVEAL',
+    'SUSPENSE_RISE',
+    'TIMER_TICK',
+    'COUNTDOWN_FINAL',
+  ]);
+
+  if (broadcastProCues.has(cue)) return playBroadcastPro(cue, volume);
 
   const luxuryCues = new Set([
     'LUXURY_STING',

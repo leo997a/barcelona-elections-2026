@@ -1972,6 +1972,8 @@ const buildTransferTargetsTemplate = (
   description: string,
   icon: string,
   displayMode: 'SEQUENCE' | 'SLIDE' | 'CYCLE',
+  visualTheme: string = 'NEON_GLASS',
+  accentColor: string = '#edb111',
 ): OverlayConfig => ({
   id,
   templateId: id,
@@ -1979,10 +1981,10 @@ const buildTransferTargetsTemplate = (
   type: OverlayType.TRANSFER_TARGETS,
   isVisible: false,
   templateIcon: icon,
-  templateAccent: '#edb111',
+  templateAccent: accentColor,
   templateGroup: 'MERCATO_PACKAGE',
   templateDescription: description,
-  theme: { primaryColor: '#edb111', secondaryColor: '#04060a', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+  theme: { primaryColor: accentColor, secondaryColor: '#04060a', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
   slots: {},
   fields: [
     ...commonFields,
@@ -1991,11 +1993,18 @@ const buildTransferTargetsTemplate = (
       { value: 'SLIDE',    label: 'سلايد عصري لمركز واحد' },
       { value: 'CYCLE',    label: 'دوران تلقائي بين المراكز' },
     ] },
+    { id: 'visualTheme', label: 'نمط التصميم', type: 'select', value: visualTheme, options: [
+      { value: 'NEON_GLASS',      label: '🔵 Neon Glass — زجاج نيون' },
+      { value: 'TACTICAL_DARK',   label: '⚫ Tactical Dark — تكتيكي داكن' },
+      { value: 'LUXE_GOLD',       label: '🟡 Luxe Gold — ذهبي فاخر' },
+      { value: 'CLEAN_BROADCAST', label: '🔷 Clean Broadcast — بث نظيف' },
+      { value: 'GRADIENT_FIRE',   label: '🔴 Gradient Fire — تدرج ناري' },
+    ] },
     { id: 'headline', label: 'العنوان الرئيسي', type: 'text', value: 'أهداف برشلونة في سوق الانتقالات' },
     { id: 'subheadline', label: 'العنوان الفرعي', type: 'text', value: 'Mercato Targets — Reo Show' },
     { id: 'clubName', label: 'اسم النادي', type: 'text', value: 'FC Barcelona' },
     { id: 'clubLogo', label: 'شعار النادي', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png' },
-    { id: 'accentColor', label: 'لون التمييز', type: 'color', value: '#edb111' },
+    { id: 'accentColor', label: 'لون التمييز', type: 'color', value: accentColor },
     { id: 'sidePanelWidth', label: 'عرض الشريط الجانبي %', type: 'range', value: 30, min: 22, max: 50, step: 1 },
     { id: 'sequenceInterval', label: 'الفاصل بين الأهداف (ث) - وضع تتابع', type: 'range', value: 4, min: 2, max: 15, step: 1 },
     { id: 'cycleInterval', label: 'الفاصل بين المراكز (ث) - وضع الدوران', type: 'range', value: 30, min: 10, max: 120, step: 5 },
@@ -2009,26 +2018,28 @@ const buildTransferTargetsTemplate = (
       { value: 'pos6', label: 'حارس المرمى' },
     ] },
     { id: 'soundPerTarget', label: 'مؤثر صوتي لكل هدف', type: 'select', value: 'TARGET_REVEAL', options: BROADCAST_SOUND_OPTIONS },
+    { id: 'showRating', label: 'إظهار التقييم', type: 'boolean', value: true },
+    { id: 'showCountry', label: 'إظهار الجنسية', type: 'boolean', value: false },
 
     // Position 1 — Striker (default 4 targets)
     { id: 'pos1Label', label: 'اسم المركز 1 (عربي)', type: 'text', value: 'رأس الحربة' },
     { id: 'pos1LabelEn', label: 'اسم المركز 1 (إنجليزي)', type: 'text', value: 'STRIKER' },
-    { id: 'pos1Targets', label: 'أهداف المركز 1 (JSON أو اسم|صورة|نادي|شعار|عمر|قيمة سطر لكل هدف)', type: 'textarea', value: '[\n  {"name":"Erling Haaland","image":"","club":"Manchester City","clubLogo":"","age":"25","value":"180M EUR"},\n  {"name":"Victor Osimhen","image":"","club":"Napoli","clubLogo":"","age":"27","value":"110M EUR"},\n  {"name":"Julian Alvarez","image":"","club":"Atletico Madrid","clubLogo":"","age":"26","value":"95M EUR"}\n]' },
+    { id: 'pos1Targets', label: 'أهداف المركز 1 — JSON: name, image, club, clubLogo, age, value, rating, nationality (أو سطور بفواصل |)', type: 'textarea', value: '[\n  {"name":"Erling Haaland","image":"https://img.a.transfermarkt.technology/portrait/big/418560-1709108116.jpg","club":"Manchester City","clubLogo":"https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg","age":"25","value":"180M EUR","rating":"94","nationality":"NOR"},\n  {"name":"Victor Osimhen","image":"https://img.a.transfermarkt.technology/portrait/big/401923-1701118619.jpg","club":"Napoli","clubLogo":"https://upload.wikimedia.org/wikipedia/commons/2/2d/SSC_Neapel.svg","age":"27","value":"110M EUR","rating":"88","nationality":"NGA"},\n  {"name":"Julian Alvarez","image":"https://img.a.transfermarkt.technology/portrait/big/433351-1717677020.jpg","club":"Atletico Madrid","clubLogo":"https://upload.wikimedia.org/wikipedia/en/f/f9/Atletico_Madrid_2017_logo.svg","age":"26","value":"95M EUR","rating":"86","nationality":"ARG"}\n]' },
 
     // Position 2 — Winger
     { id: 'pos2Label', label: 'اسم المركز 2', type: 'text', value: 'الجناح' },
     { id: 'pos2LabelEn', label: 'اسم المركز 2 (EN)', type: 'text', value: 'WINGER' },
-    { id: 'pos2Targets', label: 'أهداف المركز 2', type: 'textarea', value: '[\n  {"name":"Bradley Barcola","image":"","club":"PSG","clubLogo":"","age":"23","value":"75M EUR"},\n  {"name":"Rafael Leao","image":"","club":"AC Milan","clubLogo":"","age":"26","value":"90M EUR"}\n]' },
+    { id: 'pos2Targets', label: 'أهداف المركز 2', type: 'textarea', value: '[\n  {"name":"Bradley Barcola","image":"","club":"PSG","clubLogo":"","age":"23","value":"75M EUR","rating":"85","nationality":"FRA"},\n  {"name":"Rafael Leao","image":"","club":"AC Milan","clubLogo":"","age":"26","value":"90M EUR","rating":"86","nationality":"POR"}\n]' },
 
     // Position 3 — Midfield
     { id: 'pos3Label', label: 'اسم المركز 3', type: 'text', value: 'الوسط' },
     { id: 'pos3LabelEn', label: 'اسم المركز 3 (EN)', type: 'text', value: 'MIDFIELD' },
-    { id: 'pos3Targets', label: 'أهداف المركز 3', type: 'textarea', value: '[\n  {"name":"Joshua Kimmich","image":"","club":"Bayern Munich","clubLogo":"","age":"31","value":"45M EUR"},\n  {"name":"Martin Zubimendi","image":"","club":"Real Sociedad","clubLogo":"","age":"27","value":"60M EUR"}\n]' },
+    { id: 'pos3Targets', label: 'أهداف المركز 3', type: 'textarea', value: '[\n  {"name":"Joshua Kimmich","image":"","club":"Bayern Munich","clubLogo":"","age":"31","value":"45M EUR","rating":"87","nationality":"GER"},\n  {"name":"Martin Zubimendi","image":"","club":"Real Sociedad","clubLogo":"","age":"27","value":"60M EUR","rating":"83","nationality":"ESP"}\n]' },
 
     // Position 4 — Centre back
     { id: 'pos4Label', label: 'اسم المركز 4', type: 'text', value: 'قلب الدفاع' },
     { id: 'pos4LabelEn', label: 'اسم المركز 4 (EN)', type: 'text', value: 'CENTRE-BACK' },
-    { id: 'pos4Targets', label: 'أهداف المركز 4', type: 'textarea', value: '[\n  {"name":"William Saliba","image":"","club":"Arsenal","clubLogo":"","age":"25","value":"85M EUR"},\n  {"name":"Pau Cubarsi","image":"","club":"Barcelona","clubLogo":"","age":"19","value":"Protected"}\n]' },
+    { id: 'pos4Targets', label: 'أهداف المركز 4', type: 'textarea', value: '[\n  {"name":"William Saliba","image":"","club":"Arsenal","clubLogo":"","age":"25","value":"85M EUR","rating":"86","nationality":"FRA"},\n  {"name":"Goncalo Inacio","image":"","club":"Sporting CP","clubLogo":"","age":"24","value":"55M EUR","rating":"82","nationality":"POR"}\n]' },
 
     // Position 5 — Full back
     { id: 'pos5Label', label: 'اسم المركز 5', type: 'text', value: 'الظهير' },
@@ -2056,26 +2067,62 @@ const buildTransferTargetsTemplate = (
 });
 
 const TRANSFER_TARGETS_TEMPLATES: OverlayConfig[] = [
+  // Sequence mode — 5 themes
   buildTransferTargetsTemplate(
-    'template-transfer-targets-sequence',
-    'أهداف النادي - ظهور متتابع بصوت',
-    'شريط جانبي يسار. كل هدف يظهر بعد الآخر مع تأثير صوتي مخصص — مثالي للكشف الدرامي عن قائمة الأهداف.',
-    '🎯',
-    'SEQUENCE',
+    'template-transfer-targets-sequence-neon',
+    'أهداف النادي - تتابع | Neon Glass',
+    'شريط جانبي زجاجي نيوني. كل هدف يظهر بعد الآخر مع مؤثر صوتي مخصص.',
+    '🎯', 'SEQUENCE', 'NEON_GLASS', '#22d3ee',
   ),
   buildTransferTargetsTemplate(
-    'template-transfer-targets-slide',
-    'أهداف النادي - سلايد لمركز واحد',
-    'شريط جانبي يسار يعرض كل أهداف مركز واحد بتصميم عصري وانتقال سلس بين البطاقات.',
-    '🎯',
-    'SLIDE',
+    'template-transfer-targets-sequence-tactical',
+    'أهداف النادي - تتابع | Tactical Dark',
+    'تصميم تكتيكي داكن، مناسب لتغطيات تحليلية احترافية.',
+    '🎯', 'SEQUENCE', 'TACTICAL_DARK', '#ff4b3e',
   ),
   buildTransferTargetsTemplate(
-    'template-transfer-targets-cycle',
-    'أهداف النادي - دوران تلقائي',
-    'الشريط يدور تلقائياً بين كل المراكز (مهاجم ← قلب دفاع ← وسط...) كل 30 ثانية مع إمكانية التعديل.',
-    '🎯',
-    'CYCLE',
+    'template-transfer-targets-sequence-gold',
+    'أهداف النادي - تتابع | Luxe Gold',
+    'تصميم ذهبي فاخر بإضاءة ساحرة، مثالي للحلقات الكبرى.',
+    '🎯', 'SEQUENCE', 'LUXE_GOLD', '#edb111',
+  ),
+  // Slide mode — 5 themes
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-slide-neon',
+    'أهداف النادي - سلايد | Neon Glass',
+    'سلايد عصري نيوني لمركز واحد بكل أهدافه دفعة واحدة.',
+    '🎯', 'SLIDE', 'NEON_GLASS', '#22d3ee',
+  ),
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-slide-clean',
+    'أهداف النادي - سلايد | Clean Broadcast',
+    'تصميم بث نظيف احترافي بألوان زرقاء أنيقة.',
+    '🎯', 'SLIDE', 'CLEAN_BROADCAST', '#3b82f6',
+  ),
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-slide-fire',
+    'أهداف النادي - سلايد | Gradient Fire',
+    'تدرج ناري دراماتيكي، مناسب للأخبار الساخنة في الميركاتو.',
+    '🎯', 'SLIDE', 'GRADIENT_FIRE', '#ef4444',
+  ),
+  // Cycle mode — 5 themes
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-cycle-tactical',
+    'أهداف النادي - دوران | Tactical Dark',
+    'الشريط يدور تلقائياً بين المراكز كل 30 ثانية. تصميم تكتيكي.',
+    '🎯', 'CYCLE', 'TACTICAL_DARK', '#ff4b3e',
+  ),
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-cycle-gold',
+    'أهداف النادي - دوران | Luxe Gold',
+    'دوران بين المراكز بتصميم ذهبي فاخر.',
+    '🎯', 'CYCLE', 'LUXE_GOLD', '#edb111',
+  ),
+  buildTransferTargetsTemplate(
+    'template-transfer-targets-cycle-neon',
+    'أهداف النادي - دوران | Neon Glass',
+    'دوران تلقائي بتصميم نيوني عصري.',
+    '🎯', 'CYCLE', 'NEON_GLASS', '#22d3ee',
   ),
 ];
 
@@ -2088,6 +2135,7 @@ const buildBreakingHereWeGoTemplate = (
   variant: 'BREAKING' | 'OFFICIAL' | 'IMPORTANT',
   newsTitle: string,
   newsBody: string,
+  visualTheme: string = 'CINEMATIC_RED',
 ): OverlayConfig => ({
   id,
   templateId: id,
@@ -2112,34 +2160,44 @@ const buildBreakingHereWeGoTemplate = (
       { value: 'OFFICIAL',  label: 'خبر رسمي (أزرق)' },
       { value: 'IMPORTANT', label: 'خبر مهم (برتقالي)' },
     ] },
+    { id: 'visualTheme', label: 'نمط التصميم', type: 'select', value: visualTheme, options: [
+      { value: 'CINEMATIC_RED',  label: '🎬 Cinematic Red — سينمائي أحمر' },
+      { value: 'OFFICIAL_BLUE',  label: '🏢 Official Blue — رسمي أزرق' },
+      { value: 'LUXE_GOLD',      label: '🥇 Luxe Gold — ذهبي فاخر' },
+      { value: 'NEON_CYBER',     label: '🌐 Neon Cyber — نيون سايبر' },
+      { value: 'MONO_BROADCAST', label: '⚪ Mono Broadcast — أحادي بث' },
+    ] },
     { id: 'headline', label: 'النص الكبير في المقدمة', type: 'text', value: 'HERE WE GO' },
     { id: 'newsTitle', label: 'عنوان الخبر', type: 'text', value: newsTitle },
     { id: 'newsBody', label: 'تفاصيل الخبر', type: 'textarea', value: newsBody },
     { id: 'newsImage', label: 'صورة الخبر', type: 'image', value: '' },
     { id: 'sourceLabel', label: 'المصدر', type: 'text', value: 'Reo Show — Mercato Desk' },
     { id: 'showTimestamp', label: 'إظهار الوقت', type: 'boolean', value: true },
+    { id: 'showStingerLayer', label: 'طبقة المؤثر الصوتي العميق', type: 'boolean', value: true },
 
     // Intro sequence
-    { id: 'introDuration', label: 'مدة المقدمة الدرامية (ms)', type: 'range', value: 1800, min: 800, max: 4000, step: 100 },
+    { id: 'introDuration', label: 'مدة المقدمة الدرامية (ms)', type: 'range', value: 2200, min: 1000, max: 4500, step: 100 },
 
-    // TTS
-    { id: 'ttsEnabled', label: 'تفعيل النطق الصوتي (Here We Go)', type: 'boolean', value: true },
-    { id: 'ttsText', label: 'نص النطق', type: 'text', value: 'Here we go' },
-    { id: 'ttsLang', label: 'لغة النطق', type: 'select', value: 'en-US', options: [
+    // Pro deep voice
+    { id: 'voiceEnabled', label: 'تفعيل الصوت الاحترافي', type: 'boolean', value: true },
+    { id: 'voiceMode', label: 'نمط الصوت', type: 'select', value: 'BROWSER_TTS_DEEP', options: [
+      { value: 'BROWSER_TTS_DEEP', label: '🎙️ Browser TTS Deep — صوت متصفح عميق + Stinger' },
+      { value: 'STUDIO_STINGER',   label: '💥 Studio Stinger Only — مؤثر استوديو فقط' },
+      { value: 'FORMANT_PHRASE',   label: '🎬 Formant Phrase — صوت تلفظ سينمائي صناعي' },
+    ] },
+    { id: 'voiceText', label: 'النص المنطوق', type: 'text', value: 'Here we go' },
+    { id: 'voiceLang', label: 'لغة النطق', type: 'select', value: 'en-US', options: [
       { value: 'en-US', label: 'إنجليزي (US)' },
       { value: 'en-GB', label: 'إنجليزي (UK)' },
       { value: 'ar-SA', label: 'عربي (SA)' },
       { value: 'ar-EG', label: 'عربي (EG)' },
       { value: 'es-ES', label: 'إسباني' },
       { value: 'fr-FR', label: 'فرنسي' },
+      { value: 'it-IT', label: 'إيطالي' },
+      { value: 'de-DE', label: 'ألماني' },
     ] },
-    { id: 'ttsVoice', label: 'نوع الصوت', type: 'select', value: 'male', options: [
-      { value: 'male', label: 'صوت رجالي' },
-      { value: 'female', label: 'صوت نسائي' },
-      { value: 'auto', label: 'تلقائي' },
-    ] },
-    { id: 'ttsRate', label: 'سرعة النطق', type: 'range', value: 0.95, min: 0.5, max: 1.5, step: 0.05 },
-    { id: 'ttsPitch', label: 'حدة النطق', type: 'range', value: 0.85, min: 0.3, max: 1.5, step: 0.05 },
+    { id: 'voiceVolume', label: 'حجم الصوت المنطوق', type: 'range', value: 0.95, min: 0, max: 1.4, step: 0.05 },
+    { id: 'voiceDeepness', label: 'عمق الصوت (نزول النغمة)', type: 'range', value: 4, min: 0, max: 12, step: 1 },
 
     { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
     { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
@@ -2155,32 +2213,89 @@ const buildBreakingHereWeGoTemplate = (
 });
 
 const BREAKING_HERE_WE_GO_TEMPLATES: OverlayConfig[] = [
+  // BREAKING — 5 themes
   buildBreakingHereWeGoTemplate(
-    'template-breaking-here-we-go',
-    'خبر عاجل - Here We Go',
-    'يبدأ بمؤثر صوتي درامي "Here We Go" ثم يكشف عن خبر عاجل بصورة وعنوان وتفاصيل.',
-    '🚨',
-    'BREAKING',
+    'template-breaking-cinematic-red',
+    'خبر عاجل - Cinematic Red',
+    'مقدمة صوتية درامية + تصميم سينمائي أحمر + بطاقة خبر بصورة وعنوان.',
+    '🚨', 'BREAKING',
     'صفقة كبرى تنتظر الإعلان رسمياً',
     'وفقاً لمصادر موثوقة، اللاعب سيوقع عقده الجديد خلال الساعات القادمة بعد اتفاق شامل بين الأطراف.',
+    'CINEMATIC_RED',
   ),
   buildBreakingHereWeGoTemplate(
-    'template-breaking-official',
-    'خبر رسمي - Here We Go',
-    'إعلان رسمي بتصميم أزرق احترافي يبدأ بـ Here We Go ثم تفاصيل الإعلان الرسمي.',
-    '✅',
-    'OFFICIAL',
+    'template-breaking-neon-cyber',
+    'خبر عاجل - Neon Cyber',
+    'تصميم نيوني سايبر بانتقالات رقمية حديثة، مناسب لقنوات التقنية والميركاتو.',
+    '🚨', 'BREAKING',
+    'تطور مفاجئ في سوق الانتقالات',
+    'مصادر داخلية تكشف عن صفقة لم تكن في الحسبان قد تغير وجه الموسم القادم.',
+    'NEON_CYBER',
+  ),
+  buildBreakingHereWeGoTemplate(
+    'template-breaking-mono',
+    'خبر عاجل - Mono Broadcast',
+    'تصميم أحادي اللون أنيق وكلاسيكي، نمط قنوات الأخبار الكبرى.',
+    '🚨', 'BREAKING',
+    'خبر عاجل من غرفة المفاوضات',
+    'تطور غير متوقع بحسب مصدر مقرب من المفاوضات الجارية.',
+    'MONO_BROADCAST',
+  ),
+  // OFFICIAL — 5 themes
+  buildBreakingHereWeGoTemplate(
+    'template-official-blue',
+    'خبر رسمي - Official Blue',
+    'إعلان رسمي بتصميم أزرق احترافي وصوت "Here We Go" الفخم.',
+    '✅', 'OFFICIAL',
     'إعلان رسمي من النادي',
     'أعلن النادي رسمياً عن إتمام الصفقة وتم توقيع جميع الأوراق القانونية بنجاح.',
+    'OFFICIAL_BLUE',
   ),
   buildBreakingHereWeGoTemplate(
-    'template-breaking-important',
-    'خبر مهم - Here We Go',
-    'خبر مهم بتدرج برتقالي. مناسب للأخبار الكبيرة غير العاجلة لكن المهمة جداً.',
-    '🔔',
-    'IMPORTANT',
+    'template-official-luxe-gold',
+    'خبر رسمي - Luxe Gold',
+    'إعلان رسمي بتصميم ذهبي فاخر مناسب للحلقات الكبرى والإعلانات المهمة.',
+    '✅', 'OFFICIAL',
+    'إعلان رسمي بصفقة تاريخية',
+    'وقع اللاعب رسمياً على عقده الجديد ضمن مراسم استثنائية في مقر النادي.',
+    'LUXE_GOLD',
+  ),
+  buildBreakingHereWeGoTemplate(
+    'template-official-mono',
+    'خبر رسمي - Mono Broadcast',
+    'إعلان رسمي بتصميم أحادي كلاسيكي وصوت ثابت.',
+    '✅', 'OFFICIAL',
+    'بيان رسمي من النادي',
+    'أصدر النادي بياناً رسمياً يؤكد إتمام التعاقد وفق الشروط المتفق عليها.',
+    'MONO_BROADCAST',
+  ),
+  // IMPORTANT — 5 themes
+  buildBreakingHereWeGoTemplate(
+    'template-important-cinematic',
+    'خبر مهم - Cinematic Red',
+    'خبر مهم بتصميم سينمائي أحمر، يلفت الأنظار دون التضخيم.',
+    '🔔', 'IMPORTANT',
     'تطور مهم في الصفقة',
-    'تشير المعطيات إلى تقدم جوهري في المفاوضات، مع تفاصيل جديدة من غرفة المفاوضات خلال الساعات القادمة.',
+    'تشير المعطيات إلى تقدم جوهري في المفاوضات مع تفاصيل جديدة من غرفة المفاوضات خلال الساعات القادمة.',
+    'CINEMATIC_RED',
+  ),
+  buildBreakingHereWeGoTemplate(
+    'template-important-luxe',
+    'خبر مهم - Luxe Gold',
+    'خبر مهم بإطار ذهبي فاخر يضفي على الإعلان قيمة بصرية عالية.',
+    '🔔', 'IMPORTANT',
+    'تحديث مهم من فريق التفاوض',
+    'الجلسة الأخيرة بين الطرفين أنجزت التفاصيل المالية الجوهرية وتبقى تفاصيل بسيطة قبل الإعلان.',
+    'LUXE_GOLD',
+  ),
+  buildBreakingHereWeGoTemplate(
+    'template-important-cyber',
+    'خبر مهم - Neon Cyber',
+    'خبر مهم بأسلوب نيون سايبر متطور.',
+    '🔔', 'IMPORTANT',
+    'إشارة قوية من السوق',
+    'تكشف بيانات السوق عن تحرك جدي قد يفضي إلى صفقة كبرى خلال الأيام القادمة.',
+    'NEON_CYBER',
   ),
 ];
 
