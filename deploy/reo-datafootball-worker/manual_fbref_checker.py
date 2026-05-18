@@ -1,5 +1,5 @@
-"""
-manual_fbref_checker.py — Validate, organize, and report on manual FBref files.
+﻿"""
+manual_fbref_checker.py â€” Validate, organize, and report on manual FBref files.
 
 Actions:
   --check       Scan .manual/fbref/ and incoming/ for valid files. Print report.
@@ -16,6 +16,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import io
 import pandas as pd
 
 SCRIPT_DIR = Path(__file__).parent
@@ -123,12 +124,16 @@ def _check_html(path, group):
     if len(text) < 5000:
         return False, 0, "File too small (< 5KB)"
 
-    text_lower = text[:80000].lower()
-
-    # CAPTCHA check
+    # CAPTCHA check â€” only in the first 5KB (title + initial body).
+    # FBref's legitimate pages reference "cloudflare" in CDN script URLs deeper
+    # in the document, so we must NOT scan the full file for CAPTCHA markers.
+    head_lower = text[:5000].lower()
     for marker in CAPTCHA_MARKERS:
-        if marker in text_lower:
+        if marker in head_lower:
             return False, 0, f"CAPTCHA/block page detected: '{marker}'"
+
+    # Success markers â€” scan full file (markers can be deep in commented tables).
+    text_lower = text.lower()
 
     # Success markers
     has_table = any(m.lower() in text_lower for m in SUCCESS_MARKERS)
@@ -143,13 +148,21 @@ def _check_html(path, group):
         df = None
         if table_id:
             try:
-                tables = pd.read_html(text, attrs={"id": table_id})
+                tables = pd.read_html(io.StringIO(text), attrs={"id": table_id}, flavor="lxml")
                 if tables:
                     df = tables[0]
             except Exception:
-                pass
+                try:
+                    tables = pd.read_html(io.StringIO(text), attrs={"id": table_id}, flavor="html5lib")
+                    if tables:
+                        df = tables[0]
+                except Exception:
+                    pass
         if df is None or len(df) == 0:
-            tables = pd.read_html(text)
+            try:
+                tables = pd.read_html(io.StringIO(text), flavor="lxml")
+            except Exception:
+                tables = pd.read_html(io.StringIO(text), flavor="html5lib")
             if tables:
                 df = max(tables, key=lambda t: len(t))
 
@@ -311,7 +324,7 @@ def run_import():
 
     report_txt = REPORTS_DIR / "manual_import_report.txt"
     lines = [
-        f"Manual FBref Import Report — {report['timestamp']}",
+        f"Manual FBref Import Report â€” {report['timestamp']}",
         f"{'=' * 50}",
         "",
     ]
@@ -371,3 +384,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

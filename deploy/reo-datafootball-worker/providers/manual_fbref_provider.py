@@ -1,4 +1,4 @@
-"""
+﻿"""
 Manual FBref HTML/CSV Import Provider.
 
 Reads locally-saved FBref pages (HTML or CSV) from:
@@ -10,7 +10,7 @@ Supported file names:
     defense.html | defense.csv
     possession.html | possession.csv
     pass_types.html | pass_types.csv
-    (also: standard.html, shooting.html, etc. — any stat group)
+    (also: standard.html, shooting.html, etc. â€” any stat group)
 
 Output: same JSON format as other providers (fbref-{group}-{season}.json).
 
@@ -20,6 +20,7 @@ No internet required. No scraping. Pure offline conversion.
 import traceback
 from pathlib import Path
 
+import io
 import pandas as pd
 
 from .base_provider import BaseProvider, StatGroupResult, get_logger
@@ -29,7 +30,7 @@ logger = get_logger("manual_fbref_provider")
 
 MANUAL_DIR_NAME = ".manual/fbref"
 
-# CAPTCHA / block markers — if any of these appear in the HTML, the file is rejected.
+# CAPTCHA / block markers â€” if any of these appear in the HTML, the file is rejected.
 CAPTCHA_MARKERS = [
     "just a moment",
     "verify you are human",
@@ -115,10 +116,12 @@ def _parse_html(html_path, stat_group):
     """Parse a saved FBref HTML page and extract the stats table."""
     html_text = html_path.read_text(encoding="utf-8", errors="replace")
 
-    # CAPTCHA / block detection — reject the file immediately.
-    html_lower = html_text[:50000].lower()  # Check first 50KB only for speed.
+    # CAPTCHA / block detection â€” only check first 5KB (title + initial body).
+    # FBref's legitimate pages reference "cloudflare" in CDN script URLs deeper
+    # in the document, so we must NOT scan the full file for CAPTCHA markers.
+    head_lower = html_text[:5000].lower()
     for marker in CAPTCHA_MARKERS:
-        if marker in html_lower:
+        if marker in head_lower:
             return None, f"CAPTCHA_OR_BLOCK_PAGE: found '{marker}' in {html_path.name}"
 
     # Try to find the specific table by ID first.
@@ -127,20 +130,30 @@ def _parse_html(html_path, stat_group):
 
     if table_id:
         try:
-            tables = pd.read_html(html_text, attrs={"id": table_id})
+            tables = pd.read_html(io.StringIO(html_text), attrs={"id": table_id}, flavor="lxml")
             if tables:
                 df = tables[0]
         except Exception:
-            pass
+            try:
+                tables = pd.read_html(io.StringIO(html_text), attrs={"id": table_id}, flavor="html5lib")
+                if tables:
+                    df = tables[0]
+            except Exception:
+                pass
 
     # Fallback: find the largest table on the page.
     if df is None or len(df) == 0:
         try:
-            tables = pd.read_html(html_text)
-            if tables:
-                df = max(tables, key=lambda t: len(t))
-        except Exception as e:
-            return None, f"No tables found in HTML: {e}"
+            tables = pd.read_html(io.StringIO(html_text), flavor="lxml")
+        except Exception:
+            try:
+                tables = pd.read_html(io.StringIO(html_text), flavor="html5lib")
+            except Exception as e:
+                return None, f"No tables found in HTML: {e}"
+        if tables:
+            df = max(tables, key=lambda t: len(t))
+        else:
+            return None, "No tables found in HTML"
 
     if df is None or len(df) < 5:
         return None, "Table too small or not found"
@@ -253,7 +266,7 @@ class ManualFBrefProvider(BaseProvider):
                 continue
 
             if error or df is None:
-                result.error = error or "Failed to parse file"
+                result.error = (error or "Failed to parse file")[:500]
                 results[sg] = result
                 total_failed += 1
                 logger.warning("[FAIL] %s: %s", sg, result.error)
@@ -286,3 +299,6 @@ class ManualFBrefProvider(BaseProvider):
 
         logger.info("[INFO] manual_fbref results: %d OK, %d FAILED out of %d", total_ok, total_failed, len(stat_groups))
         return {"provider": self.name, "results": results, "total_ok": total_ok, "total_failed": total_failed}
+
+
+
