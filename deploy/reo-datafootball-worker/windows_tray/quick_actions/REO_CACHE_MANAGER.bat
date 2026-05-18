@@ -16,7 +16,8 @@ echo   4. Upload existing cache to VPS (no fetch)
 echo   5. Show last run report
 echo   6. Open logs folder
 echo   7. Install daily startup sync
-echo   8. Exit
+echo   8. Open Manual FBref Manager (advanced)
+echo   9. Exit
 echo.
 echo  ---------------------------------------------------
 echo   Estimated times:
@@ -26,7 +27,7 @@ echo     Manual import: 1-5 minutes
 echo     Upload only:  ~30 seconds
 echo  ---------------------------------------------------
 echo.
-set /p CHOICE="  Choose [1-8]: "
+set /p CHOICE="  Choose [1-9]: "
 
 if "%CHOICE%"=="1" goto STATUS
 if "%CHOICE%"=="2" goto DAILY
@@ -35,7 +36,8 @@ if "%CHOICE%"=="4" goto UPLOAD
 if "%CHOICE%"=="5" goto REPORT
 if "%CHOICE%"=="6" goto LOGS
 if "%CHOICE%"=="7" goto INSTALL
-if "%CHOICE%"=="8" goto EXIT
+if "%CHOICE%"=="8" goto MANUALADV
+if "%CHOICE%"=="9" goto EXIT
 echo  [!] Invalid choice.
 timeout /t 2 >nul
 goto MENU
@@ -192,6 +194,10 @@ powershell -ExecutionPolicy Bypass -File ".\install_startup_task.ps1"
 popd
 echo.
 pause
+goto MENU
+
+:MANUALADV
+start "" "%~dp0REO_MANUAL_FBREF_MANAGER.bat"
 goto MENU
 
 :EXIT
