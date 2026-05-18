@@ -237,6 +237,13 @@
     "sourceColumn": "playing time_min",
     "category": "playing_time"
   },
+  "appearances": {
+    "label": "Appearances",
+    "labelAr": "???????????",
+    "statGroup": "playing_time",
+    "sourceColumn": "playing time_mp",
+    "category": "playing_time"
+  },
   "starts": {
     "label": "Starts",
     "labelAr": "????????? ??????",
