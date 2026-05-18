@@ -95,6 +95,37 @@ export const BROADCAST_SOUND_OPTIONS = [
     { value: 'RESULTS_STING', label: 'Results Sting' },
     { value: 'QUOTE_SWEEP', label: 'Quote Sweep' },
     { value: 'VERSUS_IMPACT', label: 'Versus Impact' },
+    // ─── New Football / Mercato Sound Pack ──────────────────────────────────
+    { value: 'BREAKING_WHOOSH', label: 'Breaking Whoosh' },
+    { value: 'TARGET_REVEAL', label: 'Target Reveal' },
+    { value: 'TARGET_LOCK', label: 'Target Lock' },
+    { value: 'TARGET_SCAN', label: 'Target Scan' },
+    { value: 'POSITION_SWITCH', label: 'Position Switch' },
+    { value: 'GOAL_FANFARE', label: 'Goal Fanfare' },
+    { value: 'STADIUM_CHEER', label: 'Stadium Cheer' },
+    { value: 'STADIUM_CHANT', label: 'Stadium Chant' },
+    { value: 'WHISTLE_SHORT', label: 'Whistle Short' },
+    { value: 'WHISTLE_LONG', label: 'Whistle Long' },
+    { value: 'KICKOFF_HORN', label: 'Kickoff Horn' },
+    { value: 'PA_ANNOUNCEMENT', label: 'PA Announcement' },
+    { value: 'BREAKING_PULSE', label: 'Breaking Pulse' },
+    { value: 'BREAKING_RISER', label: 'Breaking Riser' },
+    { value: 'BREAKING_HIT', label: 'Breaking Hit' },
+    { value: 'OFFICIAL_STAMP', label: 'Official Stamp' },
+    { value: 'IMPORTANT_PING', label: 'Important Ping' },
+    { value: 'NEWS_TICKER', label: 'News Ticker' },
+    { value: 'SCOUT_BEEP', label: 'Scout Beep' },
+    { value: 'TRANSFER_REVEAL', label: 'Transfer Reveal' },
+    { value: 'CINEMATIC_DROP', label: 'Cinematic Drop' },
+    { value: 'CINEMATIC_RISE', label: 'Cinematic Rise' },
+    { value: 'IMPACT_BOOM', label: 'Impact Boom' },
+    { value: 'GLITCH_TRANSITION', label: 'Glitch Transition' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital Sweep' },
+    { value: 'MAGIC_REVEAL', label: 'Magic Reveal' },
+    { value: 'SUSPENSE_RISE', label: 'Suspense Rise' },
+    { value: 'TROPHY_FANFARE', label: 'Trophy Fanfare' },
+    { value: 'TIMER_TICK', label: 'Timer Tick' },
+    { value: 'COUNTDOWN_FINAL', label: 'Countdown Final' },
 ];
 
 export type ElectionSynthStep = {
@@ -249,6 +280,154 @@ export const ELECTION_SOUND_PATTERNS: Record<string, ElectionSynthStep[]> = {
     BREAKING_WHOOSH: [
         { delay: 0, duration: 0.34, frequency: 980, toFrequency: 240, waveform: 'sawtooth', gain: 0.8 },
         { delay: 0.08, duration: 0.22, frequency: 640, toFrequency: 320, waveform: 'triangle', gain: 0.38 },
+    ],
+    // ─── New Football / Mercato Sound Patterns ────────────────────────────────
+    TARGET_REVEAL: [
+        { delay: 0, duration: 0.18, frequency: 280, toFrequency: 520, waveform: 'sine', gain: 0.42 },
+        { delay: 0.12, duration: 0.22, frequency: 620, toFrequency: 880, waveform: 'triangle', gain: 0.38 },
+        { delay: 0.32, duration: 0.28, frequency: 1040, waveform: 'sine', gain: 0.3 },
+    ],
+    TARGET_LOCK: [
+        { delay: 0, duration: 0.06, frequency: 320, waveform: 'square', gain: 0.32 },
+        { delay: 0.1, duration: 0.06, frequency: 480, waveform: 'square', gain: 0.34 },
+        { delay: 0.2, duration: 0.18, frequency: 720, toFrequency: 1080, waveform: 'triangle', gain: 0.32 },
+        { delay: 0.4, duration: 0.16, frequency: 60, toFrequency: 40, waveform: 'sine', gain: 0.65 },
+    ],
+    TARGET_SCAN: [
+        { delay: 0, duration: 0.08, frequency: 620, waveform: 'sine', gain: 0.22 },
+        { delay: 0.1, duration: 0.08, frequency: 760, waveform: 'sine', gain: 0.24 },
+        { delay: 0.2, duration: 0.08, frequency: 920, waveform: 'sine', gain: 0.26 },
+        { delay: 0.3, duration: 0.12, frequency: 1080, waveform: 'triangle', gain: 0.22 },
+    ],
+    POSITION_SWITCH: [
+        { delay: 0, duration: 0.14, frequency: 220, toFrequency: 480, waveform: 'sawtooth', gain: 0.32 },
+        { delay: 0.08, duration: 0.18, frequency: 540, toFrequency: 760, waveform: 'triangle', gain: 0.28 },
+        { delay: 0.24, duration: 0.16, frequency: 880, waveform: 'sine', gain: 0.2 },
+    ],
+    GOAL_FANFARE: [
+        { delay: 0, duration: 0.18, frequency: 220, waveform: 'square', gain: 0.55 },
+        { delay: 0.18, duration: 0.18, frequency: 330, waveform: 'square', gain: 0.55 },
+        { delay: 0.36, duration: 0.36, frequency: 440, waveform: 'square', gain: 0.6 },
+        { delay: 0.04, duration: 0.7, frequency: 55, toFrequency: 44, waveform: 'sawtooth', gain: 0.45 },
+    ],
+    STADIUM_CHEER: [
+        { delay: 0, duration: 0.5, frequency: 180, toFrequency: 360, waveform: 'sawtooth', gain: 0.32 },
+        { delay: 0.18, duration: 0.6, frequency: 460, toFrequency: 760, waveform: 'triangle', gain: 0.26 },
+        { delay: 0.4, duration: 0.5, frequency: 880, waveform: 'sine', gain: 0.18 },
+    ],
+    STADIUM_CHANT: [
+        { delay: 0, duration: 0.22, frequency: 180, waveform: 'sawtooth', gain: 0.36 },
+        { delay: 0.28, duration: 0.22, frequency: 220, waveform: 'sawtooth', gain: 0.34 },
+        { delay: 0.56, duration: 0.28, frequency: 260, waveform: 'sawtooth', gain: 0.36 },
+        { delay: 0, duration: 1.0, frequency: 60, toFrequency: 50, waveform: 'sine', gain: 0.3 },
+    ],
+    WHISTLE_SHORT: [
+        { delay: 0, duration: 0.14, frequency: 2400, waveform: 'sine', gain: 0.45 },
+        { delay: 0, duration: 0.14, frequency: 4800, waveform: 'sine', gain: 0.18 },
+    ],
+    WHISTLE_LONG: [
+        { delay: 0, duration: 0.6, frequency: 2400, toFrequency: 2480, waveform: 'sine', gain: 0.5 },
+        { delay: 0, duration: 0.6, frequency: 4800, toFrequency: 4960, waveform: 'sine', gain: 0.18 },
+    ],
+    KICKOFF_HORN: [
+        { delay: 0, duration: 0.32, frequency: 110, waveform: 'sawtooth', gain: 0.62 },
+        { delay: 0, duration: 0.32, frequency: 220, waveform: 'sawtooth', gain: 0.32 },
+        { delay: 0.34, duration: 0.42, frequency: 165, waveform: 'sawtooth', gain: 0.55 },
+    ],
+    PA_ANNOUNCEMENT: [
+        { delay: 0, duration: 0.08, frequency: 660, waveform: 'sine', gain: 0.3 },
+        { delay: 0.12, duration: 0.08, frequency: 880, waveform: 'sine', gain: 0.32 },
+        { delay: 0.24, duration: 0.16, frequency: 1100, waveform: 'sine', gain: 0.28 },
+    ],
+    BREAKING_PULSE: [
+        { delay: 0, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.42 },
+        { delay: 0.16, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.42 },
+        { delay: 0.32, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.42 },
+        { delay: 0.48, duration: 0.18, frequency: 60, toFrequency: 40, waveform: 'sine', gain: 0.5 },
+    ],
+    BREAKING_RISER: [
+        { delay: 0, duration: 0.6, frequency: 80, toFrequency: 320, waveform: 'sawtooth', gain: 0.45 },
+        { delay: 0.18, duration: 0.5, frequency: 240, toFrequency: 1100, waveform: 'triangle', gain: 0.36 },
+        { delay: 0.5, duration: 0.22, frequency: 1280, waveform: 'sine', gain: 0.3 },
+    ],
+    BREAKING_HIT: [
+        { delay: 0, duration: 0.22, frequency: 38, toFrequency: 28, waveform: 'sine', gain: 1.1 },
+        { delay: 0.04, duration: 0.16, frequency: 110, toFrequency: 76, waveform: 'sawtooth', gain: 0.6 },
+        { delay: 0.18, duration: 0.32, frequency: 580, toFrequency: 1080, waveform: 'triangle', gain: 0.36 },
+    ],
+    OFFICIAL_STAMP: [
+        { delay: 0, duration: 0.18, frequency: 56, toFrequency: 42, waveform: 'sine', gain: 1.05 },
+        { delay: 0.05, duration: 0.16, frequency: 140, toFrequency: 92, waveform: 'sawtooth', gain: 0.42 },
+        { delay: 0.22, duration: 0.18, frequency: 320, toFrequency: 220, waveform: 'triangle', gain: 0.28 },
+    ],
+    IMPORTANT_PING: [
+        { delay: 0, duration: 0.16, frequency: 880, waveform: 'sine', gain: 0.42 },
+        { delay: 0.18, duration: 0.22, frequency: 1320, waveform: 'sine', gain: 0.3 },
+    ],
+    NEWS_TICKER: [
+        { delay: 0, duration: 0.05, frequency: 720, waveform: 'square', gain: 0.18 },
+        { delay: 0.07, duration: 0.05, frequency: 920, waveform: 'square', gain: 0.18 },
+        { delay: 0.14, duration: 0.05, frequency: 720, waveform: 'square', gain: 0.18 },
+    ],
+    SCOUT_BEEP: [
+        { delay: 0, duration: 0.06, frequency: 620, waveform: 'sine', gain: 0.28 },
+        { delay: 0.1, duration: 0.06, frequency: 820, waveform: 'sine', gain: 0.3 },
+    ],
+    TRANSFER_REVEAL: [
+        { delay: 0, duration: 0.32, frequency: 80, toFrequency: 60, waveform: 'sine', gain: 0.65 },
+        { delay: 0.1, duration: 0.32, frequency: 220, toFrequency: 480, waveform: 'triangle', gain: 0.36 },
+        { delay: 0.32, duration: 0.36, frequency: 720, toFrequency: 1180, waveform: 'sine', gain: 0.28 },
+    ],
+    CINEMATIC_DROP: [
+        { delay: 0, duration: 0.42, frequency: 220, toFrequency: 36, waveform: 'sawtooth', gain: 0.58 },
+        { delay: 0.18, duration: 0.42, frequency: 580, toFrequency: 90, waveform: 'triangle', gain: 0.36 },
+        { delay: 0.4, duration: 0.32, frequency: 42, toFrequency: 28, waveform: 'sine', gain: 0.95 },
+    ],
+    CINEMATIC_RISE: [
+        { delay: 0, duration: 0.6, frequency: 60, toFrequency: 240, waveform: 'sawtooth', gain: 0.5 },
+        { delay: 0.18, duration: 0.5, frequency: 220, toFrequency: 880, waveform: 'triangle', gain: 0.4 },
+        { delay: 0.5, duration: 0.3, frequency: 1080, waveform: 'sine', gain: 0.35 },
+    ],
+    IMPACT_BOOM: [
+        { delay: 0, duration: 0.3, frequency: 32, waveform: 'sine', gain: 1.15 },
+        { delay: 0.02, duration: 0.18, frequency: 80, waveform: 'sawtooth', gain: 0.55 },
+        { delay: 0.12, duration: 0.42, frequency: 280, toFrequency: 480, waveform: 'triangle', gain: 0.28 },
+    ],
+    GLITCH_TRANSITION: [
+        { delay: 0, duration: 0.05, frequency: 620, waveform: 'square', gain: 0.32 },
+        { delay: 0.06, duration: 0.05, frequency: 320, waveform: 'square', gain: 0.32 },
+        { delay: 0.13, duration: 0.05, frequency: 880, waveform: 'square', gain: 0.32 },
+        { delay: 0.2, duration: 0.05, frequency: 240, waveform: 'square', gain: 0.32 },
+        { delay: 0.28, duration: 0.18, frequency: 460, toFrequency: 280, waveform: 'sawtooth', gain: 0.28 },
+    ],
+    DIGITAL_SWEEP: [
+        { delay: 0, duration: 0.32, frequency: 240, toFrequency: 1280, waveform: 'sawtooth', gain: 0.32 },
+        { delay: 0.12, duration: 0.32, frequency: 480, toFrequency: 1880, waveform: 'triangle', gain: 0.24 },
+    ],
+    MAGIC_REVEAL: [
+        { delay: 0, duration: 0.14, frequency: 660, waveform: 'sine', gain: 0.36 },
+        { delay: 0.16, duration: 0.14, frequency: 880, waveform: 'sine', gain: 0.34 },
+        { delay: 0.32, duration: 0.18, frequency: 1320, waveform: 'sine', gain: 0.32 },
+        { delay: 0.5, duration: 0.22, frequency: 1760, waveform: 'sine', gain: 0.26 },
+    ],
+    SUSPENSE_RISE: [
+        { delay: 0, duration: 0.8, frequency: 56, toFrequency: 110, waveform: 'sine', gain: 0.6 },
+        { delay: 0.2, duration: 0.7, frequency: 180, toFrequency: 360, waveform: 'triangle', gain: 0.32 },
+    ],
+    TROPHY_FANFARE: [
+        { delay: 0, duration: 0.16, frequency: 392, waveform: 'square', gain: 0.42 },
+        { delay: 0.16, duration: 0.16, frequency: 523, waveform: 'square', gain: 0.42 },
+        { delay: 0.32, duration: 0.32, frequency: 659, waveform: 'square', gain: 0.45 },
+        { delay: 0.32, duration: 0.32, frequency: 392, waveform: 'sawtooth', gain: 0.3 },
+    ],
+    TIMER_TICK: [
+        { delay: 0, duration: 0.04, frequency: 1320, waveform: 'square', gain: 0.18 },
+    ],
+    COUNTDOWN_FINAL: [
+        { delay: 0, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.32 },
+        { delay: 0.16, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.32 },
+        { delay: 0.32, duration: 0.08, frequency: 880, waveform: 'square', gain: 0.32 },
+        { delay: 0.48, duration: 0.32, frequency: 1320, waveform: 'square', gain: 0.5 },
     ],
     SOFT_FADE: [
         { delay: 0, duration: 0.18, frequency: 620, toFrequency: 400, waveform: 'sine', gain: 0.22 },

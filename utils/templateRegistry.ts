@@ -112,6 +112,16 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#22d3ee',
     description: 'قالب إحصائيات لاعب ذكي: لاعب واحد، مقارنة لاعبين، أو قائمة مراقبة بثلاثة لاعبين مع كاش صور وشعارات.',
   },
+  [OverlayType.TRANSFER_TARGETS]: {
+    icon: '🎯',
+    accent: '#edb111',
+    description: 'شريط جانبي لأهداف النادي في سوق الانتقالات. مراكز متعددة، أوضاع عرض متنوعة، ومرتبط بالذكاء الاصطناعي.',
+  },
+  [OverlayType.BREAKING_HERE_WE_GO]: {
+    icon: '🚨',
+    accent: '#dc2626',
+    description: 'خبر عاجل/رسمي/مهم يبدأ بمقدمة صوتية درامية "Here We Go" ثم تظهر بطاقة الخبر بصورة وعنوان وتفاصيل.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

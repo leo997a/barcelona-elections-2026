@@ -25,6 +25,8 @@ import { TransferNewsRenderer } from './renderers/TransferNewsRenderer';
 import { BarcaPremiumRenderer } from './renderers/BarcaPremiumRenderer';
 import { MatchStatsRenderer } from './renderers/MatchStatsRenderer';
 import { PlayerStatsRenderer } from './renderers/PlayerStatsRenderer';
+import { TransferTargetsRenderer } from './renderers/TransferTargetsRenderer';
+import { BreakingHereWeGoRenderer } from './renderers/BreakingHereWeGoRenderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -45,6 +47,8 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep',
   [OverlayType.TRANSFER_NEWS]: 'tv-stadium-sweep',
   [OverlayType.PLAYER_STATS]: 'tv-stadium-sweep',
+  [OverlayType.TRANSFER_TARGETS]: 'tv-slide-left',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'tv-zoom-flash',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -65,6 +69,8 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.FOOTBALL_PACKAGE]: 'tv-stadium-sweep-out',
   [OverlayType.TRANSFER_NEWS]: 'tv-stadium-sweep-out',
   [OverlayType.PLAYER_STATS]: 'tv-stadium-sweep-out',
+  [OverlayType.TRANSFER_TARGETS]: 'tv-slide-left-out',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'tv-zoom-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -85,6 +91,8 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP',
   [OverlayType.TRANSFER_NEWS]: 'STADIUM_SWEEP',
   [OverlayType.PLAYER_STATS]: 'DATA_RUSH',
+  [OverlayType.TRANSFER_TARGETS]: 'STADIUM_SWEEP',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'SPOTLIGHT_POP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -105,6 +113,8 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.FOOTBALL_PACKAGE]: 'STADIUM_SWEEP_OUT',
   [OverlayType.TRANSFER_NEWS]: 'STADIUM_SWEEP_OUT',
   [OverlayType.PLAYER_STATS]: 'DATA_RUSH_OUT',
+  [OverlayType.TRANSFER_TARGETS]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'SPOTLIGHT_POP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -149,6 +159,8 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MATCH_STATS]: 'DATA_SLAM',
   [OverlayType.PLAYER_STATS]: 'DATA_SLAM',
   [OverlayType.BARCA_PREMIUM]: 'LUXURY_SWEEP',
+  [OverlayType.TRANSFER_TARGETS]: 'TARGET_REVEAL',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'BREAKING_RISER',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -172,6 +184,8 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MATCH_STATS]: 'BROADCAST_OUT',
   [OverlayType.PLAYER_STATS]: 'BROADCAST_OUT',
   [OverlayType.BARCA_PREMIUM]: 'LUXURY_OUT',
+  [OverlayType.TRANSFER_TARGETS]: 'LUXURY_OUT',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'BROADCAST_OUT',
 };
 
 const CSS = `
@@ -431,6 +445,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.TRANSFER_NEWS && <TransferNewsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.BARCA_PREMIUM && <BarcaPremiumRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.TRANSFER_TARGETS && <TransferTargetsRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.BREAKING_HERE_WE_GO && <BreakingHereWeGoRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
                           key={activeSlot}

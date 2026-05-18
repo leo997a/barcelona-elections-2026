@@ -40,6 +40,8 @@ const ACCENT: Record<string, string> = {
   [OverlayType.PLAYER_STATS]:     '#22d3ee',
   [OverlayType.TRANSFER_NEWS]:    '#E9FF00',
   [OverlayType.BARCA_PREMIUM]:    '#EDBB00',
+  [OverlayType.TRANSFER_TARGETS]: '#edb111',
+  [OverlayType.BREAKING_HERE_WE_GO]: '#dc2626',
 };
 
 const TYPE_FILTERS = [
@@ -50,6 +52,8 @@ const TYPE_FILTERS = [
   { id: OverlayType.PLAYER_STATS,    label: 'Player Stats' },
   { id: OverlayType.H2H_STATS,       label: 'H2H' },
   { id: OverlayType.TRANSFER_NEWS,   label: 'Transfers' },
+  { id: OverlayType.TRANSFER_TARGETS,   label: 'أهداف الانتقالات' },
+  { id: OverlayType.BREAKING_HERE_WE_GO, label: 'Here We Go' },
   { id: OverlayType.BARCA_PREMIUM,   label: 'Barca' },
   { id: OverlayType.LOWER_THIRD,     label: 'أسماء' },
   { id: OverlayType.TICKER,          label: 'شريط أخبار' },
