@@ -539,18 +539,21 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
     switch (visualVariant) {
       case 'COMPACT_CARD':
         return {
-          imageColumnWidth: '260px',
-          titleSize: '40px',
-          heroValueSize: '40px',
-          secondaryValueSize: '26px',
-          maxSecondaryRows: 6,
+          // SINGLE: [stats | image] grid template (image on the right column)
+          singleColumns: 'minmax(0,1fr) minmax(280px, 32%)',
+          titleSize: '36px',
+          heroValueSize: '54px',
+          heroLabelSize: '11px',
+          secondaryValueSize: '24px',
+          maxSecondaryRows: 4,
           showScanLine: false,
         };
       case 'ULTRA_LAB':
         return {
-          imageColumnWidth: '300px',
-          titleSize: '52px',
-          heroValueSize: '52px',
+          singleColumns: 'minmax(0,1fr) minmax(320px, 30%)',
+          titleSize: '46px',
+          heroValueSize: '76px',
+          heroLabelSize: '12px',
           secondaryValueSize: '32px',
           maxSecondaryRows: 8,
           showScanLine: true,
@@ -558,11 +561,12 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
       // CLEAN_BROADCAST and other variants share calm broadcast defaults
       default:
         return {
-          imageColumnWidth: '300px',
-          titleSize: '46px',
-          heroValueSize: '46px',
+          singleColumns: 'minmax(0,1fr) minmax(300px, 30%)',
+          titleSize: '40px',
+          heroValueSize: '68px',
+          heroLabelSize: '11px',
           secondaryValueSize: '28px',
-          maxSecondaryRows: 8,
+          maxSecondaryRows: 6,
           showScanLine: false,
         };
     }
@@ -615,86 +619,59 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
           </div>
         </header>
 
-        <main className={`flex-1 min-h-0 grid gap-4 ${statsMode === 'SINGLE' ? '' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_180px_1fr]' : 'grid-cols-3'}`}
-              style={statsMode === 'SINGLE' ? { gridTemplateColumns: `${variantDensity.imageColumnWidth} 1fr` } : undefined}
+        <main className={`flex-1 min-h-0 grid gap-5 ${statsMode === 'SINGLE' ? '' : statsMode === 'COMPARE' ? 'grid-cols-[1fr_180px_1fr]' : 'grid-cols-3'}`}
+              style={statsMode === 'SINGLE' ? { gridTemplateColumns: variantDensity.singleColumns } : undefined}
         >
           {statsMode === 'SINGLE' && players[0] && (() => {
             const allMetrics = orderedMetrics(players[0]);
             const availableMetrics = allMetrics.filter(([_, m]) => m.status === 'available');
-            const heroSlice = availableMetrics.slice(0, activeHeroMetrics.length || 4);
+            const heroSlice = availableMetrics.slice(0, Math.min(4, activeHeroMetrics.length || 4));
             const secondarySlice = availableMetrics.slice(heroSlice.length, heroSlice.length + (activeSecondaryMetrics.length || 8));
             const missingMetrics = allMetrics.filter(([_, m]) => m.status === 'unavailable' || m.status === 'error');
             const showUnavailableBox = getField('showUnavailableMetrics') === 'true' && missingMetrics.length > 0;
+            const heroOnly = secondarySlice.length === 0;
 
             return (
             <>
-              {/* LEFT: Player Card */}
-              <section className="relative flex flex-col overflow-hidden border border-white/10 bg-black/70 shadow-[0_20px_60px_rgba(0,0,0,.5)]">
-                <div className="absolute left-0 top-0 h-1 w-full z-10" style={{ background: accent }} />
-                <div className="relative flex-1 overflow-hidden">
-                  {players[0].image ? (
-                    <img
-                      src={players[0].image}
-                      alt=""
-                      className="absolute inset-x-[6%] top-[6%] bottom-0 w-[88%] h-[94%] object-contain object-bottom drop-shadow-[0_20px_40px_rgba(0,0,0,.6)]"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center"><UserRound size={70} color={accent} /></div>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black via-black/70 to-transparent" />
-                </div>
-                <div className="relative p-5 bg-black/80 border-t border-white/5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {players[0].clubLogo && <img src={players[0].clubLogo} alt="" className="h-10 w-10 shrink-0 object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
-                    <div className="min-w-0">
-                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35 truncate">{players[0].club}</div>
-                      <div className="font-['Barlow_Condensed'] text-[26px] font-black uppercase leading-none text-white truncate">{players[0].name}</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex gap-4 text-[9px] font-black uppercase tracking-[0.15em] text-white/30 truncate">
-                    <span className="truncate">{players[0].position || ''}</span>
-                    <span className="truncate">{players[0].season || ''}</span>
-                  </div>
-                </div>
-              </section>
-
-              {/* RIGHT: Stats Grid */}
-              <section className="flex flex-col gap-3 min-h-0 overflow-hidden">
-                {/* Hero Metrics — centered in available space */}
+              {/* LEFT/CENTER: Stats */}
+              <section className="flex flex-col gap-4 min-h-0 min-w-0 overflow-hidden">
+                {/* Hero Metrics — fill or center based on secondary presence */}
                 {heroSlice.length > 0 && (
-                  <div className="flex items-center justify-center shrink-0">
-                    <div className={`grid gap-3 w-full ${heroSlice.length <= 3 ? 'grid-cols-3' : heroSlice.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
-                      {heroSlice.map(([key, metric], index) => (
-                        <div key={key} className="flex flex-col items-center justify-center text-center px-3 py-4 border border-white/8 bg-white/[0.02] min-w-0">
-                          <div className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40 mb-2 truncate w-full" dir="rtl">{getMetricLabel(key, 'ar')}</div>
-                          <div
-                            className="font-['Barlow_Condensed'] font-black leading-none truncate w-full text-center"
-                            style={{ color: index % 2 ? secondaryAccent : accent, fontSize: variantDensity.heroValueSize }}
-                          >{metric.value}</div>
-                          <div className="text-[8px] font-bold text-white/20 uppercase mt-1.5 truncate w-full">{getMetricLabel(key, 'en')}</div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className={`grid gap-3 min-w-0 ${heroOnly ? 'flex-1' : 'shrink-0'} ${heroSlice.length === 1 ? 'grid-cols-1' : heroSlice.length === 2 ? 'grid-cols-2' : heroSlice.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                    {heroSlice.map(([key, metric], index) => (
+                      <div key={key} className="flex flex-col items-center justify-center text-center px-3 py-5 border border-white/10 bg-white/[0.03] min-w-0">
+                        <div
+                          className="font-black uppercase tracking-[0.16em] text-white/55 mb-2 truncate w-full"
+                          style={{ fontSize: variantDensity.heroLabelSize }}
+                          dir="rtl"
+                        >{getMetricLabel(key, 'ar')}</div>
+                        <div
+                          className="font-['Barlow_Condensed'] font-black leading-none truncate w-full text-center"
+                          style={{ color: index % 2 ? secondaryAccent : accent, fontSize: variantDensity.heroValueSize }}
+                        >{metric.value}</div>
+                        <div className="text-[8px] font-bold text-white/25 uppercase mt-2 truncate w-full tracking-wider">{getMetricLabel(key, 'en')}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {/* Secondary Metrics */}
-                <div className="grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-hidden auto-rows-min">
-                  {secondarySlice.slice(0, variantDensity.maxSecondaryRows).map(([key, metric], index) => (
-                    <div key={key} className="flex items-center gap-3 border border-white/8 bg-black/50 px-4 py-3 min-w-0">
-                      <div className="flex-1 min-w-0" dir="rtl">
-                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-white/40 truncate">{getMetricLabel(key, 'ar')}</div>
-                        <div className="text-[8px] font-bold text-white/20 truncate">{getMetricLabel(key, 'en')}</div>
+                {/* Secondary Metrics — only render block if we have any */}
+                {secondarySlice.length > 0 && (
+                  <div className={`grid gap-2 flex-1 min-h-0 overflow-hidden auto-rows-min ${secondarySlice.length <= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {secondarySlice.slice(0, variantDensity.maxSecondaryRows).map(([key, metric], index) => (
+                      <div key={key} className="flex items-center gap-3 border border-white/10 bg-black/55 px-4 py-3 min-w-0">
+                        <div className="flex-1 min-w-0" dir="rtl">
+                          <div className="text-[11px] font-black uppercase tracking-[0.1em] text-white/55 truncate">{getMetricLabel(key, 'ar')}</div>
+                          <div className="text-[8px] font-bold text-white/25 truncate tracking-wider">{getMetricLabel(key, 'en')}</div>
+                        </div>
+                        <div
+                          className="font-['Barlow_Condensed'] font-black leading-none shrink-0"
+                          style={{ color: index % 2 ? secondaryAccent : accent, fontSize: variantDensity.secondaryValueSize }}
+                        >{metric.value}</div>
                       </div>
-                      <div
-                        className="font-['Barlow_Condensed'] font-black leading-none shrink-0"
-                        style={{ color: index % 2 ? secondaryAccent : accent, fontSize: variantDensity.secondaryValueSize }}
-                      >{metric.value}</div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Missing Box */}
                 {showUnavailableBox && (
@@ -716,6 +693,42 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
                     {cleanSourceLabel}
                   </div>
                 )}
+              </section>
+
+              {/* RIGHT: Player Card (compact, no name cropping) */}
+              <section className="relative flex flex-col overflow-hidden border border-white/10 bg-black/70 shadow-[0_20px_60px_rgba(0,0,0,.5)] min-w-0">
+                <div className="absolute left-0 top-0 h-1 w-full z-10" style={{ background: accent }} />
+                <div className="relative flex-1 overflow-hidden">
+                  {players[0].image ? (
+                    <img
+                      src={players[0].image}
+                      alt=""
+                      className="absolute inset-x-[6%] top-[6%] bottom-0 w-[88%] h-[94%] object-contain object-bottom drop-shadow-[0_20px_40px_rgba(0,0,0,.6)]"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center"><UserRound size={64} color={accent} /></div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                </div>
+                <div className="relative p-4 bg-black/80 border-t border-white/5 shrink-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {players[0].clubLogo && <img src={players[0].clubLogo} alt="" className="h-9 w-9 shrink-0 object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 truncate">{players[0].club}</div>
+                      <div
+                        className="font-['Barlow_Condensed'] font-black uppercase text-white leading-[1.05] break-words"
+                        style={{ fontSize: '22px', wordBreak: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                        title={players[0].name}
+                      >{players[0].name}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3 text-[9px] font-black uppercase tracking-[0.15em] text-white/35">
+                    <span className="truncate">{players[0].position || ''}</span>
+                    <span className="truncate text-right">{players[0].season || ''}</span>
+                  </div>
+                </div>
               </section>
             </>
           )})()}

@@ -113,20 +113,33 @@ const PLAYER_STATS_PRESETS: Record<string, string[]> = {
   'Full Season Report': ['appearances', 'starts', 'minutes', 'goals', 'assists', 'goal_contributions', 'shots', 'shots_on_target', 'xg', 'xa', 'key_passes', 'chances_created', 'passes', 'pass_accuracy', 'progressive_passes', 'dribbles_completed', 'progressive_carries', 'tackles', 'interceptions', 'recoveries', 'duel_win_rate', 'yellow_cards', 'rating', 'impact_index'],
 };
 
+// Arabic display labels for preset keys (UI-only — keys remain English to keep state stable)
+const PLAYER_STATS_PRESET_LABELS_AR: Record<string, string> = {
+  'Basic Setup': 'إعداد أساسي',
+  'Attacker Profile': 'ملف هجومي',
+  'Playmaker Profile': 'ملف صانع لعب',
+  'Defensive Profile': 'ملف دفاعي',
+  'Goalkeeper Profile': 'ملف حارس مرمى',
+  'Transfer Scout': 'استكشاف انتقالات',
+  'Barcelona Fit': 'ملاءمة برشلونة',
+  'Head-to-Head Comparison': 'مقارنة مباشرة',
+  'Full Season Report': 'تقرير الموسم الكامل',
+};
+
 const PLAYER_STATS_CATEGORIES = [
-  { key: 'season', label: 'Season' },
-  { key: 'attack', label: 'Attack' },
-  { key: 'shooting', label: 'Shooting' },
-  { key: 'chance_creation', label: 'Chance Creation' },
-  { key: 'passing', label: 'Passing' },
-  { key: 'dribbling', label: 'Dribbling' },
-  { key: 'possession', label: 'Possession' },
-  { key: 'defense', label: 'Defense' },
-  { key: 'duels', label: 'Duels' },
-  { key: 'discipline', label: 'Discipline' },
-  { key: 'advanced', label: 'Advanced' },
-  { key: 'per90', label: 'Per 90' },
-  { key: 'goalkeeping', label: 'Goalkeeping' },
+  { key: 'season',          label: 'الموسم' },
+  { key: 'attack',          label: 'الهجوم' },
+  { key: 'shooting',        label: 'التسديد' },
+  { key: 'chance_creation', label: 'صناعة الفرص' },
+  { key: 'passing',         label: 'التمرير' },
+  { key: 'dribbling',       label: 'المراوغة' },
+  { key: 'possession',      label: 'الاستحواذ' },
+  { key: 'defense',         label: 'الدفاع' },
+  { key: 'duels',           label: 'الالتحامات' },
+  { key: 'discipline',      label: 'الانضباط' },
+  { key: 'advanced',        label: 'متقدمة' },
+  { key: 'per90',           label: 'لكل 90 دقيقة' },
+  { key: 'goalkeeping',     label: 'حراسة المرمى' },
 ];
 
 const METRIC_TEXT_ALIASES: Record<string, string[]> = {
@@ -362,14 +375,14 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'providerPolicy') {
     return {
       id,
-      label: 'Provider policy',
+      label: 'سياسة المصدر',
       type: 'select',
       value,
       options: [
-        { value: 'auto', label: 'Auto router' },
-        { value: 'fbref', label: 'FBref season first' },
-        { value: 'matchBridge', label: 'Match bridge first' },
-        { value: 'demo', label: 'Demo safe fallback' },
+        { value: 'auto', label: 'موجِّه تلقائي' },
+        { value: 'fbref', label: 'موسم FBref أولًا' },
+        { value: 'matchBridge', label: 'جسر المباريات أولًا' },
+        { value: 'demo', label: 'وضع تجريبي آمن' },
       ],
     };
   }
@@ -377,7 +390,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'metricPreset') {
     return {
       id,
-      label: 'Smart metric preset',
+      label: 'القالب الذكي',
       type: 'select',
       value,
       options: [
@@ -1980,8 +1993,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                               type="button"
                                               onClick={() => applyMetricPreset(preset)}
                                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                                              dir="rtl"
                                             >
-                                                {preset}
+                                                {PLAYER_STATS_PRESET_LABELS_AR[preset] || preset}
                                             </button>
                                         );
                                     })}
@@ -2158,13 +2172,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                   value={String(getDraftValue('playerStatsVisualVariant') || 'CLEAN_BROADCAST')}
                                   onChange={(event) => handleDraftFieldChange('playerStatsVisualVariant', event.target.value)}
                                   className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[11px] font-bold text-white"
+                                  dir="rtl"
                                 >
-                                    <option value="CLEAN_BROADCAST">Clean Broadcast</option>
-                                    <option value="ULTRA_LAB">Ultra Lab</option>
-                                    <option value="COMPACT_CARD">Compact Card</option>
-                                    <option value="GLASS_SCOUT">Glass Scout</option>
-                                    <option value="BARCA_RADAR">Barca Radar</option>
-                                    <option value="MINIMAL_CAST">Minimal Cast</option>
+                                    <option value="CLEAN_BROADCAST">بث نظيف</option>
+                                    <option value="ULTRA_LAB">مختبر متقدم</option>
+                                    <option value="COMPACT_CARD">بطاقة مختصرة</option>
+                                    <option value="GLASS_SCOUT">زجاج استكشافي</option>
+                                    <option value="BARCA_RADAR">رادار برشلونة</option>
+                                    <option value="MINIMAL_CAST">بث مينيمال</option>
                                 </select>
                             </div>
                             <div>
