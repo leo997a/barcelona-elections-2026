@@ -37,7 +37,10 @@ deploy/reo-datafootball-worker/local.sync.json
 deploy/reo-datafootball-worker/.cache/
 deploy/reo-datafootball-worker/.venv/
 deploy/reo-datafootball-worker/venv/
-deploy/reo-datafootball-worker/.manual/
+deploy/reo-datafootball-worker/.manual/*
+!deploy/reo-datafootball-worker/.manual/fbref/
+deploy/reo-datafootball-worker/.manual/fbref/*
+!deploy/reo-datafootball-worker/.manual/fbref/README_AR.md
 deploy/reo-datafootball-worker/.state/
 deploy/reo-datafootball-worker/.logs/
 

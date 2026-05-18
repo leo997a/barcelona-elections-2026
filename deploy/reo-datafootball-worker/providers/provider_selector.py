@@ -22,6 +22,7 @@ from .base_provider import get_logger
 from .fbref_soccerdata_provider import FBrefSoccerdataProvider
 from .fbref_big5_direct_provider import FBrefBig5DirectProvider
 from .manual_csv_provider import ManualCSVProvider
+from .manual_fbref_provider import ManualFBrefProvider
 from .coverage_utils import (
     ALL_SAFE_STAT_GROUPS,
     REQUIRED_STAT_GROUPS,
@@ -46,6 +47,7 @@ VALID_STRATEGIES = [
     "soccerdata_only",
     "direct_only",
     "manual_only",
+    "manual_fbref",
 ]
 
 
@@ -295,6 +297,13 @@ def run_strategy(
     elif strategy == "manual_only":
         m_provider = ManualCSVProvider()
         r = m_provider.fetch(manual_groups, season, cache_dir)
+        provider_results.append(r)
+        total_ok += r["total_ok"]
+        _record_results_to_state(state, r)
+
+    elif strategy == "manual_fbref":
+        mf_provider = ManualFBrefProvider()
+        r = mf_provider.fetch(fetchable_groups, season, cache_dir)
         provider_results.append(r)
         total_ok += r["total_ok"]
         _record_results_to_state(state, r)
