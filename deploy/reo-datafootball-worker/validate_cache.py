@@ -13,7 +13,11 @@ Checks:
   5. players array exists and is non-empty
   6. Required fields: player/Player AND team/squad/Squad
   7. No empty/corrupt files
-  8. Minimum 10 players per file
+  8. Minimum players per group (per coverage_utils.MIN_PLAYER_COUNT_BY_GROUP)
+
+Phase F: also reads .state/fbref-fetch-state.json to surface SKIP lines for
+groups that were skipped today (already fresh) or are in CAPTCHA cooldown,
+and FAIL/captcha lines for groups whose last attempt hit a CAPTCHA.
 """
 
 import json
@@ -26,7 +30,9 @@ from providers.coverage_utils import (
     build_metric_availability,
     canonical_stat_group,
     min_player_count_for,
+    REQUIRED_STAT_GROUPS,
 )
+from providers import fetch_state as _fetch_state
 
 
 def _has_field(player, field_names):
@@ -38,7 +44,7 @@ def _has_field(player, field_names):
     return False
 
 
-def validate_cache(cache_dir, min_players=10):
+def validate_cache(cache_dir, min_players=10, worker_dir=None):
     result = {
         "valid": False,
         "total_files": 0,
@@ -51,6 +57,9 @@ def validate_cache(cache_dir, min_players=10):
         "warnings": [],
         "details": [],
         "errors": [],
+        "group_lines": [],          # Phase F: pre-formatted [OK]/[FAIL]/[SKIP] lines
+        "skipped_stat_groups": {},  # group -> reason
+        "failed_stat_groups": {},   # group -> reason
     }
 
     cache_path = Path(cache_dir)
@@ -202,6 +211,61 @@ def validate_cache(cache_dir, min_players=10):
     if coverage["coverage"] != "full_or_near_full":
         result["warnings"].append("partial coverage: missing stat groups: %s" % ", ".join(coverage["missingStatGroups"]))
 
+    # ── Phase F: per-group OK/FAIL/SKIP summary lines ────────────────
+    state_groups = {}
+    if worker_dir:
+        try:
+            state = _fetch_state.load_state(worker_dir)
+            state_groups = (state.get("groups") or {})
+        except Exception:
+            state_groups = {}
+
+    available_set = set(result["available_stat_groups"])
+    group_status_counts = {"ok": 0, "fail": 0, "skip": 0}
+    for group in REQUIRED_STAT_GROUPS:
+        canonical = canonical_stat_group(group)
+        manifest_entry = manifest.get("statGroups", {}).get(canonical, {})
+        state_entry = state_groups.get(canonical, {})
+
+        if canonical in available_set:
+            players = manifest_entry.get("playerCount") or 0
+            line = "[OK]   %-13s %d players" % (canonical, players)
+            result["group_lines"].append(line)
+            group_status_counts["ok"] += 1
+            continue
+
+        # Cooldown / fresh-today come from state — no fresh attempt happened.
+        cooldown_until = state_entry.get("cooldownUntil")
+        if cooldown_until:
+            try:
+                from datetime import datetime, timezone
+                cooldown_iso = datetime.fromtimestamp(float(cooldown_until), tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            except (TypeError, ValueError, OSError):
+                cooldown_iso = str(cooldown_until)[:19]
+            line = "[SKIP] %-13s cooldown until %s" % (canonical, cooldown_iso)
+            result["group_lines"].append(line)
+            result["skipped_stat_groups"][canonical] = "cooldown"
+            group_status_counts["skip"] += 1
+            continue
+
+        last_failure = state_entry.get("lastFailureReason")
+        last_failure_at = state_entry.get("lastFailureAt")
+        if last_failure:
+            captcha = _fetch_state.looks_like_captcha(last_failure)
+            tag = "captcha" if captcha else (last_failure[:60] if last_failure else "failed")
+            line = "[FAIL] %-13s %s" % (canonical, tag)
+            result["group_lines"].append(line)
+            result["failed_stat_groups"][canonical] = last_failure
+            group_status_counts["fail"] += 1
+            continue
+
+        # Group is missing but the state has no recent attempt info.
+        line = "[FAIL] %-13s not fetched" % canonical
+        result["group_lines"].append(line)
+        result["failed_stat_groups"][canonical] = "not fetched"
+        group_status_counts["fail"] += 1
+
+    result["group_status_counts"] = group_status_counts
     return result
 
 
@@ -220,6 +284,17 @@ def print_summary(result):
     print("  Available groups: %s" % (", ".join(result.get("available_stat_groups", [])) or "-"))
     print("  Missing groups:   %s" % (", ".join(result.get("missing_stat_groups", [])) or "-"))
     print("")
+
+    # Phase F: per-group OK/FAIL/SKIP block.
+    group_lines = result.get("group_lines") or []
+    if group_lines:
+        print("  Per-group status:")
+        for line in group_lines:
+            print("    %s" % line)
+        counts = result.get("group_status_counts") or {}
+        if counts:
+            print("    -> %d OK, %d FAIL, %d SKIP" % (counts.get("ok", 0), counts.get("fail", 0), counts.get("skip", 0)))
+        print("")
 
     for d in result["details"]:
         ic = "[OK]" if d["status"] == "OK" else "[FAIL]"
@@ -258,11 +333,12 @@ def print_summary(result):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python validate_cache.py <cache_dir>")
-        print("Example: python validate_cache.py .cache/fbref")
+        print("Usage: python validate_cache.py <cache_dir> [worker_dir]")
+        print("Example: python validate_cache.py .cache/fbref .")
         sys.exit(1)
 
     cache_dir = sys.argv[1]
-    result = validate_cache(cache_dir)
+    worker_dir = sys.argv[2] if len(sys.argv) >= 3 else str(Path(cache_dir).parent.parent)
+    result = validate_cache(cache_dir, worker_dir=worker_dir)
     print_summary(result)
     sys.exit(0 if result["valid"] else 1)

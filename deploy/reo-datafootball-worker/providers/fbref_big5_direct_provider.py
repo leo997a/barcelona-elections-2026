@@ -11,6 +11,7 @@ Supports stat groups:
 """
 
 import time
+import random
 import traceback
 from pathlib import Path
 
@@ -293,10 +294,11 @@ class FBrefBig5DirectProvider(BaseProvider):
                 logger.error("[FAIL] %s: %s", sg, str(e))
                 logger.debug(traceback.format_exc())
 
-            # Rate limiting between requests
+            # Rate limiting between requests (Phase F: 10-20 s random window).
             if i < len(stat_groups) - 1:
-                logger.info("[INFO] Waiting 7s before next request...")
-                time.sleep(7)
+                delay = random.uniform(10, 20)
+                logger.info("[INFO] Waiting %.1fs before next request...", delay)
+                time.sleep(delay)
 
         logger.info("[INFO] direct_big5 results: %d OK, %d FAILED out of %d", total_ok, total_failed, len(stat_groups))
         return {"provider": self.name, "results": results, "total_ok": total_ok, "total_failed": total_failed}

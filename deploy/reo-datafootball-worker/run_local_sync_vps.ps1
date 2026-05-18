@@ -21,6 +21,7 @@
     .\run_local_sync_vps.ps1 -StatGroups missing                # missing groups only
     .\run_local_sync_vps.ps1 -StatGroups next-missing           # first 1-2 missing groups
     .\run_local_sync_vps.ps1 -StatGroups all-safe               # safe staged coverage
+    .\run_local_sync_vps.ps1 -ForceRefresh -StatGroups all-safe # ignore fresh-today + cooldown
     .\run_local_sync_vps.ps1 -Strategy soccerdata_first -Upload # full pipeline
     .\run_local_sync_vps.ps1 -SkipFetch -Upload                 # validate + upload existing cache
 #>
@@ -30,7 +31,8 @@ param(
     [string]$StatGroups = "missing",
     [switch]$Upload,
     [switch]$SkipFetch,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$ForceRefresh
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,6 +43,21 @@ $VenvDir = Join-Path $ScriptDir ".venv"
 $ConfigFile = Join-Path $ScriptDir "local.sync.json"
 $ArchiveName = "reo-fbref-cache.tar.gz"
 $ArchivePath = Join-Path $LogDir $ArchiveName
+$CleanupScript = Join-Path $ScriptDir "cleanup_processes.ps1"
+
+# Phase F: ensure we always clean up child processes on any exit (Ctrl+C, error, success).
+# This mirrors the tray's Stop-SyncProcessTree so direct CLI invocations don't leave
+# orphan chromedriver / chrome.exe / python.exe processes.
+function Invoke-Cleanup {
+    param([string]$Reason = "exit")
+    if (Test-Path $CleanupScript) {
+        try {
+            powershell -ExecutionPolicy Bypass -File $CleanupScript -Reason $Reason | Out-Null
+        } catch {
+            Write-Host "  [WARN] cleanup_processes.ps1 failed: $_" -ForegroundColor Yellow
+        }
+    }
+}
 
 # ===================================================================
 # Helpers
@@ -115,6 +132,8 @@ Write-OK "Dependencies ready"
 # Step 2: Fetch via Provider Selector
 # ===================================================================
 
+try {
+
 if (-not $SkipFetch) {
     Write-Host ""
     Write-Step "Running provider selector (strategy: $Strategy)..."
@@ -126,14 +145,22 @@ if (-not $SkipFetch) {
     $SoccerdataDir = Join-Path (Join-Path $ScriptDir ".cache") "soccerdata"
 
     $ErrorActionPreference = "Continue"
-    & $PyExe -m providers.provider_selector `
-        --strategy $Strategy `
-        --season $Season `
-        --cache-dir $CacheDir `
-        --headless $Headless `
-        --soccerdata-dir $SoccerdataDir `
-        --stat-groups $StatGroups `
-        --next-missing-count $NextMissingCount
+    $providerArgs = @(
+        "-m", "providers.provider_selector",
+        "--strategy", $Strategy,
+        "--season", $Season,
+        "--cache-dir", $CacheDir,
+        "--headless", $Headless,
+        "--soccerdata-dir", $SoccerdataDir,
+        "--stat-groups", $StatGroups,
+        "--next-missing-count", $NextMissingCount,
+        "--worker-dir", $ScriptDir
+    )
+    if ($ForceRefresh) {
+        $providerArgs += "--force-refresh"
+        Write-Step "Force-refresh enabled (ignoring fresh-today and cooldown checks)"
+    }
+    & $PyExe @providerArgs
     $FetchExit = $LASTEXITCODE
     $ErrorActionPreference = "Stop"
 
@@ -159,7 +186,7 @@ Write-Host ""
 Write-Step "Validating cache..."
 
 $ErrorActionPreference = "Continue"
-& $PyExe (Join-Path $ScriptDir "validate_cache.py") $CacheDir
+& $PyExe (Join-Path $ScriptDir "validate_cache.py") $CacheDir $ScriptDir
 $ValidExit = $LASTEXITCODE
 $ErrorActionPreference = "Stop"
 
@@ -241,6 +268,11 @@ if ($Upload) {
     Write-Host ""
     Write-Warn "Upload skipped. Run with -Upload to push to VPS."
     Write-Host "    .\run_local_sync_vps.ps1 -Upload" -ForegroundColor Yellow
+}
+
+} finally {
+    # Phase F: always run cleanup, even on Ctrl+C, error, or normal exit.
+    Invoke-Cleanup -Reason "run_local_sync_vps_finally"
 }
 
 # ===================================================================

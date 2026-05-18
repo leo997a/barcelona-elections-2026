@@ -31,6 +31,7 @@ from .coverage_utils import (
     canonical_stat_group,
     resolve_stat_groups,
 )
+from . import fetch_state as _fetch_state
 
 logger = get_logger("provider_selector")
 
@@ -48,7 +49,7 @@ VALID_STRATEGIES = [
 ]
 
 
-def _update_last_updated(cache_dir, provider_results, season="2025-26"):
+def _update_last_updated(cache_dir, provider_results, season="2025-26", *, fetch_state_obj=None, skipped_groups=None):
     """Write last_updated.json with results summary."""
     cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
@@ -67,6 +68,18 @@ def _update_last_updated(cache_dir, provider_results, season="2025-26"):
         "metricsAvailability": metric_availability,
         "providers": []
     }
+
+    # Phase F: surface skipped groups + checkpoint state in last_updated.json.
+    # Frontend consumers (Editor.tsx, PlayerStatsRenderer.tsx, lab assistant)
+    # only read availableStatGroups / missingStatGroups / coverage; new fields
+    # here are purely additive.
+    if skipped_groups:
+        summary["skippedStatGroups"] = dict(skipped_groups)
+    if fetch_state_obj is not None:
+        try:
+            summary["fetchState"] = _fetch_state.summarize_state(fetch_state_obj)
+        except Exception as exc:
+            logger.warning("[WARN] Failed to summarize fetch state: %s", exc)
 
     for pr in provider_results:
         provider_summary = {
@@ -91,6 +104,9 @@ def _update_last_updated(cache_dir, provider_results, season="2025-26"):
                 coverage["coverage"],
                 ",".join(coverage["availableStatGroups"]),
                 ",".join(coverage["missingStatGroups"]))
+    if skipped_groups:
+        logger.info("[INFO] Skipped (this run): %s",
+                    ", ".join(f"{g}:{r}" for g, r in skipped_groups.items()))
     for sg, info in columns_manifest.get("statGroups", {}).items():
         logger.info("[INFO] Columns manifest %s: %s", sg, ", ".join(info.get("columns", [])))
 
@@ -104,12 +120,26 @@ def _infer_season(provider_results):
     return None
 
 
-def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None, stat_groups_override=None, next_missing_count=1):
+def run_strategy(
+    strategy,
+    season,
+    cache_dir,
+    headless=True,
+    soccerdata_dir=None,
+    stat_groups_override=None,
+    next_missing_count=1,
+    *,
+    worker_dir=None,
+    force_refresh=False,
+):
     """
     Run the selected fetch strategy.
 
     Args:
         stat_groups_override: If provided, use these stat groups instead of defaults.
+        worker_dir: Root directory of the worker (where .state/ lives). Defaults
+            to the parent of cache_dir.
+        force_refresh: If True, ignore "already fresh today" and cooldown checks.
 
     Returns:
         dict: {
@@ -118,12 +148,25 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
             "total_failed": int,
             "provider_results": list,
             "success": bool,
+            "skipped": dict[str, str],
         }
     """
     if strategy not in VALID_STRATEGIES:
         logger.error("[FAIL] Unknown strategy: %s", strategy)
         logger.info("[INFO] Valid strategies: %s", ", ".join(VALID_STRATEGIES))
-        return {"strategy": strategy, "total_ok": 0, "total_failed": 0, "provider_results": [], "success": False}
+        return {
+            "strategy": strategy,
+            "total_ok": 0,
+            "total_failed": 0,
+            "provider_results": [],
+            "success": False,
+            "skipped": {},
+        }
+
+    # Resolve worker_dir for state file. cache_dir = <worker_dir>/.cache/fbref by convention.
+    if worker_dir is None:
+        worker_dir = str(Path(cache_dir).parent.parent)
+    state = _fetch_state.load_state(worker_dir)
 
     logger.info("=" * 55)
     logger.info("  FBref Smart Agent - Provider Selector")
@@ -131,6 +174,8 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
     logger.info("[INFO] Strategy: %s", strategy)
     logger.info("[INFO] Season: %s", season)
     logger.info("[INFO] Cache: %s", cache_dir)
+    logger.info("[INFO] Worker dir: %s", worker_dir)
+    logger.info("[INFO] Force refresh: %s", force_refresh)
     logger.info("")
 
     provider_results = []
@@ -139,22 +184,46 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
     # Determine stat groups. Defaults are intentionally conservative:
     # fetch only missing required groups instead of re-fetching successful files.
     resolved_groups = resolve_stat_groups(stat_groups_override or "missing", cache_dir, season, next_missing_count)
-    sd_groups = [sg for sg in resolved_groups if sg in DEFAULT_STAT_GROUPS_SOCCERDATA]
-    direct_groups = [sg for sg in resolved_groups if sg in DEFAULT_STAT_GROUPS_DIRECT]
-    manual_groups = [sg for sg in resolved_groups if sg in DEFAULT_STAT_GROUPS_MANUAL]
+
+    # Phase F: filter resolved groups through the checkpoint state.
+    # - groups that succeeded today are skipped (unless force_refresh),
+    # - groups in CAPTCHA cooldown are skipped (unless force_refresh).
+    decisions = _fetch_state.decide_groups(state, resolved_groups, force_refresh=force_refresh)
+    fetchable_groups = [d.group for d in decisions if d.fetch]
+    skipped: dict[str, str] = {d.group: d.reason for d in decisions if not d.fetch}
+
+    if skipped:
+        logger.info("[INFO] Skipped by checkpoint: %s",
+                    ", ".join(f"{g}:{r}" for g, r in skipped.items()))
+
+    sd_groups = [sg for sg in fetchable_groups if sg in DEFAULT_STAT_GROUPS_SOCCERDATA]
+    direct_groups = [sg for sg in fetchable_groups if sg in DEFAULT_STAT_GROUPS_DIRECT]
+    manual_groups = [sg for sg in fetchable_groups if sg in DEFAULT_STAT_GROUPS_MANUAL]
 
     logger.info("[INFO] Requested stat groups: %s", ", ".join(stat_groups_override or ["missing"]))
-    logger.info("[INFO] Missing/selected stat groups to fetch: %s", ", ".join(resolved_groups) if resolved_groups else "(none)")
+    logger.info("[INFO] Missing/selected groups: %s", ", ".join(resolved_groups) if resolved_groups else "(none)")
+    logger.info("[INFO] Will fetch this run:    %s", ", ".join(fetchable_groups) if fetchable_groups else "(none)")
 
-    if not resolved_groups:
-        _update_last_updated(cache_dir, provider_results, season)
+    if not fetchable_groups:
+        # Nothing to fetch (either everything is fresh, in cooldown, or already cached).
+        _fetch_state.annotate_run(state, strategy=strategy)
+        _fetch_state.save_state(worker_dir, state)
+        _update_last_updated(cache_dir, provider_results, season,
+                             fetch_state_obj=state, skipped_groups=skipped)
+        coverage = build_coverage_summary(cache_dir, season)
         return {
             "strategy": strategy,
             "total_ok": 0,
             "total_failed": 0,
             "provider_results": provider_results,
-            "success": len(build_coverage_summary(cache_dir, season)["availableStatGroups"]) > 0,
+            "success": len(coverage["availableStatGroups"]) > 0,
+            "skipped": skipped,
         }
+
+    # Mark every group we are about to attempt as "attempted" so the state
+    # reflects the run even if a provider crashes mid-way.
+    for group in fetchable_groups:
+        _fetch_state.record_attempt(state, group)
 
     if strategy == "soccerdata_first":
         # Try soccerdata
@@ -166,10 +235,14 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
             r1 = sd_provider.fetch(sd_groups, season, cache_dir)
             provider_results.append(r1)
             total_ok += r1["total_ok"]
+            _record_results_to_state(state, r1)
         else:
             r1 = {"total_ok": 0}
 
-        remaining_direct = resolve_stat_groups(direct_groups, cache_dir, season, next_missing_count)
+        # After Phase 1, anything still missing AND in the direct provider's
+        # supported set gets a second attempt via direct fetcher.
+        remaining_direct = [sg for sg in resolve_stat_groups(direct_groups, cache_dir, season, next_missing_count)
+                            if sg not in skipped]
         if remaining_direct:
             logger.info("")
             logger.info("[INFO] === Phase 2: Fallback to direct_big5 ===")
@@ -177,6 +250,7 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
             r2 = d_provider.fetch(remaining_direct, season, cache_dir)
             provider_results.append(r2)
             total_ok += r2["total_ok"]
+            _record_results_to_state(state, r2)
 
     elif strategy == "direct_big5_first":
         logger.info("[INFO] === Phase 1: direct_big5 ===")
@@ -185,10 +259,12 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
             r1 = d_provider.fetch(direct_groups, season, cache_dir)
             provider_results.append(r1)
             total_ok += r1["total_ok"]
+            _record_results_to_state(state, r1)
         else:
             r1 = {"total_ok": 0}
 
-        remaining_sd = resolve_stat_groups(sd_groups, cache_dir, season, next_missing_count)
+        remaining_sd = [sg for sg in resolve_stat_groups(sd_groups, cache_dir, season, next_missing_count)
+                        if sg not in skipped]
         if remaining_sd:
             logger.info("")
             logger.info("[INFO] === Phase 2: Fallback to soccerdata ===")
@@ -198,6 +274,7 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
             r2 = sd_provider.fetch(remaining_sd, season, cache_dir)
             provider_results.append(r2)
             total_ok += r2["total_ok"]
+            _record_results_to_state(state, r2)
 
     elif strategy == "soccerdata_only":
         sd_provider = FBrefSoccerdataProvider(
@@ -206,21 +283,27 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
         r = sd_provider.fetch(sd_groups, season, cache_dir)
         provider_results.append(r)
         total_ok += r["total_ok"]
+        _record_results_to_state(state, r)
 
     elif strategy == "direct_only":
         d_provider = FBrefBig5DirectProvider()
         r = d_provider.fetch(direct_groups, season, cache_dir)
         provider_results.append(r)
         total_ok += r["total_ok"]
+        _record_results_to_state(state, r)
 
     elif strategy == "manual_only":
         m_provider = ManualCSVProvider()
         r = m_provider.fetch(manual_groups, season, cache_dir)
         provider_results.append(r)
         total_ok += r["total_ok"]
+        _record_results_to_state(state, r)
 
-    # Write last_updated.json
-    _update_last_updated(cache_dir, provider_results, season)
+    # Finalize state, then write last_updated.json with state + skipped info.
+    _fetch_state.annotate_run(state, strategy=strategy)
+    _fetch_state.save_state(worker_dir, state)
+    _update_last_updated(cache_dir, provider_results, season,
+                         fetch_state_obj=state, skipped_groups=skipped)
 
     # Summary
     total_failed = sum(pr["total_failed"] for pr in provider_results)
@@ -229,7 +312,8 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
 
     logger.info("")
     logger.info("=" * 55)
-    logger.info("  Results: %d OK, %d FAILED", total_ok, total_failed)
+    logger.info("  Results: %d OK, %d FAILED, %d SKIPPED",
+                total_ok, total_failed, len(skipped))
     if success:
         logger.info("  [OK] Cache ready for validation")
     else:
@@ -242,7 +326,27 @@ def run_strategy(strategy, season, cache_dir, headless=True, soccerdata_dir=None
         "total_failed": total_failed,
         "provider_results": provider_results,
         "success": success,
+        "skipped": skipped,
     }
+
+
+def _record_results_to_state(state, provider_result):
+    """Record per-group success/failure into the checkpoint state."""
+    for sg_name, sg_result in (provider_result.get("results") or {}).items():
+        group = canonical_stat_group(sg_name)
+        if getattr(sg_result, "ok", False):
+            _fetch_state.record_success(
+                state,
+                group,
+                source=getattr(sg_result, "source", None),
+                player_count=getattr(sg_result, "player_count", 0) or 0,
+            )
+        else:
+            _fetch_state.record_failure(
+                state,
+                group,
+                reason=getattr(sg_result, "error", None),
+            )
 
 
 def main():
@@ -254,6 +358,8 @@ def main():
     parser.add_argument("--soccerdata-dir", default=None, help="Custom data_dir for soccerdata cache")
     parser.add_argument("--stat-groups", default="missing", help="standard | missing | next-missing | all-safe | comma-separated stat groups")
     parser.add_argument("--next-missing-count", type=int, default=1, help="How many missing groups to fetch in next-missing mode")
+    parser.add_argument("--worker-dir", default=None, help="Worker root (where .state/ lives). Defaults to parent of cache-dir's parent.")
+    parser.add_argument("--force-refresh", action="store_true", help="Ignore fresh-today and cooldown checks; refetch every requested group.")
     args = parser.parse_args()
 
     headless = args.headless.lower() == "true"
@@ -272,6 +378,8 @@ def main():
         soccerdata_dir=args.soccerdata_dir,
         stat_groups_override=stat_groups_override,
         next_missing_count=args.next_missing_count,
+        worker_dir=args.worker_dir,
+        force_refresh=args.force_refresh,
     )
 
     sys.exit(0 if result["success"] else 1)

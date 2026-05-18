@@ -12,6 +12,8 @@ Stat types supported by soccerdata v1.9.0:
 """
 
 import traceback
+import random
+import time
 from pathlib import Path
 
 from .base_provider import BaseProvider, StatGroupResult, get_logger
@@ -155,9 +157,15 @@ class FBrefSoccerdataProvider(BaseProvider):
             return {"provider": self.name, "results": results, "total_ok": 0, "total_failed": total_failed}
 
         # Fetch each stat group
-        for sg in stat_groups:
+        for index, sg in enumerate(stat_groups):
             sg = canonical_stat_group(sg)
             result = StatGroupResult(sg, self.source, self.name, season)
+
+            # Phase F: pace between groups (10-20 s) to avoid CAPTCHA pressure.
+            if index > 0:
+                delay = random.uniform(10, 20)
+                logger.info("[INFO] Waiting %.1fs before next stat group...", delay)
+                time.sleep(delay)
 
             if sg not in STAT_TYPE_MAP:
                 result.error = f"Unsupported stat type: {sg}"
@@ -198,10 +206,19 @@ class FBrefSoccerdataProvider(BaseProvider):
                 logger.info("[OK] %s: %d players fetched and cached", sg, len(players))
 
             except Exception as e:
-                result.error = str(e)
+                err_str = str(e)
+                lower = err_str.lower()
+                # Tag known block/captcha signals so fetch_state can apply cooldown.
+                if any(marker in lower for marker in (
+                    "captcha", "cloudflare", "could not retrieve",
+                    "just a moment", "cf-chl", "cf-turnstile", "blocked", "403", "429",
+                )):
+                    result.error = f"captcha_or_block: {err_str[:240]}"
+                else:
+                    result.error = err_str[:300]
                 results[sg] = result
                 total_failed += 1
-                logger.error("[FAIL] %s: %s", sg, str(e))
+                logger.error("[FAIL] %s: %s", sg, err_str[:200])
                 logger.debug(traceback.format_exc())
 
         logger.info("[INFO] soccerdata results: %d OK, %d FAILED out of %d", total_ok, total_failed, len(stat_groups))
