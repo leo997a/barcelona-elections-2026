@@ -88,9 +88,9 @@ export const LABELS = {
     missingAdvanced:   { ar: 'إحصائيات متقدمة غير متاحة', en: 'Missing Advanced Metrics' },
     requires:          { ar: 'يتطلب',              en: 'requires' },
     awaitingPlayer2:   { ar: 'بانتظار اللاعب الثاني', en: 'Awaiting Player 2' },
-    partialFbref:      { ar: 'كاش جزئي',           en: 'PARTIAL FBREF CACHE' },
+    partialFbref:      { ar: 'البيانات الأساسية',  en: 'CORE METRICS' },
     fullFbref:         { ar: 'كاش كامل',            en: 'FULL FBREF CACHE' },
-    available:         { ar: 'المتاح',              en: 'Available' },
+    available:         { ar: 'المصدر',              en: 'Source' },
   },
 
   // ─── Messages ──────────────────────────────────────────────

@@ -19,6 +19,11 @@ import {
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
 import {
+  filterAvailableMetrics,
+  isMetricAvailable,
+  runPlayerStatsAssistant,
+} from '../utils/playerStatsLabAssistant';
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -487,8 +492,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [metricCatalog, setMetricCatalog] = useState<MetricCatalogItem[]>([]);
   const [metricSearch, setMetricSearch] = useState('');
   const [metricAdvancedOpen, setMetricAdvancedOpen] = useState(false);
-  const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'setup' | 'presets' | 'metrics' | 'coverage' | 'visuals'>('setup');
+  const [activePlayerStatsTab, setActivePlayerStatsTab] = useState<'basic' | 'metrics' | 'visuals' | 'coverage'>('basic');
   const [isFetchingPlayerStats, setIsFetchingPlayerStats] = useState(false);
+  const [labAssistantInput, setLabAssistantInput] = useState('');
+  const [labAssistantMessage, setLabAssistantMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+
+  // Normalize active tab if a stale value lingers from a previous schema (e.g. 'setup' or 'presets').
+  useEffect(() => {
+      const validTabs = ['basic', 'metrics', 'visuals', 'coverage'] as const;
+      if (!validTabs.includes(activePlayerStatsTab as any)) {
+          setActivePlayerStatsTab('basic');
+      }
+  }, [activePlayerStatsTab]);
   const dndSensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const [sidebarSplitPct, setSidebarSplitPct] = useState(50); // % of height for top panel
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -854,6 +869,89 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       writeSelectedMetrics(PLAYER_STATS_PRESETS[preset] || PLAYER_STATS_PRESETS['Attacker Profile'], preset);
   };
 
+  /**
+   * Read coverage.availableStatGroups from the most recent fetched payload, if any.
+   * Used to filter presets so we don't add metrics that the bridge cannot serve yet.
+   */
+  const getAvailableStatGroups = (): string[] | undefined => {
+      try {
+          const parsed = JSON.parse(String(getDraftValue('playerStatsSourceJson') || '{}'));
+          const groups = parsed?.coverage?.availableStatGroups;
+          return Array.isArray(groups) && groups.length > 0 ? groups : undefined;
+      } catch {
+          return undefined;
+      }
+  };
+
+  /**
+   * Coverage-aware preset application. Filters the preset's metric list to keep
+   * only metrics whose stat group is currently available; falls back to the full
+   * preset list if filtering would leave us empty (e.g. no coverage info yet).
+   */
+  const applyMetricPresetSmart = (preset: string) => {
+      const presetMetrics = PLAYER_STATS_PRESETS[preset] || PLAYER_STATS_PRESETS['Attacker Profile'];
+      const available = getAvailableStatGroups();
+      const filtered = filterAvailableMetrics(presetMetrics, available);
+      const final = filtered.length >= 3 ? filtered : presetMetrics;
+      writeSelectedMetrics(final, preset);
+      if (available && filtered.length < presetMetrics.length && filtered.length >= 3) {
+          setAiBoxMessage({
+              type: 'success',
+              text: `طُبِّق "${PLAYER_STATS_PRESET_LABELS_AR[preset] || preset}" مع تجاهل ${presetMetrics.length - filtered.length} إحصائيات تحتاج كاش متقدم.`,
+          });
+      }
+  };
+
+  /**
+   * Player Stats Lab — deterministic Arabic assistant.
+   * Parses intent from labAssistantInput and applies preset/mode/metrics.
+   * Does NOT call any external AI service; pure rule-based.
+   */
+  const handleLabAssistantApply = () => {
+      const text = labAssistantInput.trim();
+      if (!text) {
+          setLabAssistantMessage({ type: 'error', text: 'اكتب طلبك أولاً.' });
+          return;
+      }
+      const result = runPlayerStatsAssistant(text);
+      if (!result.ok) {
+          setLabAssistantMessage({ type: 'error', text: result.message });
+          return;
+      }
+      const updates: Record<string, unknown> = {};
+      if (result.mode) updates.playerStatsMode = result.mode;
+      if (result.playerName) {
+          updates.playerAName = result.playerName;
+          if (result.clubName) updates.playerAClub = result.clubName;
+      }
+      if (result.preset) {
+          const presetMetrics = PLAYER_STATS_PRESETS[result.preset] || [];
+          const available = getAvailableStatGroups();
+          const filtered = filterAvailableMetrics(presetMetrics, available);
+          const finalPresetMetrics = filtered.length >= 3 ? filtered : presetMetrics;
+          const merged = uniqueMetricKeys([...(result.metrics || []), ...finalPresetMetrics]);
+          updates.metricPreset = result.preset;
+          updates.selectedMetricsJson = JSON.stringify(merged);
+          updates.heroMetricsJson = JSON.stringify(merged.slice(0, 4));
+          updates.secondaryMetricsJson = JSON.stringify(merged.slice(4, 8));
+      } else if (result.metrics && result.metrics.length > 0) {
+          const available = getAvailableStatGroups();
+          const explicit = filterAvailableMetrics(result.metrics, available);
+          const finalExplicit = explicit.length > 0 ? explicit : result.metrics;
+          const merged = uniqueMetricKeys([...selectedMetricKeys, ...finalExplicit]);
+          updates.selectedMetricsJson = JSON.stringify(merged);
+          updates.heroMetricsJson = JSON.stringify(merged.slice(0, 4));
+          updates.secondaryMetricsJson = JSON.stringify(merged.slice(4, 8));
+      }
+      handleDraftFieldChanges(updates);
+      setLabAssistantMessage({ type: 'success', text: result.message });
+  };
+
+  const handleLabAssistantClear = () => {
+      setLabAssistantInput('');
+      setLabAssistantMessage(null);
+  };
+
   const toggleMetricKey = (key: string) => {
       const next = selectedMetricSet.has(key)
           ? selectedMetricKeys.filter(metricKey => metricKey !== key)
@@ -883,7 +981,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const handleFetchPlayerStats = async () => {
       if (!selectedMetricKeys.length) {
-          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
+          setAiBoxMessage({ type: 'error', text: 'اختر إحصائية واحدة على الأقل قبل التحديث.' });
           return;
       }
 
@@ -912,7 +1010,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               presentation: {
                   heroMetrics: heroMetricKeys,
                   secondaryMetrics: secondaryMetricKeys,
-                  visualVariant: String(getDraftValue('playerStatsVisualVariant') || 'ULTRA_LAB'),
+                  visualVariant: String(getDraftValue('playerStatsVisualVariant') || 'CLEAN_BROADCAST'),
               },
           };
           const apiUrl = String(getDraftValue('playerStatsApiUrl') || '/api/player-stats');
@@ -923,16 +1021,19 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               cache: 'no-store',
           });
           const payload = await response.json().catch(() => null);
-          if (!response.ok || !payload?.ok) {
+          // Accept any non-error response that contains players or stats data.
+          // The local fallback never emits `ok:true`, so we only require HTTP success
+          // and a parseable JSON body. Real bridge errors return non-2xx or {error}.
+          if (!response.ok || !payload || payload.error) {
               throw new Error(payload?.error || 'Player stats bridge failed');
           }
           handleDraftFieldChanges({
               playerStatsSourceJson: JSON.stringify(payload, null, 2),
               playerStatsDataMode: 'MANUAL',
           });
-          setAiBoxMessage({ type: 'success', text: 'Operation completed successfully.' });
+          setAiBoxMessage({ type: 'success', text: 'تم تحديث القالب من المصدر بنجاح.' });
       } catch (error) {
-          setAiBoxMessage({ type: 'error', text: 'An error occurred during the operation.' });
+          setAiBoxMessage({ type: 'error', text: 'تعذّر تحديث القالب من المصدر. تحقق من الاتصال أو الإعدادات.' });
       } finally {
           setIsFetchingPlayerStats(false);
       }
@@ -1817,16 +1918,32 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         )}
 
         {draftOverlay.type === OverlayType.PLAYER_STATS && (() => {
-            const parsedSource = JSON.parse(String(getDraftValue('playerStatsSourceJson') || '{}'));
+            const parsedSource = (() => {
+                try { return JSON.parse(String(getDraftValue('playerStatsSourceJson') || '{}')); }
+                catch { return {}; }
+            })();
             const coverage = parsedSource.coverage;
             const statsMode = String(getDraftValue('playerStatsMode') || 'SINGLE');
-            const tabs = [
-                { id: 'setup',    label: LABELS.tabs.setup.ar },
-                { id: 'presets',  label: LABELS.tabs.presets.ar },
-                { id: 'metrics',  label: LABELS.tabs.metrics.ar },
-                { id: 'coverage', label: LABELS.tabs.coverage.ar },
-                { id: 'visuals',  label: LABELS.tabs.visuals.ar },
-            ] as const;
+            const labUiMode = String(getDraftValue('playerStatsLabUiMode') || 'easy') as 'easy' | 'advanced';
+            const isEasy = labUiMode === 'easy';
+            const availableStatGroups: string[] | undefined = Array.isArray(coverage?.availableStatGroups) && coverage.availableStatGroups.length
+                ? coverage.availableStatGroups
+                : undefined;
+            const lastFetchAt = parsedSource?.updatedAt || parsedSource?.generatedAt || '';
+
+            // Tab set: easy mode hides Coverage tab (replaced by inline summary).
+            const tabs = (isEasy
+                ? [
+                    { id: 'basic',    label: 'أساسي' },
+                    { id: 'metrics',  label: 'الإحصائيات' },
+                    { id: 'visuals',  label: 'الشكل' },
+                  ]
+                : [
+                    { id: 'basic',    label: 'أساسي' },
+                    { id: 'metrics',  label: 'الإحصائيات' },
+                    { id: 'visuals',  label: 'الشكل' },
+                    { id: 'coverage', label: 'التغطية' },
+                  ]) as Array<{ id: 'basic' | 'metrics' | 'visuals' | 'coverage'; label: string }>;
 
             // Derive hero/secondary/hidden from stored JSON
             const heroKeys = (JSON.parse(String(getDraftValue('heroMetricsJson') || '[]')) as string[]);
@@ -1882,8 +1999,73 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
             return (
             <div className="shrink-0 flex flex-col flex-1 min-h-0 border-b border-cyan-900/40 bg-slate-950/70" dir="rtl">
+
+                {/* ═══ Sticky control banner ═══ */}
+                <div className="sticky top-0 z-30 border-b border-cyan-900/50 bg-slate-950/95 backdrop-blur-sm p-3 space-y-2">
+                    {/* Easy / Advanced switch */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex rounded-lg overflow-hidden border border-slate-700">
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('playerStatsLabUiMode', 'easy')}
+                              className={`px-3 py-1.5 text-[10px] font-black transition-colors ${isEasy ? 'bg-cyan-500 text-black' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}
+                            >الوضع السهل</button>
+                            <button
+                              type="button"
+                              onClick={() => handleDraftFieldChange('playerStatsLabUiMode', 'advanced')}
+                              className={`px-3 py-1.5 text-[10px] font-black transition-colors ${!isEasy ? 'bg-cyan-500 text-black' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}
+                            >الوضع المتقدم</button>
+                        </div>
+                        {!isEasy && (
+                            <span className="text-[9px] text-slate-400 font-bold">
+                                {selectedMetricKeys.length} إحصائية محددة
+                                {lastFetchAt ? ` • آخر تحديث ${new Date(lastFetchAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Master "تحديث القالب" button */}
+                    <button
+                      type="button"
+                      onClick={handleFetchPlayerStats}
+                      disabled={isFetchingPlayerStats || !selectedMetricKeys.length}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-3 text-sm font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
+                        {isFetchingPlayerStats ? 'جارٍ التحديث...' : 'تحديث القالب'}
+                    </button>
+
+                    {/* Coverage summary in easy mode (one-line, friendly) */}
+                    {isEasy && coverage && (
+                        <div className="flex items-center gap-2 rounded-lg border border-amber-700/30 bg-amber-950/20 px-3 py-1.5">
+                            <Info className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[10px] font-black text-amber-200 truncate">
+                                    {coverage.status === 'full' ? 'البيانات الكاملة متاحة' : 'البيانات الأساسية متاحة'}
+                                </div>
+                                {coverage.status !== 'full' && (
+                                    <div className="text-[9px] text-amber-300/70 font-bold truncate">
+                                        التسديد والتمرير والدفاع ستظهر بعد اكتمال الكاش المتقدم.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Status / fetch result */}
+                    {aiBoxMessage && (
+                        <div className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold ${
+                          aiBoxMessage.type === 'success'
+                            ? 'border-emerald-700/40 bg-emerald-950/25 text-emerald-200'
+                            : 'border-red-700/40 bg-red-950/25 text-red-200'
+                        }`}>
+                            {aiBoxMessage.text}
+                        </div>
+                    )}
+                </div>
+
                 {/* Sticky Tabs Header */}
-                <div className="flex bg-slate-900 border-b border-slate-800 sticky top-0 z-20">
+                <div className="flex bg-slate-900 border-b border-slate-800 sticky top-[140px] z-20">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
@@ -1898,9 +2080,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:thin] space-y-4">
 
-                    {/* ═══ SETUP TAB ═══ */}
-                    {activePlayerStatsTab === 'setup' && (
+                    {/* ═══ BASIC TAB (merges Setup + Presets + Lab Assistant) ═══ */}
+                    {activePlayerStatsTab === 'basic' && (
                         <div className="space-y-4">
+                            {/* Player mode */}
                             <div>
                                 <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.playerMode.ar}</label>
                                 <select
@@ -1934,7 +2117,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 />
                             </div>
 
-                            {/* Player B — only in Compare/Scout */}
+                            {/* Player B — Compare/Scout */}
                             {statsMode !== 'SINGLE' && (
                                 <div className="space-y-2 border-t border-slate-800 pt-3">
                                     <label className="text-xs font-black text-cyan-200 block mb-1">{LABELS.setup.secondPlayer.ar}</label>
@@ -1966,23 +2149,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 />
                             </div>
 
-                            {/* Fetch Button */}
-                            <button
-                              type="button"
-                              onClick={handleFetchPlayerStats}
-                              disabled={isFetchingPlayerStats || !selectedMetricKeys.length}
-                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-black text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
-                            >
-                                <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPlayerStats ? 'animate-spin' : ''}`} />
-                                {isFetchingPlayerStats ? LABELS.setup.fetching.ar : LABELS.setup.fetch.ar}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* ═══ PRESETS TAB ═══ */}
-                    {activePlayerStatsTab === 'presets' && (
-                        <div className="space-y-4">
-                            <div>
+                            {/* Smart preset (always visible — entry point of the lab) */}
+                            <div className="border-t border-slate-800 pt-3">
                                 <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/80">{LABELS.presets.title.ar}</div>
                                 <div className="grid grid-cols-2 gap-1.5">
                                     {Object.keys(PLAYER_STATS_PRESETS).map(preset => {
@@ -1991,7 +2159,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                             <button
                                               key={preset}
                                               type="button"
-                                              onClick={() => applyMetricPreset(preset)}
+                                              onClick={() => applyMetricPresetSmart(preset)}
                                               className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-cyan-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
                                               dir="rtl"
                                             >
@@ -2001,29 +2169,90 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                     })}
                                 </div>
                             </div>
-                            <div>
-                                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/80">{LABELS.presets.categories.ar}</div>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                    {PLAYER_STATS_CATEGORIES.map(category => {
-                                        const categoryKeys = metricsForCategories(effectiveMetricCatalog, [category.key]);
-                                        const active = categoryKeys.length > 0 && categoryKeys.some(key => selectedMetricSet.has(key));
-                                        return (
-                                            <button
-                                              key={category.key}
-                                              type="button"
-                                              onClick={() => toggleMetricCategory(category.key)}
-                                              className={`rounded-md px-2 py-1.5 text-[10px] font-black transition-colors ${active ? 'bg-emerald-500 text-black' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
-                                            >
-                                                {category.label}
-                                            </button>
-                                        );
-                                    })}
+
+                            {/* Lab assistant (deterministic Arabic intent parser) */}
+                            <div className="border-t border-slate-800 pt-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-black text-cyan-200 flex items-center gap-1.5">
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        مساعد القالب
+                                    </label>
+                                    <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
+                                        AR
+                                    </span>
                                 </div>
+                                <textarea
+                                  value={labAssistantInput}
+                                  onChange={(event) => setLabAssistantInput(event.target.value)}
+                                  rows={2}
+                                  placeholder="اكتب ما تريد عرضه، مثل: أريد بطاقة هجومية لليفاندوفسكي مع الأهداف والأسيست والدقائق"
+                                  className="w-full resize-y rounded-lg border border-cyan-800/45 bg-slate-950/70 px-3 py-2 text-[11px] leading-5 text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400"
+                                  dir="rtl"
+                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={handleLabAssistantApply}
+                                      className="rounded-lg bg-cyan-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-cyan-500"
+                                    >
+                                        إنشاء إعداد
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { handleLabAssistantApply(); handleFetchPlayerStats(); }}
+                                      className="rounded-lg bg-emerald-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-emerald-500"
+                                    >
+                                        تطبيق على القالب
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleLabAssistantClear}
+                                      className="rounded-lg bg-slate-800 px-2 py-2 text-[10px] font-black text-slate-100 transition-colors hover:bg-slate-700"
+                                    >
+                                        مسح
+                                    </button>
+                                </div>
+                                {labAssistantMessage && (
+                                    <div className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold ${
+                                      labAssistantMessage.type === 'success'
+                                        ? 'border-emerald-700/40 bg-emerald-950/25 text-emerald-200'
+                                        : 'border-red-700/40 bg-red-950/25 text-red-200'
+                                    }`} dir="rtl">
+                                        {labAssistantMessage.text}
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Advanced-only controls inside Basic tab */}
+                            {!isEasy && (
+                                <div className="border-t border-slate-800 pt-3 space-y-3">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-300 block mb-1">سياسة المصدر</label>
+                                        <select
+                                          value={String(getDraftValue('providerPolicy') || 'auto')}
+                                          onChange={(event) => handleDraftFieldChange('providerPolicy', event.target.value)}
+                                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[10px] font-bold text-white"
+                                          dir="rtl"
+                                        >
+                                            <option value="auto">موجِّه تلقائي</option>
+                                            <option value="fbref">موسم FBref أولًا</option>
+                                            <option value="matchBridge">جسر المباريات أولًا</option>
+                                            <option value="demo">وضع تجريبي آمن</option>
+                                        </select>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 p-2 text-[9px] text-slate-400 font-mono leading-relaxed" dir="ltr">
+                                        <div>selectedMetrics: [{selectedMetricKeys.length}] {selectedMetricKeys.slice(0, 6).join(', ')}{selectedMetricKeys.length > 6 ? '…' : ''}</div>
+                                        <div>heroMetrics: [{heroMetricKeys.length}] {heroMetricKeys.join(', ')}</div>
+                                        <div>secondaryMetrics: [{secondaryMetricKeys.length}] {secondaryMetricKeys.join(', ')}</div>
+                                        <div>lastFetchAt: {lastFetchAt || '—'}</div>
+                                        <div>availableStatGroups: {availableStatGroups ? availableStatGroups.join(', ') : '—'}</div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* ═══ METRICS TAB — Drag & Drop Ordering ═══ */}
+                    {/* ═══ METRICS TAB ═══ */}
                     {activePlayerStatsTab === 'metrics' && (
                         <div className="space-y-5">
                             {/* Hero Metrics Section */}
@@ -2036,19 +2265,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd('hero')}>
                                     <SortableContext items={heroKeys} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-1">
-                                            {heroKeys.map((key, index) => (
-                                                <SortableMetricItem
-                                                    key={key}
-                                                    id={key}
-                                                    section="hero"
-                                                    isFirst={index === 0}
-                                                    isLast={index === heroKeys.length - 1}
-                                                    onMoveUp={() => reorderMetric('hero', index, index - 1)}
-                                                    onMoveDown={() => reorderMetric('hero', index, index + 1)}
-                                                    onMoveTo={(target) => moveMetric(key, 'hero', target)}
-                                                    onRemove={() => removeMetric(key)}
-                                                />
-                                            ))}
+                                            {heroKeys.map((key, index) => {
+                                                const unavailable = availableStatGroups && !isMetricAvailable(key, availableStatGroups);
+                                                return (
+                                                    <div key={key} className={unavailable ? 'opacity-40' : ''} title={unavailable ? 'تحتاج كاش متقدم' : undefined}>
+                                                        <SortableMetricItem
+                                                            id={key}
+                                                            section="hero"
+                                                            isFirst={index === 0}
+                                                            isLast={index === heroKeys.length - 1}
+                                                            onMoveUp={() => reorderMetric('hero', index, index - 1)}
+                                                            onMoveDown={() => reorderMetric('hero', index, index + 1)}
+                                                            onMoveTo={(target) => moveMetric(key, 'hero', target)}
+                                                            onRemove={() => removeMetric(key)}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </SortableContext>
                                 </DndContext>
@@ -2064,26 +2297,30 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd('secondary')}>
                                     <SortableContext items={secondaryKeys} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-1">
-                                            {secondaryKeys.map((key, index) => (
-                                                <SortableMetricItem
-                                                    key={key}
-                                                    id={key}
-                                                    section="secondary"
-                                                    isFirst={index === 0}
-                                                    isLast={index === secondaryKeys.length - 1}
-                                                    onMoveUp={() => reorderMetric('secondary', index, index - 1)}
-                                                    onMoveDown={() => reorderMetric('secondary', index, index + 1)}
-                                                    onMoveTo={(target) => moveMetric(key, 'secondary', target)}
-                                                    onRemove={() => removeMetric(key)}
-                                                />
-                                            ))}
+                                            {secondaryKeys.map((key, index) => {
+                                                const unavailable = availableStatGroups && !isMetricAvailable(key, availableStatGroups);
+                                                return (
+                                                    <div key={key} className={unavailable ? 'opacity-40' : ''} title={unavailable ? 'تحتاج كاش متقدم' : undefined}>
+                                                        <SortableMetricItem
+                                                            id={key}
+                                                            section="secondary"
+                                                            isFirst={index === 0}
+                                                            isLast={index === secondaryKeys.length - 1}
+                                                            onMoveUp={() => reorderMetric('secondary', index, index - 1)}
+                                                            onMoveDown={() => reorderMetric('secondary', index, index + 1)}
+                                                            onMoveTo={(target) => moveMetric(key, 'secondary', target)}
+                                                            onRemove={() => removeMetric(key)}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </SortableContext>
                                 </DndContext>
                             </div>
 
-                            {/* Hidden Metrics Section */}
-                            {hiddenKeys.length > 0 && (
+                            {/* Hidden Metrics Section — advanced only */}
+                            {!isEasy && hiddenKeys.length > 0 && (
                                 <div>
                                     <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/30">{LABELS.metrics.hiddenMetrics.ar}</div>
                                     <div className="space-y-1">
@@ -2100,8 +2337,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                 </div>
                             )}
 
-                            {/* Missing Metrics */}
-                            {missingKeys.length > 0 && (
+                            {/* Missing Metrics — advanced only */}
+                            {!isEasy && missingKeys.length > 0 && (
                                 <div>
                                     <div className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-rose-400/70">{LABELS.metrics.missingMetrics.ar}</div>
                                     <div className="space-y-1">

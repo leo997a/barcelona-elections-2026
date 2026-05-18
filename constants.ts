@@ -567,7 +567,10 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'selectedMetricsJson', label: 'Selected metric keys', type: 'hidden', value: '["goals","assists","shots","shots_on_target","xg","xa","key_passes","dribbles_completed","touches_in_box","goals_per90","assists_per90","impact_index"]' },
       { id: 'heroMetricsJson', label: 'Hero metric keys', type: 'hidden', value: '["goals","assists","xg","impact_index"]' },
       { id: 'secondaryMetricsJson', label: 'Secondary metric keys', type: 'hidden', value: '["shots","shots_on_target","key_passes","dribbles_completed","touches_in_box","goals_per90","assists_per90","xa"]' },
+      { id: 'hiddenMetricsJson', label: 'Hidden metric keys', type: 'hidden', value: '[]' },
       { id: 'metricNaturalLanguage', label: 'Natural metric search', type: 'hidden', value: '' },
+      { id: 'playerStatsLabUiMode', label: 'وضع لوحة التحكم', type: 'hidden', value: 'easy' },
+      { id: 'showUnavailableMetrics', label: 'إظهار غير المتاح', type: 'hidden', value: 'false' },
       { id: 'playerStatsVisualVariant', label: 'نمط العرض', type: 'select', value: 'CLEAN_BROADCAST', options: [
         { value: 'CLEAN_BROADCAST', label: 'بث نظيف' },
         { value: 'ULTRA_LAB', label: 'مختبر متقدم' },
