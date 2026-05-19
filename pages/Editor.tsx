@@ -1297,21 +1297,34 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   fallbackPlayerImageUrl: detectedPlayer?.fallbackImage,
               };
           } else {
-              const generated = await assistTemplateFields({
-                  rawText: prompt,
-                  overlayType: draftOverlay.type,
-                  overlayName: draftOverlay.name,
-                  currentFields,
-              });
+              // For SMART_NEWS: use the dedicated processSmartText which respects aiPageCount
+              if (draftOverlay.type === OverlayType.SMART_NEWS) {
+                  const rawText = prompt;
+                  const targetPages = Number(getDraftValue('aiPageCount') || 6);
+                  const generated = await processSmartText(rawText, targetPages);
+                  if (!generated) throw new Error('AI returned no smart news data');
+                  updates = {
+                      headline: generated.title,
+                      pagesData: JSON.stringify(generated.pages),
+                      currentPage: 0,
+                  };
+              } else {
+                  const generated = await assistTemplateFields({
+                      rawText: prompt,
+                      overlayType: draftOverlay.type,
+                      overlayName: draftOverlay.name,
+                      currentFields,
+                  });
 
-              if (!generated) throw new Error('AI returned no template data');
+                  if (!generated) throw new Error('AI returned no template data');
 
-              updates = { ...(generated.fields || {}) };
-              const headlineField = ['headline', 'title', 'content', 'specialText'].find(id => id in currentFields);
-              const subtitleField = ['subheadline', 'subline', 'bodyText', 'subtitle'].find(id => id in currentFields);
-              if (generated.title && headlineField && !updates[headlineField]) updates[headlineField] = generated.title;
-              if (generated.subtitle && subtitleField && !updates[subtitleField]) updates[subtitleField] = generated.subtitle;
-              hints = generated.assetHints || {};
+                  updates = { ...(generated.fields || {}) };
+                  const headlineField = ['headline', 'title', 'content', 'specialText'].find(id => id in currentFields);
+                  const subtitleField = ['subheadline', 'subline', 'bodyText', 'subtitle'].find(id => id in currentFields);
+                  if (generated.title && headlineField && !updates[headlineField]) updates[headlineField] = generated.title;
+                  if (generated.subtitle && subtitleField && !updates[subtitleField]) updates[subtitleField] = generated.subtitle;
+                  hints = generated.assetHints || {};
+              }
           }
 
           const enriched = await withAssetEnrichment(updates, hints);
