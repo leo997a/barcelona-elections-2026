@@ -48,6 +48,8 @@ import {
 export type MercatoStoryConfig = {
   /** Audio profile id, e.g. 'fabrizioBreaking'. */
   profileId?: string;
+  /** Voice pack phrase id, e.g. 'hereWeGo'. Resolves to a built-in audio file. */
+  voicePackId?: string;
   /** Optional user-supplied MP3/WAV URL — has highest priority for the voice. */
   customVoiceUrl?: string;
   /** Optional override of the spoken text (otherwise profile default). */
@@ -131,15 +133,37 @@ const resolveStoryPlan = (config: MercatoStoryConfig) => {
     getAudioProfile(config.profileId || 'fabrizioBreaking') ||
     getAudioProfile('fabrizioBreaking')!;
   const phrase = getVoicePhrase(profile.phraseId);
+
+  // Voice URL priority: customVoiceUrl > voicePackId.defaultAudioUrl > phrase.defaultAudioUrl
+  let resolvedVoiceUrl = (config.customVoiceUrl || '').trim();
+  let resolvedText = config.customText?.trim() || phrase?.text || '';
+
+  if (!resolvedVoiceUrl && config.voicePackId) {
+    const packPhrase = getVoicePhrase(config.voicePackId);
+    if (packPhrase) {
+      if (packPhrase.defaultAudioUrl) {
+        resolvedVoiceUrl = packPhrase.defaultAudioUrl;
+      }
+      // Use the pack phrase text for TTS fallback if no custom text
+      if (!config.customText?.trim()) {
+        resolvedText = packPhrase.text;
+      }
+    }
+  }
+
+  if (!resolvedVoiceUrl && phrase?.defaultAudioUrl) {
+    resolvedVoiceUrl = phrase.defaultAudioUrl;
+  }
+
   return {
     profile,
-    text: config.customText?.trim() || phrase?.text || '',
+    text: resolvedText,
     introCue:   config.introCue   || profile.introCue,
     revealCue:  config.revealCue  || profile.revealCue,
     updateCue:  config.updateCue  || profile.updateCue,
     confirmCue: config.confirmCue || profile.confirmCue,
     outroCue:   config.outroCue   || profile.outroCue,
-    customVoiceUrl: (config.customVoiceUrl || phrase?.defaultAudioUrl || '').trim(),
+    customVoiceUrl: resolvedVoiceUrl,
   };
 };
 

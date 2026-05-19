@@ -59,6 +59,7 @@ const useMercatoAudio = (
 
     // Template just became visible — start the story
     const profileId = String(getField('audioProfile') || 'fabrizioBreaking');
+    const voicePackId = String(getField('voicePackId') || 'none');
     const customVoiceUrl = String(getField('customVoiceUrl') || '');
     const signaturePhrase = String(getField('signaturePhrase') || '');
     const intensity = Number(getField('audioIntensity') ?? 1.0);
@@ -70,6 +71,7 @@ const useMercatoAudio = (
 
     sessionRef.current = playMercatoStory({
       profileId,
+      voicePackId: voicePackId !== 'none' ? voicePackId : undefined,
       customVoiceUrl: customVoiceUrl || undefined,
       customText: signaturePhrase || undefined,
       intensity,
