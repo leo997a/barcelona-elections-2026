@@ -55,6 +55,15 @@ type PlayCueOptions = {
   loop?: boolean;
   loopStart?: number;
   loopEnd?: number;
+  /**
+   * Routing channel for this playback.
+   *  - 'preview' → Sounds page picker. Preview channel auto-stops when a new
+   *    preview starts; never interrupts overlay or voice channels.
+   *  - 'overlay' → Live broadcast template ENTRY/EXIT cues. Plays freely.
+   *  - 'voice'   → TTS announcements. Managed separately by deepVoiceSynth.
+   * Defaults to 'overlay' for backwards compatibility.
+   */
+  channel?: 'preview' | 'overlay' | 'voice';
 };
 
 type AudioGraph = {
@@ -126,30 +135,79 @@ export const invalidateCueFxCache = () => { _fxOverridesCache = null; _fxCacheTs
 /**
  * Cues available for preview in the control panel.
  *
- * This list is intentionally curated to ~12 broadcast-grade entries with
- * meaningful labels for editors. The underlying SoundCue keys are *not*
- * removed — saved overlays that reference legacy cue names still play
- * correctly through playCue. We just hide the long catalog from the
- * sounds picker so it doesn't feel cluttered or repetitive.
+ * The list is built from THREE sources, in order:
+ *
+ *   1. The 12 quick-pick aliases (Featured) curated for editors.
+ *      These map to existing keys so they remain backwards-compatible.
+ *   2. The new SOUND_LIBRARY recipes (~60 cues with categories + tags).
+ *   3. The legacy keys still rendered by playLuxurySynth / playPatternSynth.
+ *      Nothing is hidden; everything is still selectable.
+ *
+ * The picker UI groups by `category` and can filter by `tags`.
  */
-export const PREVIEWABLE_CUES: { value: string; label: string; category: string }[] = [
-  // News / breaking — short, clean, broadcast-style
-  { value: 'BREAKING_RISER',    label: 'News Opener — افتتاحية خبر',         category: 'news' },
-  { value: 'BREAKING_HIT',      label: 'Breaking Hit — ضربة الخبر العاجل',   category: 'news' },
-  { value: 'OFFICIAL_STAMP',    label: 'Official Stamp — ختم رسمي',          category: 'news' },
-  { value: 'HERE_WE_GO_STING',  label: 'Here We Go Boom — إعلان الصفقة',     category: 'news' },
+type PreviewableCue = {
+  value: string;
+  label: string;
+  category: string;
+  tags?: string[];
+};
+import { getAllRecipes as _getAllLibraryRecipes, FEATURED_KEYS as _FEATURED_KEYS } from './soundLibrary';
 
-  // Mercato / transfers
-  { value: 'DEAL_LOCK',         label: 'Transfer Lock — قفل الصفقة',         category: 'mercato' },
-  { value: 'TARGET_REVEAL',     label: 'Target Reveal — كشف الهدف',          category: 'mercato' },
-  { value: 'TARGET_SCAN',       label: 'Radar Scan — مسح الرادار',           category: 'mercato' },
-  { value: 'DEADLINE_ALARM',    label: 'Deadline Tension — نهاية الميركاتو', category: 'mercato' },
+const _featuredQuickPicks: PreviewableCue[] = [
+  // Quick-pick aliases that map to existing engine keys.
+  // Kept exactly as before so saved overlays don't break.
+  { value: 'BREAKING_RISER',    label: 'News Opener — افتتاحية خبر',         category: 'featured', tags: ['newsroom', 'intense'] },
+  { value: 'BREAKING_HIT',      label: 'Breaking Hit — ضربة الخبر العاجل',   category: 'featured', tags: ['newsroom', 'short'] },
+  { value: 'OFFICIAL_STAMP',    label: 'Official Stamp — ختم رسمي',          category: 'featured', tags: ['official'] },
+  { value: 'HERE_WE_GO_STING',  label: 'Here We Go Boom — إعلان الصفقة',     category: 'featured', tags: ['mercato', 'deep'] },
+  { value: 'DEAL_LOCK',         label: 'Transfer Lock — قفل الصفقة',         category: 'featured', tags: ['mercato'] },
+  { value: 'TARGET_REVEAL',     label: 'Target Reveal — كشف الهدف',          category: 'featured', tags: ['mercato', 'clean'] },
+  { value: 'TARGET_SCAN',       label: 'Radar Scan — مسح الرادار',           category: 'featured', tags: ['tactical'] },
+  { value: 'DEADLINE_ALARM',    label: 'Deadline Tension — نهاية الميركاتو', category: 'featured', tags: ['mercato', 'intense'] },
+  { value: 'STADIUM_WHOOSH',    label: 'Stadium Rise — صعود الجمهور',        category: 'featured', tags: ['stadium'] },
+  { value: 'LUXURY_SWEEP',      label: 'Tactical Swipe — انتقال تكتيكي',     category: 'featured', tags: ['transition'] },
+  { value: 'LOWER_THIRD_WIPE',  label: 'Soft Lower Third — تعريف ناعم',      category: 'featured', tags: ['soft', 'short'] },
+  { value: 'CONTRACT_STAMP',    label: 'Final Confirm — تأكيد نهائي',        category: 'featured', tags: ['official'] },
+];
 
-  // Football / studio
-  { value: 'STADIUM_WHOOSH',    label: 'Stadium Rise — صعود الجمهور',        category: 'studio' },
-  { value: 'LUXURY_SWEEP',      label: 'Tactical Swipe — انتقال تكتيكي',     category: 'studio' },
-  { value: 'LOWER_THIRD_WIPE',  label: 'Soft Lower Third — تعريف ناعم',      category: 'studio' },
-  { value: 'CONTRACT_STAMP',    label: 'Final Confirm — تأكيد نهائي',        category: 'studio' },
+// Build the library entries (categories: news, football, mercato, tactical,
+// report, lowerthird, cinematic, experimental).
+const _libraryEntries: PreviewableCue[] = _getAllLibraryRecipes().map(r => ({
+  value: r.key,
+  label: r.label,
+  category: r.category,
+  tags: r.tags as string[],
+}));
+
+// Legacy keys exposed under "legacy" so editors can still pick them; never
+// hidden, never removed. Pulled from the existing SOUND_PRIORITY map below
+// (declared afterwards) and supplemented with extras we already render.
+const _legacyKeys = [
+  'GOAL_HORN', 'BREAKING_NEWS_ALARM', 'PLAYER_ENTRANCE', 'COUNTDOWN_BEEP',
+  'CARD_FLASH', 'MERCATO_HIT', 'ELITE_HIT', 'TRANSFER_RISER', 'CLUB_REVEAL',
+  'DEADLINE_ALARM', 'PHOTO_FLASH', 'NEWS_STING', 'TACTICAL_LOCK',
+  'CINEMA_BOOM', 'DATA_SLAM', 'AGENT_CALL', 'RUMOUR_GLITCH', 'MEDICAL_PASS',
+  'CASH_REGISTER', 'ULTRA_RISER', 'LUXURY_IMPACT', 'VAR_BUZZ',
+  'LUXURY_OUT', 'BROADCAST_OUT', 'SOFT_FADE', 'SCOREBUG_SNAP', 'DATA_TICK',
+  'LUXURY_STING', 'BREAKING_PULSE', 'BREAKING_HIT', 'BREAKING_WHOOSH',
+  'OFFICIAL_STAMP', 'IMPORTANT_PING', 'NEWS_TICKER', 'TARGET_REVEAL',
+  'TARGET_LOCK', 'TARGET_SCAN', 'POSITION_SWITCH', 'SCOUT_BEEP',
+  'TRANSFER_REVEAL', 'GOAL_FANFARE', 'STADIUM_CHEER', 'STADIUM_CHANT',
+  'WHISTLE_SHORT', 'WHISTLE_LONG', 'KICKOFF_HORN', 'PA_ANNOUNCEMENT',
+  'TROPHY_FANFARE', 'CINEMATIC_DROP', 'CINEMATIC_RISE', 'IMPACT_BOOM',
+  'GLITCH_TRANSITION', 'DIGITAL_SWEEP', 'MAGIC_REVEAL', 'SUSPENSE_RISE',
+  'TIMER_TICK', 'COUNTDOWN_FINAL',
+];
+const _legacyEntries: PreviewableCue[] = _legacyKeys
+  // Drop any that already appear in featured/library to avoid duplicates.
+  .filter(k => !_featuredQuickPicks.some(p => p.value === k))
+  .filter(k => !_libraryEntries.some(p => p.value === k))
+  .map(k => ({ value: k, label: k.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), category: 'legacy' as string, tags: ['legacy'] }));
+
+export const PREVIEWABLE_CUES: PreviewableCue[] = [
+  ..._featuredQuickPicks,
+  ..._libraryEntries,
+  ..._legacyEntries,
 ];
 
 const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
@@ -1163,6 +1221,480 @@ const playSynthCue = (cue: string, volume: number) => {
   return playPatternSynth(cue, volume);
 };
 
+// ─── Sound Library v2 — extended professional cues ─────────────────────────
+//
+// This block adds support for the `services/soundLibrary.ts` recipe map.
+// Each recipe is a list of layered helpers (subImpact, glassReveal,
+// newsTicker, stadiumBed, radarSweep, officialStamp, tacticalSwipe,
+// cleanUiClick, documentaryPulse, …). Recipes are rendered in real time
+// from oscillators + filtered noise so there are no audio assets to ship.
+// All rendering goes through the same masterGain → compressor → limiter
+// chain so existing master volume and FX settings keep working.
+//
+import { getRecipe, isLibraryCue, type CueRecipe, type Helper } from './soundLibrary';
+
+// Active sources per channel — used to stop preview without touching overlay.
+const channelSources = new Map<'preview' | 'overlay' | 'voice', Set<AudioBufferSourceNode | OscillatorNode>>();
+const channelGains = new Map<'preview' | 'overlay' | 'voice', Set<GainNode>>();
+
+const trackChannelNode = (
+  channel: 'preview' | 'overlay' | 'voice',
+  node: AudioBufferSourceNode | OscillatorNode,
+  gain: GainNode,
+) => {
+  if (!channelSources.has(channel)) channelSources.set(channel, new Set());
+  if (!channelGains.has(channel)) channelGains.set(channel, new Set());
+  channelSources.get(channel)!.add(node);
+  channelGains.get(channel)!.add(gain);
+  node.onended = () => {
+    channelSources.get(channel)?.delete(node);
+    channelGains.get(channel)?.delete(gain);
+  };
+};
+
+/** Stop only the preview channel. Never affects overlay or voice. */
+export const stopPreviewChannel = (fadeMs = 60) => {
+  const graph = getGraph();
+  if (!graph) return;
+  const sources = channelSources.get('preview');
+  const gains = channelGains.get('preview');
+  if (!sources && !gains) return;
+  const t = graph.context.currentTime;
+  gains?.forEach(g => {
+    try {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setTargetAtTime(0.0001, t, fadeMs / 3000);
+    } catch { /* noop */ }
+  });
+  window.setTimeout(() => {
+    sources?.forEach(s => { try { s.stop(); } catch { /* noop */ } });
+    sources?.clear();
+    gains?.clear();
+  }, fadeMs + 30);
+};
+
+// ── Tiny helpers — each returns nothing, schedules into the bus + tracks. ──
+// Keep these short so the per-cue switch in renderHelper stays readable.
+const HELPER_EPSILON = 0.0001;
+type RenderCtx = {
+  ctx: AudioContext;
+  bus: GainNode;
+  channel: 'preview' | 'overlay' | 'voice';
+};
+
+const noiseBuffer = (ctx: AudioContext, dur: number, fadeShape: 'linear' | 'exp' = 'exp') => {
+  const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i += 1) {
+    const t = i / len;
+    const fade = fadeShape === 'exp' ? Math.pow(1 - t, 1.4) : 1 - t;
+    data[i] = (Math.random() * 2 - 1) * fade;
+  }
+  return buf;
+};
+
+const tone = (
+  rc: RenderCtx,
+  start: number,
+  freqStart: number,
+  freqEnd: number,
+  dur: number,
+  gain: number,
+  type: OscillatorType = 'sine',
+) => {
+  const osc = rc.ctx.createOscillator();
+  const g = rc.ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freqStart, start);
+  if (freqEnd !== freqStart) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), start + dur);
+  }
+  g.gain.setValueAtTime(HELPER_EPSILON, start);
+  g.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+  g.gain.exponentialRampToValueAtTime(HELPER_EPSILON, start + dur);
+  osc.connect(g);
+  g.connect(rc.bus);
+  trackChannelNode(rc.channel, osc, g);
+  osc.start(start);
+  osc.stop(start + dur + 0.05);
+};
+
+const noiseLayer = (
+  rc: RenderCtx,
+  start: number,
+  dur: number,
+  fromHz: number,
+  toHz: number,
+  gain: number,
+  filterType: BiquadFilterType = 'bandpass',
+  q = 0.9,
+) => {
+  const buf = rc.ctx.createBufferSource();
+  buf.buffer = noiseBuffer(rc.ctx, dur);
+  const flt = rc.ctx.createBiquadFilter();
+  flt.type = filterType;
+  flt.Q.value = q;
+  flt.frequency.setValueAtTime(fromHz, start);
+  flt.frequency.exponentialRampToValueAtTime(Math.max(20, toHz), start + dur);
+  const g = rc.ctx.createGain();
+  g.gain.setValueAtTime(HELPER_EPSILON, start);
+  g.gain.exponentialRampToValueAtTime(gain, start + 0.04);
+  g.gain.exponentialRampToValueAtTime(HELPER_EPSILON, start + dur);
+  buf.connect(flt);
+  flt.connect(g);
+  g.connect(rc.bus);
+  trackChannelNode(rc.channel, buf, g);
+  buf.start(start);
+  buf.stop(start + dur + 0.05);
+};
+
+// Renders a single helper layer. Each branch is a distinct sound texture.
+const renderHelper = (
+  rc: RenderCtx,
+  helper: Helper,
+  startAt: number,
+  freq = 440,
+  dur = 0.5,
+  gain = 0.6,
+) => {
+  const t = startAt;
+  switch (helper) {
+    case 'subImpact':
+      tone(rc, t, freq || 38, Math.max(20, (freq || 38) * 0.6), dur, gain, 'sine');
+      tone(rc, t, (freq || 38) * 2, (freq || 38), dur * 0.6, gain * 0.45, 'sawtooth');
+      break;
+    case 'glassReveal':
+      tone(rc, t, freq, freq * 1.05, dur, gain, 'sine');
+      tone(rc, t, freq * 2, freq * 2.05, dur * 0.7, gain * 0.35, 'triangle');
+      tone(rc, t, freq * 3, freq * 3.05, dur * 0.5, gain * 0.20, 'triangle');
+      break;
+    case 'newsTicker':
+      tone(rc, t,         1320, 1320, 0.045, gain * 0.85, 'square');
+      tone(rc, t + 0.07,   980,  980, 0.045, gain * 0.85, 'square');
+      tone(rc, t + 0.14, 1180, 1180, 0.045, gain * 0.70, 'square');
+      break;
+    case 'stadiumBed':
+      noiseLayer(rc, t, dur, 220, 600, gain * 0.9, 'lowpass', 0.5);
+      noiseLayer(rc, t + 0.10, dur * 0.85, 800, 2000, gain * 0.55, 'bandpass', 0.5);
+      break;
+    case 'radarSweep':
+      tone(rc, t, 720, 720, 0.05, gain * 0.6, 'sine');
+      tone(rc, t + dur * 0.33, 1080, 1080, 0.05, gain * 0.65, 'sine');
+      tone(rc, t + dur * 0.66, 1440, 1440, 0.05, gain * 0.7, 'sine');
+      noiseLayer(rc, t, dur, 480, 2400, gain * 0.4, 'bandpass', 1.0);
+      break;
+    case 'officialStamp':
+      tone(rc, t,        Math.max(40, freq), Math.max(28, freq * 0.7), 0.16, gain * 1.05, 'sawtooth');
+      tone(rc, t + 0.20, Math.max(40, freq), Math.max(28, freq * 0.65), 0.20, gain * 0.95, 'sawtooth');
+      noiseLayer(rc, t + 0.20, 0.30, 1800, 320, gain * 0.30, 'bandpass', 0.8);
+      break;
+    case 'tacticalSwipe':
+      noiseLayer(rc, t, dur, 1800, 480, gain * 0.7, 'bandpass', 0.7);
+      tone(rc, t, 280, 540, dur, gain * 0.30, 'triangle');
+      break;
+    case 'cleanUiClick':
+      tone(rc, t, 1200, 1200, 0.04, gain * 0.55, 'square');
+      break;
+    case 'documentaryPulse':
+      // Heartbeat-style: thud, gap, thud
+      tone(rc, t,        50, 32, 0.16, gain * 0.95, 'sine');
+      tone(rc, t + 0.32, 50, 32, 0.16, gain * 0.85, 'sine');
+      tone(rc, t + 0.65, 50, 32, 0.16, gain * 0.75, 'sine');
+      break;
+    case 'cinematicRise':
+      tone(rc, t, freq || 70, (freq || 70) * 4, dur, gain * 0.55, 'sawtooth');
+      tone(rc, t + dur * 0.3, (freq || 70) * 1.5, (freq || 70) * 6, dur * 0.7, gain * 0.40, 'triangle');
+      noiseLayer(rc, t, dur, freq || 70, 5200, gain * 0.30, 'highpass', 0.7);
+      break;
+    case 'cinematicDrop':
+      tone(rc, t, 220, 36, dur * 0.6, gain * 0.85, 'sawtooth');
+      tone(rc, t + 0.20, 80, 28, dur * 0.7, gain * 0.95, 'triangle');
+      noiseLayer(rc, t, dur, 5200, 200, gain * 0.40, 'bandpass', 0.65);
+      break;
+    case 'shortWhistle':
+      tone(rc, t, 2400, 2480, 0.16, gain * 0.55, 'sine');
+      tone(rc, t, 4800, 4960, 0.16, gain * 0.20, 'triangle');
+      break;
+    case 'longWhistle':
+      tone(rc, t, 2400, 2520, 0.85, gain * 0.55, 'sine');
+      tone(rc, t, 4800, 5040, 0.85, gain * 0.18, 'triangle');
+      break;
+    case 'crowdGasp':
+      noiseLayer(rc, t, dur, 320, 1800, gain * 0.85, 'bandpass', 0.55);
+      tone(rc, t + 0.05, 220, 380, dur * 0.6, gain * 0.30, 'triangle');
+      break;
+    case 'matchOpening':
+      tone(rc, t, 220, 660, dur, gain * 0.55, 'square');
+      tone(rc, t + 0.20, 330, 880, dur * 0.7, gain * 0.50, 'sawtooth');
+      noiseLayer(rc, t, dur, 800, 2400, gain * 0.30, 'bandpass', 0.6);
+      break;
+    case 'cameraShutter':
+      noiseLayer(rc, t, 0.04, 4800, 5200, gain * 0.65, 'bandpass', 1.5);
+      noiseLayer(rc, t + 0.06, 0.06, 800, 1200, gain * 0.45, 'bandpass', 1.0);
+      break;
+    case 'archiveTape':
+      noiseLayer(rc, t, dur, 200, 800, gain * 0.55, 'lowpass', 0.5);
+      tone(rc, t + 0.30, 70, 70, 0.10, gain * 0.45, 'square');
+      break;
+    case 'caseFileOpen':
+      tone(rc, t, 90, 60, 0.20, gain * 0.65, 'sine');
+      noiseLayer(rc, t + 0.18, 0.45, 1200, 480, gain * 0.30, 'bandpass', 0.8);
+      break;
+    case 'evidenceMarker':
+      tone(rc, t, freq || 1320, freq || 1320, 0.18, gain * 0.55, 'sine');
+      break;
+    case 'pressureZone':
+      tone(rc, t, freq || 50, (freq || 50) * 1.2, dur, gain * 0.65, 'sine');
+      tone(rc, t + dur * 0.25, (freq || 50) * 1.1, (freq || 50) * 0.85, dur * 0.7, gain * 0.45, 'triangle');
+      break;
+    case 'heatmapSweep':
+      noiseLayer(rc, t, dur, 320, 1800, gain * 0.55, 'lowpass', 0.5);
+      tone(rc, t, 220, 560, dur, gain * 0.30, 'triangle');
+      break;
+    case 'formationSwitch':
+      tone(rc, t,         220, 480, 0.14, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.14, 540, 880, 0.18, gain * 0.50, 'triangle');
+      break;
+    case 'statPop':
+      tone(rc, t,         620, 720, 0.08, gain * 0.65, 'sine');
+      tone(rc, t + 0.10, 880, 980, 0.10, gain * 0.45, 'triangle');
+      break;
+    case 'precisionClick':
+      tone(rc, t, 1480, 1480, 0.04, gain * 0.55, 'square');
+      tone(rc, t + 0.05, 980, 980, 0.04, gain * 0.45, 'square');
+      break;
+    case 'passMapDraw':
+      tone(rc, t, 220, 660, dur, gain * 0.55, 'triangle');
+      noiseLayer(rc, t + dur * 0.5, dur * 0.5, 880, 1800, gain * 0.20, 'bandpass', 0.8);
+      break;
+    case 'modernSwipeLeft':
+      noiseLayer(rc, t, dur, 4800, 480, gain * 0.65, 'bandpass', 0.7);
+      tone(rc, t, 660, 220, dur, gain * 0.30, 'triangle');
+      break;
+    case 'modernSwipeRight':
+      noiseLayer(rc, t, dur, 480, 4800, gain * 0.65, 'bandpass', 0.7);
+      tone(rc, t, 220, 660, dur, gain * 0.30, 'triangle');
+      break;
+    case 'glassWhoosh':
+      noiseLayer(rc, t, dur, 1800, 6800, gain * 0.55, 'highpass', 0.6);
+      tone(rc, t, 880, 1480, dur, gain * 0.20, 'triangle');
+      break;
+    case 'digitalGlitch':
+      [0, 0.06, 0.12, 0.20, 0.28, 0.34].forEach((d, i) => {
+        const f = [620, 280, 980, 220, 540, 1280][i];
+        tone(rc, t + d, f, f, 0.05, gain * 0.55, 'square');
+      });
+      break;
+    case 'cleanNotification':
+      tone(rc, t,         880,  880, 0.10, gain * 0.55, 'sine');
+      tone(rc, t + 0.12, 1320, 1320, 0.14, gain * 0.45, 'sine');
+      break;
+    case 'panelOpen':
+      tone(rc, t, freq || 220, (freq || 220) * 2, dur, gain * 0.55, 'triangle');
+      break;
+    case 'panelClose':
+      tone(rc, t, (freq || 440), (freq || 440) * 0.5, dur, gain * 0.55, 'triangle');
+      break;
+    case 'softLowerThird':
+      tone(rc, t, 220, 110, dur, gain * 0.40, 'triangle');
+      noiseLayer(rc, t, dur, 880, 220, gain * 0.18, 'lowpass', 0.7);
+      break;
+    case 'sharpLowerThird':
+      noiseLayer(rc, t, dur, 4800, 480, gain * 0.55, 'bandpass', 0.7);
+      tone(rc, t, 660, 220, dur, gain * 0.40, 'triangle');
+      tone(rc, t, 56, 38, dur * 0.6, gain * 0.55, 'sine');
+      break;
+    case 'finalConfirm':
+      tone(rc, t, 56, 38, 0.30, gain * 1.0, 'sine');
+      tone(rc, t + 0.05, 132, 86, 0.18, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.30, 880, 1320, 0.30, gain * 0.40, 'sine');
+      break;
+    case 'outroHit':
+      tone(rc, t, 32, 24, 0.40, gain * 1.05, 'sine');
+      tone(rc, t, 76, 50, 0.20, gain * 0.55, 'sawtooth');
+      noiseLayer(rc, t, 0.50, 1800, 280, gain * 0.30, 'bandpass', 0.8);
+      break;
+    case 'kickoffPulse':
+      tone(rc, t, 55, 38, 0.25, gain * 1.0, 'sine');
+      tone(rc, t + 0.10, 110, 110, 0.30, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.10, 220, 220, 0.30, gain * 0.30, 'sawtooth');
+      break;
+    case 'varCheck':
+      tone(rc, t, 130, 115, 0.40, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.50, 130, 115, 0.40, gain * 0.45, 'sawtooth');
+      tone(rc, t + 1.00, 740, 740, 0.20, gain * 0.30, 'triangle');
+      break;
+    case 'scoreboardTick':
+      tone(rc, t, 1480, 1480, 0.04, gain * 0.50, 'square');
+      tone(rc, t + 0.05, 980, 980, 0.04, gain * 0.30, 'square');
+      break;
+    case 'finalWhistleDrama':
+      tone(rc, t, 2400, 2520, 1.0, gain * 0.55, 'sine');
+      tone(rc, t, 4800, 5040, 1.0, gain * 0.18, 'triangle');
+      tone(rc, t + 1.0, 38, 28, 0.85, gain * 1.0, 'sine');
+      noiseLayer(rc, t + 1.0, 1.0, 800, 280, gain * 0.40, 'bandpass', 0.65);
+      break;
+    case 'goalImpactDeep':
+      tone(rc, t, 28, 22, 0.55, gain * 1.20, 'sine');
+      tone(rc, t + 0.04, 56, 36, 0.35, gain * 0.65, 'sawtooth');
+      noiseLayer(rc, t + 0.10, 0.85, 320, 1800, gain * 0.50, 'bandpass', 0.55);
+      break;
+    case 'goalStingerModern':
+      tone(rc, t, 36, 28, 0.42, gain * 1.10, 'sine');
+      tone(rc, t + 0.10, 220, 660, 0.55, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.30, 660, 1320, 0.85, gain * 0.45, 'triangle');
+      noiseLayer(rc, t, 1.30, 240, 5200, gain * 0.32, 'highpass', 0.7);
+      break;
+    case 'agentRing':
+      // Two short rings then a pause-style cue
+      [0, 0.40, 0.85].forEach(d => {
+        tone(rc, t + d, 540, 540, 0.10, gain * 0.45, 'sine');
+        tone(rc, t + d + 0.10, 660, 660, 0.10, gain * 0.45, 'sine');
+      });
+      break;
+    case 'dealAdvancing':
+      tone(rc, t,         260, 360, 0.18, gain * 0.50, 'triangle');
+      tone(rc, t + 0.22, 360, 480, 0.20, gain * 0.50, 'triangle');
+      tone(rc, t + 0.44, 480, 660, 0.30, gain * 0.50, 'triangle');
+      break;
+    case 'sourceBlip':
+      tone(rc, t, 880, 1100, 0.10, gain * 0.50, 'sine');
+      break;
+    case 'negotiationTick':
+      tone(rc, t,         620, 620, 0.04, gain * 0.40, 'square');
+      tone(rc, t + 0.30, 620, 620, 0.04, gain * 0.40, 'square');
+      tone(rc, t + 0.60, 720, 720, 0.04, gain * 0.40, 'square');
+      break;
+    case 'investigationPulse':
+      // slow tense triple with sub-bass
+      tone(rc, t,        45, 32, 0.45, gain * 0.85, 'sine');
+      tone(rc, t + 0.55, 45, 32, 0.40, gain * 0.75, 'sine');
+      tone(rc, t + 1.10, 45, 32, 0.40, gain * 0.65, 'sine');
+      break;
+    case 'sourceReveal':
+      tone(rc, t,         440,  440, 0.20, gain * 0.55, 'sine');
+      tone(rc, t + 0.22, 660,  660, 0.20, gain * 0.55, 'sine');
+      tone(rc, t + 0.44, 880, 1100, 0.40, gain * 0.55, 'sine');
+      break;
+    case 'seriousLowBoom':
+      tone(rc, t, 28, 20, 0.95, gain * 1.20, 'sine');
+      tone(rc, t + 0.04, 56, 38, 0.55, gain * 0.55, 'sawtooth');
+      noiseLayer(rc, t + 0.20, 1.20, 320, 1200, gain * 0.30, 'bandpass', 0.6);
+      break;
+    case 'timelineStep':
+      tone(rc, t, 980, 980, 0.06, gain * 0.45, 'square');
+      break;
+    case 'storyTransition':
+      tone(rc, t, 220, 660, dur, gain * 0.45, 'triangle');
+      noiseLayer(rc, t + dur * 0.5, dur * 0.5, 1200, 320, gain * 0.20, 'lowpass', 0.7);
+      break;
+    case 'cinematicPause':
+      tone(rc, t, 38, 32, dur, gain * 0.55, 'sine');
+      noiseLayer(rc, t, dur, 320, 880, gain * 0.18, 'lowpass', 0.5);
+      break;
+    case 'liveUpdatePing':
+      tone(rc, t,         880,  880, 0.10, gain * 0.55, 'sine');
+      tone(rc, t + 0.12, 1100, 1100, 0.14, gain * 0.50, 'sine');
+      break;
+    case 'urgentPulse':
+      [0, 0.18, 0.36].forEach(d => {
+        tone(rc, t + d, 880, 880, 0.07, gain * 0.55, 'square');
+      });
+      break;
+    case 'importantSoft':
+      tone(rc, t,         660,  660, 0.18, gain * 0.45, 'sine');
+      tone(rc, t + 0.20, 1100, 1100, 0.30, gain * 0.40, 'sine');
+      break;
+    case 'matchdayOpening':
+      // Big stadium opener — cinematic rise + horn-like brass
+      tone(rc, t, 50, 110, 1.40, gain * 0.55, 'sawtooth');
+      tone(rc, t + 0.30, 220, 660, 1.30, gain * 0.45, 'sawtooth');
+      tone(rc, t + 0.60, 660, 1320, 1.00, gain * 0.40, 'triangle');
+      noiseLayer(rc, t, 2.20, 220, 5200, gain * 0.30, 'highpass', 0.6);
+      break;
+    case 'xRayScan':
+      noiseLayer(rc, t, dur, 5200, 1200, gain * 0.55, 'highpass', 0.7);
+      tone(rc, t, 1320, 880, dur, gain * 0.30, 'sine');
+      break;
+    case 'medicalScan':
+      // Clean clinical pings
+      [0, 0.30, 0.60, 0.90].forEach((d, i) => {
+        const f = 880 + i * 220;
+        tone(rc, t + d, f, f, 0.10, gain * 0.45, 'sine');
+      });
+      break;
+  }
+};
+
+// Render a full library recipe through a per-cue bus on the chosen channel.
+const renderRecipe = (recipe: CueRecipe, options: PlayCueOptions): boolean => {
+  const graph = getGraph();
+  if (!graph) return false;
+  const ctx = graph.context;
+  const channel = options.channel || 'overlay';
+  if (channel === 'preview') stopPreviewChannel();
+
+  const now = ctx.currentTime + 0.02;
+  const cueVolume = clampVolume(options.volume ?? 1) * recipe.volume;
+
+  // Per-cue bus → low shelf warmth + presence + plate reverb (gentle)
+  const bus = ctx.createGain();
+  bus.gain.setValueAtTime(HELPER_EPSILON, now);
+  bus.gain.exponentialRampToValueAtTime(Math.max(0.001, cueVolume), now + 0.02);
+  // Recipe-driven natural fadeout at end
+  bus.gain.setValueAtTime(Math.max(0.001, cueVolume) * 0.95, now + recipe.duration * 0.85);
+  bus.gain.exponentialRampToValueAtTime(0.001, now + recipe.duration + 0.10);
+
+  const lowShelf = ctx.createBiquadFilter();
+  lowShelf.type = 'lowshelf';
+  lowShelf.frequency.value = 220;
+  lowShelf.gain.value = 3;
+
+  const presence = ctx.createBiquadFilter();
+  presence.type = 'peaking';
+  presence.frequency.value = 2400;
+  presence.Q.value = 1.0;
+  presence.gain.value = 2.5;
+
+  bus.connect(lowShelf);
+  lowShelf.connect(presence);
+  presence.connect(graph.masterGain);
+
+  // Gentle plate reverb send (recipe controls the amount, capped at 0.25)
+  const reverbAmt = Math.max(0, Math.min(0.25, recipe.reverb));
+  if (reverbAmt > 0 && reverbBuffer) {
+    const conv = ctx.createConvolver();
+    conv.buffer = reverbBuffer;
+    const send = ctx.createGain();
+    send.gain.value = reverbAmt;
+    presence.connect(send);
+    send.connect(conv);
+    conv.connect(graph.masterGain);
+  }
+
+  for (const layer of recipe.layers) {
+    renderHelper(
+      { ctx, bus, channel },
+      layer.helper,
+      now + layer.at,
+      layer.freq ?? 0,
+      layer.dur ?? Math.max(0.10, recipe.duration - layer.at),
+      layer.gain ?? 1,
+    );
+  }
+
+  markCueActive(recipe.key, Math.max(800, Math.floor(recipe.duration * 1000)));
+  return true;
+};
+
+/** Public: render a sound from the new library on a chosen channel. */
+export const playFromLibrary = (key: string, options: PlayCueOptions = {}): boolean => {
+  const recipe = getRecipe(key);
+  if (!recipe) return false;
+  return renderRecipe(recipe, options);
+};
+
 export const playCue = async (cue: SoundCue, options: PlayCueOptions = {}) => {
   if (!cue) return false;
   const normalizedCue = String(cue);
@@ -1177,6 +1709,11 @@ export const playCue = async (cue: SoundCue, options: PlayCueOptions = {}) => {
       await audioGraph.context.resume();
     }
 
+    // 1. Try the new library first — its keys never clash with old ones.
+    if (isLibraryCue(normalizedCue)) {
+      return renderRecipe(getRecipe(normalizedCue)!, options);
+    }
+
     if (!options.forceSynth && options.allowFile !== false) {
       const playedFile = await playFileCue(normalizedCue, options);
       if (playedFile) return true;
@@ -1187,6 +1724,23 @@ export const playCue = async (cue: SoundCue, options: PlayCueOptions = {}) => {
     return false;
   }
 };
+
+// ─── Public, named helpers (per user request) ──────────────────────────────
+// Thin wrappers around the library so any caller can pick a category-typical
+// recipe by short name without thinking about keys. Each helper is the
+// canonical example of its category.
+const wrap = (key: string) => (volume = 0.85, channel: 'preview' | 'overlay' | 'voice' = 'overlay') =>
+  playFromLibrary(key, { volume, channel });
+
+export const playSubImpact         = wrap('GOAL_IMPACT_DEEP');
+export const playGlassReveal       = wrap('TARGET_REVEAL_GLASS');
+export const playNewsTicker        = wrap('NEWS_TICKER_CLEAN');
+export const playStadiumBed        = wrap('STADIUM_RISE_REALISTIC');
+export const playRadarSweep        = wrap('MERCATO_RADAR_SCAN');
+export const playOfficialStamp     = wrap('OFFICIAL_STAMP_DEEP');
+export const playTacticalSwipe     = wrap('TACTICAL_BOARD_SWIPE');
+export const playCleanUiClick      = wrap('PRECISION_CLICK');
+export const playDocumentaryPulse  = wrap('CINEMATIC_PULSE');
 
 export const playUISound = async (cue: 'UI_CLICK' | 'UI_SUCCESS' | 'UI_ERROR' | 'UI_NOTIFICATION' | 'UI_TOGGLE_ON' | 'UI_TOGGLE_OFF', volume = 0.35) => {
   return playCue(cue, { volume, forceSynth: true });

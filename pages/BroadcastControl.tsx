@@ -146,13 +146,21 @@ const BroadcastControl: React.FC = () => {
 
         {/* Sound Preview Grid — Per-Cue FX */}
         <div className="space-y-8">
-          {(['news', 'mercato', 'studio'] as const).map(cat => {
+          {(['featured', 'news', 'football', 'mercato', 'tactical', 'report', 'lowerthird', 'cinematic', 'experimental', 'legacy'] as const).map(cat => {
             const catLabel =
-              cat === 'news'   ? '🚨 أصوات الأخبار' :
-              cat === 'mercato' ? '⚡ أصوات الميركاتو' :
-              '🎙️ أصوات الاستوديو';
-            const CatIcon = cat === 'news' ? Radio : cat === 'mercato' ? Music : Play;
+              cat === 'featured'     ? '⭐ Featured — موصى به' :
+              cat === 'news'         ? '🚨 News & Breaking — أخبار' :
+              cat === 'football'     ? '⚽ Football Match — مباراة' :
+              cat === 'mercato'      ? '⚡ Mercato / Transfers — انتقالات' :
+              cat === 'tactical'     ? '🎯 Tactical Analysis — تحليل تكتيكي' :
+              cat === 'report'       ? '🎬 Reports & Documentary — تقارير' :
+              cat === 'lowerthird'   ? '🪧 Lower Thirds & UI — أشرطة سفلية' :
+              cat === 'cinematic'    ? '🎞️ Cinematic Transitions — انتقالات سينمائية' :
+              cat === 'experimental' ? '🧪 Experimental — تجريبي' :
+              '📦 Legacy — أصوات قديمة (محفوظة)';
+            const CatIcon = (cat === 'featured' || cat === 'news') ? Radio : cat === 'mercato' ? Music : Play;
             const cues = PREVIEWABLE_CUES.filter(c => c.category === cat);
+            if (cues.length === 0) return null;
             return (
               <div key={cat}>
                 <h3 className="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
@@ -172,7 +180,7 @@ const BroadcastControl: React.FC = () => {
                             disabled={!canEditAudio}
                             onClick={async () => {
                               setPlayingCue(cue.value);
-                              await playCue(cue.value, { volume: masterVol, forceSynth: true });
+                              await playCue(cue.value, { volume: masterVol, forceSynth: true, channel: 'preview' });
                               setTimeout(() => setPlayingCue(null), 1200);
                             }}
                             className={`flex items-center gap-2 flex-1 rounded-lg border px-3 py-2 text-xs font-bold transition-all disabled:opacity-30 ${
