@@ -1863,7 +1863,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   className="w-full bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-400 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2"
                 >
                     <Sparkles className="w-3.5 h-3.5" />
-                    {isProcessingAI ? '' : ''}
+                    {isProcessingAI ? 'جاري التوليد...' : 'توليد بيانات المباراة'}
                 </button>
                 {aiError && <div className="text-[11px] text-red-400 text-center">. GEMINI_API_KEY .</div>}
             </div>
@@ -1883,7 +1883,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   value={aiBoxInput}
                   onChange={(event) => setAiBoxInput(event.target.value)}
                   rows={3}
-                  placeholder="              ..."
+                  placeholder="اكتب نص الخبر أو اسم اللاعب أو فكرة القالب..."
                   className="w-full resize-y rounded-lg border border-cyan-800/45 bg-slate-950/70 px-3 py-2 text-xs leading-5 text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400"
                 />
                 <div className="grid grid-cols-3 gap-2">
@@ -1893,7 +1893,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-cyan-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-cyan-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                       
+                      تلقائي
                     </button>
                     <button
                       type="button"
@@ -1901,7 +1901,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-rose-600 px-2 py-2 text-[10px] font-black text-white transition-colors hover:bg-rose-500 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                       / 
+                      لاعب / ميركاتو
                     </button>
                     <button
                       type="button"
@@ -1909,7 +1909,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isProcessingAI}
                       className="rounded-lg bg-slate-800 px-2 py-2 text-[10px] font-black text-slate-100 transition-colors hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400"
                     >
-                       
+                      أخبار
                     </button>
                 </div>
                 {aiBoxMessage && (
