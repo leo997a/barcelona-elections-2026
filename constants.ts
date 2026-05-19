@@ -2249,6 +2249,27 @@ const BREAKING_HERE_WE_GO_TEMPLATES: OverlayConfig[] = [
 ];
 
 // ─── 5 Innovative Mercato Templates ─────────────────────────────────────────
+
+// Shared audio fields injected into every mercato innovative template so
+// editors get one consistent UX. Profile-driven workflow: pick a profile
+// and the cues are auto-selected. Editors can still override anything.
+const mercatoAudioFields = (defaultProfile: string): OverlayField[] => [
+  { id: 'audioProfile', label: '🎚️ Audio Profile', type: 'select', value: defaultProfile, options: [
+    { value: 'fabrizioBreaking', label: '🎙️ Fabrizio Breaking — Here we go' },
+    { value: 'arabicBreaking',   label: '⚡ Arabic Breaking — الأمور تحدث' },
+    { value: 'officialClub',     label: '🏛️ Official Club — رسمياً' },
+    { value: 'deadlineDrama',    label: '⏳ Deadline Drama — الليلة قد تُحسم الصفقة' },
+    { value: 'sourceExclusive',  label: '🤐 Source Exclusive — مصدر خاص' },
+    { value: 'dealHeating',      label: '🔥 Deal Heating — الصفقة تشتعل' },
+    { value: 'analysisLab',      label: '🔬 Analysis Lab — فحص فني للاعب' },
+  ] },
+  { id: 'signaturePhrase', label: '🗣️ Signature Phrase (نص العبارة)', type: 'text', value: '' },
+  { id: 'customVoiceUrl',  label: '📁 رابط ملف صوتي (mp3/wav) — أعلى أولوية للجودة', type: 'text', value: '' },
+  { id: 'audioIntensity',  label: '⚡ Intensity — قوة المؤثر', type: 'range', value: 1.0, min: 0.3, max: 1.4, step: 0.05 },
+  { id: 'enableVoice',     label: '🎤 تفعيل الصوت المنطوق', type: 'boolean', value: true },
+  { id: 'enableSfx',       label: '🔊 تفعيل المؤثرات الصوتية', type: 'boolean', value: true },
+];
+
 const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
   // ── 1. AGENT CALL ──────────────────────────────────────────────────────────
   {
@@ -2293,6 +2314,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
       { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
       { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+      ...mercatoAudioFields('fabrizioBreaking'),
       ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', 'AGENT_CALL', 'LUXURY_OUT'),
     ],
   },
@@ -2334,6 +2356,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
       { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
       { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+      ...mercatoAudioFields('arabicBreaking'),
       ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', 'TARGET_REVEAL', 'LUXURY_OUT'),
     ],
   },
@@ -2373,6 +2396,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
       { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
       { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+      ...mercatoAudioFields('officialClub'),
       ...broadcastMotionPreset('DATA_RUSH', 'DATA_RUSH_OUT', 'CASH_REGISTER', 'BROADCAST_OUT'),
     ],
   },
@@ -2411,6 +2435,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
       { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
       { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+      ...mercatoAudioFields('deadlineDrama'),
       ...broadcastMotionPreset('SPOTLIGHT_POP', 'SPOTLIGHT_POP_OUT', 'DEADLINE_ALARM', 'BROADCAST_OUT'),
     ],
   },
@@ -2462,6 +2487,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
       { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
       { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+      ...mercatoAudioFields('analysisLab'),
       ...broadcastMotionPreset('VERTICAL_REVEAL', 'VERTICAL_REVEAL_OUT', 'TARGET_SCAN', 'BROADCAST_OUT'),
     ],
   },

@@ -69,6 +69,8 @@ type PlayCueOptions = {
 type AudioGraph = {
   context: AudioContext;
   masterGain: GainNode;
+  /** Overlay-channel duck gain. Set <1 while voice plays. Default 1. */
+  overlayDuck: GainNode;
   compressor: DynamicsCompressorNode;
   limiter: DynamicsCompressorNode;
 };
@@ -280,6 +282,8 @@ const getGraph = (): AudioGraph | null => {
   if (!graph || graph.context.state === 'closed') {
     const context = new AudioContextCtor();
     const masterGain = context.createGain();
+    const overlayDuck = context.createGain();
+    overlayDuck.gain.value = 1.0;
     const compressor = context.createDynamicsCompressor();
 
     // Safety Limiter: brick-wall at -1 dB to prevent clipping
@@ -297,11 +301,12 @@ const getGraph = (): AudioGraph | null => {
     compressor.attack.value = 0.002;
     compressor.release.value = 0.18;
 
-    // Chain: masterGain → compressor → limiter → destination
+    // Chain: overlayDuck → masterGain → compressor → limiter → destination
+    overlayDuck.connect(masterGain);
     masterGain.connect(compressor);
     compressor.connect(limiter);
     limiter.connect(context.destination);
-    graph = { context, masterGain, compressor, limiter };
+    graph = { context, masterGain, overlayDuck, compressor, limiter };
 
     // Generate impulse-response buffer for reverb
     const irLen = Math.floor(context.sampleRate * 1.4);
@@ -327,6 +332,30 @@ export const setMasterVolume = (volume: number) => {
 };
 
 export const getMasterVolume = () => masterVolume;
+
+/**
+ * Duck the overlay channel multiplier. Used by mercatoAudioEngine to
+ * lower SFX volume while a spoken voice plays so the words stay clear.
+ *
+ *  setOverlayDuckGain(0.65, 120)  → fade overlay SFX to 65% over 120ms
+ *  setOverlayDuckGain(1.0,  300)  → restore to 100% over 300ms
+ *
+ * Preview channel and voice channel are NOT affected by this — they
+ * bypass overlayDuck and go straight to masterGain.
+ */
+export const setOverlayDuckGain = (level: number, fadeMs = 200) => {
+  if (!graph) {
+    // Initialize graph lazily so calls before unlock still work.
+    getGraph();
+    if (!graph) return;
+  }
+  const clamped = Math.max(0, Math.min(1, level));
+  const t = graph.context.currentTime;
+  try {
+    graph.overlayDuck.gain.cancelScheduledValues(t);
+    graph.overlayDuck.gain.setTargetAtTime(clamped, t, Math.max(0.01, fadeMs / 3000));
+  } catch { /* noop */ }
+};
 
 export const unlockAudio = async () => {
   if (unlockPromise) return unlockPromise;
@@ -1659,7 +1688,10 @@ const renderRecipe = (recipe: CueRecipe, options: PlayCueOptions): boolean => {
 
   bus.connect(lowShelf);
   lowShelf.connect(presence);
-  presence.connect(graph.masterGain);
+  // overlay channel routes through overlayDuck so mercato voice can duck SFX.
+  // preview / voice channels bypass duck and go straight to masterGain.
+  const sink = channel === 'overlay' ? graph.overlayDuck : graph.masterGain;
+  presence.connect(sink);
 
   // Gentle plate reverb send (recipe controls the amount, capped at 0.25)
   const reverbAmt = Math.max(0, Math.min(0.25, recipe.reverb));
@@ -1670,7 +1702,7 @@ const renderRecipe = (recipe: CueRecipe, options: PlayCueOptions): boolean => {
     send.gain.value = reverbAmt;
     presence.connect(send);
     send.connect(conv);
-    conv.connect(graph.masterGain);
+    conv.connect(sink);
   }
 
   for (const layer of recipe.layers) {
