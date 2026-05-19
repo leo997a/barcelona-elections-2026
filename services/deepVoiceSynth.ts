@@ -236,6 +236,27 @@ const tryFetch = async (url: string, signal?: AbortSignal): Promise<ArrayBuffer 
   }
 };
 
+// Map a voice id from Microsoft Edge naming to the closest StreamElements
+// voice. Used as a graceful fallback because /api/tts is intentionally not
+// deployed (Vercel Hobby plan has a 12 serverless function limit).
+const mapEdgeVoiceToStreamElements = (edgeVoiceId: string): string => {
+  const id = edgeVoiceId.toLowerCase();
+  if (id.startsWith('ar-')) {
+    if (id.includes('female') || id.includes('zariyah') || id.includes('salma') || id.includes('fatima')) return 'Hoda';
+    return 'Naayf';
+  }
+  if (id.startsWith('en-gb')) return 'Brian';
+  if (id.startsWith('en-au')) return 'Russell';
+  if (id.includes('female') || id.includes('aria')) return 'Salli';
+  if (id.startsWith('en-')) return 'Joey';
+  if (id.startsWith('es-')) return 'Enrique';
+  if (id.startsWith('fr-')) return 'Mathieu';
+  if (id.startsWith('it-')) return 'Bruno';
+  if (id.startsWith('pt-')) return 'Cristiano';
+  if (id.startsWith('de-')) return 'Hans';
+  return 'Brian';
+};
+
 const fetchVoiceMp3 = async (
   text: string,
   voice: VoicePreset,
@@ -248,8 +269,10 @@ const fetchVoiceMp3 = async (
   let buf: ArrayBuffer | null = null;
 
   if (voice.provider === 'microsoftEdge') {
-    // Calls our own /api/tts proxy (server-side calls Microsoft Edge TTS)
-    const url = `/api/tts?voice=${encodeURIComponent(voice.id)}&text=${encodeURIComponent(text)}`;
+    // The /api/tts proxy is intentionally not deployed because Vercel Hobby
+    // is capped at 12 serverless functions. Auto-route to StreamElements.
+    const seVoice = mapEdgeVoiceToStreamElements(voice.id);
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(seVoice)}&text=${encodeURIComponent(text)}`;
     buf = await tryFetch(url, signal);
   } else if (voice.provider === 'streamElements') {
     const url = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice.id)}&text=${encodeURIComponent(text)}`;
@@ -261,10 +284,20 @@ const fetchVoiceMp3 = async (
       buf = await tryFetch(url, signal);
     }
   } else if (voice.provider === 'customUrl') {
-    // voice.id stores the URL (text param ignored — file is fixed)
+    // customUrl is the highest-priority option — voice.id stores the full URL
     if (voice.id && voice.id !== 'CUSTOM_URL') {
       buf = await tryFetch(voice.id, signal);
     }
+  }
+
+  // Final safety net: if nothing came back, try StreamElements with a
+  // language-appropriate fallback voice. This is only reached if the
+  // primary provider failed (network, CORS, blocked, etc.). Never replaces
+  // the primary; only steps in when it has actually failed.
+  if (!buf && voice.provider !== 'streamElements') {
+    const fbVoice = voice.lang === 'arabic' ? 'Naayf' : 'Brian';
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(fbVoice)}&text=${encodeURIComponent(text)}`;
+    buf = await tryFetch(url, signal);
   }
 
   if (buf) mp3Cache.set(cacheKey, buf);
@@ -437,8 +470,8 @@ const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
-const DEFAULT_PRIMARY: VoiceLane   = { provider: 'microsoftEdge', voiceId: 'en-US-GuyNeural' };
-const DEFAULT_SECONDARY: VoiceLane = { provider: 'microsoftEdge', voiceId: 'ar-SA-HamedNeural' };
+const DEFAULT_PRIMARY: VoiceLane   = { provider: 'streamElements', voiceId: 'Brian' };
+const DEFAULT_SECONDARY: VoiceLane = { provider: 'streamElements', voiceId: 'Naayf' };
 
 const resolveLaneVoice = (lane: VoiceLane | undefined, fallback: VoiceLane, langHint: 'arabic' | 'latin'): VoicePreset => {
   const id = (lane?.voiceId || fallback.voiceId).trim();

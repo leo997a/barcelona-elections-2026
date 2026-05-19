@@ -2150,7 +2150,7 @@ const buildBreakingHereWeGoTemplate = (
     // Intro sequence
     { id: 'introDuration', label: 'مدة المقدمة الدرامية (ms)', type: 'range', value: 2200, min: 1000, max: 4500, step: 100 },
 
-    // ─── Pro Broadcast Voice (Microsoft Edge Neural via /api/tts) ─────────
+    // ─── Pro Broadcast Voice (StreamElements TTS — runs from the browser, no proxy needed) ─
     { id: 'voiceEnabled', label: 'تفعيل الصوت الاحترافي', type: 'boolean', value: true },
     { id: 'voiceMode', label: 'نمط الصوت', type: 'select', value: 'BROADCAST', options: [
       { value: 'BROADCAST',    label: '🎙️ Broadcast — صوت بشري حقيقي + Stinger (موصى به)' },
@@ -2159,48 +2159,45 @@ const buildBreakingHereWeGoTemplate = (
     { id: 'voiceText', label: 'النص المنطوق (يدعم العربي + الإنجليزي معاً)', type: 'text', value: 'Here we go' },
 
     // Primary lane — English / Latin scripts
-    { id: 'primaryProvider', label: '🎤 الصوت الأساسي — المصدر (للإنجليزي واللغات اللاتينية)', type: 'select', value: 'microsoftEdge', options: [
-      { value: 'microsoftEdge',    label: '🎯 Microsoft Edge Neural (الأفضل، مجاني)' },
-      { value: 'streamElements',   label: '🌐 StreamElements (احتياطي)' },
-      { value: 'googleTranslate',  label: '🌐 Google Translate TTS (احتياطي)' },
+    { id: 'primaryProvider', label: '🎤 الصوت الأساسي — المصدر (للإنجليزي واللغات اللاتينية)', type: 'select', value: 'streamElements', options: [
+      { value: 'streamElements',   label: '🌐 StreamElements (الافتراضي، يعمل مباشرة)' },
       { value: 'customUrl',        label: '📁 رابط MP3 مخصص (الجودة القصوى)' },
+      { value: 'googleTranslate',  label: '🌐 Google Translate TTS (احتياطي)' },
+      { value: 'microsoftEdge',    label: '🎯 Microsoft Edge Neural — (يحتاج /api/tts، يستخدم StreamElements تلقائياً حالياً)' },
     ] },
-    { id: 'primaryVoiceId', label: 'صوت الأساسي', type: 'select', value: 'en-US-GuyNeural', options: [
-      // Microsoft Edge Neural — English
-      { value: 'en-US-GuyNeural',     label: '🇺🇸 Guy — أمريكي رجالي عميق احترافي (موصى به)' },
-      { value: 'en-US-DavisNeural',   label: '🇺🇸 Davis — مذيع أمريكي رسمي' },
-      { value: 'en-US-TonyNeural',    label: '🇺🇸 Tony — أمريكي حيوي للأخبار العاجلة' },
-      { value: 'en-US-AriaNeural',    label: '🇺🇸 Aria — نسائي أمريكي للأخبار' },
-      { value: 'en-GB-RyanNeural',    label: '🇬🇧 Ryan — بريطاني رجالي فخم' },
-      // StreamElements
-      { value: 'Brian',               label: '🇬🇧 Brian (StreamElements)' },
-      { value: 'Joey',                label: '🇺🇸 Joey (StreamElements)' },
-      // Google Translate
-      { value: 'gt-en',               label: '🇺🇸 Google Translate (English)' },
-      // Other languages
-      { value: 'es-ES-AlvaroNeural',  label: '🇪🇸 Álvaro — إسباني' },
-      { value: 'fr-FR-HenriNeural',   label: '🇫🇷 Henri — فرنسي' },
-      { value: 'it-IT-DiegoNeural',   label: '🇮🇹 Diego — إيطالي' },
-      { value: 'pt-BR-AntonioNeural', label: '🇧🇷 António — برتغالي' },
+    { id: 'primaryVoiceId', label: 'صوت الأساسي', type: 'select', value: 'Brian', options: [
+      // StreamElements (these actually work in production today)
+      { value: 'Brian',   label: '🇬🇧 Brian — بريطاني عميق (موصى به)' },
+      { value: 'Joey',    label: '🇺🇸 Joey — أمريكي للإعلانات' },
+      { value: 'Matthew', label: '🇺🇸 Matthew — أمريكي رسمي' },
+      { value: 'Russell', label: '🇦🇺 Russell — أسترالي حازم' },
+      { value: 'Salli',   label: '🇺🇸 Salli — نسائي أمريكي' },
+      { value: 'Amy',     label: '🇬🇧 Amy — نسائي بريطاني' },
+      { value: 'Enrique', label: '🇪🇸 Enrique — إسباني رجالي' },
+      { value: 'Mathieu', label: '🇫🇷 Mathieu — فرنسي رجالي' },
+      { value: 'gt-en',   label: '🌐 Google Translate (English)' },
+      // Microsoft Edge entries — currently routed via StreamElements automatically
+      { value: 'en-US-GuyNeural',     label: '🎯 Guy (Edge) — يستخدم Joey حالياً' },
+      { value: 'en-US-DavisNeural',   label: '🎯 Davis (Edge) — يستخدم Joey حالياً' },
+      { value: 'en-GB-RyanNeural',    label: '🎯 Ryan (Edge) — يستخدم Brian حالياً' },
     ] },
     { id: 'primaryCustomUrl', label: 'رابط MP3 مخصص للأساسي (إن اخترت "رابط MP3 مخصص")', type: 'text', value: '' },
 
     // Secondary lane — Arabic
-    { id: 'secondaryProvider', label: '🎤 الصوت الثانوي — المصدر (للعربية فقط)', type: 'select', value: 'microsoftEdge', options: [
-      { value: 'microsoftEdge',    label: '🎯 Microsoft Edge Neural (الأفضل للعربي، مجاني)' },
-      { value: 'streamElements',   label: '🌐 StreamElements (احتياطي)' },
-      { value: 'googleTranslate',  label: '🌐 Google Translate TTS (احتياطي)' },
+    { id: 'secondaryProvider', label: '🎤 الصوت الثانوي — المصدر (للعربية فقط)', type: 'select', value: 'streamElements', options: [
+      { value: 'streamElements',   label: '🌐 StreamElements (الافتراضي، يعمل مباشرة)' },
       { value: 'customUrl',        label: '📁 رابط MP3 مخصص (الجودة القصوى)' },
+      { value: 'googleTranslate',  label: '🌐 Google Translate TTS (احتياطي)' },
+      { value: 'microsoftEdge',    label: '🎯 Microsoft Edge Neural — (يحتاج /api/tts، يستخدم StreamElements تلقائياً حالياً)' },
     ] },
-    { id: 'secondaryVoiceId', label: 'صوت الثانوي (عربي)', type: 'select', value: 'ar-SA-HamedNeural', options: [
-      { value: 'ar-SA-HamedNeural',   label: '🇸🇦 حامد — سعودي فصيح ضخم (موصى به)' },
-      { value: 'ar-EG-ShakirNeural',  label: '🇪🇬 شاكر — مصري احترافي' },
-      { value: 'ar-SA-ZariyahNeural', label: '🇸🇦 زاريا — سعودي نسائي فصيح' },
-      { value: 'ar-EG-SalmaNeural',   label: '🇪🇬 سلمى — مصري نسائي' },
-      { value: 'ar-AE-HamdanNeural',  label: '🇦🇪 حمدان — إماراتي رجالي' },
-      { value: 'ar-AE-FatimaNeural',  label: '🇦🇪 فاطمة — إماراتي نسائي' },
-      { value: 'Naayf',               label: '🌐 Naayf (StreamElements — احتياطي)' },
-      { value: 'gt-ar',               label: '🌐 Google Translate (عربي — احتياطي)' },
+    { id: 'secondaryVoiceId', label: 'صوت الثانوي (عربي)', type: 'select', value: 'Naayf', options: [
+      { value: 'Naayf',  label: '🇸🇦 Naayf — عربي رجالي طبيعي (موصى به)' },
+      { value: 'Hoda',   label: '🇪🇬 Hoda — عربي نسائي مصري' },
+      { value: 'gt-ar',  label: '🌐 Google Translate (عربي)' },
+      // Microsoft Edge entries — currently routed via StreamElements automatically
+      { value: 'ar-SA-HamedNeural',   label: '🎯 حامد (Edge) — يستخدم Naayf حالياً' },
+      { value: 'ar-EG-ShakirNeural',  label: '🎯 شاكر (Edge) — يستخدم Naayf حالياً' },
+      { value: 'ar-SA-ZariyahNeural', label: '🎯 زاريا (Edge) — يستخدم Hoda حالياً' },
     ] },
     { id: 'secondaryCustomUrl', label: 'رابط MP3 مخصص للعربي (إن اخترت "رابط MP3 مخصص")', type: 'text', value: '' },
 
