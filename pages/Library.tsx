@@ -42,6 +42,11 @@ const ACCENT: Record<string, string> = {
   [OverlayType.BARCA_PREMIUM]:    '#EDBB00',
   [OverlayType.TRANSFER_TARGETS]: '#edb111',
   [OverlayType.BREAKING_HERE_WE_GO]: '#dc2626',
+  [OverlayType.MERCATO_AGENT_CALL]: '#ff4b3e',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: '#10b981',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: '#3b82f6',
+  [OverlayType.MERCATO_DEADLINE_DAY]: '#fbbf24',
+  [OverlayType.MERCATO_X_RAY]: '#a855f7',
 };
 
 const TYPE_FILTERS = [
@@ -54,6 +59,11 @@ const TYPE_FILTERS = [
   { id: OverlayType.TRANSFER_NEWS,   label: 'Transfers' },
   { id: OverlayType.TRANSFER_TARGETS,   label: 'أهداف الانتقالات' },
   { id: OverlayType.BREAKING_HERE_WE_GO, label: 'Here We Go' },
+  { id: OverlayType.MERCATO_AGENT_CALL,  label: 'مكالمة وكيل' },
+  { id: OverlayType.MERCATO_DEAL_TIMELINE, label: 'خط زمني صفقة' },
+  { id: OverlayType.MERCATO_BUDGET_TRACKER, label: 'ميزانية النادي' },
+  { id: OverlayType.MERCATO_DEADLINE_DAY, label: 'Deadline Day' },
+  { id: OverlayType.MERCATO_X_RAY,       label: 'X-Ray لاعب' },
   { id: OverlayType.BARCA_PREMIUM,   label: 'Barca' },
   { id: OverlayType.LOWER_THIRD,     label: 'أسماء' },
   { id: OverlayType.TICKER,          label: 'شريط أخبار' },

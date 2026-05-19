@@ -91,6 +91,56 @@ const THEME_STYLES: Record<string, ThemeStyle> = {
     pattern: 'none',
     introVariant: 'STUDIO',
   },
+  BLOOD_MOON: {
+    introBg: 'radial-gradient(circle at 50% 30%, #5a0808 0%, #1a0202 40%, #050000 75%, #000 100%)',
+    cardBg: 'linear-gradient(135deg, rgba(40,4,4,0.96) 0%, rgba(8,0,0,0.96) 100%)',
+    cardBorder: 'rgba(220,38,38,0.6)',
+    bodyBg: 'linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(40,4,4,0.85) 50%, rgba(0,0,0,0.95) 100%)',
+    textPrimary: '#ffe5e5',
+    textSecondary: 'rgba(255,180,180,0.7)',
+    pattern: 'glow',
+    introVariant: 'CINEMA',
+  },
+  STORM_WARNING: {
+    introBg: 'repeating-linear-gradient(45deg, #2a2200 0 24px, #000 24px 48px), radial-gradient(ellipse at center, #1a1500 0%, #000 60%)',
+    cardBg: 'linear-gradient(135deg, rgba(20,16,4,0.96) 0%, rgba(5,4,0,0.96) 100%)',
+    cardBorder: 'rgba(252,211,77,0.5)',
+    bodyBg: 'linear-gradient(180deg, rgba(0,0,0,0.94) 0%, rgba(28,22,4,0.88) 50%, rgba(0,0,0,0.94) 100%)',
+    textPrimary: '#fef3c7',
+    textSecondary: 'rgba(252,211,77,0.7)',
+    pattern: 'lines',
+    introVariant: 'BROADCAST',
+  },
+  BREAKING_GLASS: {
+    introBg: 'conic-gradient(from 220deg at 50% 50%, #001a30 0%, #002a4a 25%, #001020 50%, #003560 75%, #001a30 100%)',
+    cardBg: 'linear-gradient(135deg, rgba(8,18,32,0.96) 0%, rgba(2,6,12,0.96) 100%)',
+    cardBorder: 'rgba(96,165,250,0.45)',
+    bodyBg: 'linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(2,12,24,0.88) 50%, rgba(0,0,0,0.95) 100%)',
+    textPrimary: '#dbeafe',
+    textSecondary: 'rgba(147,197,253,0.65)',
+    pattern: 'noise',
+    introVariant: 'NEON',
+  },
+  CLASSIFIED: {
+    introBg: 'radial-gradient(ellipse at 50% 50%, #2a0000 0%, #0d0000 50%, #000 100%)',
+    cardBg: 'rgba(18,0,0,0.96)',
+    cardBorder: 'rgba(220,38,38,0.7)',
+    bodyBg: 'linear-gradient(180deg, rgba(0,0,0,0.96) 0%, rgba(18,0,0,0.9) 50%, rgba(0,0,0,0.96) 100%)',
+    textPrimary: '#ffffff',
+    textSecondary: 'rgba(255,200,200,0.65)',
+    pattern: 'lines',
+    introVariant: 'STUDIO',
+  },
+  GLOBAL_PULSE: {
+    introBg: 'radial-gradient(ellipse at 30% 20%, #002a4a 0%, transparent 40%), radial-gradient(ellipse at 70% 80%, #4a002a 0%, transparent 40%), #000',
+    cardBg: 'linear-gradient(135deg, rgba(4,12,24,0.94) 0%, rgba(24,4,18,0.94) 100%)',
+    cardBorder: 'rgba(56,189,248,0.4)',
+    bodyBg: 'linear-gradient(180deg, rgba(0,0,0,0.94) 0%, rgba(4,8,18,0.88) 50%, rgba(0,0,0,0.94) 100%)',
+    textPrimary: '#e0f2fe',
+    textSecondary: 'rgba(125,211,252,0.65)',
+    pattern: 'grid',
+    introVariant: 'BROADCAST',
+  },
 };
 
 const ThemePattern: React.FC<{ pattern: string; primary: string; accent: string }> = ({ pattern, primary, accent }) => {
@@ -162,14 +212,20 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
   const showTimestamp = getField('showTimestamp') !== false;
   const showStingerLayer = getField('showStingerLayer') !== false;
 
-  // Voice configuration
+  // Voice configuration — NEW v3 dual-lane system
   const voiceEnabled = getField('voiceEnabled') !== false;
   const voiceMode = String(getField('voiceMode') || 'BROADCAST');
-  const voiceId = String(getField('voiceId') || 'Brian');
   const voiceText = String(getField('voiceText') || 'Here we go');
-  const voiceLang = String(getField('voiceLang') || 'en-US');
   const voiceVolume = Number(getField('voiceVolume') ?? 0.95);
   const voicePitchShift = Number(getField('voicePitchShift') ?? 0);
+  // Primary lane (English / Latin)
+  const primaryProvider = String(getField('primaryProvider') || 'microsoftEdge');
+  const primaryVoiceId  = String(getField('primaryVoiceId')  || 'en-US-GuyNeural');
+  const primaryCustomUrl = String(getField('primaryCustomUrl') || '');
+  // Secondary lane (Arabic) — only used if text contains Arabic
+  const secondaryProvider = String(getField('secondaryProvider') || 'microsoftEdge');
+  const secondaryVoiceId  = String(getField('secondaryVoiceId')  || 'ar-SA-HamedNeural');
+  const secondaryCustomUrl = String(getField('secondaryCustomUrl') || '');
 
   const [phase, setPhase] = useState<'intro' | 'content'>('intro');
   const introDuration = Number(getField('introDuration') || 2200);
@@ -190,12 +246,19 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
     setPhase('intro');
 
     if (voiceEnabled && voiceText) {
-      // Slight delay so the visual entrance lines up with the audio downbeat
+      const primary = {
+        provider: primaryProvider as any,
+        voiceId: primaryProvider === 'customUrl' ? primaryCustomUrl : primaryVoiceId,
+      };
+      const secondary = {
+        provider: secondaryProvider as any,
+        voiceId: secondaryProvider === 'customUrl' ? secondaryCustomUrl : secondaryVoiceId,
+      };
       window.setTimeout(() => {
         playAnnouncement(voiceText, {
           mode: voiceMode as any,
-          voiceId,
-          lang: voiceLang,
+          primary,
+          secondary,
           volume: voiceVolume,
           pitchShift: voicePitchShift,
           noStinger: !showStingerLayer,
@@ -205,7 +268,12 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
 
     const t = window.setTimeout(() => setPhase('content'), Math.max(1000, introDuration));
     return () => window.clearTimeout(t);
-  }, [config.isVisible, isEditor, voiceEnabled, voiceText, voiceId, voiceLang, voiceMode, voiceVolume, voicePitchShift, introDuration, showStingerLayer]);
+  }, [
+    config.isVisible, isEditor, voiceEnabled, voiceText, voiceMode, voiceVolume, voicePitchShift,
+    primaryProvider, primaryVoiceId, primaryCustomUrl,
+    secondaryProvider, secondaryVoiceId, secondaryCustomUrl,
+    introDuration, showStingerLayer,
+  ]);
 
   return (
     <div style={containerStyle}>

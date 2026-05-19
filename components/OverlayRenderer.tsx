@@ -27,6 +27,13 @@ import { MatchStatsRenderer } from './renderers/MatchStatsRenderer';
 import { PlayerStatsRenderer } from './renderers/PlayerStatsRenderer';
 import { TransferTargetsRenderer } from './renderers/TransferTargetsRenderer';
 import { BreakingHereWeGoRenderer } from './renderers/BreakingHereWeGoRenderer';
+import {
+  MercatoAgentCallRenderer,
+  MercatoDealTimelineRenderer,
+  MercatoBudgetTrackerRenderer,
+  MercatoDeadlineDayRenderer,
+  MercatoXRayRenderer,
+} from './renderers/MercatoInnovativeRenderers';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -49,6 +56,11 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_STATS]: 'tv-stadium-sweep',
   [OverlayType.TRANSFER_TARGETS]: 'tv-slide-left',
   [OverlayType.BREAKING_HERE_WE_GO]: 'tv-zoom-flash',
+  [OverlayType.MERCATO_AGENT_CALL]: 'tv-slide-right',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'tv-stadium-sweep',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'tv-data-rush',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'tv-zoom-flash',
+  [OverlayType.MERCATO_X_RAY]: 'tv-vertical-reveal',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -71,6 +83,11 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_STATS]: 'tv-stadium-sweep-out',
   [OverlayType.TRANSFER_TARGETS]: 'tv-slide-left-out',
   [OverlayType.BREAKING_HERE_WE_GO]: 'tv-zoom-out',
+  [OverlayType.MERCATO_AGENT_CALL]: 'tv-slide-right-out',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'tv-stadium-sweep-out',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'tv-data-rush-out',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'tv-zoom-out',
+  [OverlayType.MERCATO_X_RAY]: 'tv-vertical-reveal-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -93,6 +110,11 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_STATS]: 'DATA_RUSH',
   [OverlayType.TRANSFER_TARGETS]: 'STADIUM_SWEEP',
   [OverlayType.BREAKING_HERE_WE_GO]: 'SPOTLIGHT_POP',
+  [OverlayType.MERCATO_AGENT_CALL]: 'STADIUM_SWEEP',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'STADIUM_SWEEP',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'DATA_RUSH',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'SPOTLIGHT_POP',
+  [OverlayType.MERCATO_X_RAY]: 'VERTICAL_REVEAL',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -115,6 +137,11 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_STATS]: 'DATA_RUSH_OUT',
   [OverlayType.TRANSFER_TARGETS]: 'STADIUM_SWEEP_OUT',
   [OverlayType.BREAKING_HERE_WE_GO]: 'SPOTLIGHT_POP_OUT',
+  [OverlayType.MERCATO_AGENT_CALL]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'DATA_RUSH_OUT',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'SPOTLIGHT_POP_OUT',
+  [OverlayType.MERCATO_X_RAY]: 'VERTICAL_REVEAL_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -161,6 +188,11 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'LUXURY_SWEEP',
   [OverlayType.TRANSFER_TARGETS]: 'TARGET_REVEAL',
   [OverlayType.BREAKING_HERE_WE_GO]: 'BREAKING_RISER',
+  [OverlayType.MERCATO_AGENT_CALL]: 'AGENT_CALL',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'TARGET_REVEAL',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'CASH_REGISTER',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'DEADLINE_ALARM',
+  [OverlayType.MERCATO_X_RAY]: 'TARGET_SCAN',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -186,6 +218,11 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'LUXURY_OUT',
   [OverlayType.TRANSFER_TARGETS]: 'LUXURY_OUT',
   [OverlayType.BREAKING_HERE_WE_GO]: 'BROADCAST_OUT',
+  [OverlayType.MERCATO_AGENT_CALL]: 'LUXURY_OUT',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'LUXURY_OUT',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'BROADCAST_OUT',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'BROADCAST_OUT',
+  [OverlayType.MERCATO_X_RAY]: 'BROADCAST_OUT',
 };
 
 const CSS = `
@@ -447,6 +484,11 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.UCL_DRAW && <UclDrawRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.TRANSFER_TARGETS && <TransferTargetsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.BREAKING_HERE_WE_GO && <BreakingHereWeGoRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_AGENT_CALL && <MercatoAgentCallRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_DEAL_TIMELINE && <MercatoDealTimelineRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_BUDGET_TRACKER && <MercatoBudgetTrackerRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_DEADLINE_DAY && <MercatoDeadlineDayRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_X_RAY && <MercatoXRayRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
                           key={activeSlot}

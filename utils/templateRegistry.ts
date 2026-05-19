@@ -122,6 +122,31 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#dc2626',
     description: 'خبر عاجل/رسمي/مهم يبدأ بمقدمة صوتية درامية "Here We Go" ثم تظهر بطاقة الخبر بصورة وعنوان وتفاصيل.',
   },
+  [OverlayType.MERCATO_AGENT_CALL]: {
+    icon: '📞',
+    accent: '#ff4b3e',
+    description: 'محاكاة مكالمة وكيل لاعبين على الهواء — chat bubbles + waveform + بطاقة صفقة جانبية.',
+  },
+  [OverlayType.MERCATO_DEAL_TIMELINE]: {
+    icon: '⏱️',
+    accent: '#10b981',
+    description: 'خط زمني للصفقة — من أول تواصل إلى التوقيع، مع نسبة تقدم لكل مرحلة.',
+  },
+  [OverlayType.MERCATO_BUDGET_TRACKER]: {
+    icon: '💰',
+    accent: '#3b82f6',
+    description: 'متتبع ميزانية النادي — صفقات واردة وصادرة + رصيد متبقٍ + بار النسبة.',
+  },
+  [OverlayType.MERCATO_DEADLINE_DAY]: {
+    icon: '⏳',
+    accent: '#fbbf24',
+    description: 'يوم انتهاء الميركاتو — عداد عكسي حي + تغذية صفقات مباشرة + إحصائيات.',
+  },
+  [OverlayType.MERCATO_X_RAY]: {
+    icon: '🔬',
+    accent: '#a855f7',
+    description: 'تحليل بصري للاعب — رادار chart + 6 قابليات + heat map للمناطق + verdict.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {
