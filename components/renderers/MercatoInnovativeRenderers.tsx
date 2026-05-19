@@ -31,6 +31,62 @@ import {
   AlertCircle, CheckCircle2, Hourglass, ScanLine, Radar,
 } from 'lucide-react';
 import { RendererProps } from './SharedComponents';
+import { playMercatoStory, stopMercatoStory, type MercatoStorySession } from '../../services/mercatoAudioEngine';
+
+/**
+ * Shared hook: fires MercatoAudioEngine when the overlay becomes visible.
+ * Stops cleanly on unmount or when visibility changes. Skips in editor mode.
+ */
+const useMercatoAudio = (
+  getField: (id: string) => any,
+  isVisible: boolean,
+  isEditor: boolean | undefined,
+) => {
+  const sessionRef = useRef<MercatoStorySession | null>(null);
+
+  useEffect(() => {
+    // Don't play audio in the editor preview
+    if (isEditor) return;
+    if (!isVisible) {
+      // Template hidden — fire outro and stop
+      if (sessionRef.current) {
+        sessionRef.current.outro();
+        sessionRef.current.stop();
+        sessionRef.current = null;
+      }
+      return;
+    }
+
+    // Template just became visible — start the story
+    const profileId = String(getField('audioProfile') || 'fabrizioBreaking');
+    const customVoiceUrl = String(getField('customVoiceUrl') || '');
+    const signaturePhrase = String(getField('signaturePhrase') || '');
+    const intensity = Number(getField('audioIntensity') ?? 1.0);
+    const enableVoice = getField('enableVoice') !== false;
+    const enableSfx = getField('enableSfx') !== false;
+
+    // Stop any previous session first (prevents overlap)
+    stopMercatoStory();
+
+    sessionRef.current = playMercatoStory({
+      profileId,
+      customVoiceUrl: customVoiceUrl || undefined,
+      customText: signaturePhrase || undefined,
+      intensity,
+      enableVoice,
+      enableSfx,
+    });
+
+    return () => {
+      if (sessionRef.current) {
+        sessionRef.current.stop();
+        sessionRef.current = null;
+      }
+    };
+  }, [isVisible, isEditor]);
+
+  return sessionRef;
+};
 
 // ─── Shared theme palette ───────────────────────────────────────────────────
 const SHARED_THEMES: Record<string, { bg: string; card: string; border: string; accent: string; text: string; secondary: string }> = {
@@ -120,7 +176,8 @@ const parseChatLines = (raw: unknown): ChatLine[] => {
   })).filter(l => l.text);
 };
 
-export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
+  useMercatoAudio(getField, config.isVisible, isEditor);
   const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
   const theme = getTheme(themeId);
   const callerName = String(getField('callerName') || 'AGENT — JORGE MENDES');
@@ -307,7 +364,8 @@ const parseTimeline = (raw: unknown): TimelineStep[] => {
 
 const STATUS_ICON = { done: CheckCircle2, active: Hourglass, pending: AlertCircle };
 
-export const MercatoDealTimelineRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoDealTimelineRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
+  useMercatoAudio(getField, config.isVisible, isEditor);
   const themeId = String(getField('visualTheme') || 'EMERALD_FIELD');
   const theme = getTheme(themeId);
   const headline = String(getField('headline') || 'DEAL TIMELINE');
@@ -443,7 +501,8 @@ const parseLedger = (raw: unknown): LedgerEntry[] => {
 
 const formatM = (n: number) => `€${n.toFixed(1)}M`;
 
-export const MercatoBudgetTrackerRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoBudgetTrackerRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
+  useMercatoAudio(getField, config.isVisible, isEditor);
   const themeId = String(getField('visualTheme') || 'CLEAN_BROADCAST');
   const theme = getTheme(themeId);
   const clubName = String(getField('clubName') || 'FC Barcelona');
@@ -589,7 +648,8 @@ const useCountdown = (target: string) => {
   return { hh, mm, ss, expired: diff <= 0 };
 };
 
-export const MercatoDeadlineDayRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoDeadlineDayRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
+  useMercatoAudio(getField, config.isVisible, isEditor);
   const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
   const theme = getTheme(themeId);
   const headline = String(getField('headline') || 'DEADLINE DAY');
@@ -762,7 +822,8 @@ const radarAxisPoints = (count: number, radius: number, cx: number, cy: number) 
     return { x: cx + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
   });
 
-export const MercatoXRayRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoXRayRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
+  useMercatoAudio(getField, config.isVisible, isEditor);
   const themeId = String(getField('visualTheme') || 'HOLOGRAM_PURPLE');
   const theme = getTheme(themeId);
   const playerName = String(getField('playerName') || 'Pedri González');
