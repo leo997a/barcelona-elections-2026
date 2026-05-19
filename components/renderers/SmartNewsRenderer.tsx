@@ -2,6 +2,32 @@ import React from 'react';
 import { RendererProps, ModernBackground, SmartGallery } from './SharedComponents';
 import { TRANSITIONS } from './OverlayConstants';
 
+/**
+ * Safe JSON parse that never throws. Strips ALL control characters (0x00-0x1f,
+ * 0x7f) from the raw string before parsing. If parsing still fails, returns
+ * the fallback value.
+ */
+const safeParsePages = (raw: unknown): string[] => {
+  if (Array.isArray(raw)) return raw.map(item => String(item ?? ''));
+  const str = String(raw ?? '[]');
+  // Strip every control character unconditionally — they are never valid
+  // inside a JSON string literal unless properly escaped, and user-pasted
+  // text from AI or rich editors often contains raw \n, \r, \t, \x0b etc.
+  const sanitized = str.replace(/[\x00-\x1f\x7f\u2028\u2029]/g, ' ');
+  try {
+    const parsed = JSON.parse(sanitized);
+    if (Array.isArray(parsed)) return parsed.map(item => String(item ?? ''));
+    return ['تحقق من تنسيق البيانات'];
+  } catch {
+    // Last resort: try to extract text between quotes manually
+    const matches = sanitized.match(/"([^"]*)"/g);
+    if (matches && matches.length > 0) {
+      return matches.map(m => m.slice(1, -1));
+    }
+    return ['تحقق من تنسيق البيانات'];
+  }
+};
+
 export const SmartNewsRenderer: React.FC<RendererProps> = ({ 
   config, 
   getField, 
@@ -11,14 +37,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
   activeTheme,
   playSound,
 }) => {
-    let pages: any[] = [];
-    try {
-        const raw = getField('pagesData');
-        pages = Array.isArray(raw) ? raw : JSON.parse(String(raw || '[]'));
-        if (!Array.isArray(pages)) pages = [];
-    } catch (e) {
-        pages = ["تحقق من تنسيق البيانات"];
-    }
+    const pages = safeParsePages(getField('pagesData'));
 
     const containerHeight = Number(getField('containerHeight') || 550);
     const headlineSize = Number(getField('headlineFontSize') || 48);
@@ -31,9 +50,7 @@ export const SmartNewsRenderer: React.FC<RendererProps> = ({
     const themeKey = String(getField('themePreset') || 'CLASSIC_RED');
     const currentPageIndex = Number(getField('currentPage') || 0);
     const pageContent = pages[currentPageIndex] || "";
-    const currentText = typeof pageContent === 'object' 
-        ? (pageContent.text || pageContent.content || JSON.stringify(pageContent))
-        : String(pageContent || "");
+    const currentText = String(pageContent || "");
     
     const rawImages = getField('images');
     const images = Array.isArray(rawImages) ? rawImages : [];
