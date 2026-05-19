@@ -2803,7 +2803,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     <label className="text-xs text-blue-300 font-bold flex items-center justify-between mb-2">
                         <span></span>
                         <span className="font-mono text-blue-400 bg-blue-950/50 px-2 py-0.5 rounded text-[10px]">
-                             {Number(getDraftValue('currentPage') || 0) + 1} / {JSON.parse(String(getDraftValue('pagesData') || '[]')).length || 1}
+                             {Number(getDraftValue('currentPage') || 0) + 1} / {(() => { try { return JSON.parse(String(getDraftValue('pagesData') || '[]').replace(/[\x00-\x1f\x7f\u2028\u2029]/g, ' ')).length || 1; } catch { return 1; } })()}
                         </span>
                     </label>
                     <div className="flex gap-2">
@@ -2819,8 +2819,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         <button 
                           onClick={() => {
                               const curr = Number(getDraftValue('currentPage') || 0);
-                              const pages = JSON.parse(String(getDraftValue('pagesData') || '[]'));
-                              if (curr < pages.length - 1) handleDraftFieldChange('currentPage', curr + 1);
+                              let pages: any[] = [];
+                              try { pages = JSON.parse(String(getDraftValue('pagesData') || '[]').replace(/[\x00-\x1f\x7f\u2028\u2029]/g, ' ')); } catch { pages = []; }
+                              if (curr < (pages.length || 1) - 1) handleDraftFieldChange('currentPage', curr + 1);
                           }}
                           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg flex items-center justify-center gap-1 text-xs transition-colors"
                         >
