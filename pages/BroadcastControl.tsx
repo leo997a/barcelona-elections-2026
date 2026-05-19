@@ -146,16 +146,12 @@ const BroadcastControl: React.FC = () => {
 
         {/* Sound Preview Grid — Per-Cue FX */}
         <div className="space-y-8">
-          {(['broadcast', 'mercato', 'special', 'football', 'breaking', 'cinematic', 'utility'] as const).map(cat => {
+          {(['news', 'mercato', 'studio'] as const).map(cat => {
             const catLabel =
-              cat === 'broadcast' ? '🎙️ أصوات البث' :
+              cat === 'news'   ? '🚨 أصوات الأخبار' :
               cat === 'mercato' ? '⚡ أصوات الميركاتو' :
-              cat === 'special' ? '🎬 أصوات خاصة' :
-              cat === 'football' ? '⚽ أصوات كروية (ملعب وهتاف)' :
-              cat === 'breaking' ? '🚨 أصوات الأخبار العاجلة' :
-              cat === 'cinematic' ? '🎞️ انتقالات سينمائية' :
-              '⏱️ أصوات الأدوات';
-            const CatIcon = cat === 'broadcast' ? Radio : cat === 'mercato' ? Music : Play;
+              '🎙️ أصوات الاستوديو';
+            const CatIcon = cat === 'news' ? Radio : cat === 'mercato' ? Music : Play;
             const cues = PREVIEWABLE_CUES.filter(c => c.category === cat);
             return (
               <div key={cat}>

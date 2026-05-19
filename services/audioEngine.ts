@@ -123,64 +123,33 @@ const getCueFx = (cue: string): { reverb: number; subBass: number } => {
 /** Force invalidate FX cache (called after slider change) */
 export const invalidateCueFxCache = () => { _fxOverridesCache = null; _fxCacheTs = 0; };
 
-/** Cues available for preview in the control panel */
+/**
+ * Cues available for preview in the control panel.
+ *
+ * This list is intentionally curated to ~12 broadcast-grade entries with
+ * meaningful labels for editors. The underlying SoundCue keys are *not*
+ * removed — saved overlays that reference legacy cue names still play
+ * correctly through playCue. We just hide the long catalog from the
+ * sounds picker so it doesn't feel cluttered or repetitive.
+ */
 export const PREVIEWABLE_CUES: { value: string; label: string; category: string }[] = [
-  { value: 'SCOREBUG_SNAP', label: 'Scorebug Snap', category: 'broadcast' },
-  { value: 'LOWER_THIRD_WIPE', label: 'Lower Third Wipe', category: 'broadcast' },
-  { value: 'STADIUM_WHOOSH', label: 'Stadium Whoosh', category: 'broadcast' },
-  { value: 'DATA_TICK', label: 'Data Tick', category: 'broadcast' },
-  { value: 'DATA_SLAM', label: 'Data Slam', category: 'broadcast' },
-  { value: 'LUXURY_SWEEP', label: 'Luxury Sweep', category: 'broadcast' },
-  { value: 'LUXURY_IMPACT', label: 'Luxury Impact', category: 'broadcast' },
-  { value: 'LUXURY_OUT', label: 'Luxury Out', category: 'broadcast' },
-  { value: 'BROADCAST_OUT', label: 'Broadcast Out', category: 'broadcast' },
-  { value: 'SOFT_FADE', label: 'Soft Fade', category: 'broadcast' },
-  { value: 'MERCATO_HIT', label: 'Mercato Hit', category: 'mercato' },
-  { value: 'HERE_WE_GO_STING', label: 'Here We Go', category: 'mercato' },
-  { value: 'TRANSFER_RISER', label: 'Transfer Riser', category: 'mercato' },
-  { value: 'CONTRACT_STAMP', label: 'Contract Stamp', category: 'mercato' },
-  { value: 'DEAL_LOCK', label: 'Deal Lock', category: 'mercato' },
-  { value: 'AGENT_CALL', label: 'Agent Call', category: 'mercato' },
-  { value: 'CASH_REGISTER', label: 'Cash Register', category: 'mercato' },
-  { value: 'DEADLINE_ALARM', label: 'Deadline Alarm', category: 'mercato' },
-  { value: 'GOAL_HORN', label: 'Goal Horn', category: 'special' },
-  { value: 'BREAKING_NEWS_ALARM', label: 'Breaking News', category: 'special' },
-  { value: 'CINEMA_BOOM', label: 'Cinema Boom', category: 'special' },
-  { value: 'PLAYER_ENTRANCE', label: 'Player Entrance', category: 'special' },
-  { value: 'ELITE_HIT', label: 'Elite Hit', category: 'special' },
-  { value: 'ULTRA_RISER', label: 'Ultra Riser', category: 'special' },
-  { value: 'VAR_BUZZ', label: 'VAR Buzz', category: 'special' },
-  // ─── New Football / Mercato Sound Pack ───────────────────────────────────
-  { value: 'TARGET_REVEAL', label: 'Target Reveal', category: 'mercato' },
-  { value: 'TARGET_LOCK', label: 'Target Lock', category: 'mercato' },
-  { value: 'TARGET_SCAN', label: 'Target Scan', category: 'mercato' },
-  { value: 'POSITION_SWITCH', label: 'Position Switch', category: 'mercato' },
-  { value: 'SCOUT_BEEP', label: 'Scout Beep', category: 'mercato' },
-  { value: 'TRANSFER_REVEAL', label: 'Transfer Reveal', category: 'mercato' },
-  { value: 'GOAL_FANFARE', label: 'Goal Fanfare', category: 'football' },
-  { value: 'STADIUM_CHEER', label: 'Stadium Cheer', category: 'football' },
-  { value: 'STADIUM_CHANT', label: 'Stadium Chant', category: 'football' },
-  { value: 'WHISTLE_SHORT', label: 'Whistle Short', category: 'football' },
-  { value: 'WHISTLE_LONG', label: 'Whistle Long', category: 'football' },
-  { value: 'KICKOFF_HORN', label: 'Kickoff Horn', category: 'football' },
-  { value: 'PA_ANNOUNCEMENT', label: 'PA Announcement', category: 'football' },
-  { value: 'TROPHY_FANFARE', label: 'Trophy Fanfare', category: 'football' },
-  { value: 'BREAKING_PULSE', label: 'Breaking Pulse', category: 'breaking' },
-  { value: 'BREAKING_RISER', label: 'Breaking Riser', category: 'breaking' },
-  { value: 'BREAKING_HIT', label: 'Breaking Hit', category: 'breaking' },
-  { value: 'BREAKING_WHOOSH', label: 'Breaking Whoosh', category: 'breaking' },
-  { value: 'OFFICIAL_STAMP', label: 'Official Stamp', category: 'breaking' },
-  { value: 'IMPORTANT_PING', label: 'Important Ping', category: 'breaking' },
-  { value: 'NEWS_TICKER', label: 'News Ticker', category: 'breaking' },
-  { value: 'CINEMATIC_DROP', label: 'Cinematic Drop', category: 'cinematic' },
-  { value: 'CINEMATIC_RISE', label: 'Cinematic Rise', category: 'cinematic' },
-  { value: 'IMPACT_BOOM', label: 'Impact Boom', category: 'cinematic' },
-  { value: 'GLITCH_TRANSITION', label: 'Glitch Transition', category: 'cinematic' },
-  { value: 'DIGITAL_SWEEP', label: 'Digital Sweep', category: 'cinematic' },
-  { value: 'MAGIC_REVEAL', label: 'Magic Reveal', category: 'cinematic' },
-  { value: 'SUSPENSE_RISE', label: 'Suspense Rise', category: 'cinematic' },
-  { value: 'TIMER_TICK', label: 'Timer Tick', category: 'utility' },
-  { value: 'COUNTDOWN_FINAL', label: 'Countdown Final', category: 'utility' },
+  // News / breaking — short, clean, broadcast-style
+  { value: 'BREAKING_RISER',    label: 'News Opener — افتتاحية خبر',         category: 'news' },
+  { value: 'BREAKING_HIT',      label: 'Breaking Hit — ضربة الخبر العاجل',   category: 'news' },
+  { value: 'OFFICIAL_STAMP',    label: 'Official Stamp — ختم رسمي',          category: 'news' },
+  { value: 'HERE_WE_GO_STING',  label: 'Here We Go Boom — إعلان الصفقة',     category: 'news' },
+
+  // Mercato / transfers
+  { value: 'DEAL_LOCK',         label: 'Transfer Lock — قفل الصفقة',         category: 'mercato' },
+  { value: 'TARGET_REVEAL',     label: 'Target Reveal — كشف الهدف',          category: 'mercato' },
+  { value: 'TARGET_SCAN',       label: 'Radar Scan — مسح الرادار',           category: 'mercato' },
+  { value: 'DEADLINE_ALARM',    label: 'Deadline Tension — نهاية الميركاتو', category: 'mercato' },
+
+  // Football / studio
+  { value: 'STADIUM_WHOOSH',    label: 'Stadium Rise — صعود الجمهور',        category: 'studio' },
+  { value: 'LUXURY_SWEEP',      label: 'Tactical Swipe — انتقال تكتيكي',     category: 'studio' },
+  { value: 'LOWER_THIRD_WIPE',  label: 'Soft Lower Third — تعريف ناعم',      category: 'studio' },
+  { value: 'CONTRACT_STAMP',    label: 'Final Confirm — تأكيد نهائي',        category: 'studio' },
 ];
 
 const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
