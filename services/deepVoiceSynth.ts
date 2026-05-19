@@ -399,13 +399,13 @@ const playBufferThroughBus = (
   presence.gain.value = 4;
 
   const sat = ctx.createWaveShaper();
-  sat.curve = buildSat(0.32);
+  sat.curve = buildSat(0.22);
   sat.oversample = '2x';
 
   const conv = ctx.createConvolver();
   conv.buffer = getPlateReverb(ctx);
   const sendGain = ctx.createGain();
-  sendGain.gain.value = 0.18;
+  sendGain.gain.value = 0.10;
 
   src.connect(bus);
   bus.connect(sat);
