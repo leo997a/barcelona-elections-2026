@@ -26,6 +26,7 @@ import hashlib
 import json
 import logging
 import re
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -65,10 +66,11 @@ HTML_HEADERS = {
 
 logger = logging.getLogger("reo.fotmob")
 if not logger.handlers:
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s", "%H:%M:%S"))
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 _DEFAULT_CACHE_DIR = Path(__file__).parent.parent / "cache" / "fotmob"
 
@@ -435,107 +437,81 @@ class FotMobProvider:
             return None
 
         page_props = next_data.get("pageProps", {})
-        # Modern FotMob structure: pageProps.data
-        # Older fallback: pageProps.fetchAllPlayer / pageProps.playerProps
-        player_data = page_props.get("data") or page_props.get("fetchAllPlayer") or page_props.get("playerProps") or {}
-
+        player_data = page_props.get("data") or {}
         if not isinstance(player_data, dict):
-            logger.warning("[WARN] player_data is not dict: %s", type(player_data).__name__)
             player_data = {}
 
-        resolved_name = (
-            player_data.get("name")
-            or name
-            or f"player-{player_id}"
-        )
+        resolved_name = player_data.get("name") or name or f"player-{player_id}"
         slug = self._slugify(resolved_name)
 
-        # Extract identity safely
-        birth = player_data.get("birthDate") or {}
-        primary_team = player_data.get("primaryTeam") or {}
-        position_desc = player_data.get("positionDescription") or {}
+        # Compute raw payload size by re-serializing once (cheap on already-loaded dict).
+        try:
+            raw_size_kb = round(len(json.dumps(next_data, ensure_ascii=False)) / 1024, 1)
+        except Exception:
+            raw_size_kb = None
+
+        # Sections that exist in the public catalog. Used to compute available/missing.
+        all_sections = [
+            "id", "name", "birthDate", "contractEnd", "primaryTeam",
+            "positionDescription", "injuryInformation", "internationalDuty",
+            "playerInformation", "mainLeague", "trophies", "recentMatches",
+            "careerHistory", "traits", "coachStats", "statSeasons",
+            "firstSeasonStats", "marketValues", "relatedLinksData", "nextMatch",
+        ]
+        available_sections = []
+        missing_sections = []
+        for section in all_sections:
+            v = player_data.get(section)
+            if v is None or (isinstance(v, (list, dict, str)) and len(v) == 0):
+                missing_sections.append(section)
+            else:
+                available_sections.append(section)
 
         report = {
             "source": "fotmob",
             "method": "next_data",
             "player_id": player_id,
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "identity": {
-                "name": resolved_name,
-                "id": player_id,
-                "birth_date": birth.get("utcTime") if isinstance(birth, dict) else birth,
-                "nationality": None,
-                "height": None,
-                "preferred_foot": None,
-            },
-            "current_club": {
-                "name": primary_team.get("teamName"),
-                "id": primary_team.get("teamId"),
-            },
-            "position": {
-                "main": position_desc.get("primaryPosition") if isinstance(position_desc, dict) else None,
-                "label": position_desc.get("label") if isinstance(position_desc, dict) else None,
-            },
-            "recent_matches": [],
-            "season_stats": {},
-            "raw_top_keys": list(player_data.keys()) if isinstance(player_data, dict) else [],
+            "summary": _extract_summary(player_data, player_id, resolved_name),
+            "season_top_stats": _extract_top_stat_card(player_data),
+            "main_league_stats": _extract_main_league_stats(player_data),
+            "recent_matches": _extract_recent_matches(player_data),
+            "career_history": _extract_career_history(player_data),
+            "traits": _extract_traits(player_data),
+            "trophies": _extract_trophies(player_data),
+            "market_values": _extract_market_values(player_data),
+            "stat_seasons_index": _extract_stat_seasons_index(player_data),
+            "next_match": _extract_next_match(player_data),
+            "image_url": f"https://images.fotmob.com/image_resources/playerimages/{player_id}.png",
+            "availableSections": available_sections,
+            "missingSections": missing_sections,
+            "extractedMetrics": [],  # filled below
+            "rawPayloadSizeKB": raw_size_kb,
+            "rawPayloadPath": str(self.cache_dir / "player_next_data" / f"{player_id}.json"),
+            "raw_top_keys": list(player_data.keys()),
         }
 
-        # Player information (nationality, height, foot)
-        info_list = player_data.get("playerInformation") or []
-        if isinstance(info_list, list):
-            for info in info_list:
-                if not isinstance(info, dict):
-                    continue
-                title = (info.get("title") or "").lower()
-                value = info.get("value")
-                resolved = value.get("fallback") if isinstance(value, dict) else value
-                if "country" in title or "nationality" in title:
-                    report["identity"]["nationality"] = resolved
-                elif "height" in title:
-                    report["identity"]["height"] = resolved
-                elif "foot" in title:
-                    report["identity"]["preferred_foot"] = resolved
+        # Build extractedMetrics list from all numeric fields we successfully pulled
+        ext: list[str] = []
+        if report["summary"].get("position"):
+            ext.append("position")
+        for st in report["season_top_stats"]:
+            if st.get("value") is not None:
+                ext.append(f"top_stat:{st['key']}")
+        for st in report["main_league_stats"]:
+            if st.get("value") is not None:
+                ext.append(f"main_league:{st['key']}")
+        if report["recent_matches"]:
+            ext.append(f"recent_matches({len(report['recent_matches'])})")
+        if report["career_history"]:
+            ext.append(f"career_history({len(report['career_history'])})")
+        if report["traits"]:
+            ext.append(f"traits({len(report['traits'])})")
+        if report["trophies"]:
+            ext.append(f"trophies({len(report['trophies'])})")
+        report["extractedMetrics"] = ext
 
-        # Recent matches
-        recent = player_data.get("recentMatches") or []
-        if isinstance(recent, list):
-            for match in recent[:10]:
-                if not isinstance(match, dict):
-                    continue
-                match_date = match.get("matchDate")
-                if isinstance(match_date, dict):
-                    match_date = match_date.get("utcTime")
-                report["recent_matches"].append({
-                    "match_id": match.get("matchId") or match.get("id"),
-                    "opponent": match.get("opponentTeamName") or match.get("opponent"),
-                    "date": match_date,
-                    "rating": match.get("rating"),
-                    "goals": match.get("goals"),
-                    "assists": match.get("assists"),
-                    "minutes_played": match.get("minutesPlayed"),
-                })
-
-        # Season stats from mainLeague.stats
-        main_league = player_data.get("mainLeague") or {}
-        if isinstance(main_league, dict):
-            stats_blocks = main_league.get("stats") or []
-            if isinstance(stats_blocks, list):
-                for block in stats_blocks:
-                    if not isinstance(block, dict):
-                        continue
-                    items = block.get("stats") or []
-                    if isinstance(items, list):
-                        for item in items:
-                            if not isinstance(item, dict):
-                                continue
-                            key = item.get("key") or item.get("title")
-                            stat_obj = item.get("stat")
-                            val = stat_obj.get("value") if isinstance(stat_obj, dict) else stat_obj
-                            if key and val is not None:
-                                report["season_stats"][str(key)] = val
-
-        # Save report
+        # Save
         out_dir = output_dir or (Path(__file__).parent.parent / "reports" / "player_fotmob")
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"{slug}.json"
@@ -543,3 +519,262 @@ class FotMobProvider:
         logger.info("[OK] player report saved: %s", out_path.name)
 
         return report
+
+
+# ─── Extractor helpers (top-level so tests can import them) ────────────────────
+
+
+def _safe_get(d: Any, *keys: str, default: Any = None) -> Any:
+    """Safely traverse nested dicts."""
+    cur: Any = d
+    for k in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(k)
+    return cur if cur is not None else default
+
+
+def _extract_summary(player_data: dict, player_id: int, name: str) -> dict:
+    """Identity + club + position + bio facts."""
+    primary_team = player_data.get("primaryTeam") or {}
+    position_desc = player_data.get("positionDescription") or {}
+    primary_pos = position_desc.get("primaryPosition") or {}
+    pos_label = primary_pos.get("label") if isinstance(primary_pos, dict) else None
+
+    # playerInformation is a list of {translationKey, value} blocks
+    info_map: dict[str, Any] = {}
+    for item in (player_data.get("playerInformation") or []):
+        if not isinstance(item, dict):
+            continue
+        key = item.get("translationKey") or item.get("title")
+        val = item.get("value")
+        if isinstance(val, dict):
+            info_map[key] = val.get("fallback") if val.get("fallback") is not None else val.get("numberValue")
+        else:
+            info_map[key] = val
+
+    birth = player_data.get("birthDate") or {}
+    contract_end = player_data.get("contractEnd") or {}
+
+    return {
+        "id": player_id,
+        "name": name,
+        "club": primary_team.get("teamName"),
+        "club_id": primary_team.get("teamId"),
+        "on_loan": primary_team.get("onLoan"),
+        "position": pos_label,
+        "position_short": _safe_get(position_desc, "positions", default=[None])[0] if isinstance(position_desc.get("positions"), list) and position_desc["positions"] else None,
+        "all_positions": [p.get("strPos", {}).get("label") for p in (position_desc.get("positions") or []) if isinstance(p, dict)],
+        "country": info_map.get("country_sentencecase") or info_map.get("country"),
+        "height_cm": info_map.get("height_sentencecase") or info_map.get("height"),
+        "preferred_foot": info_map.get("preferred_foot"),
+        "shirt_number": info_map.get("shirt"),
+        "age": info_map.get("age_sentencecase") or info_map.get("age"),
+        "transfer_value": info_map.get("transfer_value"),
+        "birth_date": birth.get("utcTime") if isinstance(birth, dict) else birth,
+        "contract_end": contract_end.get("utcTime") if isinstance(contract_end, dict) else contract_end,
+        "is_captain": player_data.get("isCaptain"),
+        "status": player_data.get("status"),
+    }
+
+
+def _extract_top_stat_card(player_data: dict) -> list[dict]:
+    """firstSeasonStats.topStatCard.items — headline season stats."""
+    out: list[dict] = []
+    fss = player_data.get("firstSeasonStats") or {}
+    tsc = fss.get("topStatCard") if isinstance(fss, dict) else None
+    if not isinstance(tsc, dict):
+        return out
+    items = tsc.get("items") or []
+    if not isinstance(items, list):
+        return out
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        out.append({
+            "key": it.get("localizedTitleId") or it.get("title"),
+            "title": it.get("title"),
+            "value": it.get("statValue"),
+            "per90": it.get("per90"),
+            "percentile_rank": it.get("percentileRank"),
+            "percentile_rank_per90": it.get("percentileRankPer90"),
+            "stat_format": it.get("statFormat"),
+        })
+    return out
+
+
+def _extract_main_league_stats(player_data: dict) -> list[dict]:
+    """mainLeague.stats — list of {title, localizedTitleId, value} blocks."""
+    out: list[dict] = []
+    ml = player_data.get("mainLeague") or {}
+    stats = ml.get("stats") if isinstance(ml, dict) else None
+    if not isinstance(stats, list):
+        return out
+    for s in stats:
+        if not isinstance(s, dict):
+            continue
+        out.append({
+            "key": s.get("localizedTitleId") or s.get("title"),
+            "title": s.get("title"),
+            "value": s.get("value"),
+        })
+    return out
+
+
+def _extract_recent_matches(player_data: dict, limit: int = 12) -> list[dict]:
+    """recentMatches — last `limit` matches with rating/goals/assists/minutes."""
+    out: list[dict] = []
+    rm = player_data.get("recentMatches") or []
+    if not isinstance(rm, list):
+        return out
+    for m in rm[:limit]:
+        if not isinstance(m, dict):
+            continue
+        match_date = m.get("matchDate")
+        if isinstance(match_date, dict):
+            match_date = match_date.get("utcTime")
+        rating_props = m.get("ratingProps") or {}
+        rating = rating_props.get("rating") if isinstance(rating_props, dict) else None
+        out.append({
+            "match_id": m.get("id") or m.get("matchId"),
+            "date": match_date,
+            "league_id": m.get("leagueId"),
+            "league": m.get("leagueName"),
+            "team": m.get("teamName"),
+            "opponent": m.get("opponentTeamName"),
+            "is_home": m.get("isHomeTeam"),
+            "home_score": m.get("homeScore"),
+            "away_score": m.get("awayScore"),
+            "minutes_played": m.get("minutesPlayed"),
+            "goals": m.get("goals"),
+            "assists": m.get("assists"),
+            "yellow_cards": m.get("yellowCards"),
+            "red_cards": m.get("redCards"),
+            "rating": rating,
+            "is_top_rating": rating_props.get("isTopRating") if isinstance(rating_props, dict) else None,
+            "player_of_the_match": m.get("playerOfTheMatch"),
+            "on_bench": m.get("onBench"),
+        })
+    return out
+
+
+def _extract_career_history(player_data: dict) -> list[dict]:
+    """careerHistory.careerItems — flatten senior/youth/national team."""
+    out: list[dict] = []
+    ch = player_data.get("careerHistory") or {}
+    items = ch.get("careerItems") if isinstance(ch, dict) else None
+    if not isinstance(items, dict):
+        return out
+    for category, content in items.items():
+        if not isinstance(content, dict):
+            continue
+        entries = content.get("seasonEntries") or []
+        if not isinstance(entries, list):
+            continue
+        for e in entries[:8]:  # cap per category
+            if not isinstance(e, dict):
+                continue
+            out.append({
+                "category": category,
+                "season": e.get("seasonName"),
+                "team": e.get("teamName"),
+                "team_id": e.get("teamId"),
+                "appearances": e.get("appearances"),
+                "goals": e.get("goals"),
+                "assists": e.get("assists"),
+            })
+    return out
+
+
+def _extract_traits(player_data: dict) -> list[dict]:
+    """traits.items — playing style traits (0–1 normalized)."""
+    out: list[dict] = []
+    tr = player_data.get("traits") or {}
+    items = tr.get("items") if isinstance(tr, dict) else None
+    if not isinstance(items, list):
+        return out
+    for t in items:
+        if not isinstance(t, dict):
+            continue
+        out.append({
+            "key": t.get("key"),
+            "title": t.get("title"),
+            "value": t.get("value"),
+        })
+    return out
+
+
+def _extract_trophies(player_data: dict) -> list[dict]:
+    """trophies.playerTrophies — won/runner-up by tournament."""
+    out: list[dict] = []
+    tr = player_data.get("trophies") or {}
+    pt = tr.get("playerTrophies") if isinstance(tr, dict) else None
+    if not isinstance(pt, list):
+        return out
+    for entry in pt:
+        if not isinstance(entry, dict):
+            continue
+        team = entry.get("teamName")
+        for t in (entry.get("tournaments") or []):
+            if not isinstance(t, dict):
+                continue
+            won = t.get("seasonsWon") or []
+            ru = t.get("seasonsRunnerUp") or []
+            out.append({
+                "team": team,
+                "tournament": t.get("name"),
+                "won_count": len(won) if isinstance(won, list) else 0,
+                "runner_up_count": len(ru) if isinstance(ru, list) else 0,
+            })
+    return out
+
+
+def _extract_market_values(player_data: dict) -> dict:
+    """marketValues.values — return latest + first + count."""
+    mv = player_data.get("marketValues") or {}
+    values = mv.get("values") if isinstance(mv, dict) else None
+    if not isinstance(values, list) or not values:
+        return {}
+    first = values[0] if isinstance(values[0], dict) else {}
+    last = values[-1] if isinstance(values[-1], dict) else {}
+    return {
+        "count": len(values),
+        "first_date": first.get("date"),
+        "first_value": first.get("value"),
+        "first_currency": first.get("currency"),
+        "latest_date": last.get("date"),
+        "latest_value": last.get("value"),
+        "latest_currency": last.get("currency"),
+    }
+
+
+def _extract_stat_seasons_index(player_data: dict) -> list[dict]:
+    """Lightweight index of available seasons (full stats are huge)."""
+    out: list[dict] = []
+    seasons = player_data.get("statSeasons") or []
+    if not isinstance(seasons, list):
+        return out
+    for s in seasons:
+        if not isinstance(s, dict):
+            continue
+        tournaments = s.get("tournaments") or []
+        out.append({
+            "season": s.get("seasonName"),
+            "tournament_count": len(tournaments) if isinstance(tournaments, list) else 0,
+        })
+    return out
+
+
+def _extract_next_match(player_data: dict) -> Optional[dict]:
+    """Lightweight next match info."""
+    nm = player_data.get("nextMatch")
+    if not isinstance(nm, dict):
+        return None
+    md = nm.get("matchDate")
+    return {
+        "match_id": nm.get("matchId"),
+        "home": nm.get("homeName"),
+        "away": nm.get("awayName"),
+        "date": md.get("utcTime") if isinstance(md, dict) else md,
+        "league_id": nm.get("leagueId"),
+    }

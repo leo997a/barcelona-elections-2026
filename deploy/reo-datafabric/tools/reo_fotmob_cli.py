@@ -75,24 +75,44 @@ def cmd_player(args):
         print("  [FAIL] Could not fetch player data.")
         return
 
-    print(f"  Name:     {report['identity']['name']}")
-    print(f"  Club:     {report['current_club']['name']}")
-    print(f"  Position: {report['position']['main']} ({report['position']['label']})")
-    print(f"  Country:  {report['identity']['nationality']}")
-    print(f"  Height:   {report['identity']['height']}")
-    print(f"  Foot:     {report['identity']['preferred_foot']}")
-    print(f"  Top keys in raw payload: {report['raw_top_keys'][:12]}")
+    s = report["summary"]
+    print(f"  Name:     {s.get('name')}")
+    print(f"  Club:     {s.get('club')} (ID: {s.get('club_id')})")
+    print(f"  Position: {s.get('position') or '?'}")
+    print(f"  Country:  {s.get('country')}")
+    print(f"  Height:   {s.get('height_cm')}")
+    print(f"  Foot:     {s.get('preferred_foot')}")
+    print(f"  Age:      {s.get('age')}")
+    print(f"  Shirt:    #{s.get('shirt_number')}")
+    print(f"  Value:    {s.get('transfer_value')}")
+    print(f"  Captain:  {s.get('is_captain')}")
+    print(f"  Image:    {report.get('image_url')}")
     print()
 
-    if report["season_stats"]:
-        print(f"  Season Stats ({len(report['season_stats'])} keys):")
-        for key, val in list(report["season_stats"].items())[:15]:
-            print(f"    {key}: {val}")
+    # Top stat card
+    tsc = report.get("season_top_stats") or []
+    if tsc:
+        print(f"  Season Top Stats ({len(tsc)}):")
+        for st in tsc[:8]:
+            val = st.get("value")
+            rank = st.get("percentile_rank")
+            rank_str = f" (rank: {round(rank)}%)" if rank is not None else ""
+            print(f"    - {st.get('title')}: {val}{rank_str}")
         print()
 
-    if report["recent_matches"]:
-        print(f"  Recent Matches ({len(report['recent_matches'])}):")
-        for m in report["recent_matches"][:5]:
+    # Main league stats
+    mls = report.get("main_league_stats") or []
+    if mls:
+        print(f"  Main League Stats ({len(mls)}):")
+        for st in mls[:10]:
+            print(f"    - {st.get('title')}: {st.get('value')}")
+        print()
+
+    # Recent matches
+    rm = report.get("recent_matches") or []
+    if rm:
+        print(f"  Recent Matches ({len(rm)}):")
+        for m in rm[:5]:
             rating = m.get("rating") or "-"
             goals = m.get("goals") or 0
             assists = m.get("assists") or 0
@@ -101,8 +121,32 @@ def cmd_player(args):
             print(f"    vs {opp}: rating={rating}, G={goals}, A={assists}, min={mins}")
         print()
 
+    # Traits
+    traits = report.get("traits") or []
+    if traits:
+        print(f"  Traits ({len(traits)}):")
+        for t in traits[:6]:
+            print(f"    - {t.get('title')}: {t.get('value')}")
+        print()
+
+    # Career
+    ch = report.get("career_history") or []
+    if ch:
+        print(f"  Career History ({len(ch)} entries):")
+        for c in ch[:4]:
+            print(f"    - [{c.get('category')}] {c.get('season')} {c.get('team')}: G={c.get('goals')}, A={c.get('assists')}")
+        print()
+
+    # Sections summary
+    avail = report.get("availableSections") or []
+    miss = report.get("missingSections") or []
+    print(f"  Sections: {len(avail)} available, {len(miss)} missing")
+    if miss:
+        print(f"  Missing: {miss}")
+    print(f"  Extracted metrics: {len(report.get('extractedMetrics', []))} items")
+    print(f"  Raw payload: {report.get('rawPayloadSizeKB')} KB at {report.get('rawPayloadPath')}")
+    print()
     print(f"  [OK] Full report saved to: reports/player_fotmob/")
-    print(f"  [OK] Raw next_data saved to: cache/fotmob/player_next_data/{args.id}.json")
 
 
 def cmd_team(args):
