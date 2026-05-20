@@ -5,10 +5,16 @@
  * Reads/writes directly to overlay fields via a callback.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, ChevronUp, ChevronDown, EyeOff, Plus, Sparkles, RefreshCw, Users, User } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, EyeOff, Plus, Sparkles, RefreshCw, Users, User, AlertTriangle } from 'lucide-react';
 import type { OverlayField } from '../../types';
 import { PLAYER_INTEL_PRESETS, METRIC_CATEGORIES, getPreset } from './playerIntelV2Presets';
 import { getMetricAr } from './playerIntelV2Labels';
+import {
+  resolveQuery,
+  detectCompareQuery,
+  detectPresetIntent,
+  type RegistryEntry as ResolverEntry,
+} from './playerIntelV2PlayerResolver';
 
 const SAMPLES_BASE = '/player-intel-v2-samples';
 
@@ -59,6 +65,11 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [activeCategory, setActiveCategory] = useState<string>('attacking');
   const [assistantText, setAssistantText] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+
+  // Player search state
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<ResolverEntry & { score: number }>>([]);
+  const [searchStatus, setSearchStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building'; msg?: string }>({ kind: 'idle' });
 
   // Load registry on mount
   useEffect(() => {
@@ -151,6 +162,65 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
     setTimeout(() => setToast(null), 3000);
   };
 
+  // ── Search & build profile ──────────────────────────────────────────────────
+
+  const runPlayerSearch = async () => {
+    const q = playerSearch.trim();
+    if (!q) return;
+    setSearchStatus({ kind: 'searching', msg: 'جارٍ البحث...' });
+
+    // Local match first
+    const local = resolveQuery(q, registry);
+    if (local.length > 0) {
+      setSearchResults(local.map((m) => ({ ...m.entry, score: m.score })));
+      if (local.length === 1) {
+        applyChanges({ samplePlayer: local[0].entry.id });
+        setSearchStatus({ kind: 'found', msg: `تم العثور على "${local[0].entry.name}" داخل المكتبة وتحديده.` });
+        flashToast(`تم اختيار ${local[0].entry.name}`);
+      } else {
+        setSearchStatus({ kind: 'found', msg: `${local.length} نتائج — اختر واحدة من القائمة.` });
+      }
+      return;
+    }
+
+    // Remote search via API
+    try {
+      const r = await fetch('/api/player-intel-v2/search-player', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, mode: 'search_only' }),
+      });
+      const data = await r.json();
+      if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
+        setSearchResults(data.matches.map((m: ResolverEntry & { confidence: number }) => ({
+          ...m, score: m.confidence,
+        })));
+        if (data.matches.length === 1) {
+          applyChanges({ samplePlayer: data.matches[0].id });
+          setSearchStatus({ kind: 'found', msg: `تم العثور على "${data.matches[0].name}" وتحديده.` });
+          flashToast(`تم اختيار ${data.matches[0].name}`);
+        } else {
+          setSearchStatus({ kind: 'found', msg: `${data.matches.length} نتائج — اختر واحدة.` });
+        }
+      } else {
+        setSearchResults([]);
+        setSearchStatus({
+          kind: 'none',
+          msg: data.messageAr || 'لم يتم العثور على اللاعب. اكتب الاسم بالإنجليزي أو أضف النادي.',
+        });
+      }
+    } catch {
+      setSearchStatus({ kind: 'none', msg: 'تعذّر الاتصال بخدمة البحث.' });
+    }
+  };
+
+  const selectSearchResult = (id: string, slot: 'a' | 'b' = 'a') => {
+    applyChanges(slot === 'b' ? { samplePlayerB: id } : { samplePlayer: id });
+    const name = (searchResults.find((r) => r.id === id))?.name || id;
+    flashToast(`تم اختيار ${name}`);
+    setSearchStatus({ kind: 'found', msg: `تم اختيار ${name}.` });
+  };
+
   // Refresh button — re-applies preset if cardType is not custom
   const refreshCard = () => {
     if (cardType !== 'custom') {
@@ -165,55 +235,30 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
   // Assistant
   const runAssistant = () => {
-    const txt = assistantText.toLowerCase().trim();
+    const txt = assistantText.trim();
     if (!txt) return;
-    let nextPlayer = playerA;
-    let nextPreset = cardType;
+
+    // Detect compare
+    const compare = detectCompareQuery(txt);
     let nextMode = mode;
+    let nextPlayer = playerA;
     let nextPlayerB = playerB;
 
-    // Detect player names (Arabic or English)
-    const matchPlayer = (q: string): string | null => {
-      const p = registry.find((r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.id.includes(q) ||
-        (r.club || '').toLowerCase().includes(q),
-      );
-      return p?.id || null;
-    };
-
-    // Detect compare keyword
-    const isCompare = /مقارنة|vs|ضد|بين/.test(txt);
-    if (isCompare) {
+    if (compare) {
       nextMode = 'compare';
-      // Try to find two players
-      const tokens = txt.split(/\s+|و|and/).filter(Boolean);
-      const found: string[] = [];
-      tokens.forEach((tok) => {
-        const m = matchPlayer(tok);
-        if (m && !found.includes(m)) found.push(m);
-      });
-      if (found.length >= 1) nextPlayer = found[0];
-      if (found.length >= 2) nextPlayerB = found[1];
+      const matchesA = resolveQuery(compare.queryA, registry);
+      const matchesB = resolveQuery(compare.queryB, registry);
+      if (matchesA[0]) nextPlayer = matchesA[0].entry.id;
+      if (matchesB[0]) nextPlayerB = matchesB[0].entry.id;
     } else {
       nextMode = 'single';
-      // Find single player
-      const tokens = txt.split(/\s+/).filter(Boolean);
-      for (const tok of tokens) {
-        const m = matchPlayer(tok);
-        if (m) { nextPlayer = m; break; }
-      }
+      const matches = resolveQuery(txt, registry);
+      if (matches[0]) nextPlayer = matches[0].entry.id;
     }
 
     // Detect preset
-    if (/هجوم|attacker/.test(txt)) nextPreset = 'attacker_card';
-    else if (/صانع|playmaker/.test(txt)) nextPreset = 'playmaker_card';
-    else if (/جناح|winger/.test(txt)) nextPreset = 'winger_card';
-    else if (/مدافع|defender/.test(txt)) nextPreset = 'defender_card';
-    else if (/فورمة|form/.test(txt)) nextPreset = 'form_report';
-    else if (/سوق|market/.test(txt)) nextPreset = 'market_report';
-    else if (/موسم|season/.test(txt)) nextPreset = 'season_report';
-    else if (/كامل|complete|full/.test(txt)) nextPreset = 'complete_report';
+    const detectedPreset = detectPresetIntent(txt);
+    const nextPreset = detectedPreset || cardType;
 
     const preset = getPreset(nextPreset);
     applyChanges({
@@ -226,7 +271,15 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
         playerIntelSecondaryMetricsJson: JSON.stringify(preset.secondary),
       } : {}),
     });
-    flashToast('تم تطبيق المساعد بنجاح');
+
+    const playerName = registry.find((r) => r.id === nextPlayer)?.name || nextPlayer;
+    const presetLabel = preset?.label || nextPreset;
+    if (nextMode === 'compare') {
+      const playerBName = registry.find((r) => r.id === nextPlayerB)?.name || nextPlayerB;
+      flashToast(`مقارنة: ${playerName} ضد ${playerBName} (${presetLabel})`);
+    } else {
+      flashToast(`تم اختيار ${playerName} وتطبيق ${presetLabel}`);
+    }
     setAssistantText('');
   };
 
@@ -295,6 +348,107 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       {/* ─── BASIC TAB ─── */}
       {activeTab === 'basic' && (
         <div className="space-y-3">
+          {/* Player Search Box */}
+          <div className="rounded-lg border border-cyan-800/40 bg-slate-950/40 p-3 space-y-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Search className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs font-bold text-cyan-200">بحث عن لاعب</span>
+            </div>
+            <input
+              type="text"
+              value={playerSearch}
+              onChange={(e) => setPlayerSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') runPlayerSearch(); }}
+              placeholder="اكتب اسم اللاعب أو النادي بالعربي أو الإنجليزي..."
+              className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-cyan-500"
+              dir="rtl"
+            />
+            <div className="flex gap-1.5">
+              <button
+                onClick={runPlayerSearch}
+                disabled={!playerSearch.trim() || searchStatus.kind === 'searching'}
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-bold py-1.5 rounded-md flex items-center justify-center gap-1.5"
+              >
+                <Search className="w-3 h-3" />
+                {searchStatus.kind === 'searching' ? 'جارٍ البحث...' : 'بحث وبناء البروفايل'}
+              </button>
+              <button
+                onClick={runPlayerSearch}
+                disabled={!playerSearch.trim()}
+                className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-bold py-1.5 px-3 rounded-md"
+                title="بحث فقط داخل المكتبة الحالية"
+              >
+                بحث فقط
+              </button>
+            </div>
+
+            {/* Status messages */}
+            {searchStatus.kind === 'found' && (
+              <div className="text-[11px] bg-green-900/20 border border-green-700/40 text-green-300 rounded-md px-2 py-1.5">
+                ✓ {searchStatus.msg}
+              </div>
+            )}
+            {searchStatus.kind === 'none' && (
+              <div className="text-[11px] bg-amber-900/20 border border-amber-700/40 text-amber-300 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{searchStatus.msg}</span>
+              </div>
+            )}
+
+            {/* Results list (only when >1 result) */}
+            {searchResults.length > 1 && (
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                <div className="text-[10px] text-slate-500 font-bold uppercase">النتائج:</div>
+                {searchResults.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between bg-slate-900 hover:bg-slate-800 rounded-md px-2 py-1.5"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-200 truncate">{r.name}</div>
+                      <div className="text-[10px] text-slate-500 truncate">
+                        {r.club} {r.season ? `· ${r.season}` : ''}
+                        {typeof r.score === 'number' ? ` · ${Math.round(r.score * 100)}%` : ''}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => selectSearchResult(r.id, 'a')}
+                        className="text-[9px] bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-0.5 rounded"
+                      >
+                        لاعب 1
+                      </button>
+                      {mode === 'compare' && (
+                        <button
+                          onClick={() => selectSearchResult(r.id, 'b')}
+                          className="text-[9px] bg-blue-700 hover:bg-blue-600 text-white px-2 py-0.5 rounded"
+                        >
+                          لاعب 2
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Examples hint */}
+            {searchStatus.kind === 'idle' && (
+              <div className="text-[10px] text-slate-500 space-y-0.5 pt-1">
+                <div className="font-bold text-slate-400">أمثلة:</div>
+                {['ليفاندوفسكي برشلونة', 'يامال برشلونة', 'كول بالمر تشيلسي', 'Cole Palmer Chelsea'].map((ex) => (
+                  <button
+                    key={ex}
+                    onClick={() => setPlayerSearch(ex)}
+                    className="block w-full text-right text-slate-300 hover:text-cyan-300 hover:bg-slate-900 rounded px-1.5 py-0.5"
+                  >
+                    • {ex}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Mode toggle */}
           <div className="flex gap-2">
             <button
@@ -366,9 +520,12 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               لتوليدها.
             </div>
           )}
-          {registry.length > 0 && registry.length < 5 && (
-            <div className="text-[10px] text-slate-500">
-              المكتبة الحالية تحتوي {registry.length} لاعبين فقط. أضف المزيد عبر Player Intel Builder.
+          {registry.length > 0 && (
+            <div className="text-[10px] flex items-center justify-between text-slate-500">
+              <span>المكتبة الحالية: {registry.length} لاعب</span>
+              {registry.length <= 3 && (
+                <span className="text-amber-400">المكتبة ما زالت صغيرة — استخدم البحث لإضافة لاعب جديد.</span>
+              )}
             </div>
           )}
 
@@ -600,6 +757,8 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               'تقرير كامل لكول بالمر',
               'مقارنة بين ليفاندوفسكي ويامال',
               'بطاقة صانع لعب ليامال',
+              'أريد إحصائيات ديمبيلي مع باريس',
+              'ابحث عن مبابي ريال مدريد',
             ].map((ex) => (
               <button
                 key={ex}
