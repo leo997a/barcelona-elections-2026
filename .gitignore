@@ -44,5 +44,9 @@ deploy/reo-datafootball-worker/.manual/fbref/*
 deploy/reo-datafootball-worker/.state/
 deploy/reo-datafootball-worker/.logs/
 
+# REO Data Fabric — runtime files (never commit)
+deploy/reo-datafabric/cache/
+deploy/reo-datafabric/reports/player_fotmob/
+
 # External references (cloned repos, not committed)
 references/_external/
