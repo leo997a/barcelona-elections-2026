@@ -40,35 +40,37 @@ def print_json(data, max_lines=80):
 def cmd_search_player(args):
     provider = FotMobProvider()
     print(f"\n  Searching FotMob for: '{args.name}'")
-    print(f"  Endpoint: /api/search/suggest?term={args.name}\n")
+    print(f"  Endpoint: apigw.fotmob.com/searchapi/suggest?term={args.name}&lang=en\n")
 
-    result = provider.search_player(args.name)
-    if not result:
-        print("  [FAIL] No results or source blocked.")
+    raw = provider.search_player(args.name)
+    if raw is None:
+        print("  [FAIL] SOURCE_SEARCH_FAILED")
         return
 
-    # Extract player suggestions
-    suggestions = result.get("squadMemberSuggestions") or result.get("suggestions") or []
-    if isinstance(suggestions, list) and suggestions:
-        print(f"  Found {len(suggestions)} player suggestions:\n")
-        for i, s in enumerate(suggestions[:10], 1):
-            name = s.get("name") or s.get("title") or "?"
-            pid = s.get("id") or s.get("playerId") or "?"
-            team = s.get("teamName") or s.get("subtitle") or ""
-            print(f"    {i}. {name} (ID: {pid}) — {team}")
-        print()
-    else:
-        print("  Raw response:")
-        print_json(result)
+    suggestions = FotMobProvider.parse_player_search(raw)
+    if not suggestions:
+        print("  [INFO] No player suggestions in response.")
+        print("  Raw keys:", list(raw.keys()) if isinstance(raw, dict) else "(not dict)")
+        return
+
+    print(f"  Found {len(suggestions)} player suggestions:\n")
+    for i, s in enumerate(suggestions[:10], 1):
+        coach_tag = " [COACH]" if s.get("is_coach") else ""
+        print(f"    {i}. {s['name']} (ID: {s['id']}) — {s.get('team_name') or '?'}{coach_tag}")
+    print()
 
 
 def cmd_player(args):
     provider = FotMobProvider()
     print(f"\n  Fetching player data: ID={args.id}")
-    print(f"  Endpoint: /api/playerData?id={args.id}\n")
+    print(f"  Method: Next.js _next/data extraction\n")
 
-    # Build full report
-    report = provider.build_player_report(args.id)
+    bid = provider.get_build_id()
+    if bid:
+        print(f"  buildId: {bid}")
+
+    name = getattr(args, "name", None)
+    report = provider.build_player_report(args.id, name=name)
     if not report:
         print("  [FAIL] Could not fetch player data.")
         return
@@ -79,10 +81,11 @@ def cmd_player(args):
     print(f"  Country:  {report['identity']['nationality']}")
     print(f"  Height:   {report['identity']['height']}")
     print(f"  Foot:     {report['identity']['preferred_foot']}")
+    print(f"  Top keys in raw payload: {report['raw_top_keys'][:12]}")
     print()
 
     if report["season_stats"]:
-        print("  Season Stats:")
+        print(f"  Season Stats ({len(report['season_stats'])} keys):")
         for key, val in list(report["season_stats"].items())[:15]:
             print(f"    {key}: {val}")
         print()
@@ -99,75 +102,54 @@ def cmd_player(args):
         print()
 
     print(f"  [OK] Full report saved to: reports/player_fotmob/")
+    print(f"  [OK] Raw next_data saved to: cache/fotmob/player_next_data/{args.id}.json")
 
 
 def cmd_team(args):
     provider = FotMobProvider()
     print(f"\n  Fetching team data: ID={args.id}")
-    print(f"  Endpoint: /api/teams?id={args.id}\n")
+    print(f"  Method: Next.js _next/data\n")
 
-    result = provider.get_team(args.id)
+    result = provider.get_team_next_data(args.id)
     if not result:
         print("  [FAIL] Could not fetch team data.")
         return
 
-    name = result.get("details", {}).get("name") or result.get("name") or "?"
-    print(f"  Team: {name}")
-
-    squad = result.get("squad")
-    if isinstance(squad, list):
-        print(f"  Squad sections: {len(squad)}")
-        for section in squad[:4]:
-            title = section.get("title", "?")
-            members = section.get("members", [])
-            print(f"    {title}: {len(members)} players")
-            for p in members[:5]:
-                pname = p.get("name") or "?"
-                pid = p.get("id") or "?"
-                print(f"      - {pname} (ID: {pid})")
+    pp = result.get("pageProps", {})
+    data = pp.get("data") or pp
+    print(f"  pageProps top keys: {list(pp.keys())[:15]}")
+    if isinstance(data, dict):
+        print(f"  data top keys: {list(data.keys())[:15]}")
     print()
 
 
 def cmd_matches(args):
     provider = FotMobProvider()
     print(f"\n  Fetching matches for date: {args.date}")
-    print(f"  Endpoint: /api/matches?date={args.date}\n")
+    print(f"  Method: Next.js _next/data\n")
 
-    result = provider.get_matches(args.date)
+    result = provider.get_matches_next_data(args.date)
     if not result:
         print("  [FAIL] Could not fetch matches.")
         return
 
-    leagues = result.get("leagues") or []
-    print(f"  Leagues with matches: {len(leagues)}")
-    for league in leagues[:8]:
-        lname = league.get("name") or "?"
-        matches = league.get("matches") or []
-        print(f"    {lname}: {len(matches)} matches")
-        for m in matches[:3]:
-            home = m.get("home", {}).get("name") or "?"
-            away = m.get("away", {}).get("name") or "?"
-            mid = m.get("id") or "?"
-            status = m.get("status", {}).get("reason", {}).get("short") or m.get("status", {}).get("scoreStr") or ""
-            print(f"      {home} vs {away} (ID: {mid}) {status}")
+    pp = result.get("pageProps", {})
+    print(f"  pageProps keys: {list(pp.keys())[:15]}")
     print()
 
 
 def cmd_match(args):
     provider = FotMobProvider()
     print(f"\n  Fetching match details: ID={args.id}")
-    print(f"  Endpoint: /api/matchDetails?matchId={args.id}\n")
+    print(f"  Method: Next.js _next/data\n")
 
-    result = provider.get_match_details(args.id)
+    result = provider.get_match_next_data(args.id)
     if not result:
         print("  [FAIL] Could not fetch match details.")
         return
 
-    general = result.get("general") or result.get("header") or {}
-    home = general.get("homeTeam", {}).get("name") or result.get("home", {}).get("name") or "?"
-    away = general.get("awayTeam", {}).get("name") or result.get("away", {}).get("name") or "?"
-    print(f"  Match: {home} vs {away}")
-    print(f"  Top-level keys: {list(result.keys())[:15]}")
+    pp = result.get("pageProps", {})
+    print(f"  pageProps top keys: {list(pp.keys())[:15]}")
     print()
 
 
@@ -180,6 +162,7 @@ def main():
 
     sp = subparsers.add_parser("player", help="Get player data by FotMob ID")
     sp.add_argument("--id", type=int, required=True, help="FotMob player ID")
+    sp.add_argument("--name", type=str, default=None, help="Player name (for slug generation)")
 
     sp = subparsers.add_parser("team", help="Get team data by FotMob ID")
     sp.add_argument("--id", type=int, required=True, help="FotMob team ID")
