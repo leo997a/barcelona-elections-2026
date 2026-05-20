@@ -34,6 +34,7 @@ import {
   MercatoDeadlineDayRenderer,
   MercatoXRayRenderer,
 } from './renderers/MercatoInnovativeRenderers';
+import { PlayerIntelV2Renderer } from './renderers/PlayerIntelV2Renderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -489,6 +490,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.MERCATO_BUDGET_TRACKER && <MercatoBudgetTrackerRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_DEADLINE_DAY && <MercatoDeadlineDayRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_X_RAY && <MercatoXRayRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.PLAYER_INTEL_V2 && <PlayerIntelV2Renderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
                           key={activeSlot}

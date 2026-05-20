@@ -2506,6 +2506,64 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
 ];
 
 // Deduplicate by id to prevent any accidental duplicates
+// ─── Player Intel V2 Template ─────────────────────────────────────────────────
+
+const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
+  {
+    id: 'template-player-intel-v2',
+    name: 'استخبارات اللاعب V2',
+    type: OverlayType.PLAYER_INTEL_V2,
+    templateId: 'template-player-intel-v2',
+    templateDescription: 'قالب بث احترافي يدمج بيانات FotMob و FBref في بطاقة تحليل لاعب متقدمة.',
+    templateIcon: '🧠',
+    templateAccent: '#22d3ee',
+    templateGroup: 'PLAYER_INTEL',
+    fields: [
+      { id: 'samplePlayer', label: 'اختيار لاعب', type: 'select', value: 'lamine-yamal', options: [
+        { label: 'Lamine Yamal', value: 'lamine-yamal' },
+        { label: 'Robert Lewandowski', value: 'robert-lewandowski' },
+        { label: 'Cole Palmer', value: 'cole-palmer' },
+      ]},
+      { id: 'cardType', label: 'نوع البطاقة', type: 'select', value: 'attacker_card', options: [
+        { label: 'بطاقة هجومية', value: 'attacker_card' },
+        { label: 'صانع لعب', value: 'playmaker_card' },
+        { label: 'جناح', value: 'winger_card' },
+        { label: 'مدافع', value: 'defender_card' },
+        { label: 'تقرير الفورمة', value: 'form_report' },
+        { label: 'تقرير السوق', value: 'market_report' },
+        { label: 'تقرير الموسم', value: 'season_report' },
+        { label: 'تقرير كامل', value: 'complete_report' },
+      ]},
+      { id: 'heroMetricsCount', label: 'إحصائيات رئيسية', type: 'select', value: '5', options: [
+        { label: '4', value: '4' },
+        { label: '5', value: '5' },
+        { label: '6', value: '6' },
+      ]},
+      { id: 'secondaryMetricsCount', label: 'إحصائيات ثانوية', type: 'select', value: '6', options: [
+        { label: '4', value: '4' },
+        { label: '6', value: '6' },
+        { label: '8', value: '8' },
+      ]},
+      { id: 'visualTheme', label: 'النمط البصري', type: 'select', value: 'broadcast_dark', options: [
+        { label: 'Broadcast Dark', value: 'broadcast_dark' },
+        { label: 'Barcelona Night', value: 'barcelona_night' },
+        { label: 'Clean Studio', value: 'clean_studio' },
+      ]},
+      { id: 'showSources', label: 'إظهار المصادر', type: 'boolean', value: true },
+      { id: 'showFooter', label: 'إظهار Footer', type: 'boolean', value: true },
+      { id: 'masterJson', label: 'لصق Master JSON', type: 'textarea', value: '' },
+    ],
+    slots: {},
+    theme: {
+      primaryColor: '#22d3ee',
+      secondaryColor: '#0f172a',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal, sans-serif',
+    },
+    isVisible: false,
+  },
+];
+
 const _allTemplates: OverlayConfig[] = [
   ...INITIAL_TEMPLATE_DEFINITIONS,
   ...BARCELONA_ELECTION_TEMPLATES,
@@ -2514,6 +2572,7 @@ const _allTemplates: OverlayConfig[] = [
   ...TRANSFER_TARGETS_TEMPLATES,
   ...BREAKING_HERE_WE_GO_TEMPLATES,
   ...MERCATO_INNOVATIVE_TEMPLATES,
+  ...PLAYER_INTEL_V2_TEMPLATES,
 ];
 const _seenIds = new Set<string>();
 export const INITIAL_TEMPLATES: OverlayConfig[] = _allTemplates

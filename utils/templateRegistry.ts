@@ -147,6 +147,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#a855f7',
     description: 'تحليل بصري للاعب — رادار chart + 6 قابليات + heat map للمناطق + verdict.',
   },
+  [OverlayType.PLAYER_INTEL_V2]: {
+    icon: '🧠',
+    accent: '#22d3ee',
+    description: 'قالب بث احترافي يدمج بيانات FotMob و FBref في بطاقة تحليل لاعب متقدمة.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {
