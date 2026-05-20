@@ -48,6 +48,7 @@ deploy/reo-datafootball-worker/.logs/
 deploy/reo-datafabric/cache/
 deploy/reo-datafabric/reports/player_fotmob/
 deploy/reo-datafabric/reports/player_fotmob_mega/
+deploy/reo-datafabric/reports/player_intel_master/
 
 # External references (cloned repos, not committed)
 references/_external/

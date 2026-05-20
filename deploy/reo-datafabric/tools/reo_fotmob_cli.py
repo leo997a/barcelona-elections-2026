@@ -5,6 +5,7 @@ Usage:
   python reo_fotmob_cli.py search-player --name "Lamine Yamal"
   python reo_fotmob_cli.py player --id 1273159
   python reo_fotmob_cli.py mega-player --id 1467236 --name "Lamine Yamal"
+  python reo_fotmob_cli.py master-player --player "Lamine Yamal" --club "Barcelona" --season "2025-26"
   python reo_fotmob_cli.py team --id 8634
   python reo_fotmob_cli.py matches --date 20260518
   python reo_fotmob_cli.py match --id 4193490
@@ -165,6 +166,19 @@ def cmd_mega_player(args):
         sys.exit(1)
 
 
+def cmd_master_player(args):
+    """Build the Master Profile (FotMob mega + FBref full cache merged)."""
+    try:
+        from tools.build_player_intel_master_profile import run as run_master
+    except ImportError:
+        sys.path.insert(0, str(Path(__file__).parent))
+        from build_player_intel_master_profile import run as run_master  # type: ignore
+    profile = run_master(args.player, args.club, args.season)
+    if profile is None:
+        print("  [FAIL] Master Profile could not be built.")
+        sys.exit(1)
+
+
 def cmd_team(args):
     provider = FotMobProvider()
     print(f"\n  Fetching team data: ID={args.id}")
@@ -228,6 +242,11 @@ def main():
     sp.add_argument("--id", type=int, required=True, help="FotMob player ID")
     sp.add_argument("--name", type=str, default=None, help="Player name (for slug generation)")
 
+    sp = subparsers.add_parser("master-player", help="Build Player Intel Master Profile (FotMob + FBref merged)")
+    sp.add_argument("--player", type=str, required=True, help="Player name")
+    sp.add_argument("--club", type=str, default=None, help="Club name (helps matching)")
+    sp.add_argument("--season", type=str, default="2025-26", help="Season slug (default 2025-26)")
+
     sp = subparsers.add_parser("team", help="Get team data by FotMob ID")
     sp.add_argument("--id", type=int, required=True, help="FotMob team ID")
 
@@ -247,6 +266,8 @@ def main():
         cmd_player(args)
     elif args.command == "mega-player":
         cmd_mega_player(args)
+    elif args.command == "master-player":
+        cmd_master_player(args)
     elif args.command == "team":
         cmd_team(args)
     elif args.command == "matches":
