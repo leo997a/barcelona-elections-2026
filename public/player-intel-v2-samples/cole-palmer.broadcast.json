@@ -1,0 +1,1351 @@
+{
+  "schemaVersion": "player-intel-master-v1",
+  "generatedAt": "2026-05-20T04:47:37.324792+00:00",
+  "player": {
+    "name": "Cole Palmer",
+    "club": "Chelsea",
+    "season": "2025-26",
+    "position": "Attacking Midfielder"
+  },
+  "identity": {
+    "name": "Cole Palmer",
+    "fotmobId": 1096353,
+    "fotmobClub": "Chelsea",
+    "fotmobPosition": "Attacking Midfielder",
+    "fotmobPositionKey": "centerattackingmidfielder",
+    "queryClub": "Chelsea",
+    "queryName": "Cole Palmer"
+  },
+  "sourceCoverage": {
+    "fotmob": true,
+    "fbref": true,
+    "fbrefGroupsAvailable": [
+      "standard",
+      "shooting",
+      "passing",
+      "pass_types",
+      "gca",
+      "defense",
+      "possession",
+      "playing_time",
+      "misc",
+      "keeper"
+    ],
+    "fbrefGroupsMatched": [
+      "standard",
+      "shooting",
+      "passing",
+      "pass_types",
+      "gca",
+      "defense",
+      "possession",
+      "playing_time",
+      "misc"
+    ]
+  },
+  "broadcastCards": {
+    "attacker": {
+      "title": "Attacker Card",
+      "items": [
+        {
+          "key": "goals",
+          "label": "Goals",
+          "labelAr": "الأهداف",
+          "value": 9,
+          "source": "fotmob",
+          "category": "attack"
+        },
+        {
+          "key": "assists",
+          "label": "Assists",
+          "labelAr": "التمريرات الحاسمة",
+          "value": 1,
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "xg",
+          "label": "Expected Goals",
+          "labelAr": "الأهداف المتوقعة",
+          "value": "10.34",
+          "source": "fotmob",
+          "category": "shooting"
+        },
+        {
+          "key": "shots",
+          "label": "Shots",
+          "labelAr": "التسديدات",
+          "value": "61",
+          "source": "fotmob",
+          "category": "shooting"
+        },
+        {
+          "key": "shots_on_target",
+          "label": "Shots on Target",
+          "labelAr": "التسديدات على المرمى",
+          "value": "23",
+          "source": "fotmob",
+          "category": "shooting"
+        },
+        {
+          "key": "rating",
+          "label": "Rating",
+          "labelAr": "التقييم",
+          "value": 7.03,
+          "source": "fotmob",
+          "category": "summary"
+        },
+        {
+          "key": "fotmob_recent_goals",
+          "label": "Recent goals",
+          "labelAr": null,
+          "value": 13,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_avg_rating",
+          "label": "Recent avg rating",
+          "labelAr": null,
+          "value": 6.67,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        }
+      ],
+      "itemsCount": 8
+    },
+    "playmaker": {
+      "title": "Playmaker Card",
+      "items": [
+        {
+          "key": "assists",
+          "label": "Assists",
+          "labelAr": "التمريرات الحاسمة",
+          "value": 1,
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "xa",
+          "label": "Expected Assists",
+          "labelAr": "التمريرات المتوقعة",
+          "value": "2.47",
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "key_passes",
+          "label": "Key Passes",
+          "labelAr": "التمريرات المفتاحية",
+          "value": "24",
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "fotmob_passing_chances_created",
+          "label": "Chances created",
+          "labelAr": null,
+          "value": "24",
+          "source": "fotmob",
+          "category": "passing",
+          "per90": 1.1520000000000001,
+          "percentileRank": 62.01550387596899
+        }
+      ],
+      "itemsCount": 4
+    },
+    "winger": {
+      "title": "Winger Card",
+      "items": [
+        {
+          "key": "assists",
+          "label": "Assists",
+          "labelAr": "التمريرات الحاسمة",
+          "value": 1,
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "crosses",
+          "label": "Crosses",
+          "labelAr": "العرضيات",
+          "value": "33",
+          "source": "fbref",
+          "category": "passing"
+        },
+        {
+          "key": "fotmob_possession_dribbles_succeeded",
+          "label": "Dribbles",
+          "labelAr": null,
+          "value": "22",
+          "source": "fotmob",
+          "category": "possession",
+          "per90": 1.056,
+          "percentileRank": 67.44186046511628
+        },
+        {
+          "key": "fotmob_possession_touches",
+          "label": "Touches",
+          "labelAr": null,
+          "value": "1172",
+          "source": "fotmob",
+          "category": "possession",
+          "per90": 56.256,
+          "percentileRank": 73.64341085271317
+        }
+      ],
+      "itemsCount": 4
+    },
+    "defender": {
+      "title": "Defender Card",
+      "items": [
+        {
+          "key": "tackles_won",
+          "label": "Tackles Won",
+          "labelAr": null,
+          "value": "11",
+          "source": "fbref",
+          "category": "defense"
+        },
+        {
+          "key": "interceptions",
+          "label": "Interceptions",
+          "labelAr": "الاعتراضات",
+          "value": "15",
+          "source": "fotmob",
+          "category": "defense"
+        },
+        {
+          "key": "fotmob_defending_defensive_actions",
+          "label": "Defensive actions",
+          "labelAr": null,
+          "value": "134",
+          "source": "fotmob",
+          "category": "defending",
+          "per90": 6.4319999999999995,
+          "percentileRank": 69.76744186046511
+        },
+        {
+          "key": "fotmob_defending_clearances",
+          "label": "Clearances",
+          "labelAr": null,
+          "value": "12",
+          "source": "fotmob",
+          "category": "defending",
+          "per90": 0.5760000000000001,
+          "percentileRank": 46.51162790697674
+        }
+      ],
+      "itemsCount": 4
+    },
+    "complete_report": {
+      "title": "Complete Report",
+      "items": [
+        {
+          "key": "goals",
+          "label": "Goals",
+          "labelAr": "الأهداف",
+          "value": 9,
+          "source": "fotmob",
+          "category": "attack"
+        },
+        {
+          "key": "assists",
+          "label": "Assists",
+          "labelAr": "التمريرات الحاسمة",
+          "value": 1,
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "matches",
+          "label": "Matches",
+          "labelAr": "المباريات",
+          "value": 24,
+          "source": "fbref",
+          "category": "summary"
+        },
+        {
+          "key": "minutes",
+          "label": "Minutes",
+          "labelAr": "الدقائق",
+          "value": 1875,
+          "source": "fotmob",
+          "category": "summary"
+        },
+        {
+          "key": "rating",
+          "label": "Rating",
+          "labelAr": "التقييم",
+          "value": 7.03,
+          "source": "fotmob",
+          "category": "summary"
+        },
+        {
+          "key": "yellow_cards",
+          "label": "Yellow Cards",
+          "labelAr": "البطاقات الصفراء",
+          "value": 4,
+          "source": "fotmob",
+          "category": "discipline"
+        },
+        {
+          "key": "red_cards",
+          "label": "Red Cards",
+          "labelAr": "البطاقات الحمراء",
+          "value": 0,
+          "source": "fotmob",
+          "category": "discipline"
+        },
+        {
+          "key": "shots",
+          "label": "Shots",
+          "labelAr": "التسديدات",
+          "value": "61",
+          "source": "fotmob",
+          "category": "shooting"
+        },
+        {
+          "key": "key_passes",
+          "label": "Key Passes",
+          "labelAr": "التمريرات المفتاحية",
+          "value": "24",
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "interceptions",
+          "label": "Interceptions",
+          "labelAr": "الاعتراضات",
+          "value": "15",
+          "source": "fotmob",
+          "category": "defense"
+        }
+      ],
+      "itemsCount": 10
+    },
+    "form_report": {
+      "title": "Form Report (recent)",
+      "items": [
+        {
+          "key": "fotmob_recent_matches_count",
+          "label": "Recent matches count",
+          "labelAr": null,
+          "value": 49,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_goals",
+          "label": "Recent goals",
+          "labelAr": null,
+          "value": 13,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_assists",
+          "label": "Recent assists",
+          "labelAr": null,
+          "value": 7,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_minutes",
+          "label": "Recent minutes",
+          "labelAr": null,
+          "value": 3350,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_avg_rating",
+          "label": "Recent avg rating",
+          "labelAr": null,
+          "value": 6.67,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_player_of_match_count",
+          "label": "Recent POTM",
+          "labelAr": null,
+          "value": 3,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_yellow_cards",
+          "label": "Recent yellow cards",
+          "labelAr": null,
+          "value": 7,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_recent_red_cards",
+          "label": "Recent red cards",
+          "labelAr": null,
+          "value": 0,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        }
+      ],
+      "itemsCount": 8
+    },
+    "market_report": {
+      "title": "Market Report",
+      "items": [
+        {
+          "key": "fotmob_market_currentValue",
+          "label": "currentValue",
+          "labelAr": null,
+          "value": 100951687,
+          "source": "fotmob",
+          "category": "marketValue",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_market_highestValue",
+          "label": "highestValue",
+          "labelAr": null,
+          "value": 118953165,
+          "source": "fotmob",
+          "category": "marketValue",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_market_lowestValue",
+          "label": "lowestValue",
+          "labelAr": null,
+          "value": 250000,
+          "source": "fotmob",
+          "category": "marketValue",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_market_firstValue",
+          "label": "firstValue",
+          "labelAr": null,
+          "value": 250000,
+          "source": "fotmob",
+          "category": "marketValue",
+          "per90": null,
+          "percentileRank": null
+        },
+        {
+          "key": "fotmob_market_growthFromFirstPercent",
+          "label": "growthFromFirstPercent",
+          "labelAr": null,
+          "value": 40280.67,
+          "source": "fotmob",
+          "category": "marketValue",
+          "per90": null,
+          "percentileRank": null
+        }
+      ],
+      "itemsCount": 5
+    },
+    "season_report": {
+      "title": "Season Report",
+      "items": [
+        {
+          "key": "goals",
+          "label": "Goals",
+          "labelAr": "الأهداف",
+          "value": 9,
+          "source": "fotmob",
+          "category": "attack"
+        },
+        {
+          "key": "assists",
+          "label": "Assists",
+          "labelAr": "التمريرات الحاسمة",
+          "value": 1,
+          "source": "fotmob",
+          "category": "chance_creation"
+        },
+        {
+          "key": "matches",
+          "label": "Matches",
+          "labelAr": "المباريات",
+          "value": 24,
+          "source": "fbref",
+          "category": "summary"
+        },
+        {
+          "key": "minutes",
+          "label": "Minutes",
+          "labelAr": "الدقائق",
+          "value": 1875,
+          "source": "fotmob",
+          "category": "summary"
+        },
+        {
+          "key": "rating",
+          "label": "Rating",
+          "labelAr": "التقييم",
+          "value": 7.03,
+          "source": "fotmob",
+          "category": "summary"
+        },
+        {
+          "key": "shots_on_target",
+          "label": "Shots on Target",
+          "labelAr": "التسديدات على المرمى",
+          "value": "23",
+          "source": "fotmob",
+          "category": "shooting"
+        },
+        {
+          "key": "interceptions",
+          "label": "Interceptions",
+          "labelAr": "الاعتراضات",
+          "value": "15",
+          "source": "fotmob",
+          "category": "defense"
+        },
+        {
+          "key": "touches",
+          "label": "Touches",
+          "labelAr": "اللمسات",
+          "value": "1172",
+          "source": "fotmob",
+          "category": "possession"
+        },
+        {
+          "key": "fotmob_recent_matches_count",
+          "label": "Recent matches count",
+          "labelAr": null,
+          "value": 49,
+          "source": "fotmob",
+          "category": "fotmob",
+          "per90": null,
+          "percentileRank": null
+        }
+      ],
+      "itemsCount": 9
+    }
+  },
+  "canonicalMetrics": {
+    "goals": {
+      "primaryValue": 9,
+      "primarySource": "fotmob",
+      "label": "Goals",
+      "category": "attack",
+      "sources": {
+        "fotmob": {
+          "value": 9,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Goals",
+          "rawKey": "goals",
+          "normalizedKey": "fotmob_main_league_goals",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 9,
+            "label": "Goals",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "goals"
+          }
+        },
+        "fbref": {
+          "value": 9,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "performance_gls",
+          "normalizedKey": "fbref_standard_performance_gls",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 9
+        }
+      }
+    },
+    "assists": {
+      "primaryValue": 1,
+      "primarySource": "fotmob",
+      "label": "Assists",
+      "category": "chance_creation",
+      "sources": {
+        "fotmob": {
+          "value": 1,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Assists",
+          "rawKey": "assists",
+          "normalizedKey": "fotmob_main_league_assists",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 1,
+            "label": "Assists",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "assists"
+          }
+        },
+        "fbref": {
+          "value": 1,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "performance_ast",
+          "normalizedKey": "fbref_standard_performance_ast",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 1
+        }
+      }
+    },
+    "matches": {
+      "primaryValue": 24,
+      "primarySource": "fbref",
+      "label": "Matches",
+      "category": "summary",
+      "sources": {
+        "fbref": {
+          "value": 24,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "playing time_mp",
+          "normalizedKey": "fbref_standard_playing_time_mp",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 24
+        }
+      }
+    },
+    "minutes": {
+      "primaryValue": 1875,
+      "primarySource": "fotmob",
+      "label": "Minutes",
+      "category": "summary",
+      "sources": {
+        "fotmob": {
+          "value": 1875,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Minutes played",
+          "rawKey": "minutes_played",
+          "normalizedKey": "fotmob_main_league_minutes_played",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 1875,
+            "label": "Minutes played",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "minutes_played"
+          }
+        },
+        "fbref": {
+          "value": 1777,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "playing time_min",
+          "normalizedKey": "fbref_standard_playing_time_min",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 1777
+        }
+      }
+    },
+    "rating": {
+      "primaryValue": 7.03,
+      "primarySource": "fotmob",
+      "label": "Rating",
+      "category": "summary",
+      "sources": {
+        "fotmob": {
+          "value": 7.03,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Rating",
+          "rawKey": "rating",
+          "normalizedKey": "fotmob_main_league_rating",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 7.03,
+            "label": "Rating",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "rating"
+          }
+        }
+      }
+    },
+    "yellow_cards": {
+      "primaryValue": 4,
+      "primarySource": "fotmob",
+      "label": "Yellow Cards",
+      "category": "discipline",
+      "sources": {
+        "fotmob": {
+          "value": 4,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Yellow cards",
+          "rawKey": "yellow_cards",
+          "normalizedKey": "fotmob_main_league_yellow_cards",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 4,
+            "label": "Yellow cards",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "yellow_cards"
+          }
+        },
+        "fbref": {
+          "value": 4,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "performance_crdy",
+          "normalizedKey": "fbref_standard_performance_crdy",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 4
+        }
+      }
+    },
+    "red_cards": {
+      "primaryValue": 0,
+      "primarySource": "fotmob",
+      "label": "Red Cards",
+      "category": "discipline",
+      "sources": {
+        "fotmob": {
+          "value": 0,
+          "source": "fotmob",
+          "sourceGroup": "mainLeague.stats",
+          "label": "Red cards",
+          "rawKey": "red_cards",
+          "normalizedKey": "fotmob_main_league_red_cards",
+          "category": "mainLeague",
+          "per90": null,
+          "percentileRank": null,
+          "confidence": 0.9,
+          "raw": {
+            "value": 0,
+            "label": "Red cards",
+            "category": "mainLeague",
+            "sourceSection": "mainLeague.stats",
+            "rawKey": "red_cards"
+          }
+        },
+        "fbref": {
+          "value": 0,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "performance_crdr",
+          "normalizedKey": "fbref_standard_performance_crdr",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 0
+        }
+      }
+    },
+    "shots": {
+      "primaryValue": "61",
+      "primarySource": "fotmob",
+      "label": "Shots",
+      "category": "shooting",
+      "sources": {
+        "fotmob": {
+          "value": "61",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.shooting",
+          "label": "Shots",
+          "rawKey": "shots",
+          "normalizedKey": "fotmob_shooting_shots",
+          "category": "shooting",
+          "per90": 2.928,
+          "percentileRank": 87.59689922480621,
+          "confidence": 0.9,
+          "raw": {
+            "value": "61",
+            "label": "Shots",
+            "category": "shooting",
+            "sourceSection": "statsSections.shooting",
+            "rawKey": "shots",
+            "per90": 2.928,
+            "percentileRank": 87.59689922480621
+          }
+        },
+        "fbref": {
+          "value": 58,
+          "source": "fbref",
+          "sourceGroup": "shooting",
+          "rawColumn": "standard_sh",
+          "normalizedKey": "fbref_shooting_standard_sh",
+          "category": "shooting",
+          "confidence": 1.0,
+          "raw": 58
+        }
+      }
+    },
+    "shots_on_target": {
+      "primaryValue": "23",
+      "primarySource": "fotmob",
+      "label": "Shots on Target",
+      "category": "shooting",
+      "sources": {
+        "fotmob": {
+          "value": "23",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.shooting",
+          "label": "Shots on target",
+          "rawKey": "ShotsOnTarget",
+          "normalizedKey": "fotmob_shooting_ShotsOnTarget",
+          "category": "shooting",
+          "per90": 1.104,
+          "percentileRank": 90.69767441860465,
+          "confidence": 0.9,
+          "raw": {
+            "value": "23",
+            "label": "Shots on target",
+            "category": "shooting",
+            "sourceSection": "statsSections.shooting",
+            "rawKey": "ShotsOnTarget",
+            "per90": 1.104,
+            "percentileRank": 90.69767441860465
+          }
+        },
+        "fbref": {
+          "value": 22,
+          "source": "fbref",
+          "sourceGroup": "shooting",
+          "rawColumn": "standard_sot",
+          "normalizedKey": "fbref_shooting_standard_sot",
+          "category": "shooting",
+          "confidence": 1.0,
+          "raw": 22
+        }
+      }
+    },
+    "xg": {
+      "primaryValue": "10.34",
+      "primarySource": "fotmob",
+      "label": "Expected Goals",
+      "category": "shooting",
+      "sources": {
+        "fotmob": {
+          "value": "10.34",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.shooting",
+          "label": "xG",
+          "rawKey": "expected_goals",
+          "normalizedKey": "fotmob_shooting_expected_goals",
+          "category": "shooting",
+          "per90": 0.4963103942871094,
+          "percentileRank": 93.7984496124031,
+          "confidence": 0.9,
+          "raw": {
+            "value": "10.34",
+            "label": "xG",
+            "category": "shooting",
+            "sourceSection": "statsSections.shooting",
+            "rawKey": "expected_goals",
+            "per90": 0.4963103942871094,
+            "percentileRank": 93.7984496124031
+          }
+        }
+      }
+    },
+    "xa": {
+      "primaryValue": "2.47",
+      "primarySource": "fotmob",
+      "label": "Expected Assists",
+      "category": "chance_creation",
+      "sources": {
+        "fotmob": {
+          "value": "2.47",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.passing",
+          "label": "xA",
+          "rawKey": "expected_assists",
+          "normalizedKey": "fotmob_passing_expected_assists",
+          "category": "passing",
+          "per90": 0.11837490463256836,
+          "percentileRank": 61.240310077519375,
+          "confidence": 0.9,
+          "raw": {
+            "value": "2.47",
+            "label": "xA",
+            "category": "passing",
+            "sourceSection": "statsSections.passing",
+            "rawKey": "expected_assists",
+            "per90": 0.11837490463256836,
+            "percentileRank": 61.240310077519375
+          }
+        }
+      }
+    },
+    "key_passes": {
+      "primaryValue": "24",
+      "primarySource": "fotmob",
+      "label": "Key Passes",
+      "category": "chance_creation",
+      "sources": {
+        "fotmob": {
+          "value": "24",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.passing",
+          "label": "Chances created",
+          "rawKey": "chances_created",
+          "normalizedKey": "fotmob_passing_chances_created",
+          "category": "passing",
+          "per90": 1.1520000000000001,
+          "percentileRank": 62.01550387596899,
+          "confidence": 0.9,
+          "raw": {
+            "value": "24",
+            "label": "Chances created",
+            "category": "passing",
+            "sourceSection": "statsSections.passing",
+            "rawKey": "chances_created",
+            "per90": 1.1520000000000001,
+            "percentileRank": 62.01550387596899
+          }
+        }
+      }
+    },
+    "tackles": {
+      "primaryValue": null,
+      "primarySource": "fbref",
+      "label": "Tackles",
+      "category": "defense",
+      "sources": {
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "defense",
+          "rawColumn": "tackles_tkl",
+          "normalizedKey": "fbref_defense_tackles_tkl",
+          "category": "defense",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "interceptions": {
+      "primaryValue": "15",
+      "primarySource": "fotmob",
+      "label": "Interceptions",
+      "category": "defense",
+      "sources": {
+        "fotmob": {
+          "value": "15",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.defending",
+          "label": "Interceptions",
+          "rawKey": "interceptions",
+          "normalizedKey": "fotmob_defending_interceptions",
+          "category": "defending",
+          "per90": 0.72,
+          "percentileRank": 81.3953488372093,
+          "confidence": 0.9,
+          "raw": {
+            "value": "15",
+            "label": "Interceptions",
+            "category": "defending",
+            "sourceSection": "statsSections.defending",
+            "rawKey": "interceptions",
+            "per90": 0.72,
+            "percentileRank": 81.3953488372093
+          }
+        },
+        "fbref": {
+          "value": "13",
+          "source": "fbref",
+          "sourceGroup": "defense",
+          "rawColumn": "int",
+          "normalizedKey": "fbref_defense_int",
+          "category": "defense",
+          "confidence": 1.0,
+          "raw": "13"
+        }
+      }
+    },
+    "touches": {
+      "primaryValue": "1172",
+      "primarySource": "fotmob",
+      "label": "Touches",
+      "category": "possession",
+      "sources": {
+        "fotmob": {
+          "value": "1172",
+          "source": "fotmob",
+          "sourceGroup": "statsSections.possession",
+          "label": "Touches",
+          "rawKey": "touches",
+          "normalizedKey": "fotmob_possession_touches",
+          "category": "possession",
+          "per90": 56.256,
+          "percentileRank": 73.64341085271317,
+          "confidence": 0.9,
+          "raw": {
+            "value": "1172",
+            "label": "Touches",
+            "category": "possession",
+            "sourceSection": "statsSections.possession",
+            "rawKey": "touches",
+            "per90": 56.256,
+            "percentileRank": 73.64341085271317
+          }
+        },
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "possession",
+          "rawColumn": "touches_touches",
+          "normalizedKey": "fbref_possession_touches_touches",
+          "category": "possession",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "progressive_carries": {
+      "primaryValue": null,
+      "primarySource": "fbref",
+      "label": "Progressive Carries",
+      "category": "possession",
+      "sources": {
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "possession",
+          "rawColumn": "carries_prgdist",
+          "normalizedKey": "fbref_possession_carries_prgdist",
+          "category": "possession",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "crosses": {
+      "primaryValue": "33",
+      "primarySource": "fbref",
+      "label": "Crosses",
+      "category": "passing",
+      "sources": {
+        "fbref": {
+          "value": "33",
+          "source": "fbref",
+          "sourceGroup": "passing",
+          "rawColumn": "pass types_crs",
+          "normalizedKey": "fbref_passing_pass_types_crs",
+          "category": "passing",
+          "confidence": 1.0,
+          "raw": "33"
+        }
+      }
+    },
+    "fouls_committed": {
+      "primaryValue": 13,
+      "primarySource": "fbref",
+      "label": "Fouls Committed",
+      "category": "discipline",
+      "sources": {
+        "fbref": {
+          "value": 13,
+          "source": "fbref",
+          "sourceGroup": "misc",
+          "rawColumn": "performance_fls",
+          "normalizedKey": "fbref_misc_performance_fls",
+          "category": "discipline",
+          "confidence": 1.0,
+          "raw": 13
+        }
+      }
+    },
+    "fouls_drawn": {
+      "primaryValue": 33,
+      "primarySource": "fbref",
+      "label": "Fouls Drawn",
+      "category": "discipline",
+      "sources": {
+        "fbref": {
+          "value": 33,
+          "source": "fbref",
+          "sourceGroup": "misc",
+          "rawColumn": "performance_fld",
+          "normalizedKey": "fbref_misc_performance_fld",
+          "category": "discipline",
+          "confidence": 1.0,
+          "raw": 33
+        }
+      }
+    },
+    "offsides": {
+      "primaryValue": 2,
+      "primarySource": "fbref",
+      "label": "Offsides",
+      "category": "discipline",
+      "sources": {
+        "fbref": {
+          "value": 2,
+          "source": "fbref",
+          "sourceGroup": "misc",
+          "rawColumn": "performance_off",
+          "normalizedKey": "fbref_misc_performance_off",
+          "category": "discipline",
+          "confidence": 1.0,
+          "raw": 2
+        }
+      }
+    },
+    "shot_creating_actions": {
+      "primaryValue": null,
+      "primarySource": "fbref",
+      "label": "Shot-Creating Actions",
+      "category": "creation",
+      "sources": {
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "gca",
+          "rawColumn": "sca_sca",
+          "normalizedKey": "fbref_gca_sca_sca",
+          "category": "creation",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "goal_creating_actions": {
+      "primaryValue": null,
+      "primarySource": "fbref",
+      "label": "Goal-Creating Actions",
+      "category": "creation",
+      "sources": {
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "gca",
+          "rawColumn": "gca_gca",
+          "normalizedKey": "fbref_gca_gca_gca",
+          "category": "creation",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "blocks": {
+      "primaryValue": null,
+      "primarySource": "fbref",
+      "label": "Blocks",
+      "category": "defense",
+      "sources": {
+        "fbref": {
+          "value": null,
+          "source": "fbref",
+          "sourceGroup": "defense",
+          "rawColumn": "blocks_blocks",
+          "normalizedKey": "fbref_defense_blocks_blocks",
+          "category": "defense",
+          "confidence": 1.0,
+          "raw": null
+        }
+      }
+    },
+    "starts": {
+      "primaryValue": 22,
+      "primarySource": "fbref",
+      "label": "Starts",
+      "category": "summary",
+      "sources": {
+        "fbref": {
+          "value": 22,
+          "source": "fbref",
+          "sourceGroup": "standard",
+          "rawColumn": "playing time_starts",
+          "normalizedKey": "fbref_standard_playing_time_starts",
+          "category": "summary",
+          "confidence": 1.0,
+          "raw": 22
+        }
+      }
+    },
+    "tackles_won": {
+      "primaryValue": "11",
+      "primarySource": "fbref",
+      "label": "Tackles Won",
+      "category": "defense",
+      "sources": {
+        "fbref": {
+          "value": "11",
+          "source": "fbref",
+          "sourceGroup": "defense",
+          "rawColumn": "tackles_tklw",
+          "normalizedKey": "fbref_defense_tackles_tklw",
+          "category": "defense",
+          "confidence": 1.0,
+          "raw": "11"
+        }
+      }
+    }
+  },
+  "qualityReport": {
+    "fotmobMetricsCount": 172,
+    "fbrefGroupsMatched": [
+      "standard",
+      "shooting",
+      "passing",
+      "pass_types",
+      "gca",
+      "defense",
+      "possession",
+      "playing_time",
+      "misc"
+    ],
+    "fbrefGroupsMissingPlayer": [
+      "keeper"
+    ],
+    "fbrefRawColumnsCount": 145,
+    "canonicalMetricsCount": 25,
+    "mergedMetricsCount": 342,
+    "broadcastCardsCount": 8,
+    "broadcastCardsItemTotal": 52,
+    "sourceConflicts": [],
+    "warnings": []
+  },
+  "images": {
+    "playerImage": "https://images.fotmob.com/image_resources/playerimages/1096353.png",
+    "teamLogo": "https://images.fotmob.com/image_resources/logo/teamlogo/8455.png"
+  },
+  "mainLeague": {
+    "leagueId": 47,
+    "leagueName": "Premier League",
+    "season": "2025/2026",
+    "stats": [
+      {
+        "key": "goals",
+        "title": "Goals",
+        "value": 9,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Goals",
+          "localizedTitleId": "goals",
+          "value": 9
+        }
+      },
+      {
+        "key": "assists",
+        "title": "Assists",
+        "value": 1,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Assists",
+          "localizedTitleId": "assists",
+          "value": 1
+        }
+      },
+      {
+        "key": "started",
+        "title": "Started",
+        "value": 23,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Started",
+          "localizedTitleId": "started",
+          "value": 23
+        }
+      },
+      {
+        "key": "matches_uppercase",
+        "title": "Matches",
+        "value": 25,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Matches",
+          "localizedTitleId": "matches_uppercase",
+          "value": 25
+        }
+      },
+      {
+        "key": "minutes_played",
+        "title": "Minutes played",
+        "value": 1875,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Minutes played",
+          "localizedTitleId": "minutes_played",
+          "value": 1875
+        }
+      },
+      {
+        "key": "rating",
+        "title": "Rating",
+        "value": 7.03,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Rating",
+          "localizedTitleId": "rating",
+          "value": 7.03
+        }
+      },
+      {
+        "key": "yellow_cards",
+        "title": "Yellow cards",
+        "value": 4,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Yellow cards",
+          "localizedTitleId": "yellow_cards",
+          "value": 4
+        }
+      },
+      {
+        "key": "red_cards",
+        "title": "Red cards",
+        "value": 0,
+        "sourcePath": "pageProps.data.mainLeague.stats[]",
+        "raw": {
+          "title": "Red cards",
+          "localizedTitleId": "red_cards",
+          "value": 0
+        }
+      }
+    ],
+    "statsCount": 8
+  }
+}

@@ -77,7 +77,8 @@
       "sources": {
         "fotmob": true,
         "fbref": true
-      }
+      },
+      "broadcastFile": "cole-palmer.broadcast.json"
     },
     {
       "slug": "lamine-yamal",
@@ -153,7 +154,8 @@
       "sources": {
         "fotmob": true,
         "fbref": true
-      }
+      },
+      "broadcastFile": "lamine-yamal.broadcast.json"
     },
     {
       "slug": "robert-lewandowski",
@@ -229,7 +231,9 @@
       "sources": {
         "fotmob": true,
         "fbref": true
-      }
+      },
+      "broadcastFile": "robert-lewandowski.broadcast.json"
     }
-  ]
+  ],
+  "hasBroadcastFiles": true
 }
