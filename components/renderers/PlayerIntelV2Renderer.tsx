@@ -75,6 +75,21 @@ const PLAYER_IMG_FALLBACK: Record<string, string> = {
 };
 
 async function loadBroadcast(slug: string): Promise<PlayerIntelMasterFull | null> {
+  // First, check localStorage dynamic store (FotMob on-demand profiles)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem('reo:player-intel-v2:dynamic-profiles:v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { entries?: Record<string, { profile?: unknown }> };
+        const entry = parsed.entries?.[slug];
+        if (entry?.profile) {
+          return entry.profile as PlayerIntelMasterFull;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Fall back to static public file
   try {
     const r = await fetch(`${SAMPLES_BASE}/${slug}.broadcast.json`, { cache: 'no-store' });
     if (!r.ok) return null;
@@ -85,12 +100,38 @@ async function loadBroadcast(slug: string): Promise<PlayerIntelMasterFull | null
 interface RegistryPlayer { id: string; name: string; club: string; file: string; }
 
 async function loadRegistry(): Promise<RegistryPlayer[]> {
+  let staticPlayers: RegistryPlayer[] = [];
   try {
     const r = await fetch(`${SAMPLES_BASE}/index.json`, { cache: 'no-store' });
-    if (!r.ok) return [];
-    const data = await r.json();
-    return (data?.players || []) as RegistryPlayer[];
-  } catch { return []; }
+    if (r.ok) {
+      const data = await r.json();
+      staticPlayers = (data?.players || []) as RegistryPlayer[];
+    }
+  } catch { /* ignore */ }
+
+  // Merge with localStorage dynamic profiles
+  const dynamic: RegistryPlayer[] = [];
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem('reo:player-intel-v2:dynamic-profiles:v1');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { entries?: Record<string, { id: string; name: string; club: string }> };
+        for (const e of Object.values(parsed.entries || {})) {
+          dynamic.push({ id: e.id, name: e.name, club: e.club, file: '__dynamic__' });
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Dynamic first, then static (no duplicates)
+  const seen = new Set<string>();
+  const merged: RegistryPlayer[] = [];
+  for (const e of [...dynamic, ...staticPlayers]) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    merged.push(e);
+  }
+  return merged;
 }
 
 // ─── Build metrics from manual selection or preset ────────────────────────────

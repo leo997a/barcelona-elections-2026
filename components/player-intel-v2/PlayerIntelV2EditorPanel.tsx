@@ -5,7 +5,7 @@
  * Reads/writes directly to overlay fields via a callback.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, ChevronUp, ChevronDown, EyeOff, Plus, Sparkles, RefreshCw, Users, User, AlertTriangle } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, EyeOff, Plus, Sparkles, RefreshCw, Users, User, AlertTriangle, Download, Trash2 } from 'lucide-react';
 import type { OverlayField } from '../../types';
 import { PLAYER_INTEL_PRESETS, METRIC_CATEGORIES, getPreset } from './playerIntelV2Presets';
 import { getMetricAr } from './playerIntelV2Labels';
@@ -15,6 +15,12 @@ import {
   detectPresetIntent,
   type RegistryEntry as ResolverEntry,
 } from './playerIntelV2PlayerResolver';
+import {
+  saveDynamicProfile,
+  listDynamicProfiles,
+  deleteDynamicProfile,
+  type DynamicEntry,
+} from './playerIntelV2DynamicStore';
 
 const SAMPLES_BASE = '/player-intel-v2-samples';
 
@@ -71,6 +77,12 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [searchResults, setSearchResults] = useState<Array<ResolverEntry & { score: number }>>([]);
   const [searchStatus, setSearchStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building'; msg?: string }>({ kind: 'idle' });
 
+  // FotMob live search state
+  const [fotmobMatches, setFotmobMatches] = useState<Array<{ fotmobId: number; name: string; club: string; confidence: number }>>([]);
+  const [fotmobStatus, setFotmobStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'success'; msg?: string }>({ kind: 'idle' });
+  const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
+  const [refreshTick, setRefreshTick] = useState(0);
+
   // Load registry on mount
   useEffect(() => {
     fetch(`${SAMPLES_BASE}/index.json`, { cache: 'no-store' })
@@ -78,6 +90,32 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       .then((d) => { if (d?.players) setRegistry(d.players as RegistryEntry[]); })
       .catch(() => setRegistry([]));
   }, []);
+
+  // Load dynamic profiles from localStorage
+  useEffect(() => {
+    setDynamicEntries(listDynamicProfiles());
+  }, [refreshTick]);
+
+  // Combined registry (static + dynamic)
+  const combinedRegistry = useMemo<RegistryEntry[]>(() => {
+    const dynAsRegistry: RegistryEntry[] = dynamicEntries.map((d) => ({
+      id: d.id,
+      name: d.name,
+      club: d.club,
+      season: d.season,
+      position: d.position,
+      file: '__dynamic__',
+    }));
+    // Dynamic first (most recent at top)
+    const seen = new Set<string>();
+    const merged: RegistryEntry[] = [];
+    for (const e of [...dynAsRegistry, ...registry]) {
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+      merged.push(e);
+    }
+    return merged;
+  }, [registry, dynamicEntries]);
 
   // Load broadcast file for player A to discover available metrics
   useEffect(() => {
@@ -221,6 +259,87 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
     setSearchStatus({ kind: 'found', msg: `تم اختيار ${name}.` });
   };
 
+  // ── FotMob live search ──────────────────────────────────────────────────────
+
+  const runFotMobSearch = async () => {
+    const q = playerSearch.trim();
+    if (!q) return;
+    setFotmobStatus({ kind: 'searching', msg: 'جاري البحث في FotMob...' });
+    setFotmobMatches([]);
+
+    try {
+      const r = await fetch('/api/player-intel-v2/fotmob-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = await r.json();
+      if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
+        setFotmobMatches(data.matches);
+        setFotmobStatus({
+          kind: 'found',
+          msg: data.messageAr || `تم العثور على ${data.matches.length} نتائج.`,
+        });
+      } else {
+        setFotmobStatus({
+          kind: 'none',
+          msg: data.messageAr || 'لم يتم العثور على اللاعب في FotMob.',
+        });
+      }
+    } catch {
+      setFotmobStatus({ kind: 'none', msg: 'تعذّر الاتصال بـ FotMob. تحقق من الشبكة.' });
+    }
+  };
+
+  const buildAndAddPlayer = async (match: { fotmobId: number; name: string; club: string }) => {
+    setFotmobStatus({ kind: 'building', msg: `جاري بناء بروفايل ${match.name}...` });
+    try {
+      const r = await fetch('/api/player-intel-v2/build-fotmob-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fotmobId: match.fotmobId,
+          name: match.name,
+          season: '2025-26',
+        }),
+      });
+      const data = await r.json();
+      if (!data.ok) {
+        setFotmobStatus({
+          kind: 'none',
+          msg: data.messageAr || 'فشل بناء البروفايل.',
+        });
+        return;
+      }
+
+      // Persist to localStorage
+      saveDynamicProfile(data.slug, data.profile, {
+        name: data.profile.player.name,
+        club: data.profile.player.club,
+        season: data.profile.player.season,
+        position: data.profile.player.position,
+      });
+      setRefreshTick((t) => t + 1);
+
+      // Auto-select the new player
+      applyChanges({ samplePlayer: data.slug });
+      setFotmobStatus({
+        kind: 'success',
+        msg: `تمت إضافة ${data.profile.player.name} من FotMob (${data.summary?.itemsTotal || 0} إحصائية).`,
+      });
+      flashToast(`تمت إضافة ${data.profile.player.name}`);
+      setFotmobMatches([]);
+      setPlayerSearch('');
+    } catch {
+      setFotmobStatus({ kind: 'none', msg: 'تعذّر بناء البروفايل.' });
+    }
+  };
+
+  const removeDynamicEntry = (slug: string) => {
+    deleteDynamicProfile(slug);
+    setRefreshTick((t) => t + 1);
+  };
+
   // Refresh button — re-applies preset if cardType is not custom
   const refreshCard = () => {
     if (cardType !== 'custom') {
@@ -352,37 +471,87 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
           <div className="rounded-lg border border-cyan-800/40 bg-slate-950/40 p-3 space-y-2">
             <div className="flex items-center gap-1.5 mb-1">
               <Search className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-xs font-bold text-cyan-200">بحث عن لاعب</span>
+              <span className="text-xs font-bold text-cyan-200">بحث وإضافة لاعب من FotMob</span>
             </div>
             <input
               type="text"
               value={playerSearch}
               onChange={(e) => setPlayerSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') runPlayerSearch(); }}
-              placeholder="اكتب اسم اللاعب أو النادي بالعربي أو الإنجليزي..."
+              onKeyDown={(e) => { if (e.key === 'Enter') runFotMobSearch(); }}
+              placeholder="اكتب اسم اللاعب والنادي بالعربي أو الإنجليزي..."
               className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-cyan-500"
               dir="rtl"
             />
             <div className="flex gap-1.5">
               <button
-                onClick={runPlayerSearch}
-                disabled={!playerSearch.trim() || searchStatus.kind === 'searching'}
+                onClick={runFotMobSearch}
+                disabled={!playerSearch.trim() || fotmobStatus.kind === 'searching' || fotmobStatus.kind === 'building'}
                 className="flex-1 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-bold py-1.5 rounded-md flex items-center justify-center gap-1.5"
               >
                 <Search className="w-3 h-3" />
-                {searchStatus.kind === 'searching' ? 'جارٍ البحث...' : 'بحث وبناء البروفايل'}
+                {fotmobStatus.kind === 'searching' ? 'جاري البحث...' :
+                 fotmobStatus.kind === 'building' ? 'جاري البناء...' :
+                 'بحث في FotMob'}
               </button>
               <button
                 onClick={runPlayerSearch}
                 disabled={!playerSearch.trim()}
                 className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-bold py-1.5 px-3 rounded-md"
-                title="بحث فقط داخل المكتبة الحالية"
+                title="بحث في المكتبة المحلية فقط"
               >
-                بحث فقط
+                محلي فقط
               </button>
             </div>
 
-            {/* Status messages */}
+            {/* FotMob status */}
+            {fotmobStatus.kind === 'success' && (
+              <div className="text-[11px] bg-green-900/30 border border-green-700/40 text-green-300 rounded-md px-2 py-1.5">
+                ✓ {fotmobStatus.msg}
+              </div>
+            )}
+            {fotmobStatus.kind === 'building' && (
+              <div className="text-[11px] bg-blue-900/30 border border-blue-700/40 text-blue-300 rounded-md px-2 py-1.5 flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                {fotmobStatus.msg}
+              </div>
+            )}
+            {fotmobStatus.kind === 'none' && (
+              <div className="text-[11px] bg-amber-900/20 border border-amber-700/40 text-amber-300 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{fotmobStatus.msg}</span>
+              </div>
+            )}
+
+            {/* FotMob match list */}
+            {fotmobMatches.length > 0 && (
+              <div className="space-y-1 max-h-48 overflow-y-auto bg-slate-900/40 rounded-md p-1.5">
+                <div className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">نتائج FotMob:</div>
+                {fotmobMatches.map((m) => (
+                  <div
+                    key={m.fotmobId}
+                    className="flex items-center justify-between bg-slate-900 hover:bg-slate-800 rounded-md px-2 py-1.5"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-200 truncate">{m.name}</div>
+                      <div className="text-[10px] text-slate-500 truncate">
+                        {m.club || '—'} · {Math.round(m.confidence * 100)}% match · ID {m.fotmobId}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => buildAndAddPlayer(m)}
+                      disabled={fotmobStatus.kind === 'building'}
+                      className="text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white px-2 py-1 rounded flex items-center gap-1"
+                      title="إضافة هذا اللاعب للقالب"
+                    >
+                      <Download className="w-2.5 h-2.5" />
+                      إضافة للقالب
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Local search status */}
             {searchStatus.kind === 'found' && (
               <div className="text-[11px] bg-green-900/20 border border-green-700/40 text-green-300 rounded-md px-2 py-1.5">
                 ✓ {searchStatus.msg}
@@ -395,10 +564,10 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               </div>
             )}
 
-            {/* Results list (only when >1 result) */}
+            {/* Local results list (only when >1 result) */}
             {searchResults.length > 1 && (
               <div className="space-y-1 max-h-40 overflow-y-auto">
-                <div className="text-[10px] text-slate-500 font-bold uppercase">النتائج:</div>
+                <div className="text-[10px] text-slate-500 font-bold uppercase">نتائج محلية:</div>
                 {searchResults.map((r) => (
                   <div
                     key={r.id}
@@ -432,11 +601,11 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               </div>
             )}
 
-            {/* Examples hint */}
-            {searchStatus.kind === 'idle' && (
+            {/* Examples */}
+            {fotmobStatus.kind === 'idle' && searchStatus.kind === 'idle' && fotmobMatches.length === 0 && (
               <div className="text-[10px] text-slate-500 space-y-0.5 pt-1">
                 <div className="font-bold text-slate-400">أمثلة:</div>
-                {['ليفاندوفسكي برشلونة', 'يامال برشلونة', 'كول بالمر تشيلسي', 'Cole Palmer Chelsea'].map((ex) => (
+                {['ليفاندوفسكي برشلونة', 'مبابي ريال مدريد', 'يامال برشلونة', 'كول بالمر تشيلسي', 'Cole Palmer Chelsea', 'Mohamed Salah Liverpool'].map((ex) => (
                   <button
                     key={ex}
                     onClick={() => setPlayerSearch(ex)}
@@ -448,6 +617,38 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               </div>
             )}
           </div>
+
+          {/* Dynamic profiles list (added on-demand) */}
+          {dynamicEntries.length > 0 && (
+            <div className="rounded-lg border border-blue-800/30 bg-slate-950/40 p-2 space-y-1">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase mb-0.5">
+                <span>اللاعبون المُضافون من FotMob ({dynamicEntries.length})</span>
+              </div>
+              {dynamicEntries.map((d) => (
+                <div key={d.id} className="flex items-center justify-between bg-slate-900 rounded px-2 py-1 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-slate-200 truncate">{d.name}</div>
+                    <div className="text-[9px] text-slate-500 truncate">{d.club} · {d.season}</div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => applyChanges({ samplePlayer: d.id })}
+                      className="text-[9px] bg-cyan-800 hover:bg-cyan-700 text-cyan-100 px-2 py-0.5 rounded"
+                    >
+                      اختيار
+                    </button>
+                    <button
+                      onClick={() => removeDynamicEntry(d.id)}
+                      className="text-[9px] bg-red-900/40 hover:bg-red-800/60 text-red-300 px-1.5 py-0.5 rounded"
+                      title="حذف من المكتبة المحلية"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Mode toggle */}
           <div className="flex gap-2">
@@ -487,11 +688,13 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               onChange={(e) => applyChanges({ samplePlayer: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500"
             >
-              {registry.length === 0 ? (
+              {combinedRegistry.length === 0 ? (
                 <option value={playerA}>{playerA}</option>
               ) : (
-                registry.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name} — {r.club}</option>
+                combinedRegistry.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} — {r.club}{r.file === '__dynamic__' ? ' (FotMob)' : ''}
+                  </option>
                 ))
               )}
             </select>
@@ -506,26 +709,23 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
                 onChange={(e) => applyChanges({ samplePlayerB: e.target.value })}
                 className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-cyan-500"
               >
-                {registry.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name} — {r.club}</option>
+                {combinedRegistry.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} — {r.club}{r.file === '__dynamic__' ? ' (FotMob)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
           )}
 
-          {registry.length === 0 && (
+          {combinedRegistry.length === 0 && (
             <div className="text-[11px] text-amber-400 bg-amber-900/20 border border-amber-800/40 rounded-lg p-2">
-              لا توجد مكتبة لاعبين جاهزة. شغّل
-              <code className="mx-1 font-mono text-[10px]">build_player_intel_public_registry.py</code>
-              لتوليدها.
+              لا توجد مكتبة لاعبين جاهزة. استخدم البحث في FotMob أعلاه لإضافة لاعب جديد.
             </div>
           )}
-          {registry.length > 0 && (
+          {combinedRegistry.length > 0 && (
             <div className="text-[10px] flex items-center justify-between text-slate-500">
-              <span>المكتبة الحالية: {registry.length} لاعب</span>
-              {registry.length <= 3 && (
-                <span className="text-amber-400">المكتبة ما زالت صغيرة — استخدم البحث لإضافة لاعب جديد.</span>
-              )}
+              <span>المكتبة الحالية: {combinedRegistry.length} لاعب ({registry.length} ثابت + {dynamicEntries.length} من FotMob)</span>
             </div>
           )}
 
