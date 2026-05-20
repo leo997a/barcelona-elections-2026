@@ -2519,10 +2519,17 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
     templateAccent: '#22d3ee',
     templateGroup: 'PLAYER_INTEL',
     fields: [
-      { id: 'samplePlayer', label: 'اختيار لاعب', type: 'select', value: 'lamine-yamal', options: [
+      { id: 'mode', label: 'الوضع', type: 'select', value: 'single', options: [
+        { label: 'لاعب واحد', value: 'single' },
+        { label: 'مقارنة لاعبين', value: 'compare' },
+      ]},
+      { id: 'samplePlayer', label: 'اللاعب الأول', type: 'select', value: 'lamine-yamal', options: [
         { label: '— يُحمَّل من المكتبة —', value: 'lamine-yamal' },
       ]},
-      { id: 'cardType', label: 'نوع البطاقة', type: 'select', value: 'attacker_card', options: [
+      { id: 'samplePlayerB', label: 'اللاعب الثاني', type: 'select', value: 'robert-lewandowski', options: [
+        { label: '— يُحمَّل من المكتبة —', value: 'robert-lewandowski' },
+      ]},
+      { id: 'cardType', label: 'نوع البطاقة (Preset)', type: 'select', value: 'attacker_card', options: [
         { label: 'بطاقة هجومية', value: 'attacker_card' },
         { label: 'صانع لعب', value: 'playmaker_card' },
         { label: 'جناح', value: 'winger_card' },
@@ -2531,25 +2538,28 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
         { label: 'تقرير السوق', value: 'market_report' },
         { label: 'تقرير الموسم', value: 'season_report' },
         { label: 'تقرير كامل', value: 'complete_report' },
+        { label: 'مخصّص (يدوي)', value: 'custom' },
       ]},
-      { id: 'heroMetricsCount', label: 'إحصائيات رئيسية', type: 'select', value: '5', options: [
-        { label: '4', value: '4' },
-        { label: '5', value: '5' },
-        { label: '6', value: '6' },
+      { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'premium_broadcast', options: [
+        { label: 'Premium Broadcast Card', value: 'premium_broadcast' },
+        { label: 'Tactical Data Board', value: 'tactical_board' },
+        { label: 'Magazine Player Profile', value: 'magazine_profile' },
+        { label: 'Compact TV Overlay', value: 'compact_tv' },
+        { label: 'Head-to-Head Duel', value: 'h2h_duel' },
       ]},
-      { id: 'secondaryMetricsCount', label: 'إحصائيات ثانوية', type: 'select', value: '6', options: [
-        { label: '4', value: '4' },
-        { label: '6', value: '6' },
-        { label: '8', value: '8' },
-      ]},
-      { id: 'visualTheme', label: 'النمط البصري', type: 'select', value: 'broadcast_dark', options: [
+      { id: 'visualTheme', label: 'نمط الألوان', type: 'select', value: 'broadcast_dark', options: [
         { label: 'Broadcast Dark', value: 'broadcast_dark' },
         { label: 'Barcelona Night', value: 'barcelona_night' },
         { label: 'Clean Studio', value: 'clean_studio' },
       ]},
+      // Manual metric selection (JSON arrays of metric keys)
+      { id: 'playerIntelHeroMetricsJson', label: '__hero', type: 'hidden', value: '[]' },
+      { id: 'playerIntelSecondaryMetricsJson', label: '__secondary', type: 'hidden', value: '[]' },
+      { id: 'playerIntelHiddenMetricsJson', label: '__hidden', type: 'hidden', value: '[]' },
       { id: 'showSources', label: 'إظهار المصادر', type: 'boolean', value: true },
       { id: 'showFooter', label: 'إظهار Footer', type: 'boolean', value: true },
       { id: 'masterJson', label: 'لصق Master JSON', type: 'textarea', value: '' },
+      { id: 'masterJsonB', label: 'لصق Master JSON للاعب الثاني', type: 'textarea', value: '' },
     ],
     slots: {},
     theme: {

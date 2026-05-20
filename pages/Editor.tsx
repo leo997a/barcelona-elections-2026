@@ -18,6 +18,7 @@ import {
 } from '../utils/assetCache';
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
+import PlayerIntelV2EditorPanel from '../components/player-intel-v2/PlayerIntelV2EditorPanel';
 import {
   filterAvailableMetrics,
   isMetricAvailable,
@@ -2508,6 +2509,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             </div>
             );
         })()}
+
+        {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
+            <PlayerIntelV2EditorPanel
+                fields={draftOverlay.fields}
+                getDraftValue={getDraftValue}
+                applyChanges={(updates) => handleDraftFieldChanges(updates)}
+            />
+        )}
 
         {draftOverlay.type === OverlayType.MATCH_STATS && (
             <div className="shrink-0 max-h-[62vh] overflow-y-auto border-b border-blue-900/40 bg-blue-950/25 p-4 [scrollbar-width:thin] space-y-3">
