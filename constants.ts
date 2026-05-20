@@ -2520,9 +2520,7 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
     templateGroup: 'PLAYER_INTEL',
     fields: [
       { id: 'samplePlayer', label: 'اختيار لاعب', type: 'select', value: 'lamine-yamal', options: [
-        { label: 'Lamine Yamal', value: 'lamine-yamal' },
-        { label: 'Robert Lewandowski', value: 'robert-lewandowski' },
-        { label: 'Cole Palmer', value: 'cole-palmer' },
+        { label: '— يُحمَّل من المكتبة —', value: 'lamine-yamal' },
       ]},
       { id: 'cardType', label: 'نوع البطاقة', type: 'select', value: 'attacker_card', options: [
         { label: 'بطاقة هجومية', value: 'attacker_card' },

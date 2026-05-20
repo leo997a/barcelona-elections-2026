@@ -1,8 +1,10 @@
 /**
- * Player Intel V2 — Broadcast Renderer
+ * Player Intel V2 — Broadcast Renderer (Production)
  *
- * Professional broadcast card that reads real metric data from broadcast.json
- * samples or pasted master JSON. Shows actual stats, not empty placeholders.
+ * Reads broadcast.json dynamically from public/player-intel-v2-samples/.
+ * Supports dynamic player registry (not hardcoded 3 players).
+ * Uses clean Arabic labels (no mojibake).
+ * Broadcast-quality 16:9 design.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { RendererProps } from './SharedComponents';
@@ -14,287 +16,265 @@ import {
 } from '../player-intel-v2/playerIntelV2MetricResolver';
 import type { PlayerIntelMasterFull } from '../player-intel-v2/playerIntelV2Types';
 
-// ─── Visual themes ────────────────────────────────────────────────────────────
+// ─── Themes ───────────────────────────────────────────────────────────────────
 
-const VISUAL_THEMES = {
+const THEMES = {
   broadcast_dark: {
-    bg: 'linear-gradient(145deg, #0a0e1a 0%, #0f1629 40%, #111d35 100%)',
-    accent: '#22d3ee',
-    accentDim: 'rgba(34,211,238,0.12)',
-    cardBg: 'rgba(15,23,42,0.92)',
-    heroCardBg: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.85))',
-    text: '#f1f5f9',
-    muted: '#94a3b8',
-    dim: '#475569',
-    border: 'rgba(51,65,85,0.5)',
-    glow: 'rgba(34,211,238,0.08)',
+    bg: '#0b1120',
+    bgGrad: 'radial-gradient(ellipse at 70% 50%, rgba(15,30,60,1) 0%, rgba(11,17,32,1) 70%)',
+    accent: '#00e5ff',
+    accentSoft: 'rgba(0,229,255,0.08)',
+    surface: 'rgba(15,25,50,0.85)',
+    text: '#ffffff',
+    sub: '#8899bb',
+    dim: '#4a5568',
+    border: 'rgba(50,70,100,0.4)',
   },
   barcelona_night: {
-    bg: 'linear-gradient(145deg, #1a0a2e 0%, #2d1040 40%, #15082a 100%)',
-    accent: '#ff3366',
-    accentDim: 'rgba(255,51,102,0.12)',
-    cardBg: 'rgba(26,10,46,0.92)',
-    heroCardBg: 'linear-gradient(135deg, rgba(26,10,46,0.95), rgba(45,16,64,0.85))',
-    text: '#f1f5f9',
-    muted: '#c4b5fd',
-    dim: '#7c3aed',
-    border: 'rgba(88,28,135,0.4)',
-    glow: 'rgba(255,51,102,0.08)',
+    bg: '#0d0520',
+    bgGrad: 'radial-gradient(ellipse at 70% 50%, rgba(40,10,60,1) 0%, rgba(13,5,32,1) 70%)',
+    accent: '#ff2d55',
+    accentSoft: 'rgba(255,45,85,0.08)',
+    surface: 'rgba(30,10,50,0.85)',
+    text: '#ffffff',
+    sub: '#b8a0d0',
+    dim: '#6b4d8a',
+    border: 'rgba(80,30,120,0.4)',
   },
   clean_studio: {
-    bg: 'linear-gradient(145deg, #111827 0%, #1e293b 40%, #0f172a 100%)',
-    accent: '#3b82f6',
-    accentDim: 'rgba(59,130,246,0.12)',
-    cardBg: 'rgba(30,41,59,0.92)',
-    heroCardBg: 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(51,65,85,0.85))',
-    text: '#f8fafc',
-    muted: '#94a3b8',
-    dim: '#64748b',
-    border: 'rgba(71,85,105,0.4)',
-    glow: 'rgba(59,130,246,0.08)',
+    bg: '#101820',
+    bgGrad: 'radial-gradient(ellipse at 70% 50%, rgba(25,40,60,1) 0%, rgba(16,24,32,1) 70%)',
+    accent: '#4d8dff',
+    accentSoft: 'rgba(77,141,255,0.08)',
+    surface: 'rgba(25,35,55,0.85)',
+    text: '#ffffff',
+    sub: '#8899aa',
+    dim: '#556677',
+    border: 'rgba(60,80,110,0.4)',
   },
-};
+} as const;
 
-type ThemeKey = keyof typeof VISUAL_THEMES;
-type Theme = typeof VISUAL_THEMES.broadcast_dark;
+type ThemeKey = keyof typeof THEMES;
+type Theme = typeof THEMES.broadcast_dark;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const SAMPLES_BASE = '/player-intel-v2-samples';
 
-const PLAYER_IMAGE_MAP: Record<string, string> = {
-  'lamine-yamal': 'https://images.fotmob.com/image_resources/playerimages/1467236.png',
-  'robert-lewandowski': 'https://images.fotmob.com/image_resources/playerimages/93447.png',
-  'cole-palmer': 'https://images.fotmob.com/image_resources/playerimages/1096353.png',
-};
-
-async function loadBroadcastData(slug: string): Promise<PlayerIntelMasterFull | null> {
+async function loadBroadcast(slug: string): Promise<PlayerIntelMasterFull | null> {
   try {
     const r = await fetch(`${SAMPLES_BASE}/${slug}.broadcast.json`, { cache: 'no-store' });
     if (!r.ok) return null;
     return (await r.json()) as PlayerIntelMasterFull;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
+}
+
+interface RegistryPlayer { id: string; name: string; club: string; file: string; }
+
+async function loadRegistry(): Promise<RegistryPlayer[]> {
+  try {
+    const r = await fetch(`${SAMPLES_BASE}/index.json`, { cache: 'no-store' });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return (data?.players || []) as RegistryPlayer[];
+  } catch { return []; }
 }
 
 // ─── Main Renderer ────────────────────────────────────────────────────────────
 
-export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getField }) => {
+export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getField, isEditor }) => {
   const sampleSlug = String(getField('samplePlayer') || 'lamine-yamal');
   const pastedJson = String(getField('masterJson') || '');
   const cardType = (String(getField('cardType') || 'attacker_card')) as CardType;
-  const heroCount = Number(getField('heroMetricsCount') || 5);
-  const secondaryCount = Number(getField('secondaryMetricsCount') || 6);
+  const heroCount = Number(getField('heroMetricsCount') || 4);
+  const secondaryCount = Number(getField('secondaryMetricsCount') || 4);
   const showSources = getField('showSources') !== false;
   const showFooter = getField('showFooter') !== false;
   const themeKey = (String(getField('visualTheme') || 'broadcast_dark')) as ThemeKey;
+  const t = THEMES[themeKey] || THEMES.broadcast_dark;
 
-  const theme = VISUAL_THEMES[themeKey] || VISUAL_THEMES.broadcast_dark;
+  // Registry for dynamic player list (used in editor panel)
+  const [registry, setRegistry] = useState<RegistryPlayer[]>([]);
+  const [data, setData] = useState<PlayerIntelMasterFull | null>(null);
 
-  const [broadcastData, setBroadcastData] = useState<PlayerIntelMasterFull | null>(null);
-
-  // Parse pasted JSON
+  // Pasted JSON
   const parsedFull = useMemo<PlayerIntelMasterFull | null>(() => {
     if (!pastedJson || pastedJson.length < 100) return null;
     try { return JSON.parse(pastedJson) as PlayerIntelMasterFull; } catch { return null; }
   }, [pastedJson]);
 
-  // Load broadcast sample
+  // Load registry
+  useEffect(() => { loadRegistry().then(setRegistry); }, []);
+
+  // Load broadcast data
   useEffect(() => {
-    if (parsedFull) return;
-    let mounted = true;
-    loadBroadcastData(sampleSlug).then((d) => { if (mounted) setBroadcastData(d); });
-    return () => { mounted = false; };
+    if (parsedFull) { setData(null); return; }
+    let m = true;
+    loadBroadcast(sampleSlug).then((d) => { if (m) setData(d); });
+    return () => { m = false; };
   }, [sampleSlug, parsedFull]);
 
-  // Resolve metrics
+  // Update samplePlayer options dynamically in editor
+  useEffect(() => {
+    if (!isEditor || registry.length === 0) return;
+    const field = config.fields.find((f) => f.id === 'samplePlayer');
+    if (field && Array.isArray(field.options)) {
+      const newOpts = registry.map((p) => ({ label: `${p.name} — ${p.club}`, value: p.id }));
+      if (JSON.stringify(field.options) !== JSON.stringify(newOpts)) {
+        field.options = newOpts;
+      }
+    }
+  }, [registry, isEditor, config.fields]);
+
+  // Resolve
   const resolved: ResolvedData = useMemo(() => {
-    const source = parsedFull || broadcastData;
+    const source = parsedFull || data;
     return resolveMetrics(source, cardType, heroCount, secondaryCount);
-  }, [parsedFull, broadcastData, cardType, heroCount, secondaryCount]);
+  }, [parsedFull, data, cardType, heroCount, secondaryCount]);
 
   const { meta, heroMetrics, secondaryMetrics, sourceCoverage } = resolved;
+  const hasData = heroMetrics.length > 0;
 
   // Image
-  const imageUrl = meta.imageUrl
-    || (broadcastData as Record<string, unknown> | null)?.images
-      && ((broadcastData as Record<string, unknown>)?.images as Record<string, string>)?.playerImage
-    || PLAYER_IMAGE_MAP[sampleSlug]
-    || null;
-
-  const hasData = heroMetrics.length > 0 || secondaryMetrics.length > 0;
+  const imageUrl = useMemo(() => {
+    if (meta.imageUrl) return meta.imageUrl;
+    const d2 = parsedFull || data;
+    const img = (d2 as Record<string, unknown> | null)?.images;
+    if (img && typeof img === 'object' && 'playerImage' in (img as object)) {
+      return (img as Record<string, string>).playerImage;
+    }
+    // Fallback known IDs
+    const map: Record<string, string> = {
+      'lamine-yamal': 'https://images.fotmob.com/image_resources/playerimages/1467236.png',
+      'robert-lewandowski': 'https://images.fotmob.com/image_resources/playerimages/93447.png',
+      'cole-palmer': 'https://images.fotmob.com/image_resources/playerimages/1096353.png',
+    };
+    return map[sampleSlug] || null;
+  }, [meta.imageUrl, parsedFull, data, sampleSlug]);
 
   return (
-    <div className="w-full h-full flex items-center justify-center" style={{ fontFamily: "'Tajawal', sans-serif" }}>
-      <div
-        className="relative w-full h-full overflow-hidden"
-        style={{ background: theme.bg, aspectRatio: '16/9' }}
-      >
-        {/* Background effects */}
-        <div className="absolute inset-0 opacity-[0.025]" style={{
-          backgroundImage: `radial-gradient(circle, ${theme.accent} 1px, transparent 1px)`,
-          backgroundSize: '32px 32px',
-        }} />
-        <div className="absolute -top-20 -left-20 w-[500px] h-[500px] rounded-full blur-[150px] opacity-30"
-          style={{ background: theme.glow }} />
-        <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] rounded-full blur-[120px] opacity-20"
-          style={{ background: theme.accentDim }} />
+    <div className="w-full h-full relative overflow-hidden" style={{
+      fontFamily: "'Tajawal', sans-serif",
+      background: t.bgGrad,
+      aspectRatio: '16/9',
+    }}>
+      {/* Subtle accent glow */}
+      <div className="absolute top-0 right-0 w-[50%] h-[60%] opacity-20 blur-[100px] pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${t.accentSoft}, transparent 70%)` }} />
 
-        {/* Main layout */}
-        <div className="absolute inset-0 flex" dir="rtl">
-          {/* Right: Player image */}
-          <div className="w-[30%] h-full relative flex items-end justify-center">
-            <div className="absolute inset-0" style={{
-              background: `radial-gradient(ellipse at center bottom, ${theme.accentDim}, transparent 70%)`,
-            }} />
-            {imageUrl && (
-              <img
-                src={imageUrl}
-                alt={meta.player}
-                className="relative z-10 w-[85%] max-h-[88%] object-contain object-bottom drop-shadow-2xl"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-              />
-            )}
-          </div>
-
-          {/* Left: Data panel */}
-          <div className="flex-1 flex flex-col justify-center px-[4%] py-[3%]">
-            {/* Card type badge */}
-            <div className="mb-3">
-              <span className="text-[13px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-md"
-                style={{ color: theme.accent, background: theme.accentDim }}>
-                {meta.cardTitleAr}
-              </span>
+      <div className="absolute inset-0 flex" dir="rtl">
+        {/* ─── Right: Player Image ─── */}
+        <div className="w-[28%] h-full relative flex items-end justify-center overflow-hidden">
+          {/* Gradient overlay at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-[40%] z-10 pointer-events-none"
+            style={{ background: `linear-gradient(to top, ${t.bg}, transparent)` }} />
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="relative z-0 w-[90%] max-h-[92%] object-contain object-bottom"
+              style={{ filter: 'drop-shadow(0 8px 30px rgba(0,0,0,0.6))' }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+          ) : (
+            <div className="w-[60%] aspect-[3/4] rounded-2xl mb-8 flex items-center justify-center"
+              style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+              <span className="text-4xl opacity-20">⚽</span>
             </div>
-
-            {/* Player name */}
-            <h1 className="text-[42px] font-black leading-[1.1] mb-1" style={{ color: theme.text }}>
-              {meta.player || '—'}
-            </h1>
-
-            {/* Club / Position / Season */}
-            <div className="flex items-center gap-3 text-[15px] mb-6" style={{ color: theme.muted }}>
-              {meta.club && <span className="font-bold">{meta.club}</span>}
-              {meta.position && <><span style={{ color: theme.dim }}>•</span><span>{meta.position}</span></>}
-              {meta.season && <><span style={{ color: theme.dim }}>•</span><span className="font-mono text-[13px]">{meta.season}</span></>}
-            </div>
-
-            {/* Hero metrics */}
-            {heroMetrics.length > 0 && (
-              <div className="grid gap-3 mb-4" style={{
-                gridTemplateColumns: `repeat(${Math.min(heroMetrics.length, 3)}, 1fr)`,
-              }}>
-                {heroMetrics.map((m) => (
-                  <HeroCard key={m.key} metric={m} theme={theme} />
-                ))}
-              </div>
-            )}
-
-            {/* Secondary metrics */}
-            {secondaryMetrics.length > 0 && (
-              <div className="grid gap-2 mb-5" style={{
-                gridTemplateColumns: `repeat(${Math.min(secondaryMetrics.length, 4)}, 1fr)`,
-              }}>
-                {secondaryMetrics.map((m) => (
-                  <SecondaryChip key={m.key} metric={m} theme={theme} />
-                ))}
-              </div>
-            )}
-
-            {/* No data message */}
-            {!hasData && (
-              <div className="rounded-xl px-5 py-8 text-center" style={{ background: theme.cardBg, border: `1px solid ${theme.border}` }}>
-                <p className="text-[15px]" style={{ color: theme.muted }}>
-                  جارٍ تحميل البيانات...
-                </p>
-                <p className="text-[12px] mt-2" style={{ color: theme.dim }}>
-                  إذا استمرت المشكلة، الصق ملف Master JSON في الإعدادات
-                </p>
-              </div>
-            )}
-
-            {/* Sources */}
-            {showSources && hasData && (
-              <div className="flex items-center gap-2 mt-auto pt-3">
-                {sourceCoverage.fotmob && (
-                  <span className="text-[11px] font-bold px-2 py-1 rounded-md"
-                    style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }}>
-                    FotMob ✓
-                  </span>
-                )}
-                {sourceCoverage.fbref && (
-                  <span className="text-[11px] font-bold px-2 py-1 rounded-md"
-                    style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}>
-                    FBref ✓
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Footer */}
-        {showFooter && (
-          <div className="absolute bottom-0 left-0 right-0 h-8 flex items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.5)', borderTop: `1px solid ${theme.border}` }}>
-            <span className="text-[10px] font-mono tracking-widest" style={{ color: theme.dim }}>
-              REO DATA FABRIC • FOTMOB + FBREF
-            </span>
+        {/* ─── Left: Content ─── */}
+        <div className="flex-1 flex flex-col justify-center px-[3.5%] py-[2.5%]">
+          {/* Badge */}
+          <div className="inline-flex self-start px-3 py-1 rounded-md mb-3 text-[12px] font-black uppercase tracking-[0.15em]"
+            style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}30` }}>
+            {meta.cardTitleAr}
           </div>
-        )}
+
+          {/* Name */}
+          <h1 className="text-[38px] font-black leading-[1.05] mb-1" style={{ color: t.text }}>
+            {meta.player || '—'}
+          </h1>
+
+          {/* Sub info */}
+          <div className="flex items-center gap-2 text-[14px] mb-5" style={{ color: t.sub }}>
+            {meta.club && <span className="font-bold">{meta.club}</span>}
+            {meta.position && <><span style={{ opacity: 0.4 }}>|</span><span>{meta.position}</span></>}
+            {meta.season && <><span style={{ opacity: 0.4 }}>|</span><span className="font-mono text-[12px]">{meta.season}</span></>}
+          </div>
+
+          {/* Hero Metrics */}
+          {hasData ? (
+            <div className="grid gap-2.5 mb-3" style={{ gridTemplateColumns: `repeat(${Math.min(heroMetrics.length, 3)}, 1fr)` }}>
+              {heroMetrics.slice(0, 6).map((m) => <HeroStat key={m.key} m={m} t={t} />)}
+            </div>
+          ) : (
+            <div className="rounded-xl px-4 py-6 text-center mb-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+              <p className="text-[14px]" style={{ color: t.sub }}>لا توجد بيانات — اختر لاعبًا أو الصق Master JSON</p>
+            </div>
+          )}
+
+          {/* Secondary Metrics */}
+          {secondaryMetrics.length > 0 && (
+            <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${Math.min(secondaryMetrics.length, 4)}, 1fr)` }}>
+              {secondaryMetrics.map((m) => <SecondaryStat key={m.key} m={m} t={t} />)}
+            </div>
+          )}
+
+          {/* Sources */}
+          {showSources && hasData && (
+            <div className="flex items-center gap-2 mt-auto">
+              {sourceCoverage.fotmob && <SourceBadge label="FotMob" color="#22c55e" />}
+              {sourceCoverage.fbref && <SourceBadge label="FBref" color="#3b82f6" />}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Footer */}
+      {showFooter && (
+        <div className="absolute bottom-0 inset-x-0 h-7 flex items-center justify-center"
+          style={{ background: `linear-gradient(to top, rgba(0,0,0,0.6), transparent)` }}>
+          <span className="text-[9px] font-mono uppercase tracking-[0.25em]" style={{ color: t.dim }}>
+            REO DATA FABRIC • PLAYER INTEL V2
+          </span>
+        </div>
+      )}
     </div>
   );
 };
 
-// ─── Hero Metric Card ─────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-const HeroCard: React.FC<{ metric: ResolvedMetric; theme: Theme }> = ({ metric, theme }) => (
-  <div className="rounded-xl p-4 backdrop-blur-sm" style={{
-    background: theme.heroCardBg,
-    border: `1px solid ${theme.border}`,
-    boxShadow: `0 4px 20px ${theme.glow}`,
-  }}>
-    <div className="text-[11px] font-bold uppercase tracking-wide mb-2 truncate" style={{ color: theme.muted }}>
-      {metric.labelAr || metric.label}
+const HeroStat: React.FC<{ m: ResolvedMetric; t: Theme }> = ({ m, t }) => (
+  <div className="rounded-xl px-3.5 py-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+    <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5 truncate" style={{ color: t.sub }}>
+      {m.labelAr || m.label}
     </div>
-    <div className="text-[32px] font-black leading-none" style={{ color: theme.text }}>
-      {metric.formattedValue || '—'}
+    <div className="text-[28px] font-black leading-none" style={{ color: t.text }}>
+      {m.formattedValue}
     </div>
-    {metric.rank !== null && (
-      <div className="mt-3 flex items-center gap-2">
-        <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${Math.min(metric.rank, 100)}%`, background: theme.accent }} />
+    {m.rank !== null && (
+      <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: `${t.accent}15` }}>
+          <div className="h-full rounded-full" style={{ width: `${Math.min(m.rank, 100)}%`, background: t.accent }} />
         </div>
-        <span className="text-[10px] font-mono font-bold" style={{ color: theme.accent }}>
-          {Math.round(metric.rank)}%
-        </span>
-      </div>
-    )}
-    {metric.per90 !== null && metric.rank === null && (
-      <div className="text-[11px] mt-1.5 font-mono" style={{ color: theme.dim }}>
-        {metric.per90.toFixed(2)} /90
+        <span className="text-[9px] font-mono font-bold" style={{ color: t.accent }}>{Math.round(m.rank)}%</span>
       </div>
     )}
   </div>
 );
 
-// ─── Secondary Metric Chip ────────────────────────────────────────────────────
-
-const SecondaryChip: React.FC<{ metric: ResolvedMetric; theme: Theme }> = ({ metric, theme }) => (
-  <div className="rounded-lg px-3 py-2.5" style={{
-    background: theme.cardBg,
-    border: `1px solid ${theme.border}`,
-  }}>
-    <div className="text-[9px] uppercase tracking-wide truncate mb-0.5" style={{ color: theme.dim }}>
-      {metric.labelAr || metric.label}
-    </div>
-    <div className="text-[18px] font-black leading-tight" style={{ color: theme.text }}>
-      {metric.formattedValue || '—'}
-    </div>
+const SecondaryStat: React.FC<{ m: ResolvedMetric; t: Theme }> = ({ m, t }) => (
+  <div className="rounded-lg px-2.5 py-2" style={{ background: `${t.surface}80`, border: `1px solid ${t.border}` }}>
+    <div className="text-[8px] uppercase tracking-wide truncate mb-0.5" style={{ color: t.dim }}>{m.labelAr || m.label}</div>
+    <div className="text-[16px] font-black" style={{ color: t.text }}>{m.formattedValue}</div>
   </div>
+);
+
+const SourceBadge: React.FC<{ label: string; color: string }> = ({ label, color }) => (
+  <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{
+    background: `${color}15`, color, border: `1px solid ${color}30`,
+  }}>
+    {label} ✓
+  </span>
 );
 
 export default PlayerIntelV2Renderer;

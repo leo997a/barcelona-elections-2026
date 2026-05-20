@@ -13,7 +13,7 @@ import type {
   PlayerIntelMasterSummary,
   PlayerIntelTopCard,
 } from './playerIntelV2Types';
-import { CARD_AR_TITLES } from './playerIntelV2Labels';
+import { CARD_AR_TITLES, getMetricAr } from './playerIntelV2Labels';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ function _resolveFromFull(
     return {
       key: it.key,
       label: it.label || it.key,
-      labelAr: it.labelAr || null,
+      labelAr: getMetricAr(it.key, it.labelAr, it.label || it.key),
       value: it.value,
       formattedValue: formatMetricValue(it.value, it.key),
       source: it.source || 'unknown',

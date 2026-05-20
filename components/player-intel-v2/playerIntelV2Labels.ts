@@ -136,3 +136,92 @@ export const fbrefGroupAr = (group: string): string =>
 
 export const warningAr = (warning: string): string =>
   WARNING_AR[warning] || warning;
+
+/**
+ * Clean Arabic label resolver for broadcast metrics.
+ * Falls back to English label if no Arabic mapping exists.
+ * Detects mojibake (non-Arabic chars in supposedly Arabic text) and skips it.
+ */
+const METRIC_AR_MAP: Record<string, string> = {
+  goals: 'الأهداف',
+  assists: 'التمريرات الحاسمة',
+  xg: 'الأهداف المتوقعة',
+  expected_goals: 'الأهداف المتوقعة',
+  xa: 'التمريرات المتوقعة',
+  expected_assists: 'التمريرات المتوقعة',
+  shots: 'التسديدات',
+  shots_on_target: 'على المرمى',
+  rating: 'التقييم',
+  minutes: 'الدقائق',
+  minutes_played: 'الدقائق',
+  matches: 'المباريات',
+  appearances: 'المشاركات',
+  starts: 'بدأ أساسيًا',
+  tackles: 'الافتكاكات',
+  interceptions: 'الاعتراضات',
+  blocks: 'الصدّات',
+  clearances: 'التشتيتات',
+  touches: 'اللمسات',
+  dribbles: 'المراوغات',
+  crosses: 'العرضيات',
+  key_passes: 'التمريرات المفتاحية',
+  progressive_passes: 'التمريرات التقدمية',
+  progressive_carries: 'الحمل التقدمي',
+  yellow_cards: 'بطاقات صفراء',
+  red_cards: 'بطاقات حمراء',
+  fouls_committed: 'أخطاء',
+  fouls_drawn: 'أخطاء عليه',
+  offsides: 'تسلل',
+  shot_creating_actions: 'صناعة تسديدات',
+  goal_creating_actions: 'صناعة أهداف',
+  saves: 'تصديات',
+  clean_sheets: 'شِباك نظيفة',
+  aerial_duels_won: 'مبارزات هوائية',
+  duels_won: 'مبارزات فائزة',
+  dribble_success_rate: 'نجاح المراوغة',
+  accurate_passes: 'تمريرات دقيقة',
+  chances_created: 'فرص مصنوعة',
+  penalties_scored: 'ركلات مسجلة',
+  market_value: 'القيمة السوقية',
+  transfer_value: 'القيمة السوقية',
+  // Form report
+  recent_matches_count: 'المباريات الأخيرة',
+  recent_goals: 'أهداف أخيرة',
+  recent_assists: 'صناعات أخيرة',
+  recent_minutes: 'دقائق أخيرة',
+  recent_avg_rating: 'متوسط التقييم',
+  recent_player_of_match_count: 'رجل المباراة',
+  recent_yellow_cards: 'صفراء أخيرة',
+  recent_red_cards: 'حمراء أخيرة',
+  // Market
+  currentvalue: 'القيمة الحالية',
+  highestvalue: 'أعلى قيمة',
+  lowestvalue: 'أدنى قيمة',
+  firstvalue: 'أول قيمة',
+  growthfromfirstpercent: 'نمو القيمة',
+};
+
+function _isMojibake(s: string | null | undefined): boolean {
+  if (!s) return true;
+  // Arabic chars are in range \u0600-\u06FF. If the string has none, it's mojibake.
+  return !/[\u0600-\u06FF]/.test(s);
+}
+
+/**
+ * Get clean Arabic label for a metric key.
+ * Priority: METRIC_AR_MAP > labelAr from data (if not mojibake) > English label.
+ */
+export function getMetricAr(key: string, labelAr?: string | null, fallbackLabel?: string): string {
+  // Try direct map first (most reliable)
+  const lower = key.toLowerCase().replace(/^fotmob_/, '').replace(/^fbref_\w+_/, '');
+  if (METRIC_AR_MAP[lower]) return METRIC_AR_MAP[lower];
+  // Try partial match
+  for (const [pat, ar] of Object.entries(METRIC_AR_MAP)) {
+    if (lower.includes(pat)) return ar;
+  }
+  // Try provided labelAr if not mojibake
+  if (labelAr && !_isMojibake(labelAr)) return labelAr;
+  // Fallback to English
+  return fallbackLabel || key;
+}
+
