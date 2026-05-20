@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "player-intel-v2-samples-index-v1",
+  "generatedAt": "2026-05-20T04:58:54.292454+00:00",
+  "playerCount": 3,
+  "players": [
+    {
+      "slug": "cole-palmer",
+      "summaryFile": "cole-palmer.master.summary.json",
+      "player": "Cole Palmer",
+      "club": "Chelsea",
+      "season": "2025-26",
+      "position": "Attacking Midfielder",
+      "schemaVersion": "player-intel-master-v1",
+      "generatedAt": "2026-05-20T04:47:37.324792+00:00",
+      "metricsCount": 342,
+      "fotmobMetrics": 172,
+      "fbrefRawColumns": 145,
+      "broadcastCardsCount": 8,
+      "broadcastCardsItemTotal": 52,
+      "topAvailableCards": [
+        {
+          "key": "complete_report",
+          "title": "Complete Report",
+          "itemsCount": 10
+        },
+        {
+          "key": "season_report",
+          "title": "Season Report",
+          "itemsCount": 9
+        },
+        {
+          "key": "attacker",
+          "title": "Attacker Card",
+          "itemsCount": 8
+        },
+        {
+          "key": "form_report",
+          "title": "Form Report (recent)",
+          "itemsCount": 8
+        },
+        {
+          "key": "market_report",
+          "title": "Market Report",
+          "itemsCount": 5
+        },
+        {
+          "key": "playmaker",
+          "title": "Playmaker Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "winger",
+          "title": "Winger Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "defender",
+          "title": "Defender Card",
+          "itemsCount": 4
+        }
+      ],
+      "qualityWarnings": [],
+      "fbrefGroupsMatched": [
+        "standard",
+        "shooting",
+        "passing",
+        "pass_types",
+        "gca",
+        "defense",
+        "possession",
+        "playing_time",
+        "misc"
+      ],
+      "fbrefGroupsMissingPlayer": [
+        "keeper"
+      ],
+      "sources": {
+        "fotmob": true,
+        "fbref": true
+      }
+    },
+    {
+      "slug": "lamine-yamal",
+      "summaryFile": "lamine-yamal.master.summary.json",
+      "player": "Lamine Yamal",
+      "club": "Barcelona",
+      "season": "2025-26",
+      "position": "Right Winger",
+      "schemaVersion": "player-intel-master-v1",
+      "generatedAt": "2026-05-20T04:47:56.670795+00:00",
+      "metricsCount": 345,
+      "fotmobMetrics": 175,
+      "fbrefRawColumns": 145,
+      "broadcastCardsCount": 8,
+      "broadcastCardsItemTotal": 52,
+      "topAvailableCards": [
+        {
+          "key": "complete_report",
+          "title": "Complete Report",
+          "itemsCount": 10
+        },
+        {
+          "key": "season_report",
+          "title": "Season Report",
+          "itemsCount": 9
+        },
+        {
+          "key": "attacker",
+          "title": "Attacker Card",
+          "itemsCount": 8
+        },
+        {
+          "key": "form_report",
+          "title": "Form Report (recent)",
+          "itemsCount": 8
+        },
+        {
+          "key": "market_report",
+          "title": "Market Report",
+          "itemsCount": 5
+        },
+        {
+          "key": "playmaker",
+          "title": "Playmaker Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "winger",
+          "title": "Winger Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "defender",
+          "title": "Defender Card",
+          "itemsCount": 4
+        }
+      ],
+      "qualityWarnings": [],
+      "fbrefGroupsMatched": [
+        "standard",
+        "shooting",
+        "passing",
+        "pass_types",
+        "gca",
+        "defense",
+        "possession",
+        "playing_time",
+        "misc"
+      ],
+      "fbrefGroupsMissingPlayer": [
+        "keeper"
+      ],
+      "sources": {
+        "fotmob": true,
+        "fbref": true
+      }
+    },
+    {
+      "slug": "robert-lewandowski",
+      "summaryFile": "robert-lewandowski.master.summary.json",
+      "player": "Robert Lewandowski",
+      "club": "Barcelona",
+      "season": "2025-26",
+      "position": "Striker",
+      "schemaVersion": "player-intel-master-v1",
+      "generatedAt": "2026-05-20T04:47:21.268561+00:00",
+      "metricsCount": 366,
+      "fotmobMetrics": 175,
+      "fbrefRawColumns": 164,
+      "broadcastCardsCount": 8,
+      "broadcastCardsItemTotal": 52,
+      "topAvailableCards": [
+        {
+          "key": "complete_report",
+          "title": "Complete Report",
+          "itemsCount": 10
+        },
+        {
+          "key": "season_report",
+          "title": "Season Report",
+          "itemsCount": 9
+        },
+        {
+          "key": "attacker",
+          "title": "Attacker Card",
+          "itemsCount": 8
+        },
+        {
+          "key": "form_report",
+          "title": "Form Report (recent)",
+          "itemsCount": 8
+        },
+        {
+          "key": "market_report",
+          "title": "Market Report",
+          "itemsCount": 5
+        },
+        {
+          "key": "playmaker",
+          "title": "Playmaker Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "winger",
+          "title": "Winger Card",
+          "itemsCount": 4
+        },
+        {
+          "key": "defender",
+          "title": "Defender Card",
+          "itemsCount": 4
+        }
+      ],
+      "qualityWarnings": [],
+      "fbrefGroupsMatched": [
+        "standard",
+        "shooting",
+        "passing",
+        "pass_types",
+        "gca",
+        "defense",
+        "possession",
+        "playing_time",
+        "misc"
+      ],
+      "fbrefGroupsMissingPlayer": [
+        "keeper"
+      ],
+      "sources": {
+        "fotmob": true,
+        "fbref": true
+      }
+    }
+  ]
+}

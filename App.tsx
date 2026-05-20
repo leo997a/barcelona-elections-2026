@@ -9,6 +9,7 @@ import Editor from './pages/Editor';
 import Integrations from './pages/Integrations'; 
 import Settings from './pages/Settings';
 import BroadcastControl from './pages/BroadcastControl';
+import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
 import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
 import { syncManager } from './services/syncManager';
@@ -392,6 +393,15 @@ const App: React.FC = () => {
   // ----------------------------------------------------
   if (hashPath.startsWith('#/output/')) {
     return <LiveOutputView hashPath={hashPath} />;
+  }
+
+  // ----------------------------------------------------
+  // RENDER: Player Intel V2 Preview Lab — standalone read-only lab.
+  // Intentionally bypasses license gate so we can iterate. Does NOT touch the
+  // legacy Player Stats Lab or any production overlay code.
+  // ----------------------------------------------------
+  if (hashPath.startsWith('#/player-intel-v2-preview')) {
+    return <PlayerIntelV2PreviewPage />;
   }
 
   // ----------------------------------------------------

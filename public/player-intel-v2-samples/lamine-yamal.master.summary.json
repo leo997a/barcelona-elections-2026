@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "player-intel-master-v1",
+  "generatedAt": "2026-05-20T04:47:56.670795+00:00",
+  "player": "Lamine Yamal",
+  "club": "Barcelona",
+  "season": "2025-26",
+  "position": "Right Winger",
+  "sources": {
+    "fotmob": true,
+    "fbref": true
+  },
+  "counts": {
+    "fotmobMetrics": 175,
+    "fbrefRawColumns": 145,
+    "canonicalMetrics": 25,
+    "mergedMetrics": 345,
+    "metricCatalog": 345,
+    "broadcastCards": 8,
+    "broadcastCardsItemTotal": 52
+  },
+  "fbrefGroupsMatched": [
+    "standard",
+    "shooting",
+    "passing",
+    "pass_types",
+    "gca",
+    "defense",
+    "possession",
+    "playing_time",
+    "misc"
+  ],
+  "fbrefGroupsMissingPlayer": [
+    "keeper"
+  ],
+  "topAvailableCards": [
+    {
+      "key": "complete_report",
+      "title": "Complete Report",
+      "itemsCount": 10
+    },
+    {
+      "key": "season_report",
+      "title": "Season Report",
+      "itemsCount": 9
+    },
+    {
+      "key": "attacker",
+      "title": "Attacker Card",
+      "itemsCount": 8
+    },
+    {
+      "key": "form_report",
+      "title": "Form Report (recent)",
+      "itemsCount": 8
+    },
+    {
+      "key": "market_report",
+      "title": "Market Report",
+      "itemsCount": 5
+    },
+    {
+      "key": "playmaker",
+      "title": "Playmaker Card",
+      "itemsCount": 4
+    },
+    {
+      "key": "winger",
+      "title": "Winger Card",
+      "itemsCount": 4
+    },
+    {
+      "key": "defender",
+      "title": "Defender Card",
+      "itemsCount": 4
+    }
+  ],
+  "canonicalKeys": [
+    "goals",
+    "assists",
+    "matches",
+    "minutes",
+    "rating",
+    "yellow_cards",
+    "red_cards",
+    "shots",
+    "shots_on_target",
+    "xg",
+    "xa",
+    "key_passes",
+    "tackles",
+    "interceptions",
+    "touches",
+    "progressive_carries",
+    "crosses",
+    "fouls_committed",
+    "fouls_drawn",
+    "offsides",
+    "shot_creating_actions",
+    "goal_creating_actions",
+    "blocks",
+    "starts",
+    "tackles_won"
+  ],
+  "qualityWarnings": [],
+  "sourceConflicts": [],
+  "paths": {
+    "fotmobMega": "C:\\New folder\\barcelona-elections-2026\\deploy\\reo-datafabric\\reports\\player_fotmob_mega\\lamine-yamal.json",
+    "fbrefDir": "C:\\New folder\\barcelona-elections-2026\\deploy\\reo-datafootball-worker\\.cache\\fbref",
+    "fbrefGroupsLoaded": [
+      "standard",
+      "shooting",
+      "passing",
+      "pass_types",
+      "gca",
+      "defense",
+      "possession",
+      "playing_time",
+      "misc",
+      "keeper"
+    ]
+  }
+}
