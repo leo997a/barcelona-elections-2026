@@ -4,6 +4,7 @@ REO Data Fabric — FotMob CLI
 Usage:
   python reo_fotmob_cli.py search-player --name "Lamine Yamal"
   python reo_fotmob_cli.py player --id 1273159
+  python reo_fotmob_cli.py mega-player --id 1467236 --name "Lamine Yamal"
   python reo_fotmob_cli.py team --id 8634
   python reo_fotmob_cli.py matches --date 20260518
   python reo_fotmob_cli.py match --id 4193490
@@ -149,6 +150,21 @@ def cmd_player(args):
     print(f"  [OK] Full report saved to: reports/player_fotmob/")
 
 
+def cmd_mega_player(args):
+    """Build the Mega Profile (full extraction, no data loss) for a player."""
+    # Local import to avoid circular issues at module load
+    try:
+        from tools.build_fotmob_mega_profile import run as run_mega
+    except ImportError:
+        # Allow running CLI directly from tools/ folder
+        sys.path.insert(0, str(Path(__file__).parent))
+        from build_fotmob_mega_profile import run as run_mega  # type: ignore
+    profile = run_mega(args.id, getattr(args, "name", None))
+    if profile is None:
+        print("  [FAIL] Mega Profile could not be built.")
+        sys.exit(1)
+
+
 def cmd_team(args):
     provider = FotMobProvider()
     print(f"\n  Fetching team data: ID={args.id}")
@@ -208,6 +224,10 @@ def main():
     sp.add_argument("--id", type=int, required=True, help="FotMob player ID")
     sp.add_argument("--name", type=str, default=None, help="Player name (for slug generation)")
 
+    sp = subparsers.add_parser("mega-player", help="Build full Mega Profile (no data loss)")
+    sp.add_argument("--id", type=int, required=True, help="FotMob player ID")
+    sp.add_argument("--name", type=str, default=None, help="Player name (for slug generation)")
+
     sp = subparsers.add_parser("team", help="Get team data by FotMob ID")
     sp.add_argument("--id", type=int, required=True, help="FotMob team ID")
 
@@ -225,6 +245,8 @@ def main():
         cmd_search_player(args)
     elif args.command == "player":
         cmd_player(args)
+    elif args.command == "mega-player":
+        cmd_mega_player(args)
     elif args.command == "team":
         cmd_team(args)
     elif args.command == "matches":
