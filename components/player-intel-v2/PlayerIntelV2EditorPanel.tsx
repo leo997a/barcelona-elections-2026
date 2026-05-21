@@ -223,10 +223,10 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
     // Remote search via API
     try {
-      const r = await fetch('/api/player-intel-v2/search-player', {
+      const r = await fetch('/api/player-intel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q, mode: 'search_only' }),
+        body: JSON.stringify({ action: 'search-player', query: q, mode: 'search_only' }),
       });
       const data = await r.json();
       if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
@@ -268,10 +268,10 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
     setFotmobMatches([]);
 
     try {
-      const r = await fetch('/api/player-intel-v2/fotmob-search', {
+      const r = await fetch('/api/player-intel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q }),
+        body: JSON.stringify({ action: 'fotmob-search', query: q }),
       });
       const data = await r.json();
       if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
@@ -294,10 +294,11 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const buildAndAddPlayer = async (match: { fotmobId: number; name: string; club: string }) => {
     setFotmobStatus({ kind: 'building', msg: `جاري بناء بروفايل ${match.name}...` });
     try {
-      const r = await fetch('/api/player-intel-v2/build-fotmob-profile', {
+      const r = await fetch('/api/player-intel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'build-fotmob-profile',
           fotmobId: match.fotmobId,
           name: match.name,
           season: '2025-26',

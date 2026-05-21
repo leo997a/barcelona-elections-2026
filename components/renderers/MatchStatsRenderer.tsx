@@ -1121,7 +1121,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   activeTheme,
 }) => {
   const dataMode = String(getField('dataMode') || 'CLOUD_BRIDGE');
-  const apiUrl = String(getField('apiUrl') || (dataMode === 'CLOUD_BRIDGE' ? '/api/reo-match/match' : 'http://127.0.0.1:3005/api/match'));
+  const apiUrl = String(getField('apiUrl') || (dataMode === 'CLOUD_BRIDGE' ? '/api/reo-match?action=match' : 'http://127.0.0.1:3005/api/match'));
   const manualJson = String(getField('manualJson') || '');
   const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 30), 10, 60);
   const statsRotateSec = clamp(toNumber(getField('statsRotateSec'), 30), 10, 90);

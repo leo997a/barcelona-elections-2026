@@ -67,7 +67,7 @@ const CURRENCY_OPTIONS = [
 ];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
-const CLOUD_MATCH_API_URL = '/api/reo-match/match';
+const CLOUD_MATCH_API_URL = '/api/reo-match?action=match';
 
 const MATCH_STAT_PRESET_QUICK = [
   { value: 'SMART', label: 'Smart' },
@@ -1638,7 +1638,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     body: Record<string, unknown> = {},
     signal?: AbortSignal,
   ) => {
-    const response = await fetch(`/api/reo-match/control?action=${encodeURIComponent(action)}`, {
+    const response = await fetch(`/api/reo-match?action=control&control=${encodeURIComponent(action)}`, {
       method: 'POST',
       headers: getAdminAuthHeaders(),
       body: JSON.stringify(body),
@@ -1657,7 +1657,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setIsBridgeActionRunning(true);
     setMatchStatsImportMessage(null);
     try {
-      const response = await fetch('/api/reo-match/status', { cache: 'no-store' });
+      const response = await fetch('/api/reo-match?action=status', { cache: 'no-store' });
       const payload = await response.json().catch(() => ({})) as BridgeStatusSnapshot & { error?: string };
       if (!response.ok) {
         throw new Error(typeof payload.error === 'string' ? payload.error : '');

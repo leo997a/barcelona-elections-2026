@@ -508,7 +508,7 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
     id: 'apiUrl',
     label: 'رابط خادم الجسر المحلي',
     type: 'text',
-    value: '/api/reo-match/match',
+    value: '/api/reo-match?action=match',
   },
   {
     id: 'homeColor',

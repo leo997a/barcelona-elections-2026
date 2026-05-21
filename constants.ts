@@ -514,7 +514,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'playerImageCacheUrl', label: 'رابط كاش صور اللاعبين JSON', type: 'text', value: '/player-image-cache/barcelona.json?v=20260515;/player-image-cache/chelsea.json?v=20260515' },
       { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'REO Cloud Bridge' },
       { id: 'sourceMatchUrl', label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
-      { id: 'apiUrl', label: 'رابط API بيانات المباراة', type: 'text', value: '/api/reo-match/match' },
+      { id: 'apiUrl', label: 'رابط API بيانات المباراة', type: 'text', value: '/api/reo-match?action=match' },
       { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },
       { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#ef4444' },
       { id: 'showDominance', label: 'إظهار مؤشر الهيمنة', type: 'boolean', value: true },
