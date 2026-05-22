@@ -21,7 +21,7 @@ import {
 } from '../player-intel-v2/playerIntelV2MetricResolver';
 import { getMetricAr, cardArTitle } from '../player-intel-v2/playerIntelV2Labels';
 import type { PlayerIntelMasterFull } from '../player-intel-v2/playerIntelV2Types';
-import { getImageOverride, resolveImageUrl, type ImageOverride } from '../player-intel-v2/playerIntelV2ImageStore';
+import { getImageOverride, resolveImageUrl, onImageOverrideChange, type ImageOverride } from '../player-intel-v2/playerIntelV2ImageStore';
 import { chooseStatLayout, type StatLayoutMode } from '../player-intel-v2/playerIntelV2Layouts';
 
 // ─── Themes ───────────────────────────────────────────────────────────────────
@@ -277,12 +277,40 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
     return r.meta;
   }, [sourceB, cardType]);
 
-  const imageOverrideA = useMemo(() => getImageOverride(playerASlug), [playerASlug]);
-  const imageOverrideB = useMemo(() => getImageOverride(playerBSlug), [playerBSlug]);
+  // imageVersion ticks whenever any override changes — forces re-derive
+  const [imageVersion, setImageVersion] = useState(0);
+  useEffect(() => {
+    return onImageOverrideChange(() => setImageVersion((v) => v + 1));
+  }, []);
+
+  const imageOverrideA = useMemo(
+    () => getImageOverride(playerASlug),
+    [playerASlug, imageVersion],
+  );
+  const imageOverrideB = useMemo(
+    () => getImageOverride(playerBSlug),
+    [playerBSlug, imageVersion],
+  );
   const fallbackImageA = metaA.imageUrl || PLAYER_IMG_FALLBACK[playerASlug] || null;
   const fallbackImageB = metaB.imageUrl || PLAYER_IMG_FALLBACK[playerBSlug] || null;
-  const imageA = resolveImageUrl(imageOverrideA, fallbackImageA);
-  const imageB = resolveImageUrl(imageOverrideB, fallbackImageB);
+  
+  // Add cache-busting to force browser to reload when override changes
+  const imageA = useMemo(() => {
+    const url = resolveImageUrl(imageOverrideA, fallbackImageA);
+    if (!url) return null;
+    // Add timestamp to bust cache when override changes (except for data URLs)
+    if (url.startsWith('data:')) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}_v=${imageOverrideA?.updatedAt || Date.now()}`;
+  }, [imageOverrideA, fallbackImageA]);
+  
+  const imageB = useMemo(() => {
+    const url = resolveImageUrl(imageOverrideB, fallbackImageB);
+    if (!url) return null;
+    if (url.startsWith('data:')) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}_v=${imageOverrideB?.updatedAt || Date.now()}`;
+  }, [imageOverrideB, fallbackImageB]);
 
   // Determine actual variant: h2h_duel forces compare style
   const actualVariant = mode === 'compare' && heroB.length > 0
@@ -350,7 +378,42 @@ interface VariantProps {
 const PremiumBroadcastVariant: React.FC<VariantProps> = ({
   t, metaA, imageA, imageOverrideA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
-  const heroCols = Math.min(heroA.length || 1, 4);
+  const totalStats = heroA.length + secondaryA.length;
+  const layout = chooseStatLayout(totalStats, 'premium_broadcast', false);
+  
+  // Dynamic grid based on count
+  let heroDisplay = heroA;
+  let secondaryDisplay = secondaryA;
+  let heroGrid = 'repeat(auto-fit, minmax(120px, 1fr))';
+  let secondaryGrid = 'repeat(auto-fit, minmax(100px, 1fr))';
+  
+  if (layout === 'hero_cards') {
+    // 1-6 stats: large hero cards
+    heroDisplay = heroA.slice(0, 6);
+    secondaryDisplay = [];
+    heroGrid = `repeat(${Math.min(heroDisplay.length, 3)}, 1fr)`;
+  } else if (layout === 'compact_grid') {
+    // 7-12 stats: compact grid
+    heroDisplay = heroA.slice(0, 4);
+    secondaryDisplay = secondaryA.slice(0, 8);
+    heroGrid = `repeat(${Math.min(heroDisplay.length, 4)}, 1fr)`;
+    secondaryGrid = `repeat(${Math.min(secondaryDisplay.length, 4)}, 1fr)`;
+  } else if (layout === 'matrix') {
+    // 13-20 stats: dense matrix
+    const allStats = [...heroA, ...secondaryA].slice(0, 20);
+    heroDisplay = allStats.slice(0, 10);
+    secondaryDisplay = allStats.slice(10);
+    heroGrid = 'repeat(5, 1fr)';
+    secondaryGrid = 'repeat(5, 1fr)';
+  } else if (layout === 'data_table') {
+    // 21-30 stats: ultra-compact table
+    const allStats = [...heroA, ...secondaryA].slice(0, 30);
+    heroDisplay = allStats.slice(0, 15);
+    secondaryDisplay = allStats.slice(15);
+    heroGrid = 'repeat(6, 1fr)';
+    secondaryGrid = 'repeat(6, 1fr)';
+  }
+  
   return (
     <div className="w-full h-full relative overflow-hidden" style={{ background: t.bg, aspectRatio: '16/9' }}>
       {/* Glow */}
@@ -359,18 +422,22 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
 
       <div className="absolute inset-0 flex" dir="rtl">
         {/* Right: Portrait */}
-        <div className="w-[30%] h-full relative flex items-end justify-center">
-          <div className="absolute bottom-0 left-0 right-0 h-[35%] z-10 pointer-events-none"
-            style={{ background: `linear-gradient(to top, ${t.bgFlat}, transparent)` }} />
-          {imageA ? (
-            <PortraitImage src={imageA} t={t} override={imageOverrideA} />
-          ) : (
-            <ImagePlaceholder t={t} />
+        <div className={`${imageOverrideA?.mode === 'hidden' ? 'w-0' : 'w-[30%]'} h-full relative flex items-end justify-center transition-all`}>
+          {imageOverrideA?.mode !== 'hidden' && (
+            <>
+              <div className="absolute bottom-0 left-0 right-0 h-[35%] z-10 pointer-events-none"
+                style={{ background: `linear-gradient(to top, ${t.bgFlat}, transparent)` }} />
+              {imageA ? (
+                <PortraitImage src={imageA} t={t} override={imageOverrideA} />
+              ) : (
+                <ImagePlaceholder t={t} />
+              )}
+            </>
           )}
         </div>
 
         {/* Left: Content */}
-        <div className="flex-1 flex flex-col justify-center px-[3.5%] py-[2.5%] gap-3">
+        <div className="flex-1 flex flex-col justify-center px-[3.5%] py-[2.5%] gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <CardBadge t={t} text={cardTitleAr} />
             {scopeLabel && (
@@ -380,17 +447,24 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
               </span>
             )}
           </div>
-          <PlayerIdentity t={t} meta={metaA} large />
+          <PlayerIdentity t={t} meta={metaA} large={layout === 'hero_cards'} />
 
-          {heroA.length > 0 ? (
-            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${heroCols}, 1fr)` }}>
-              {heroA.slice(0, 5).map((m) => <HeroStatLarge key={m.key} m={m} t={t} />)}
+          {heroDisplay.length > 0 ? (
+            <div className={`grid ${layout === 'data_table' ? 'gap-1' : layout === 'matrix' ? 'gap-1.5' : 'gap-2.5'}`} style={{ gridTemplateColumns: heroGrid }}>
+              {heroDisplay.map((m) => 
+                layout === 'hero_cards' ? <HeroStatLarge key={m.key} m={m} t={t} /> :
+                layout === 'data_table' ? <MicroStat key={m.key} m={m} t={t} /> :
+                <SecondaryStat key={m.key} m={m} t={t} />
+              )}
             </div>
           ) : <NoData t={t} />}
 
-          {secondaryA.length > 0 && (
-            <div className="grid gap-2 mt-1" style={{ gridTemplateColumns: `repeat(${Math.min(secondaryA.length, 4)}, 1fr)` }}>
-              {secondaryA.slice(0, 4).map((m) => <SecondaryStat key={m.key} m={m} t={t} />)}
+          {secondaryDisplay.length > 0 && (
+            <div className={`grid ${layout === 'data_table' ? 'gap-1 mt-1' : layout === 'matrix' ? 'gap-1.5 mt-1' : 'gap-2 mt-1.5'}`} style={{ gridTemplateColumns: secondaryGrid }}>
+              {secondaryDisplay.map((m) => 
+                layout === 'data_table' ? <MicroStat key={m.key} m={m} t={t} /> :
+                <SecondaryStat key={m.key} m={m} t={t} />
+              )}
             </div>
           )}
 
@@ -406,9 +480,24 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
 // ─── 2. Tactical Data Board ───────────────────────────────────────────────────
 
 const TacticalBoardVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
+  t, metaA, imageA, imageOverrideA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
-  const allMetrics = [...heroA, ...secondaryA].slice(0, 12);
+  const allMetrics = [...heroA, ...secondaryA];
+  const totalStats = allMetrics.length;
+  const layout = chooseStatLayout(totalStats, 'tactical_board', false);
+  
+  // Adjust display based on count
+  let displayMetrics = allMetrics.slice(0, 24); // Max 24 for tactical board
+  let gridCols = 4;
+  
+  if (layout === 'matrix') {
+    gridCols = 5;
+    displayMetrics = allMetrics.slice(0, 20);
+  } else if (layout === 'data_table') {
+    gridCols = 6;
+    displayMetrics = allMetrics.slice(0, 24);
+  }
+  
   return (
     <div className="w-full h-full relative overflow-hidden" style={{ background: t.bg, aspectRatio: '16/9' }}>
       <div className="absolute inset-0 grid grid-cols-[20%_1fr]" dir="rtl">
@@ -416,7 +505,7 @@ const TacticalBoardVariant: React.FC<VariantProps> = ({
         <div className="border-l flex flex-col" style={{ borderColor: t.border, background: t.surface }}>
           <div className="flex-1 flex items-center justify-center p-3">
             {imageA ? (
-              <img src={imageA} alt="" className="max-w-full max-h-[200px] object-contain"
+              <img key={imageA} src={imageA} alt="" className={`max-w-full max-h-[200px] ${imageOverrideA?.objectFit === 'cover' ? 'object-cover' : 'object-contain'}`}
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
             ) : <ImagePlaceholder t={t} small />}
           </div>
@@ -435,9 +524,12 @@ const TacticalBoardVariant: React.FC<VariantProps> = ({
 
         {/* Right: dense grid */}
         <div className="p-4 flex flex-col gap-2">
-          <div className="grid grid-cols-4 gap-2 flex-1">
-            {allMetrics.map((m) => <DenseStatCell key={m.key} m={m} t={t} />)}
-            {allMetrics.length === 0 && <div className="col-span-4 self-center"><NoData t={t} /></div>}
+          <div className={`grid gap-${layout === 'data_table' ? '1' : '2'} flex-1`} style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
+            {displayMetrics.map((m) => 
+              layout === 'data_table' ? <MicroStat key={m.key} m={m} t={t} /> :
+              <DenseStatCell key={m.key} m={m} t={t} />
+            )}
+            {displayMetrics.length === 0 && <div className="col-span-full self-center"><NoData t={t} /></div>}
           </div>
           {showSources && <SourceBadges sourceCoverage={sourceCoverage} />}
         </div>
@@ -450,7 +542,7 @@ const TacticalBoardVariant: React.FC<VariantProps> = ({
 // ─── 3. Magazine Player Profile ───────────────────────────────────────────────
 
 const MagazineProfileVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
+  t, metaA, imageA, imageOverrideA, heroA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   return (
     <div className="w-full h-full relative overflow-hidden"
@@ -463,7 +555,7 @@ const MagazineProfileVariant: React.FC<VariantProps> = ({
         <div className="w-[42%] h-full relative">
           <div className="absolute inset-0 flex items-end justify-center">
             {imageA ? (
-              <img src={imageA} alt="" className="w-[95%] max-h-[100%] object-contain object-bottom"
+              <img key={imageA} src={imageA} alt="" className={`w-[95%] max-h-[100%] ${imageOverrideA?.objectFit === 'cover' ? 'object-cover' : 'object-contain'} ${imageOverrideA?.position === 'top' ? 'object-top' : imageOverrideA?.position === 'center' ? 'object-center' : 'object-bottom'}`}
                 style={{ filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.8))' }}
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
             ) : <ImagePlaceholder t={t} />}
@@ -535,7 +627,7 @@ const CompactTVVariant: React.FC<VariantProps> = ({
           {/* Player image circle */}
           <div className="w-[110px] flex-shrink-0 relative" style={{ background: t.surfaceLight }}>
             {imageA && (
-              <img src={imageA} alt="" className="absolute bottom-0 w-full h-full object-contain object-bottom"
+              <img key={imageA} src={imageA} alt="" className="absolute bottom-0 w-full h-full object-contain object-bottom"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
             )}
           </div>
@@ -598,7 +690,7 @@ const H2HDuelVariant: React.FC<VariantProps> = ({
             background: `radial-gradient(ellipse at center, ${t.accentSoft}, transparent 70%)`,
           }} />
           {imageA ? (
-            <img src={imageA} alt="" className="relative z-10 max-h-[55%] object-contain"
+            <img key={imageA} src={imageA} alt="" className="relative z-10 max-h-[55%] object-contain"
               style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.6))' }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
           ) : <ImagePlaceholder t={t} />}
@@ -637,7 +729,7 @@ const H2HDuelVariant: React.FC<VariantProps> = ({
             background: `radial-gradient(ellipse at center, ${t.accentSoft}, transparent 70%)`,
           }} />
           {imageB ? (
-            <img src={imageB} alt="" className="relative z-10 max-h-[55%] object-contain"
+            <img key={imageB} src={imageB} alt="" className="relative z-10 max-h-[55%] object-contain"
               style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.6))' }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
           ) : <ImagePlaceholder t={t} />}
@@ -702,6 +794,13 @@ const SecondaryStat: React.FC<{ m: ResolvedMetric; t: Theme }> = ({ m, t }) => (
   <div className="rounded-lg px-2.5 py-2" style={{ background: `${t.surface}80`, border: `1px solid ${t.border}` }}>
     <div className="text-[8px] uppercase tracking-wide truncate mb-0.5" style={{ color: t.dim }}>{m.labelAr || m.label}</div>
     <div className="text-[16px] font-black" style={{ color: t.text }}>{m.formattedValue}</div>
+  </div>
+);
+
+const MicroStat: React.FC<{ m: ResolvedMetric; t: Theme }> = ({ m, t }) => (
+  <div className="rounded px-1.5 py-1" style={{ background: `${t.surface}60`, border: `1px solid ${t.border}50` }}>
+    <div className="text-[7px] uppercase tracking-wide truncate" style={{ color: t.dim }}>{m.labelAr || m.label}</div>
+    <div className="text-[13px] font-black leading-tight" style={{ color: t.text }}>{m.formattedValue}</div>
   </div>
 );
 
@@ -832,6 +931,7 @@ const PortraitImage: React.FC<{
 
   return (
     <img
+      key={src}
       src={src}
       alt=""
       className={`relative z-0 w-[85%] max-h-[90%] ${objectClass} ${positionClass}`}
