@@ -67,7 +67,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [registry, setRegistry] = useState<RegistryEntry[]>([]);
   const [broadcastA, setBroadcastA] = useState<BroadcastFile | null>(null);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'basic' | 'metrics' | 'variants' | 'assistant'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'scope' | 'metrics' | 'variants' | 'assistant'>('basic');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [assistantText, setAssistantText] = useState('');
   const [toast, setToast] = useState<string | null>(null);
@@ -550,6 +550,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       <div className="flex gap-1 border-b border-slate-800 pb-0">
         {[
           { id: 'basic', label: 'أساسي' },
+          { id: 'scope', label: 'نطاق الإحصائيات' },
           { id: 'metrics', label: 'اختيار الإحصائيات' },
           { id: 'variants', label: 'التصاميم' },
           { id: 'assistant', label: 'المساعد' },
@@ -933,6 +934,119 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
           </div>
         </div>
       )}
+
+      {/* ─── SCOPE TAB ─── */}
+      {activeTab === 'scope' && (() => {
+        const dataScope = (broadcastA as Record<string, unknown> | null)?.dataScope as
+          | { scopeType?: string; label?: string; competitionName?: string; season?: string; sourcePath?: string; confidence?: string;
+              availableCompetitions?: Array<{ name: string; competitionId?: number; seasonsCount?: number; hasDeepStats?: boolean }>; }
+          | undefined;
+        const recentMatches = ((broadcastA as Record<string, unknown> | null)?.broadcastCards as Record<string, { items?: unknown[] }> | undefined)?.form_report?.items || [];
+        const recentCount = (broadcastA as Record<string, unknown> | null)?.recentMatches
+          ? ((broadcastA as { recentMatches?: unknown[] }).recentMatches?.length || 0)
+          : (Array.isArray(recentMatches) ? recentMatches.length : 0);
+        const competitions = dataScope?.availableCompetitions || [];
+
+        const scopes: Array<{ id: string; label: string; type: string; enabled: boolean; reason?: string; active?: boolean; sub?: string }> = [
+          {
+            id: 'main_league',
+            label: dataScope?.competitionName ? `${dataScope.competitionName} · ${dataScope.season || ''}` : 'الدوري الرئيسي',
+            type: 'main_league',
+            enabled: dataScope?.scopeType === 'main_league' && dataScope?.confidence !== 'low',
+            active: dataScope?.scopeType === 'main_league',
+            sub: 'مصدر: FotMob mainLeague.stats',
+          },
+          {
+            id: 'recent_matches',
+            label: recentCount > 0 ? `آخر ${recentCount} مباراة (مسابقات مختلطة)` : 'آخر المباريات',
+            type: 'recent_matches',
+            enabled: recentCount > 0,
+            active: dataScope?.scopeType === 'recent_matches',
+            sub: 'مصدر: FotMob recentMatches',
+          },
+          {
+            id: 'all_available',
+            label: 'كل المسابقات المتاحة',
+            type: 'all_available',
+            enabled: false,
+            reason: 'FotMob لا يوفّر إحصائيات موسم كاملة لكل مسابقة بشكل متاح حاليًا.',
+            sub: 'يحتاج دمج FBref + FotMob بكامل البطولات (مرحلة لاحقة).',
+          },
+        ];
+
+        return (
+          <div className="space-y-3">
+            <div className="text-[11px] text-slate-500 leading-relaxed">
+              يُحدِّد نطاقَ الإحصائيات المعروضة على القالب. كل خيار يبيّن المصدر الفعلي للأرقام.
+              {!dataScope && <div className="mt-1 text-amber-400">لم يُختر لاعب بعد — اختر لاعبًا من تبويب "أساسي".</div>}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              {scopes.map((s) => (
+                <div
+                  key={s.id}
+                  className={[
+                    'rounded-lg border p-3 transition-colors',
+                    !s.enabled
+                      ? 'bg-slate-950/60 border-slate-800/50 opacity-60'
+                      : s.active
+                      ? 'bg-cyan-900/30 border-cyan-700/50'
+                      : 'bg-slate-900 border-slate-800',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className={['text-[12px] font-bold', s.active ? 'text-cyan-200' : 'text-slate-200'].join(' ')}>
+                        {s.active && <span className="mr-1">●</span>}
+                        {s.label}
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1">{s.sub}</div>
+                      {s.reason && (
+                        <div className="text-[10px] text-amber-400/80 mt-1">⚠ {s.reason}</div>
+                      )}
+                    </div>
+                    {s.active ? (
+                      <span className="text-[9px] font-bold bg-cyan-700 text-white px-2 py-0.5 rounded shrink-0">نشط</span>
+                    ) : !s.enabled ? (
+                      <span className="text-[9px] font-bold bg-slate-800 text-slate-500 px-2 py-0.5 rounded shrink-0">غير متاح</span>
+                    ) : (
+                      <span className="text-[9px] font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded shrink-0">متاح</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Competitions discovered */}
+            {competitions.length > 0 && (
+              <div className="border border-slate-800 rounded-lg p-2 bg-slate-950/50">
+                <div className="text-[10px] text-slate-500 font-bold uppercase mb-2">
+                  المسابقات المكتشفة في FotMob ({competitions.length})
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {competitions.slice(0, 12).map((c, i) => (
+                    <div
+                      key={`${c.competitionId || i}-${c.name}`}
+                      className="flex items-center justify-between bg-slate-900 rounded px-2 py-1.5 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-slate-200 truncate">{c.name}</div>
+                        <div className="text-[9px] text-slate-600">{c.seasonsCount || 0} موسم</div>
+                      </div>
+                      {c.hasDeepStats && (
+                        <span className="text-[8px] font-bold bg-emerald-900/30 text-emerald-300 px-1.5 py-0.5 rounded shrink-0">deep</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[9px] text-slate-500 mt-2 leading-relaxed">
+                  هذه المسابقات مكتشفة من careerHistory/statSeasons، لكن استخدامها كمصدر إحصائيات كامل يحتاج مرحلة معالجة لاحقة.
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ─── METRICS TAB ─── */}
       {activeTab === 'metrics' && (

@@ -74,7 +74,7 @@ export interface BroadcastProfile {
     sourcePath: string;
     confidence: 'high' | 'medium' | 'low';
     /** Other competitions that were found but not actively used as stats source. */
-    availableCompetitions?: Array<{ name: string; competitionId?: number; seasonsCount?: number }>;
+    availableCompetitions?: Array<{ name: string; competitionId?: number; seasonsCount?: number; hasDeepStats?: boolean }>;
   };
 }
 
@@ -448,35 +448,41 @@ export function buildBroadcastFromFotMob(
 
   // ── Compute dataScope ───────────────────────────────────────────────────────
   const statSeasonsArr = raw.statSeasons as Array<{ seasonName?: string; tournaments?: Array<{ name?: string; tournamentId?: number; hasDeepStats?: boolean }> }> | undefined;
-  const availableComps: Array<{ name: string; competitionId?: number; seasonsCount?: number }> = [];
+  const availableComps: Array<{ name: string; competitionId?: number; seasonsCount?: number; hasDeepStats?: boolean }> = [];
   if (Array.isArray(statSeasonsArr)) {
-    const compMap = new Map<string, { name: string; competitionId?: number; seasonsCount: number }>();
+    const compMap = new Map<string, { name: string; competitionId?: number; seasonsCount: number; hasDeepStats: boolean }>();
     for (const s of statSeasonsArr) {
       for (const t of (s.tournaments || [])) {
         if (!t.name) continue;
         const key = `${t.tournamentId || ''}-${t.name}`;
         const existing = compMap.get(key);
-        if (existing) existing.seasonsCount += 1;
-        else compMap.set(key, { name: t.name, competitionId: t.tournamentId, seasonsCount: 1 });
+        if (existing) {
+          existing.seasonsCount += 1;
+          if (t.hasDeepStats) existing.hasDeepStats = true;
+        } else {
+          compMap.set(key, { name: t.name, competitionId: t.tournamentId, seasonsCount: 1, hasDeepStats: !!t.hasDeepStats });
+        }
       }
     }
     availableComps.push(...compMap.values());
   }
 
-  // Determine scope: prefer mainLeague stats > top season stats > recent
+  // Determine scope
   const hasMainLeague = mlObj && Array.isArray((mlObj as { stats?: unknown }).stats) && ((mlObj as { stats: unknown[] }).stats.length > 0);
   const hasFss = !!(raw.firstSeasonStats as Record<string, unknown> | undefined);
   const recent = raw.recentMatches as unknown[] | undefined;
+  const recentCount = Array.isArray(recent) ? recent.length : 0;
 
   const seasonLabel = (mlObj?.season as string) || (statSeasonsArr?.[0]?.seasonName) || '2025-26';
+  const mainLeagueName = (mlObj as { leagueName?: string })?.leagueName;
 
   let dataScope: BroadcastProfile['dataScope'];
   if (hasMainLeague) {
     dataScope = {
       scopeType: 'main_league',
-      label: `${(mlObj as { leagueName?: string })?.leagueName || 'Main League'} · ${seasonLabel}`,
+      label: `${mainLeagueName || 'Main League'} · ${seasonLabel}`,
       season: seasonLabel,
-      competitionName: (mlObj as { leagueName?: string })?.leagueName,
+      competitionName: mainLeagueName,
       competitionId: (mlObj as { leagueId?: number })?.leagueId,
       sourcePath: 'pageProps.data.mainLeague.stats',
       confidence: 'high',
@@ -491,10 +497,10 @@ export function buildBroadcastFromFotMob(
       confidence: 'medium',
       availableCompetitions: availableComps,
     };
-  } else if (Array.isArray(recent) && recent.length > 0) {
+  } else if (recentCount > 0) {
     dataScope = {
       scopeType: 'recent_matches',
-      label: `Recent matches · mixed competitions · ${seasonLabel}`,
+      label: `Recent ${recentCount} matches · mixed competitions`,
       season: seasonLabel,
       sourcePath: 'pageProps.data.recentMatches',
       confidence: 'medium',

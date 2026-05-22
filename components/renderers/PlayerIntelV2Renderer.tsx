@@ -288,11 +288,17 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
 
   // Read dataScope (from sourceA or sourceB if sourceA missing)
   const dataScope = (sourceA as Record<string, unknown> | null)?.dataScope as
-    | { scopeType?: string; label?: string; competitionName?: string; season?: string }
+    | { scopeType?: string; label?: string; competitionName?: string; season?: string; confidence?: string }
     | undefined;
-  const scopeLabel = dataScope?.label || (dataScope?.competitionName && dataScope?.season
+  const baseLabel = dataScope?.label || (dataScope?.competitionName && dataScope?.season
     ? `${dataScope.competitionName} · ${dataScope.season}`
     : null);
+  const sourcePrefix = (sourceA?.sourceCoverage?.fbref && sourceA?.sourceCoverage?.fotmob)
+    ? 'FBref + FotMob'
+    : sourceA?.sourceCoverage?.fbref ? 'FBref' : sourceA?.sourceCoverage?.fotmob ? 'FotMob' : null;
+  const scopeLabel = baseLabel
+    ? (sourcePrefix ? `${sourcePrefix} · ${baseLabel}` : baseLabel)
+    : null;
 
   const commonProps = {
     t, metaA, metaB, imageA, imageB, heroA, secondaryA, heroB,

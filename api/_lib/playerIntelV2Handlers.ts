@@ -13,6 +13,18 @@ import {
   resolveQuery,
   type RegistryEntry,
 } from '../../components/player-intel-v2/playerIntelV2PlayerResolver.js';
+import {
+  CLUB_AR_ALIASES as PLAYER_RESOLVER_CLUB_ALIASES,
+  buildPlayerSearchQueries,
+  hasArabicChars as hasArabicCharsExternal,
+  normalizeArabic as normalizeArabicExternal,
+  normalizeLatin,
+  scoreCandidate,
+  translateArabicClub,
+  translateArabicPlayer,
+  type ClubMatchStrength,
+  type MatchedBy,
+} from './playerNameResolver.js';
 
 export interface HandlerResult {
   status: number;
@@ -174,6 +186,7 @@ interface ResolvedClub {
   leagueName?: string;
   confidence: number; // 0..1
   source: 'fotmob' | 'alias' | 'raw';
+  aliases: string[]; // for downstream ranking
 }
 
 /** Resolve a club name (Arabic or English) to FotMob teamId via live search. */
@@ -181,24 +194,35 @@ async function _resolveClubLive(rawClub: string): Promise<ResolvedClub | null> {
   const trimmed = rawClub.trim();
   if (!trimmed) return null;
 
-  // First, translate Arabic via alias map (fast path)
+  // Translate Arabic → English using extended map
   let englishCandidate = trimmed;
-  if (_hasArabicChars(trimmed)) {
-    const norm = _normalizeArabic(trimmed);
-    for (const [ar, en] of Object.entries(AR_CLUB_MAP).sort((a, b) => b[0].length - a[0].length)) {
-      if (norm.includes(_normalizeArabic(ar))) {
-        englishCandidate = en;
-        break;
-      }
+  const aliasesPool: string[] = [trimmed];
+  if (hasArabicCharsExternal(trimmed)) {
+    const translated = translateArabicClub(trimmed);
+    if (translated) {
+      englishCandidate = translated;
+      aliasesPool.push(translated);
+    } else {
+      // No alias hit — strip and use as-is, will likely fail FotMob lookup
+      englishCandidate = normalizeArabicExternal(trimmed);
+    }
+  } else {
+    englishCandidate = normalizeLatin(trimmed);
+    aliasesPool.push(englishCandidate);
+  }
+
+  // Add reverse aliases (any AR key that maps to same English club)
+  for (const [ar, en] of Object.entries(PLAYER_RESOLVER_CLUB_ALIASES)) {
+    if (en.toLowerCase() === englishCandidate.toLowerCase()) {
+      aliasesPool.push(ar);
     }
   }
 
   // Live FotMob search for teams
   const teams = await searchFotMobTeams(englishCandidate);
   if (teams.length === 0) {
-    // Fallback: return raw English candidate without ID
     return englishCandidate
-      ? { teamId: null, name: englishCandidate, confidence: 0.4, source: englishCandidate !== trimmed ? 'alias' : 'raw' }
+      ? { teamId: null, name: englishCandidate, confidence: 0.4, source: englishCandidate !== trimmed ? 'alias' : 'raw', aliases: aliasesPool }
       : null;
   }
 
@@ -216,7 +240,6 @@ async function _resolveClubLive(rawClub: string): Promise<ResolvedClub | null> {
         const hits = targetTokens.filter((tok) => nameLower.includes(tok)).length;
         score = targetTokens.length > 0 ? (hits / targetTokens.length) * 0.6 : 0.3;
       }
-      // FotMob's own score bonus
       if (typeof t.score === 'number') score += Math.min(t.score / 200, 0.05);
       return { team: t, score };
     })
@@ -224,7 +247,7 @@ async function _resolveClubLive(rawClub: string): Promise<ResolvedClub | null> {
 
   const best = ranked[0];
   if (!best || best.score < 0.4) {
-    return { teamId: null, name: englishCandidate, confidence: 0.3, source: 'raw' };
+    return { teamId: null, name: englishCandidate, confidence: 0.3, source: 'raw', aliases: aliasesPool };
   }
 
   return {
@@ -234,6 +257,7 @@ async function _resolveClubLive(rawClub: string): Promise<ResolvedClub | null> {
     leagueName: best.team.leagueName,
     confidence: Number(Math.min(1, best.score).toFixed(3)),
     source: 'fotmob',
+    aliases: aliasesPool,
   };
 }
 
@@ -377,75 +401,45 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     return { status: 400, body: { ok: false, messageAr: 'يرجى كتابة اسم اللاعب.' } };
   }
 
-  // Resolve club universally (Arabic or English, dynamic via FotMob)
+  // 1. Resolve club universally
   const resolvedClub = clubInput ? await _resolveClubLive(clubInput) : null;
+  const clubCtx = resolvedClub ? {
+    teamId: resolvedClub.teamId,
+    name: resolvedClub.name,
+    aliases: resolvedClub.aliases,
+  } : null;
 
-  // Combine query + club for translation (player part)
-  const combinedQuery = clubInput ? `${query} ${clubInput}` : query;
-  const translated = _translateQuery(combinedQuery);
+  // 2. Translate player query (Arabic→English) for display
+  const translatedPlayer = hasArabicCharsExternal(query)
+    ? translateArabicPlayer(query)
+    : null;
+  const resolvedPlayerName = translatedPlayer || normalizeLatin(query) || query;
 
-  // Set translated.club from resolved (overrides static map result)
-  if (resolvedClub) {
-    translated.club = resolvedClub.name;
-  } else if (clubInput && !translated.club) {
-    translated.club = clubInput;
-  }
-
-  if (!translated.englishTerm) {
+  // 3. Build multiple search queries
+  const queries = buildPlayerSearchQueries(query, clubCtx);
+  if (queries.length === 0) {
     return {
       status: 200,
-      body: { ok: false, messageAr: 'لم يتم التعرف على الاسم. جرّب كتابته بالإنجليزي مع اسم النادي.', query },
+      body: { ok: false, messageAr: 'لم يتم التعرف على الاسم.', query },
     };
   }
-  const suggestions = await searchFotMob(translated.englishTerm);
 
-  const buildResponse = (raw: FotMobSuggestion[], note: 'primary' | 'fallback'): HandlerResult => {
-    const ranked = _rankMatchesV2(raw, translated, query, resolvedClub);
-    if (ranked.length === 0) {
-      return {
-        status: 200,
-        body: {
-          ok: false,
-          query,
-          club: clubInput || null,
-          resolvedClub,
-          translated: translated.englishTerm,
-          messageAr: 'تم العثور على نتائج لكن لم يتطابق أي منها مع طلبك.',
-          matches: [],
-        },
-      };
+  // 4. Execute searches in order, dedupe by fotmobId
+  const seenIds = new Set<number>();
+  const allCandidates: FotMobSuggestion[] = [];
+  for (const q of queries) {
+    const results = await searchFotMob(q);
+    for (const r of results) {
+      if (!seenIds.has(r.fotmobId)) {
+        seenIds.add(r.fotmobId);
+        allCandidates.push(r);
+      }
     }
-    const weakClubMatch = !!clubInput && !ranked.some((r) => r._clubMatchStrength === 'strong');
-    const visibleMatches = ranked.map(({ _clubMatchStrength, ...rest }) => ({
-      ...rest,
-      clubMatch: _clubMatchStrength,
-    }));
-    return {
-      status: 200,
-      body: {
-        ok: true,
-        query,
-        club: clubInput || null,
-        resolvedClub,
-        translated: translated.englishTerm,
-        weakClubMatch,
-        messageAr: weakClubMatch
-          ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
-          : note === 'fallback'
-          ? 'تم العثور على نتائج بالاسم الأساسي.'
-          : visibleMatches.length === 1
-          ? 'تم العثور على نتيجة واحدة.'
-          : `تم العثور على ${visibleMatches.length} نتائج محتملة.`,
-        matches: visibleMatches,
-      },
-    };
-  };
+    // Early exit: if we already have a high-quality strong match, no need to continue
+    if (allCandidates.length >= 12) break;
+  }
 
-  if (suggestions.length === 0) {
-    if (translated.player && translated.player !== translated.englishTerm) {
-      const fallback = await searchFotMob(translated.player);
-      if (fallback.length > 0) return buildResponse(fallback, 'fallback');
-    }
+  if (allCandidates.length === 0) {
     return {
       status: 200,
       body: {
@@ -453,15 +447,70 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
         query,
         club: clubInput || null,
         resolvedClub,
-        translated: translated.englishTerm,
-        messageAr: 'لم يتم العثور على اللاعب في FotMob. جرّب الاسم الكامل بالإنجليزية.',
+        translatedPlayer,
+        triedQueries: queries,
+        messageAr: 'لم نجد نتيجة قوية. جرّب اسمًا آخر أو أضف النادي.',
         matches: [],
       },
     };
   }
 
-  return buildResponse(suggestions, 'primary');
+  // 5. Score every candidate
+  const scored = allCandidates
+    .map((c) => scoreCandidate(c, resolvedPlayerName, query, clubCtx))
+    .filter((s): s is NonNullable<typeof s> => s !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+
+  if (scored.length === 0) {
+    return {
+      status: 200,
+      body: {
+        ok: false,
+        query,
+        club: clubInput || null,
+        resolvedClub,
+        translatedPlayer,
+        triedQueries: queries,
+        messageAr: 'تم العثور على نتائج لكن لم يتطابق أي منها مع طلبك.',
+        matches: [],
+      },
+    };
+  }
+
+  const weakClubMatch = !!clubInput && !scored.some((s) => s.clubMatch === 'strong');
+  const visible = scored.map((s) => ({
+    fotmobId: s.result.fotmobId,
+    name: s.result.name,
+    arabicName: hasArabicCharsExternal(query) ? query : null,
+    club: s.result.teamName || '',
+    position: '',
+    confidence: Number(Math.min(1, s.score / 200).toFixed(3)),
+    isCoach: !!s.result.isCoach,
+    clubMatch: s.clubMatch,
+    matchedBy: s.matchedBy,
+  }));
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      query,
+      club: clubInput || null,
+      resolvedClub,
+      translatedPlayer,
+      weakClubMatch,
+      messageAr: weakClubMatch
+        ? 'النادي غير متطابق بشكل قوي — عرضنا أفضل النتائج المتاحة.'
+        : visible.length === 1
+        ? 'تم العثور على نتيجة واحدة.'
+        : `تم العثور على ${visible.length} نتائج محتملة.`,
+      matches: visible,
+    },
+  };
 }
+
+// (Old _rankMatchesV2 left in file but no longer used; handler now uses scoreCandidate.)
 
 // ─── V2 ranker that uses resolved teamId for exact match boost ────────────────
 
