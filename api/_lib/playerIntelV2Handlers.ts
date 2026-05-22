@@ -185,6 +185,7 @@ async function _readRegistry(): Promise<RegistryFile | null> {
 
 export async function handleSearchPlayer(body: Record<string, unknown>): Promise<HandlerResult> {
   const query = String(body.query || '').trim();
+  const club = String(body.club || '').trim();
   if (!query) {
     return { status: 400, body: { ok: false, reason: 'missing_query', messageAr: 'يرجى كتابة اسم اللاعب للبحث.' } };
   }
@@ -209,13 +210,44 @@ export async function handleSearchPlayer(body: Record<string, unknown>): Promise
       },
     };
   }
+
+  // Optional club re-ranking (Arabic-aware, non-strict)
+  let weakClubMatch = false;
+  let ranked = matches;
+  if (club) {
+    const clubNormEn = (() => {
+      if (!_hasArabicChars(club)) return club.toLowerCase();
+      const arNorm = _normalizeArabic(club);
+      for (const [ar, en] of Object.entries(AR_CLUB_MAP).sort((a, b) => b[0].length - a[0].length)) {
+        if (arNorm.includes(_normalizeArabic(ar))) return en.toLowerCase();
+      }
+      return arNorm.toLowerCase();
+    })();
+    const clubFirstWord = clubNormEn.split(/\s+/)[0] || clubNormEn;
+    let strongHit = false;
+    ranked = matches
+      .map((m) => {
+        const entryClub = (m.entry.club || '').toLowerCase();
+        let bonus = 0;
+        if (entryClub && clubFirstWord && entryClub.includes(clubFirstWord)) {
+          bonus = 0.4;
+          strongHit = true;
+        }
+        return { ...m, score: Math.min(1, m.score + bonus) };
+      })
+      .sort((a, b) => b.score - a.score);
+    if (!strongHit) weakClubMatch = true;
+  }
+
   return {
     status: 200,
     body: {
       ok: true,
       query,
+      club: club || null,
+      weakClubMatch,
       registrySize: registry.players.length,
-      matches: matches.slice(0, 10).map((m) => ({
+      matches: ranked.slice(0, 10).map((m) => ({
         id: m.entry.id,
         name: m.entry.name,
         club: m.entry.club,
@@ -234,10 +266,30 @@ export async function handleSearchPlayer(body: Record<string, unknown>): Promise
 
 export async function handleFotMobSearch(body: Record<string, unknown>): Promise<HandlerResult> {
   const query = String(body.query || '').trim();
+  const clubInput = String(body.club || '').trim();
   if (!query) {
     return { status: 400, body: { ok: false, messageAr: 'يرجى كتابة اسم اللاعب.' } };
   }
-  const translated = _translateQuery(query);
+  // Combine query + club for translation if club provided
+  const combinedQuery = clubInput ? `${query} ${clubInput}` : query;
+  const translated = _translateQuery(combinedQuery);
+
+  // If user gave explicit club but translator didn't pick it up, set it manually
+  if (clubInput && !translated.club) {
+    if (_hasArabicChars(clubInput)) {
+      const clubNorm = _normalizeArabic(clubInput);
+      for (const [ar, en] of Object.entries(AR_CLUB_MAP).sort((a, b) => b[0].length - a[0].length)) {
+        if (clubNorm.includes(_normalizeArabic(ar))) {
+          translated.club = en;
+          break;
+        }
+      }
+      if (!translated.club) translated.club = clubInput;
+    } else {
+      translated.club = clubInput;
+    }
+  }
+
   if (!translated.englishTerm) {
     return {
       status: 200,
@@ -249,14 +301,22 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     if (translated.player && translated.player !== translated.englishTerm) {
       const fallback = await searchFotMob(translated.player);
       if (fallback.length > 0) {
+        const ranked = _rankMatches(fallback, translated, query);
+        const weakClubMatch = !!clubInput && !ranked.some((r) =>
+          r.club.toLowerCase().includes((translated.club || '').toLowerCase().split(/\s+/)[0]),
+        );
         return {
           status: 200,
           body: {
             ok: true,
             query,
+            club: clubInput || null,
             translated: translated.englishTerm,
-            messageAr: 'تم العثور على نتائج بالاسم الأساسي.',
-            matches: _rankMatches(fallback, translated, query),
+            weakClubMatch,
+            messageAr: weakClubMatch
+              ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
+              : 'تم العثور على نتائج بالاسم الأساسي.',
+            matches: ranked,
           },
         };
       }
@@ -266,6 +326,7 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
       body: {
         ok: false,
         query,
+        club: clubInput || null,
         translated: translated.englishTerm,
         messageAr: 'لم يتم العثور على اللاعب في FotMob. جرّب الاسم الكامل بالإنجليزية.',
         matches: [],
@@ -279,19 +340,27 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
       body: {
         ok: false,
         query,
+        club: clubInput || null,
         translated: translated.englishTerm,
         messageAr: 'تم العثور على نتائج لكن لم يتطابق أي منها مع طلبك.',
         matches: [],
       },
     };
   }
+  const weakClubMatch = !!clubInput && !ranked.some((r) =>
+    r.club.toLowerCase().includes((translated.club || '').toLowerCase().split(/\s+/)[0]),
+  );
   return {
     status: 200,
     body: {
       ok: true,
       query,
+      club: clubInput || null,
       translated: translated.englishTerm,
-      messageAr: ranked.length === 1 ? 'تم العثور على نتيجة واحدة.' : `تم العثور على ${ranked.length} نتائج محتملة.`,
+      weakClubMatch,
+      messageAr: weakClubMatch
+        ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
+        : ranked.length === 1 ? 'تم العثور على نتيجة واحدة.' : `تم العثور على ${ranked.length} نتائج محتملة.`,
       matches: ranked,
     },
   };

@@ -18,7 +18,7 @@ import {
 } from '../utils/assetCache';
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
-import PlayerIntelV2EditorPanel from '../components/player-intel-v2/PlayerIntelV2EditorPanel';
+import PlayerIntelV2BottomDock from '../components/player-intel-v2/PlayerIntelV2BottomDock';
 import {
   filterAvailableMetrics,
   isMetricAvailable,
@@ -2511,7 +2511,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         })()}
 
         {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
-            <PlayerIntelV2EditorPanel
+            <PlayerIntelV2BottomDock
                 fields={draftOverlay.fields}
                 getDraftValue={getDraftValue}
                 applyChanges={(updates) => handleDraftFieldChanges(updates)}

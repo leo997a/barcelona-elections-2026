@@ -74,12 +74,13 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
   // Player search state
   const [playerSearch, setPlayerSearch] = useState('');
+  const [clubSearch, setClubSearch] = useState('');
   const [searchResults, setSearchResults] = useState<Array<ResolverEntry & { score: number }>>([]);
-  const [searchStatus, setSearchStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building'; msg?: string }>({ kind: 'idle' });
+  const [searchStatus, setSearchStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'weakClub'; msg?: string }>({ kind: 'idle' });
 
   // FotMob live search state
   const [fotmobMatches, setFotmobMatches] = useState<Array<{ fotmobId: number; name: string; club: string; confidence: number }>>([]);
-  const [fotmobStatus, setFotmobStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'success'; msg?: string }>({ kind: 'idle' });
+  const [fotmobStatus, setFotmobStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'success' | 'weakClub'; msg?: string }>({ kind: 'idle' });
   const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -204,19 +205,46 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
   const runPlayerSearch = async () => {
     const q = playerSearch.trim();
+    const c = clubSearch.trim();
     if (!q) return;
     setSearchStatus({ kind: 'searching', msg: 'جارٍ البحث...' });
 
     // Local match first
     const local = resolveQuery(q, registry);
     if (local.length > 0) {
-      setSearchResults(local.map((m) => ({ ...m.entry, score: m.score })));
-      if (local.length === 1) {
-        applyChanges({ samplePlayer: local[0].entry.id });
-        setSearchStatus({ kind: 'found', msg: `تم العثور على "${local[0].entry.name}" داخل المكتبة وتحديده.` });
-        flashToast(`تم اختيار ${local[0].entry.name}`);
+      // Re-rank locally if club provided
+      let ranked = local;
+      let weakLocalClub = false;
+      if (c) {
+        const cLower = c.toLowerCase();
+        let strongHit = false;
+        ranked = local
+          .map((m) => {
+            const entryClub = (m.entry.club || '').toLowerCase();
+            const bonus = entryClub && entryClub.includes(cLower.split(/\s+/)[0]) ? 0.4 : 0;
+            if (bonus) strongHit = true;
+            return { ...m, score: Math.min(1, m.score + bonus) };
+          })
+          .sort((a, b) => b.score - a.score);
+        if (!strongHit) weakLocalClub = true;
+      }
+      setSearchResults(ranked.map((m) => ({ ...m.entry, score: m.score })));
+      if (ranked.length === 1) {
+        applyChanges({ samplePlayer: ranked[0].entry.id });
+        setSearchStatus({
+          kind: weakLocalClub ? 'weakClub' : 'found',
+          msg: weakLocalClub
+            ? `لم نجد تطابقًا قويًا مع "${c}"، اخترنا "${ranked[0].entry.name}".`
+            : `تم العثور على "${ranked[0].entry.name}" داخل المكتبة وتحديده.`,
+        });
+        flashToast(`تم اختيار ${ranked[0].entry.name}`);
       } else {
-        setSearchStatus({ kind: 'found', msg: `${local.length} نتائج — اختر واحدة من القائمة.` });
+        setSearchStatus({
+          kind: weakLocalClub ? 'weakClub' : 'found',
+          msg: weakLocalClub
+            ? `${ranked.length} نتائج — لم نجد تطابقًا قويًا مع النادي.`
+            : `${ranked.length} نتائج — اختر واحدة من القائمة.`,
+        });
       }
       return;
     }
@@ -226,19 +254,30 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       const r = await fetch('/api/player-intel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'search-player', query: q, mode: 'search_only' }),
+        body: JSON.stringify({ action: 'search-player', query: q, club: c || undefined, mode: 'search_only' }),
       });
       const data = await r.json();
       if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
         setSearchResults(data.matches.map((m: ResolverEntry & { confidence: number }) => ({
           ...m, score: m.confidence,
         })));
+        const weak = !!data.weakClubMatch;
         if (data.matches.length === 1) {
           applyChanges({ samplePlayer: data.matches[0].id });
-          setSearchStatus({ kind: 'found', msg: `تم العثور على "${data.matches[0].name}" وتحديده.` });
+          setSearchStatus({
+            kind: weak ? 'weakClub' : 'found',
+            msg: weak
+              ? `لم نجد تطابقًا قويًا مع النادي، اخترنا "${data.matches[0].name}".`
+              : `تم العثور على "${data.matches[0].name}" وتحديده.`,
+          });
           flashToast(`تم اختيار ${data.matches[0].name}`);
         } else {
-          setSearchStatus({ kind: 'found', msg: `${data.matches.length} نتائج — اختر واحدة.` });
+          setSearchStatus({
+            kind: weak ? 'weakClub' : 'found',
+            msg: weak
+              ? `${data.matches.length} نتائج — لم نجد تطابقًا قويًا مع النادي.`
+              : `${data.matches.length} نتائج — اختر واحدة.`,
+          });
         }
       } else {
         setSearchResults([]);
@@ -263,6 +302,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
   const runFotMobSearch = async () => {
     const q = playerSearch.trim();
+    const c = clubSearch.trim();
     if (!q) return;
     setFotmobStatus({ kind: 'searching', msg: 'جاري البحث في FotMob...' });
     setFotmobMatches([]);
@@ -271,13 +311,14 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       const r = await fetch('/api/player-intel-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fotmob-search', query: q }),
+        body: JSON.stringify({ action: 'fotmob-search', query: q, club: c || undefined }),
       });
       const data = await r.json();
       if (data.ok && Array.isArray(data.matches) && data.matches.length > 0) {
         setFotmobMatches(data.matches);
+        const weak = !!data.weakClubMatch;
         setFotmobStatus({
-          kind: 'found',
+          kind: weak ? 'weakClub' : 'found',
           msg: data.messageAr || `تم العثور على ${data.matches.length} نتائج.`,
         });
       } else {
@@ -483,6 +524,15 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:border-cyan-500"
               dir="rtl"
             />
+            <input
+              type="text"
+              value={clubSearch}
+              onChange={(e) => setClubSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') runFotMobSearch(); }}
+              placeholder="النادي اختياري لتضييق النتائج، مثال: برشلونة"
+              className="w-full bg-slate-900 border border-slate-700/60 text-slate-300 text-xs rounded-md px-3 py-1.5 focus:outline-none focus:border-cyan-500"
+              dir="rtl"
+            />
             <div className="flex gap-1.5">
               <button
                 onClick={runFotMobSearch}
@@ -508,6 +558,12 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             {fotmobStatus.kind === 'success' && (
               <div className="text-[11px] bg-green-900/30 border border-green-700/40 text-green-300 rounded-md px-2 py-1.5">
                 ✓ {fotmobStatus.msg}
+              </div>
+            )}
+            {fotmobStatus.kind === 'weakClub' && (
+              <div className="text-[11px] bg-amber-900/20 border border-amber-700/40 text-amber-300 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{fotmobStatus.msg}</span>
               </div>
             )}
             {fotmobStatus.kind === 'building' && (
@@ -558,6 +614,12 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
                 ✓ {searchStatus.msg}
               </div>
             )}
+            {searchStatus.kind === 'weakClub' && (
+              <div className="text-[11px] bg-amber-900/20 border border-amber-700/40 text-amber-300 rounded-md px-2 py-1.5 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>{searchStatus.msg}</span>
+              </div>
+            )}
             {searchStatus.kind === 'none' && (
               <div className="text-[11px] bg-amber-900/20 border border-amber-700/40 text-amber-300 rounded-md px-2 py-1.5 flex items-start gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -605,14 +667,21 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             {/* Examples */}
             {fotmobStatus.kind === 'idle' && searchStatus.kind === 'idle' && fotmobMatches.length === 0 && (
               <div className="text-[10px] text-slate-500 space-y-0.5 pt-1">
-                <div className="font-bold text-slate-400">أمثلة:</div>
-                {['ليفاندوفسكي برشلونة', 'مبابي ريال مدريد', 'يامال برشلونة', 'كول بالمر تشيلسي', 'Cole Palmer Chelsea', 'Mohamed Salah Liverpool'].map((ex) => (
+                <div className="font-bold text-slate-400">أمثلة (اللاعب + النادي):</div>
+                {[
+                  { p: 'ليفاندوفسكي', c: 'برشلونة' },
+                  { p: 'كوندي', c: 'برشلونة' },
+                  { p: 'مبابي', c: 'ريال مدريد' },
+                  { p: 'يامال', c: 'برشلونة' },
+                  { p: 'Cole Palmer', c: 'Chelsea' },
+                  { p: 'Mohamed Salah', c: 'Liverpool' },
+                ].map((ex) => (
                   <button
-                    key={ex}
-                    onClick={() => setPlayerSearch(ex)}
+                    key={`${ex.p}-${ex.c}`}
+                    onClick={() => { setPlayerSearch(ex.p); setClubSearch(ex.c); }}
                     className="block w-full text-right text-slate-300 hover:text-cyan-300 hover:bg-slate-900 rounded px-1.5 py-0.5"
                   >
-                    • {ex}
+                    • {ex.p} <span className="text-slate-600">·</span> {ex.c}
                   </button>
                 ))}
               </div>
