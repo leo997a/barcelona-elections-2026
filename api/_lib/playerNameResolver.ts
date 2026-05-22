@@ -210,7 +210,113 @@ export function translateArabicClub(arabicQuery: string): string | null {
   return null;
 }
 
-// ─── Query Expansion ──────────────────────────────────────────────────────────
+// ─── Arabic → Latin Transliterator ───────────────────────────────────────────
+// Maps each Arabic letter to its primary Latin equivalent + alternate variants.
+// First entry is the most common; alternates handle ambiguity (ف could be f or v
+// because Arabic has no native /v/, و could be w/u/o/v in transliteration).
+
+const TRANSLIT_PRIMARY: Record<string, string> = {
+  'ا': 'a', 'أ': 'a', 'إ': 'e', 'آ': 'aa', 'ى': 'a',
+  'ب': 'b', 'ت': 't', 'ث': 'th',
+  'ج': 'j', 'ح': 'h', 'خ': 'kh',
+  'د': 'd', 'ذ': 'd',
+  'ر': 'r', 'ز': 'z',
+  'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'd',
+  'ط': 't', 'ظ': 'z',
+  'ع': '', 'غ': 'gh',
+  'ف': 'f', 'ق': 'q',
+  'ك': 'k', 'ل': 'l', 'م': 'm', 'ن': 'n',
+  'ه': 'h', 'ة': 'a',
+  'و': 'o', 'ي': 'i',
+  'ء': '', 'ؤ': 'o', 'ئ': 'i',
+  ' ': ' ',
+};
+
+// Letters where the primary transliteration is ambiguous and a swap should
+// generate a search variant.
+const TRANSLIT_VARIANTS: Record<string, string[]> = {
+  'ف': ['v'],            // الفاريز → alfariz / alvariz (catches Álvarez)
+  'و': ['u', 'w'],        // كوندي → kondi / kundi / kwndi
+  'ي': ['y', 'e'],        // كوندي → kondi / konde / kondy
+  'ج': ['g'],             // جوكا → joka / goka
+  'ك': ['c'],             // كاسادو → kasado / casado
+  'ق': ['k'],             // قاسم → qasim / kasim
+  'ا': ['e'],             // مارتن → martin / mertin
+  'ه': [''],              // when ه is at end: ﺗﻴﻤﻴ + ه
+  'ز': ['s'],             // كاسسي / كاسي forms
+};
+
+/** Convert Arabic word to its primary Latin form. */
+function _basicTransliterate(arabicWord: string): string {
+  let out = '';
+  for (const ch of arabicWord) {
+    if (TRANSLIT_PRIMARY[ch] !== undefined) {
+      out += TRANSLIT_PRIMARY[ch];
+    } else if (/[a-zA-Z0-9'\- ]/.test(ch)) {
+      out += ch;
+    }
+    // Skip diacritics and unknown chars
+  }
+  // Cleanup: collapse repeated letters, strip leading vowel after ال (al-)
+  out = out.replace(/\s+/g, ' ').trim();
+  return out;
+}
+
+/**
+ * Generate up to N transliteration variants for an Arabic word.
+ * Strategy: produce primary form, then swap up to 2 ambiguous letters per
+ * variant (avoids combinatorial explosion).
+ */
+export function transliterateArabic(arabicQuery: string, maxVariants: number = 5): string[] {
+  if (!arabicQuery || !hasArabicChars(arabicQuery)) return [];
+  const words = normalizeArabic(arabicQuery).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const results = new Set<string>();
+  // Per-word primary
+  const primaryPerWord = words.map(_basicTransliterate);
+  results.add(primaryPerWord.join(' ').trim());
+
+  // Variant 1: substitute ambiguous letters in each word
+  for (let wi = 0; wi < words.length; wi++) {
+    const w = words[wi];
+    // Find positions of letters with variants
+    const ambiguousPositions: Array<{ idx: number; variants: string[] }> = [];
+    for (let i = 0; i < w.length; i++) {
+      const v = TRANSLIT_VARIANTS[w[i]];
+      if (v && v.length > 0) ambiguousPositions.push({ idx: i, variants: v });
+    }
+    if (ambiguousPositions.length === 0) continue;
+
+    // Generate variants by swapping each ambiguous letter once
+    for (const { idx, variants } of ambiguousPositions) {
+      for (const sub of variants) {
+        let altOut = '';
+        for (let i = 0; i < w.length; i++) {
+          if (i === idx) altOut += sub;
+          else altOut += TRANSLIT_PRIMARY[w[i]] !== undefined ? TRANSLIT_PRIMARY[w[i]] : w[i];
+        }
+        const allWords = primaryPerWord.slice();
+        allWords[wi] = altOut;
+        results.add(allWords.join(' ').trim());
+        if (results.size >= maxVariants) break;
+      }
+      if (results.size >= maxVariants) break;
+    }
+    if (results.size >= maxVariants) break;
+  }
+
+  // Strip leading "al " (الـ definite article)
+  for (const r of Array.from(results)) {
+    if (r.startsWith('al ')) results.add(r.slice(3));
+    if (r.startsWith('al')) results.add(r.slice(2));
+  }
+
+  return Array.from(results)
+    .map((s) => s.replace(/\s+/g, ' ').trim())
+    .filter((s) => s.length >= 2)
+    .slice(0, maxVariants);
+}
 
 /**
  * Generate ordered list of search queries to try against FotMob.
@@ -251,7 +357,17 @@ export function buildPlayerSearchQueries(
     if (tokens.length > 1) playerForms.push(tokens[tokens.length - 1]);
   }
 
-  // B. Original query (English) — accent-stripped
+  // B. Phonetic transliteration (works even when alias is missing)
+  if (playerIsArabic) {
+    const variants = transliterateArabic(playerQuery, 6);
+    for (const v of variants) {
+      playerForms.push(v);
+      const tokens = v.split(/\s+/);
+      if (tokens.length > 1) playerForms.push(tokens[tokens.length - 1]);
+    }
+  }
+
+  // C. Original query (English) — accent-stripped
   if (!playerIsArabic) {
     const stripped = normalizeLatin(playerQuery);
     if (stripped) playerForms.push(stripped);
@@ -260,11 +376,6 @@ export function buildPlayerSearchQueries(
     // Surname-only
     const tokens = stripped.split(/\s+/);
     if (tokens.length > 1) playerForms.push(tokens[tokens.length - 1]);
-  }
-
-  // C. Original Arabic (if no translation found) — FotMob may accept transliterated forms
-  if (playerIsArabic && !translatedFull) {
-    playerForms.push(normalizeArabic(playerQuery));
   }
 
   // De-duplicate forms
@@ -284,27 +395,27 @@ export function buildPlayerSearchQueries(
     clubTokens.push(normalizeLatin(clubContext.name));
     for (const a of (clubContext.aliases || [])) {
       const stripped = normalizeLatin(a);
-      if (stripped && !clubTokens.includes(stripped)) clubTokens.push(stripped);
+      if (stripped && !clubTokens.includes(stripped) && !hasArabicChars(stripped)) {
+        clubTokens.push(stripped);
+      }
     }
   }
 
   // D. Build queries — most specific first
   for (const p of uniqueForms) {
     if (clubTokens.length > 0) {
-      // "Player Club" form (FotMob suggest matches this well)
-      for (const c of clubTokens) {
-        push(`${p} ${c}`);
+      for (const c of clubTokens.slice(0, 2)) {
+        push(`${p} ${c}`);     // "Kounde Barcelona"
       }
-      // "Club Player" (less common but FotMob handles it)
-      for (const c of clubTokens) {
-        push(`${c} ${p}`);
+      for (const c of clubTokens.slice(0, 2)) {
+        push(`${c} ${p}`);     // "Barcelona Kounde"
       }
     }
     // Name only — the strongest fallback
     push(p);
   }
 
-  return out.slice(0, 8); // cap at 8 to avoid hammering FotMob
+  return out.slice(0, 12); // cap at 12 to avoid hammering FotMob
 }
 
 // ─── Match scoring ────────────────────────────────────────────────────────────
@@ -336,12 +447,17 @@ interface ClubContext {
 /**
  * Score a single FotMob suggestion against a normalized player + optional club.
  * Returns null if it should be excluded entirely (coach, invalid id).
+ *
+ * The candidate is matched against ALL provided name variants, and the best
+ * variant's score is used. This handles cases where alias gives "Jules Kounde"
+ * but FotMob stores "Jules Koundé" — both stripped → exact match.
  */
 export function scoreCandidate<T extends CandidateLike>(
   candidate: T,
   resolvedPlayerName: string,    // canonical English name (e.g. "Jules Kounde")
   originalQuery: string,
   clubCtx: ClubContext | null,
+  extraVariants: string[] = [],   // transliteration variants etc.
 ): ScoredCandidate<T> | null {
   if (candidate.isCoach || !candidate.fotmobId || candidate.fotmobId <= 0) return null;
 
@@ -352,33 +468,61 @@ export function scoreCandidate<T extends CandidateLike>(
   const targetTokens = targetName.split(/\s+/).filter((t) => t.length >= 2);
   const originalTokens = originalNorm.split(/\s+/).filter((t) => t.length >= 2);
 
+  // Build all name forms to try matching
+  const variants = [targetName, ...extraVariants.map((v) => normalizeLatin(v).toLowerCase())]
+    .filter((v) => v && v.length >= 2);
+
   let score = 0;
   let matchedBy: MatchedBy = 'fuzzy';
 
-  // 1. Exact full-name match
-  if (candidateName === targetName) {
-    score += 100;
-    matchedBy = 'exact';
+  // 1. Try exact match against any variant
+  let exactHit = false;
+  let aliasHit = false;
+  let surnameHit = false;
+  for (const v of variants) {
+    if (candidateName === v) { exactHit = true; break; }
+    if (!aliasHit && (candidateName.includes(v) || v.includes(candidateName))) {
+      aliasHit = true;
+    }
   }
-  // 2. Alias-translated name contained
-  else if (candidateName.includes(targetName) || targetName.includes(candidateName)) {
+
+  if (exactHit) {
+    score += 120;
+    matchedBy = 'exact';
+  } else if (aliasHit) {
     score += 90;
     matchedBy = 'alias';
-  }
-  // 3. Surname match — last token of resolved name
-  else if (targetTokens.length > 0) {
-    const surname = targetTokens[targetTokens.length - 1];
-    if (surname.length >= 4 && candidateName.includes(surname)) {
+  } else {
+    // 3. Surname match across all variants
+    for (const v of variants) {
+      const tokens = v.split(/\s+/).filter((t) => t.length >= 2);
+      if (tokens.length === 0) continue;
+      const surname = tokens[tokens.length - 1];
+      if (surname.length >= 4 && candidateName.includes(surname)) {
+        surnameHit = true;
+        break;
+      }
+    }
+    if (surnameHit) {
       score += 60;
       matchedBy = 'surname';
     }
   }
 
-  // 4. Token overlap fuzzy
+  // 4. Token overlap fuzzy (only if no exact/alias)
   if (score === 0) {
-    const hits = targetTokens.filter((t) => candidateName.includes(t)).length;
-    if (targetTokens.length > 0 && hits > 0) {
-      score += Math.round((hits / targetTokens.length) * 50);
+    let bestHits = 0;
+    let bestTotal = 0;
+    for (const v of variants) {
+      const tokens = v.split(/\s+/).filter((t) => t.length >= 2);
+      const hits = tokens.filter((t) => candidateName.includes(t)).length;
+      if (tokens.length > 0 && (hits / tokens.length) > (bestHits / Math.max(1, bestTotal))) {
+        bestHits = hits;
+        bestTotal = tokens.length;
+      }
+    }
+    if (bestTotal > 0 && bestHits > 0) {
+      score += Math.round((bestHits / bestTotal) * 50);
       matchedBy = 'fuzzy';
     }
   }
@@ -406,18 +550,17 @@ export function scoreCandidate<T extends CandidateLike>(
         score += 40;
         clubMatch = 'medium';
       } else {
-        // Check aliases
-        let aliasHit = false;
+        let aliasClubHit = false;
         for (const a of clubCtx.aliases) {
           const aNorm = normalizeLatin(a).toLowerCase();
           if (aNorm && candidateTeam.includes(aNorm.split(/\s+/)[0])) {
             score += 30;
             clubMatch = 'medium';
-            aliasHit = true;
+            aliasClubHit = true;
             break;
           }
         }
-        if (!aliasHit) {
+        if (!aliasClubHit) {
           score -= 30; // soft penalty, do NOT hide
           clubMatch = 'weak';
         }

@@ -1051,6 +1051,90 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       {/* ─── METRICS TAB ─── */}
       {activeTab === 'metrics' && (
         <div className="space-y-3">
+          {/* Smart Presets — large cards at the top */}
+          <div className="rounded-lg border border-cyan-800/30 bg-gradient-to-br from-cyan-950/30 to-slate-950 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[12px] font-bold text-cyan-200">Smart Presets — اختيار سريع</div>
+              <div className="text-[10px] text-slate-500">يطبّق الإحصائيات تلقائيًا</div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {Object.values(PLAYER_INTEL_PRESETS).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => applyPreset(p.id)}
+                  className={[
+                    'text-xs font-bold py-2.5 px-2 rounded-lg border transition-all text-center',
+                    cardType === p.id
+                      ? 'bg-cyan-700 border-cyan-500 text-white shadow-md shadow-cyan-900/40'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-cyan-700 hover:text-cyan-200',
+                  ].join(' ')}
+                >
+                  {p.label}
+                  <div className="text-[9px] font-normal opacity-70 mt-0.5">
+                    {p.hero.length} رئيسية · {p.secondary.length} ثانوية
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Currently selected metrics — compact summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="rounded-md border border-cyan-800/30 bg-cyan-950/20 p-2">
+              <div className="text-[10px] font-bold uppercase text-cyan-300 mb-1">
+                الإحصائيات الرئيسية ({heroKeys.length}/5)
+              </div>
+              {heroKeys.length === 0 ? (
+                <div className="text-[10px] text-slate-500 italic py-2">— فارغ — اختر preset أو أضف يدويًا</div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {heroKeys.map((k, i) => (
+                    <div key={k} className="inline-flex items-center gap-1 bg-slate-900/80 rounded px-1.5 py-0.5">
+                      <span className="text-[10px] text-slate-200">{getMetricAr(k) || k}</span>
+                      <button onClick={() => reorderMetric(k, 'hero', -1)} className="text-slate-500 hover:text-cyan-300 disabled:opacity-30" disabled={i === 0}>
+                        <ChevronUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button onClick={() => reorderMetric(k, 'hero', 1)} className="text-slate-500 hover:text-cyan-300 disabled:opacity-30" disabled={i === heroKeys.length - 1}>
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                      <button onClick={() => moveMetric(k, 'remove')} className="text-red-400 hover:text-red-300 ml-0.5">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="rounded-md border border-blue-800/30 bg-blue-950/15 p-2">
+              <div className="text-[10px] font-bold uppercase text-blue-300 mb-1">
+                الإحصائيات الثانوية ({secondaryKeys.length}/8)
+              </div>
+              {secondaryKeys.length === 0 ? (
+                <div className="text-[10px] text-slate-500 italic py-2">— فارغ —</div>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {secondaryKeys.map((k, i) => (
+                    <div key={k} className="inline-flex items-center gap-1 bg-slate-900/80 rounded px-1.5 py-0.5">
+                      <span className="text-[10px] text-slate-200">{getMetricAr(k) || k}</span>
+                      <button onClick={() => reorderMetric(k, 'secondary', -1)} className="text-slate-500 hover:text-blue-300 disabled:opacity-30" disabled={i === 0}>
+                        <ChevronUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button onClick={() => reorderMetric(k, 'secondary', 1)} className="text-slate-500 hover:text-blue-300 disabled:opacity-30" disabled={i === secondaryKeys.length - 1}>
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                      <button onClick={() => moveMetric(k, 'remove')} className="text-red-400 hover:text-red-300 ml-0.5">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Toggle: open advanced metric picker */}
+          <details className="rounded-lg border border-slate-800 bg-slate-950/50 group">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-bold text-slate-300 hover:text-cyan-300 flex items-center justify-between">
+              <span>فتح كل الإحصائيات المتاحة (تعديل يدوي متقدم)</span>
+              <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+            </summary>
+            <div className="border-t border-slate-800 p-3 space-y-3">
           {/* Search */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2" />
@@ -1228,6 +1312,8 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               </div>
             )}
           </div>
+            </div>
+          </details>
         </div>
       )}
 

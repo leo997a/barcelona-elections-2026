@@ -20,6 +20,7 @@ import {
   normalizeArabic as normalizeArabicExternal,
   normalizeLatin,
   scoreCandidate,
+  transliterateArabic,
   translateArabicClub,
   translateArabicPlayer,
   type ClubMatchStrength,
@@ -409,11 +410,19 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     aliases: resolvedClub.aliases,
   } : null;
 
-  // 2. Translate player query (Arabic→English) for display
+  // 2. Translate player query (Arabic→English) for display + transliterate variants
   const translatedPlayer = hasArabicCharsExternal(query)
     ? translateArabicPlayer(query)
     : null;
-  const resolvedPlayerName = translatedPlayer || normalizeLatin(query) || query;
+  const transliterations = hasArabicCharsExternal(query)
+    ? transliterateArabic(query, 6)
+    : [];
+  const resolvedPlayerName = translatedPlayer || transliterations[0] || normalizeLatin(query) || query;
+  // All variants used for scoring
+  const nameVariants: string[] = [];
+  if (translatedPlayer) nameVariants.push(translatedPlayer);
+  for (const t of transliterations) nameVariants.push(t);
+  if (!hasArabicCharsExternal(query)) nameVariants.push(query);
 
   // 3. Build multiple search queries
   const queries = buildPlayerSearchQueries(query, clubCtx);
@@ -455,9 +464,9 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     };
   }
 
-  // 5. Score every candidate
+  // 5. Score every candidate (use ALL name variants for matching)
   const scored = allCandidates
-    .map((c) => scoreCandidate(c, resolvedPlayerName, query, clubCtx))
+    .map((c) => scoreCandidate(c, resolvedPlayerName, query, clubCtx, nameVariants))
     .filter((s): s is NonNullable<typeof s> => s !== null)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
@@ -479,6 +488,9 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
   }
 
   const weakClubMatch = !!clubInput && !scored.some((s) => s.clubMatch === 'strong');
+  const topScore = scored[0]?.score ?? 0;
+  const secondScore = scored[1]?.score ?? 0;
+  const isAutoPickConfident = topScore >= 140 && (topScore - secondScore) >= 30;
   const visible = scored.map((s) => ({
     fotmobId: s.result.fotmobId,
     name: s.result.name,
@@ -486,6 +498,7 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     club: s.result.teamName || '',
     position: '',
     confidence: Number(Math.min(1, s.score / 200).toFixed(3)),
+    score: s.score,
     isCoach: !!s.result.isCoach,
     clubMatch: s.clubMatch,
     matchedBy: s.matchedBy,
@@ -499,6 +512,9 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
       club: clubInput || null,
       resolvedClub,
       translatedPlayer,
+      transliterations,
+      triedQueries: queries,
+      autoPickConfident: isAutoPickConfident,
       weakClubMatch,
       messageAr: weakClubMatch
         ? 'النادي غير متطابق بشكل قوي — عرضنا أفضل النتائج المتاحة.'
