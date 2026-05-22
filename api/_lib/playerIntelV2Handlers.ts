@@ -6,7 +6,7 @@
  */
 import { promises as fs } from 'fs';
 import path from 'path';
-import { searchFotMob, getFotMobPlayer, type FotMobSuggestion } from './fotmobClient.js';
+import { searchFotMob, searchFotMobTeams, getFotMobPlayer, type FotMobSuggestion, type FotMobTeamSuggestion } from './fotmobClient.js';
 import { buildBroadcastFromFotMob } from './fotmobBroadcastBuilder.js';
 import { saveProfile, getProfile } from './fotmobRuntimeStore.js';
 import {
@@ -165,6 +165,112 @@ function _rankMatches(suggestions: FotMobSuggestion[], translated: TranslatedQue
     .slice(0, 10);
 }
 
+// ─── Universal club resolver ─────────────────────────────────────────────────
+
+interface ResolvedClub {
+  teamId: number | null;
+  name: string;
+  countryCode?: string;
+  leagueName?: string;
+  confidence: number; // 0..1
+  source: 'fotmob' | 'alias' | 'raw';
+}
+
+/** Resolve a club name (Arabic or English) to FotMob teamId via live search. */
+async function _resolveClubLive(rawClub: string): Promise<ResolvedClub | null> {
+  const trimmed = rawClub.trim();
+  if (!trimmed) return null;
+
+  // First, translate Arabic via alias map (fast path)
+  let englishCandidate = trimmed;
+  if (_hasArabicChars(trimmed)) {
+    const norm = _normalizeArabic(trimmed);
+    for (const [ar, en] of Object.entries(AR_CLUB_MAP).sort((a, b) => b[0].length - a[0].length)) {
+      if (norm.includes(_normalizeArabic(ar))) {
+        englishCandidate = en;
+        break;
+      }
+    }
+  }
+
+  // Live FotMob search for teams
+  const teams = await searchFotMobTeams(englishCandidate);
+  if (teams.length === 0) {
+    // Fallback: return raw English candidate without ID
+    return englishCandidate
+      ? { teamId: null, name: englishCandidate, confidence: 0.4, source: englishCandidate !== trimmed ? 'alias' : 'raw' }
+      : null;
+  }
+
+  // Pick best match: name token overlap
+  const target = englishCandidate.toLowerCase();
+  const targetTokens = target.split(/\s+/).filter((t) => t.length >= 2);
+  const ranked = teams
+    .map((t) => {
+      const nameLower = t.name.toLowerCase();
+      let score = 0;
+      if (nameLower === target) score = 1.0;
+      else if (nameLower.startsWith(target)) score = 0.85;
+      else if (nameLower.includes(target)) score = 0.75;
+      else {
+        const hits = targetTokens.filter((tok) => nameLower.includes(tok)).length;
+        score = targetTokens.length > 0 ? (hits / targetTokens.length) * 0.6 : 0.3;
+      }
+      // FotMob's own score bonus
+      if (typeof t.score === 'number') score += Math.min(t.score / 200, 0.05);
+      return { team: t, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0];
+  if (!best || best.score < 0.4) {
+    return { teamId: null, name: englishCandidate, confidence: 0.3, source: 'raw' };
+  }
+
+  return {
+    teamId: best.team.teamId,
+    name: best.team.name,
+    countryCode: best.team.countryCode,
+    leagueName: best.team.leagueName,
+    confidence: Number(Math.min(1, best.score).toFixed(3)),
+    source: 'fotmob',
+  };
+}
+
+export async function handleClubResolve(body: Record<string, unknown>): Promise<HandlerResult> {
+  const query = String(body.query || body.club || '').trim();
+  if (!query) {
+    return { status: 400, body: { ok: false, messageAr: 'يرجى كتابة اسم النادي للبحث.' } };
+  }
+  const resolved = await _resolveClubLive(query);
+  if (!resolved) {
+    return {
+      status: 200,
+      body: { ok: false, messageAr: 'لم يتم العثور على النادي. جرّب اسمًا آخر.', candidates: [] },
+    };
+  }
+
+  // Also return top 5 candidates for the UI to show as chips
+  const teams = await searchFotMobTeams(_hasArabicChars(query) ? resolved.name : query);
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      query,
+      resolved,
+      candidates: teams.slice(0, 5).map((t) => ({
+        teamId: t.teamId,
+        name: t.name,
+        countryCode: t.countryCode,
+        leagueName: t.leagueName,
+      })),
+      messageAr: resolved.teamId
+        ? `تم تحديد النادي: ${resolved.name}`
+        : 'لم يتم تأكيد النادي — سيتم استخدامه لتحسين الترتيب فقط.',
+    },
+  };
+}
+
 // ─── Handler 1: search-player (local registry only) ──────────────────────────
 
 interface RegistryFile { players: RegistryEntry[]; }
@@ -270,24 +376,19 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
   if (!query) {
     return { status: 400, body: { ok: false, messageAr: 'يرجى كتابة اسم اللاعب.' } };
   }
-  // Combine query + club for translation if club provided
+
+  // Resolve club universally (Arabic or English, dynamic via FotMob)
+  const resolvedClub = clubInput ? await _resolveClubLive(clubInput) : null;
+
+  // Combine query + club for translation (player part)
   const combinedQuery = clubInput ? `${query} ${clubInput}` : query;
   const translated = _translateQuery(combinedQuery);
 
-  // If user gave explicit club but translator didn't pick it up, set it manually
-  if (clubInput && !translated.club) {
-    if (_hasArabicChars(clubInput)) {
-      const clubNorm = _normalizeArabic(clubInput);
-      for (const [ar, en] of Object.entries(AR_CLUB_MAP).sort((a, b) => b[0].length - a[0].length)) {
-        if (clubNorm.includes(_normalizeArabic(ar))) {
-          translated.club = en;
-          break;
-        }
-      }
-      if (!translated.club) translated.club = clubInput;
-    } else {
-      translated.club = clubInput;
-    }
+  // Set translated.club from resolved (overrides static map result)
+  if (resolvedClub) {
+    translated.club = resolvedClub.name;
+  } else if (clubInput && !translated.club) {
+    translated.club = clubInput;
   }
 
   if (!translated.englishTerm) {
@@ -297,29 +398,53 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
     };
   }
   const suggestions = await searchFotMob(translated.englishTerm);
+
+  const buildResponse = (raw: FotMobSuggestion[], note: 'primary' | 'fallback'): HandlerResult => {
+    const ranked = _rankMatchesV2(raw, translated, query, resolvedClub);
+    if (ranked.length === 0) {
+      return {
+        status: 200,
+        body: {
+          ok: false,
+          query,
+          club: clubInput || null,
+          resolvedClub,
+          translated: translated.englishTerm,
+          messageAr: 'تم العثور على نتائج لكن لم يتطابق أي منها مع طلبك.',
+          matches: [],
+        },
+      };
+    }
+    const weakClubMatch = !!clubInput && !ranked.some((r) => r._clubMatchStrength === 'strong');
+    const visibleMatches = ranked.map(({ _clubMatchStrength, ...rest }) => ({
+      ...rest,
+      clubMatch: _clubMatchStrength,
+    }));
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        query,
+        club: clubInput || null,
+        resolvedClub,
+        translated: translated.englishTerm,
+        weakClubMatch,
+        messageAr: weakClubMatch
+          ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
+          : note === 'fallback'
+          ? 'تم العثور على نتائج بالاسم الأساسي.'
+          : visibleMatches.length === 1
+          ? 'تم العثور على نتيجة واحدة.'
+          : `تم العثور على ${visibleMatches.length} نتائج محتملة.`,
+        matches: visibleMatches,
+      },
+    };
+  };
+
   if (suggestions.length === 0) {
     if (translated.player && translated.player !== translated.englishTerm) {
       const fallback = await searchFotMob(translated.player);
-      if (fallback.length > 0) {
-        const ranked = _rankMatches(fallback, translated, query);
-        const weakClubMatch = !!clubInput && !ranked.some((r) =>
-          r.club.toLowerCase().includes((translated.club || '').toLowerCase().split(/\s+/)[0]),
-        );
-        return {
-          status: 200,
-          body: {
-            ok: true,
-            query,
-            club: clubInput || null,
-            translated: translated.englishTerm,
-            weakClubMatch,
-            messageAr: weakClubMatch
-              ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
-              : 'تم العثور على نتائج بالاسم الأساسي.',
-            matches: ranked,
-          },
-        };
-      }
+      if (fallback.length > 0) return buildResponse(fallback, 'fallback');
     }
     return {
       status: 200,
@@ -327,43 +452,87 @@ export async function handleFotMobSearch(body: Record<string, unknown>): Promise
         ok: false,
         query,
         club: clubInput || null,
+        resolvedClub,
         translated: translated.englishTerm,
         messageAr: 'لم يتم العثور على اللاعب في FotMob. جرّب الاسم الكامل بالإنجليزية.',
         matches: [],
       },
     };
   }
-  const ranked = _rankMatches(suggestions, translated, query);
-  if (ranked.length === 0) {
-    return {
-      status: 200,
-      body: {
-        ok: false,
-        query,
-        club: clubInput || null,
-        translated: translated.englishTerm,
-        messageAr: 'تم العثور على نتائج لكن لم يتطابق أي منها مع طلبك.',
-        matches: [],
-      },
-    };
-  }
-  const weakClubMatch = !!clubInput && !ranked.some((r) =>
-    r.club.toLowerCase().includes((translated.club || '').toLowerCase().split(/\s+/)[0]),
-  );
-  return {
-    status: 200,
-    body: {
-      ok: true,
-      query,
-      club: clubInput || null,
-      translated: translated.englishTerm,
-      weakClubMatch,
-      messageAr: weakClubMatch
-        ? 'لم نجد تطابقًا قويًا مع النادي، عرضنا أقرب نتائج اللاعب.'
-        : ranked.length === 1 ? 'تم العثور على نتيجة واحدة.' : `تم العثور على ${ranked.length} نتائج محتملة.`,
-      matches: ranked,
-    },
-  };
+
+  return buildResponse(suggestions, 'primary');
+}
+
+// ─── V2 ranker that uses resolved teamId for exact match boost ────────────────
+
+interface RankedMatchV2 {
+  fotmobId: number;
+  name: string;
+  arabicName: string | null;
+  club: string;
+  position: string;
+  confidence: number;
+  isCoach: boolean;
+  _clubMatchStrength: 'strong' | 'medium' | 'weak' | 'none';
+}
+
+function _rankMatchesV2(
+  suggestions: FotMobSuggestion[],
+  translated: TranslatedQuery,
+  originalQuery: string,
+  resolvedClub: ResolvedClub | null,
+): RankedMatchV2[] {
+  const desiredClub = (translated.club || '').toLowerCase();
+  const desiredPlayer = (translated.player || translated.englishTerm).toLowerCase();
+  const teamIdTarget = resolvedClub?.teamId || null;
+
+  return suggestions
+    .filter((s) => !s.isCoach && s.fotmobId > 0)
+    .map((s) => {
+      const nameLower = s.name.toLowerCase();
+      const teamLower = (s.teamName || '').toLowerCase();
+
+      let confidence = 0;
+      // Player name match
+      const nameTokens = desiredPlayer.split(/\s+/).filter((t) => t.length >= 3);
+      const nameHits = nameTokens.filter((t) => nameLower.includes(t)).length;
+      if (nameTokens.length > 0) confidence += (nameHits / nameTokens.length) * 0.55;
+
+      // Club match — graded
+      let clubStrength: RankedMatchV2['_clubMatchStrength'] = 'none';
+      if (teamIdTarget && s.teamId === teamIdTarget) {
+        confidence += 0.4;
+        clubStrength = 'strong';
+      } else if (desiredClub && teamLower) {
+        if (teamLower === desiredClub) {
+          confidence += 0.35;
+          clubStrength = 'strong';
+        } else if (teamLower.includes(desiredClub.split(/\s+/)[0])) {
+          confidence += 0.22;
+          clubStrength = 'medium';
+        } else if (desiredClub.includes(teamLower.split(/\s+/)[0])) {
+          confidence += 0.18;
+          clubStrength = 'medium';
+        } else {
+          clubStrength = 'weak';
+        }
+      }
+
+      if (typeof s.score === 'number') confidence += Math.min(s.score / 100, 0.1);
+
+      return {
+        fotmobId: s.fotmobId,
+        name: s.name,
+        arabicName: _hasArabicChars(originalQuery) && translated.player ? originalQuery : null,
+        club: s.teamName || '',
+        position: '',
+        confidence: Number(Math.min(1, confidence).toFixed(3)),
+        isCoach: !!s.isCoach,
+        _clubMatchStrength: clubStrength,
+      };
+    })
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 10);
 }
 
 // ─── Handler 3: build-fotmob-profile ─────────────────────────────────────────

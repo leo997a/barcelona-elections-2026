@@ -64,6 +64,18 @@ export interface BroadcastProfile {
   };
   images: { playerImage: string; teamLogo: string | null };
   mainLeague?: { leagueId?: number; leagueName?: string; season?: string; stats?: Array<{ title?: string; value?: unknown; localizedTitleId?: string }> };
+  /** Competition scope — clarifies whether stats are from the main league, all comps, or recent matches. */
+  dataScope: {
+    scopeType: 'main_league' | 'all_available' | 'tournament' | 'recent_matches' | 'unknown';
+    label: string;
+    season: string;
+    competitionName?: string;
+    competitionId?: number;
+    sourcePath: string;
+    confidence: 'high' | 'medium' | 'low';
+    /** Other competitions that were found but not actively used as stats source. */
+    availableCompetitions?: Array<{ name: string; competitionId?: number; seasonsCount?: number }>;
+  };
 }
 
 // ─── Arabic label map (subset — full list in playerIntelV2Labels.ts) ─────────
@@ -434,6 +446,71 @@ export function buildBroadcastFromFotMob(
   // mainLeague summary
   const mlObj = raw.mainLeague as Record<string, unknown> | undefined;
 
+  // ── Compute dataScope ───────────────────────────────────────────────────────
+  const statSeasonsArr = raw.statSeasons as Array<{ seasonName?: string; tournaments?: Array<{ name?: string; tournamentId?: number; hasDeepStats?: boolean }> }> | undefined;
+  const availableComps: Array<{ name: string; competitionId?: number; seasonsCount?: number }> = [];
+  if (Array.isArray(statSeasonsArr)) {
+    const compMap = new Map<string, { name: string; competitionId?: number; seasonsCount: number }>();
+    for (const s of statSeasonsArr) {
+      for (const t of (s.tournaments || [])) {
+        if (!t.name) continue;
+        const key = `${t.tournamentId || ''}-${t.name}`;
+        const existing = compMap.get(key);
+        if (existing) existing.seasonsCount += 1;
+        else compMap.set(key, { name: t.name, competitionId: t.tournamentId, seasonsCount: 1 });
+      }
+    }
+    availableComps.push(...compMap.values());
+  }
+
+  // Determine scope: prefer mainLeague stats > top season stats > recent
+  const hasMainLeague = mlObj && Array.isArray((mlObj as { stats?: unknown }).stats) && ((mlObj as { stats: unknown[] }).stats.length > 0);
+  const hasFss = !!(raw.firstSeasonStats as Record<string, unknown> | undefined);
+  const recent = raw.recentMatches as unknown[] | undefined;
+
+  const seasonLabel = (mlObj?.season as string) || (statSeasonsArr?.[0]?.seasonName) || '2025-26';
+
+  let dataScope: BroadcastProfile['dataScope'];
+  if (hasMainLeague) {
+    dataScope = {
+      scopeType: 'main_league',
+      label: `${(mlObj as { leagueName?: string })?.leagueName || 'Main League'} · ${seasonLabel}`,
+      season: seasonLabel,
+      competitionName: (mlObj as { leagueName?: string })?.leagueName,
+      competitionId: (mlObj as { leagueId?: number })?.leagueId,
+      sourcePath: 'pageProps.data.mainLeague.stats',
+      confidence: 'high',
+      availableCompetitions: availableComps,
+    };
+  } else if (hasFss) {
+    dataScope = {
+      scopeType: 'main_league',
+      label: `Season top stats · ${seasonLabel}`,
+      season: seasonLabel,
+      sourcePath: 'pageProps.data.firstSeasonStats',
+      confidence: 'medium',
+      availableCompetitions: availableComps,
+    };
+  } else if (Array.isArray(recent) && recent.length > 0) {
+    dataScope = {
+      scopeType: 'recent_matches',
+      label: `Recent matches · mixed competitions · ${seasonLabel}`,
+      season: seasonLabel,
+      sourcePath: 'pageProps.data.recentMatches',
+      confidence: 'medium',
+      availableCompetitions: availableComps,
+    };
+  } else {
+    dataScope = {
+      scopeType: 'unknown',
+      label: 'Unknown scope',
+      season: seasonLabel,
+      sourcePath: '',
+      confidence: 'low',
+      availableCompetitions: availableComps,
+    };
+  }
+
   const itemTotal = Object.values(cards).reduce((s, c) => s + c.itemsCount, 0);
 
   const profile: BroadcastProfile = {
@@ -474,6 +551,7 @@ export function buildBroadcastFromFotMob(
           stats: (mlObj.stats as Array<{ title?: string; value?: unknown; localizedTitleId?: string }> | undefined)?.filter((s) => _isPresent(s.value)),
         }
       : undefined,
+    dataScope,
   };
 
   const slug = _slugify(playerName) + '-' + player.id;

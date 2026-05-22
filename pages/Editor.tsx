@@ -512,6 +512,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
   const [panelOpen, setPanelOpen] = useState(true);
+
+  // Auto-collapse sidebar when Player Intel V2 is active (its controls are in the bottom dock now).
+  // User can re-open manually via the toggle button.
+  useEffect(() => {
+    if (draftOverlay.type === OverlayType.PLAYER_INTEL_V2) {
+      setPanelOpen(false);
+    }
+  }, [draftOverlay.type]);
   const [newSlotName, setNewSlotName] = useState('');
 
   // --- SPONSORS MANAGEMENT STATE ---
@@ -2511,11 +2519,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         })()}
 
         {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
-            <PlayerIntelV2BottomDock
-                fields={draftOverlay.fields}
-                getDraftValue={getDraftValue}
-                applyChanges={(updates) => handleDraftFieldChanges(updates)}
-            />
+            <div className="shrink-0 border-b border-cyan-900/30 bg-cyan-950/10 p-3">
+                <p className="text-[11px] text-cyan-300 font-bold mb-1">⚡ تحكم Player Intel V2</p>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                    لوحة التحكم الكاملة منقولة إلى الشريط السفلي تحت المعاينة لتجربة بث أوسع.
+                </p>
+            </div>
         )}
 
         {draftOverlay.type === OverlayType.MATCH_STATS && (
@@ -3870,6 +3879,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
             </div>
          </div>
+
+         {/* True Bottom Control Dock — only for PLAYER_INTEL_V2 */}
+         {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
+            <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0c14]" dir="rtl">
+                <PlayerIntelV2BottomDock
+                    fields={draftOverlay.fields}
+                    getDraftValue={getDraftValue}
+                    applyChanges={(updates) => handleDraftFieldChanges(updates)}
+                />
+            </div>
+         )}
 
          {/*  Slot Quick-Bar  */}
          <div className="shrink-0 border-t border-white/[0.06] bg-[#10121a] px-4 py-2 flex items-center gap-2 overflow-x-auto">

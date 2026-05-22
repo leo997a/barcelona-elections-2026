@@ -286,9 +286,17 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
   const sourceCoverage = sourceA?.sourceCoverage || { fotmob: false, fbref: false };
   const cardTitleAr = cardType === 'custom' ? 'بطاقة مخصّصة' : cardArTitle(cardType.replace('_card', '').replace('_report', ''), cardArTitle(cardType));
 
+  // Read dataScope (from sourceA or sourceB if sourceA missing)
+  const dataScope = (sourceA as Record<string, unknown> | null)?.dataScope as
+    | { scopeType?: string; label?: string; competitionName?: string; season?: string }
+    | undefined;
+  const scopeLabel = dataScope?.label || (dataScope?.competitionName && dataScope?.season
+    ? `${dataScope.competitionName} · ${dataScope.season}`
+    : null);
+
   const commonProps = {
     t, metaA, metaB, imageA, imageB, heroA, secondaryA, heroB,
-    showSources, showFooter, sourceCoverage, cardTitleAr, mode,
+    showSources, showFooter, sourceCoverage, cardTitleAr, mode, scopeLabel,
   };
 
   return (
@@ -318,12 +326,13 @@ interface VariantProps {
   sourceCoverage: { fotmob: boolean; fbref: boolean };
   cardTitleAr: string;
   mode: string;
+  scopeLabel: string | null;
 }
 
 // ─── 1. Premium Broadcast Card ────────────────────────────────────────────────
 
 const PremiumBroadcastVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr,
+  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   const heroCols = Math.min(heroA.length || 1, 4);
   return (
@@ -338,9 +347,7 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-[35%] z-10 pointer-events-none"
             style={{ background: `linear-gradient(to top, ${t.bgFlat}, transparent)` }} />
           {imageA ? (
-            <img src={imageA} alt="" className="relative z-0 w-[85%] max-h-[90%] object-contain object-bottom"
-              style={{ filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.7))' }}
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }} />
+            <PortraitImage src={imageA} t={t} />
           ) : (
             <ImagePlaceholder t={t} />
           )}
@@ -348,7 +355,15 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
 
         {/* Left: Content */}
         <div className="flex-1 flex flex-col justify-center px-[3.5%] py-[2.5%] gap-3">
-          <CardBadge t={t} text={cardTitleAr} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardBadge t={t} text={cardTitleAr} />
+            {scopeLabel && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                style={{ background: 'rgba(255,255,255,0.04)', color: t.sub, border: `1px solid ${t.border}` }}>
+                {scopeLabel}
+              </span>
+            )}
+          </div>
           <PlayerIdentity t={t} meta={metaA} large />
 
           {heroA.length > 0 ? (
@@ -375,7 +390,7 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
 // ─── 2. Tactical Data Board ───────────────────────────────────────────────────
 
 const TacticalBoardVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr,
+  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   const allMetrics = [...heroA, ...secondaryA].slice(0, 12);
   return (
@@ -394,6 +409,11 @@ const TacticalBoardVariant: React.FC<VariantProps> = ({
             <div className="text-[20px] font-black mt-1.5 leading-tight" style={{ color: t.text }}>{metaA.player}</div>
             <div className="text-[11px] mt-1" style={{ color: t.sub }}>{metaA.club}</div>
             <div className="text-[10px] mt-0.5" style={{ color: t.dim }}>{metaA.position} · {metaA.season}</div>
+            {scopeLabel && (
+              <div className="text-[9px] mt-1.5 font-mono" style={{ color: t.accent, opacity: 0.7 }}>
+                {scopeLabel}
+              </div>
+            )}
           </div>
         </div>
 
@@ -414,7 +434,7 @@ const TacticalBoardVariant: React.FC<VariantProps> = ({
 // ─── 3. Magazine Player Profile ───────────────────────────────────────────────
 
 const MagazineProfileVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, showSources, showFooter, sourceCoverage, cardTitleAr,
+  t, metaA, imageA, heroA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   return (
     <div className="w-full h-full relative overflow-hidden"
@@ -452,6 +472,7 @@ const MagazineProfileVariant: React.FC<VariantProps> = ({
           </h1>
           <div className="text-[16px] mb-8 font-bold" style={{ color: t.sub }}>
             {metaA.club} · {metaA.position}
+            {scopeLabel && <span className="block text-[11px] mt-2 font-mono opacity-70" style={{ color: t.accent }}>{scopeLabel}</span>}
           </div>
 
           {heroA.length > 0 ? (
@@ -485,7 +506,7 @@ const MagazineProfileVariant: React.FC<VariantProps> = ({
 // ─── 4. Compact TV Overlay (horizontal slim bar) ──────────────────────────────
 
 const CompactTVVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, secondaryA, showSources, sourceCoverage, cardTitleAr,
+  t, metaA, imageA, heroA, secondaryA, showSources, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   const allMetrics = [...heroA, ...secondaryA].slice(0, 6);
   return (
@@ -508,6 +529,7 @@ const CompactTVVariant: React.FC<VariantProps> = ({
             <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: t.accent }}>{cardTitleAr}</div>
             <div className="text-[20px] font-black leading-tight" style={{ color: t.text }}>{metaA.player}</div>
             <div className="text-[11px]" style={{ color: t.sub }}>{metaA.club} · {metaA.position}</div>
+            {scopeLabel && <div className="text-[9px] font-mono" style={{ color: t.dim }}>{scopeLabel}</div>}
           </div>
 
           {/* Metrics row */}
@@ -543,7 +565,7 @@ const CompactTVVariant: React.FC<VariantProps> = ({
 // ─── 5. Head-to-Head Duel ─────────────────────────────────────────────────────
 
 const H2HDuelVariant: React.FC<VariantProps> = ({
-  t, metaA, metaB, imageA, imageB, heroA, heroB, showFooter, sourceCoverage, cardTitleAr, showSources,
+  t, metaA, metaB, imageA, imageB, heroA, heroB, showFooter, sourceCoverage, cardTitleAr, showSources, scopeLabel,
 }) => {
   // Pair metrics by key
   const pairs = useMemo(() => {
@@ -577,6 +599,9 @@ const H2HDuelVariant: React.FC<VariantProps> = ({
             <div className="text-[36px] font-black leading-none mt-1" style={{
               color: t.text, textShadow: `0 0 30px ${t.accent}`,
             }}>VS</div>
+            {scopeLabel && (
+              <div className="text-[9px] mt-1.5 font-mono" style={{ color: t.dim }}>{scopeLabel}</div>
+            )}
           </div>
 
           {pairs.length > 0 ? (
@@ -749,5 +774,41 @@ const ImagePlaceholder: React.FC<{ t: Theme; small?: boolean }> = ({ t, small })
     <span className="opacity-20" style={{ fontSize: small ? '32px' : '48px' }}>⚽</span>
   </div>
 );
+
+/**
+ * Portrait with elegant fallback when FotMob image fails to load.
+ * Shows a gradient silhouette instead of empty space or broken icon.
+ */
+const PortraitImage: React.FC<{ src: string; t: Theme; size?: 'large' | 'medium' | 'small' }> = ({ src, t, size = 'large' }) => {
+  const [errored, setErrored] = useState(false);
+
+  if (errored) {
+    return (
+      <div className="relative z-0 flex items-end justify-center" style={{
+        width: size === 'small' ? '60%' : size === 'medium' ? '80%' : '85%',
+        height: '90%',
+      }}>
+        <div className="w-full h-full flex items-end justify-center" style={{
+          background: `radial-gradient(ellipse at center 80%, ${t.accent}10, transparent 60%)`,
+        }}>
+          <svg viewBox="0 0 100 140" className="h-[80%] opacity-30" fill="none">
+            <circle cx="50" cy="35" r="18" fill={t.sub} fillOpacity="0.4" />
+            <path d="M20 110 Q20 75 50 75 Q80 75 80 110 L80 140 L20 140 Z" fill={t.sub} fillOpacity="0.4" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="relative z-0 w-[85%] max-h-[90%] object-contain object-bottom"
+      style={{ filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.7))' }}
+      onError={() => setErrored(true)}
+    />
+  );
+};
 
 export default PlayerIntelV2Renderer;

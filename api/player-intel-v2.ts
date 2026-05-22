@@ -21,9 +21,10 @@ import {
   handleSearchPlayer,
   handleFotMobSearch,
   handleBuildFotMobProfile,
+  handleClubResolve,
 } from './_lib/playerIntelV2Handlers.js';
 
-const ALLOWED_ACTIONS = ['search-player', 'fotmob-search', 'build-fotmob-profile'] as const;
+const ALLOWED_ACTIONS = ['search-player', 'fotmob-search', 'build-fotmob-profile', 'club-resolve'] as const;
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -71,6 +72,9 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         break;
       case 'build-fotmob-profile':
         result = await handleBuildFotMobProfile(body);
+        break;
+      case 'club-resolve':
+        result = await handleClubResolve(body);
         break;
       default:
         return sendJson(res, 400, {

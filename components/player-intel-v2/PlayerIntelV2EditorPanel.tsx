@@ -79,8 +79,12 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [searchStatus, setSearchStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'weakClub'; msg?: string }>({ kind: 'idle' });
 
   // FotMob live search state
-  const [fotmobMatches, setFotmobMatches] = useState<Array<{ fotmobId: number; name: string; club: string; confidence: number }>>([]);
+  const [fotmobMatches, setFotmobMatches] = useState<Array<{ fotmobId: number; name: string; club: string; confidence: number; clubMatch?: 'strong' | 'medium' | 'weak' | 'none' }>>([]);
   const [fotmobStatus, setFotmobStatus] = useState<{ kind: 'idle' | 'searching' | 'found' | 'none' | 'building' | 'success' | 'weakClub'; msg?: string }>({ kind: 'idle' });
+
+  // Resolved club state (universal resolver)
+  const [resolvedClub, setResolvedClub] = useState<{ teamId: number | null; name: string; confidence: number; leagueName?: string; countryCode?: string } | null>(null);
+  const [clubResolveLoading, setClubResolveLoading] = useState(false);
   const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -299,6 +303,29 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   };
 
   // ── FotMob live search ──────────────────────────────────────────────────────
+
+  const resolveClubLive = async () => {
+    const c = clubSearch.trim();
+    if (!c) { setResolvedClub(null); return; }
+    setClubResolveLoading(true);
+    try {
+      const r = await fetch('/api/player-intel-v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'club-resolve', query: c }),
+      });
+      const data = await r.json();
+      if (data.ok && data.resolved) {
+        setResolvedClub(data.resolved);
+      } else {
+        setResolvedClub(null);
+      }
+    } catch {
+      setResolvedClub(null);
+    } finally {
+      setClubResolveLoading(false);
+    }
+  };
 
   const runFotMobSearch = async () => {
     const q = playerSearch.trim();
@@ -527,12 +554,47 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             <input
               type="text"
               value={clubSearch}
-              onChange={(e) => setClubSearch(e.target.value)}
+              onChange={(e) => { setClubSearch(e.target.value); if (resolvedClub) setResolvedClub(null); }}
               onKeyDown={(e) => { if (e.key === 'Enter') runFotMobSearch(); }}
+              onBlur={() => { if (clubSearch.trim() && !resolvedClub) resolveClubLive(); }}
               placeholder="النادي اختياري لتضييق النتائج، مثال: برشلونة"
               className="w-full bg-slate-900 border border-slate-700/60 text-slate-300 text-xs rounded-md px-3 py-1.5 focus:outline-none focus:border-cyan-500"
               dir="rtl"
             />
+
+            {/* Resolved club chip */}
+            {clubSearch.trim() && (
+              <div className="flex items-center gap-1.5">
+                {clubResolveLoading ? (
+                  <span className="text-[10px] text-slate-500">جارٍ تحديد النادي...</span>
+                ) : resolvedClub ? (
+                  <span
+                    className={[
+                      'text-[10px] font-bold px-2 py-1 rounded-md inline-flex items-center gap-1',
+                      resolvedClub.teamId
+                        ? 'bg-cyan-900/30 border border-cyan-700/50 text-cyan-200'
+                        : 'bg-amber-900/20 border border-amber-700/40 text-amber-300',
+                    ].join(' ')}
+                  >
+                    {resolvedClub.teamId ? '✓' : '~'} {resolvedClub.name}
+                    {resolvedClub.teamId && (
+                      <span className="text-cyan-400/70 font-mono">· id {resolvedClub.teamId}</span>
+                    )}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={resolveClubLive}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded"
+                  >
+                    اعتماد النادي
+                  </button>
+                )}
+                {resolvedClub && !resolvedClub.teamId && (
+                  <span className="text-[10px] text-slate-500">سيُستخدم لتحسين الترتيب فقط.</span>
+                )}
+              </div>
+            )}
             <div className="flex gap-1.5">
               <button
                 onClick={runFotMobSearch}
@@ -583,28 +645,42 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             {fotmobMatches.length > 0 && (
               <div className="space-y-1 max-h-48 overflow-y-auto bg-slate-900/40 rounded-md p-1.5">
                 <div className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">نتائج FotMob:</div>
-                {fotmobMatches.map((m) => (
-                  <div
-                    key={m.fotmobId}
-                    className="flex items-center justify-between bg-slate-900 hover:bg-slate-800 rounded-md px-2 py-1.5"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-200 truncate">{m.name}</div>
-                      <div className="text-[10px] text-slate-500 truncate">
-                        {m.club || '—'} · {Math.round(m.confidence * 100)}% match · ID {m.fotmobId}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => buildAndAddPlayer(m)}
-                      disabled={fotmobStatus.kind === 'building'}
-                      className="text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white px-2 py-1 rounded flex items-center gap-1"
-                      title="إضافة هذا اللاعب للقالب"
+                {fotmobMatches.map((m) => {
+                  const matchBadge = m.clubMatch === 'strong'
+                    ? { label: 'تطابق نادٍ قوي', cls: 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300' }
+                    : m.clubMatch === 'medium'
+                    ? { label: 'تطابق نادٍ متوسط', cls: 'bg-amber-900/20 border-amber-700/40 text-amber-300' }
+                    : m.clubMatch === 'weak'
+                    ? { label: 'تطابق نادٍ ضعيف', cls: 'bg-slate-800 border-slate-700 text-slate-400' }
+                    : null;
+                  return (
+                    <div
+                      key={m.fotmobId}
+                      className="flex items-center justify-between bg-slate-900 hover:bg-slate-800 rounded-md px-2 py-1.5 gap-2"
                     >
-                      <Download className="w-2.5 h-2.5" />
-                      إضافة للقالب
-                    </button>
-                  </div>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-200 truncate">{m.name}</div>
+                        <div className="text-[10px] text-slate-500 truncate">
+                          {m.club || '—'} · {Math.round(m.confidence * 100)}% · ID {m.fotmobId}
+                        </div>
+                        {matchBadge && (
+                          <span className={`text-[9px] mt-0.5 inline-block font-bold px-1.5 py-0.5 rounded border ${matchBadge.cls}`}>
+                            {matchBadge.label}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => buildAndAddPlayer(m)}
+                        disabled={fotmobStatus.kind === 'building'}
+                        className="text-[9px] bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white px-2 py-1 rounded flex items-center gap-1 flex-shrink-0"
+                        title="إضافة هذا اللاعب للقالب"
+                      >
+                        <Download className="w-2.5 h-2.5" />
+                        إضافة للقالب
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

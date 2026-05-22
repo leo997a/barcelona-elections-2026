@@ -173,6 +173,64 @@ export async function searchFotMob(term: string): Promise<FotMobSuggestion[]> {
   return out;
 }
 
+// ─── Universal team/club search ──────────────────────────────────────────────
+
+export interface FotMobTeamSuggestion {
+  teamId: number;
+  name: string;
+  countryCode?: string;
+  leagueName?: string;
+  score?: number;
+}
+
+/**
+ * Search FotMob for teams (clubs). Uses the same /searchapi/suggest endpoint
+ * but reads the teamSuggest block. Useful for resolving Arabic club names
+ * (e.g. "برشلونة" → teamId 8634) without relying on a static alias map.
+ */
+export async function searchFotMobTeams(term: string): Promise<FotMobTeamSuggestion[]> {
+  const cleanTerm = term.trim();
+  if (!cleanTerm) return [];
+
+  const cacheKey = `fotmob:teamSearch:${cleanTerm.toLowerCase()}`;
+  const cached = _cacheGet<FotMobTeamSuggestion[]>(cacheKey);
+  if (cached) return cached;
+
+  const url = `${APIGW_BASE}/searchapi/suggest?term=${encodeURIComponent(cleanTerm)}&lang=en`;
+  const data = await _fetchJson<{
+    teamSuggest?: Array<{
+      options?: Array<{
+        text?: string;
+        payload?: { id?: number; teamName?: string; countryCode?: string; leagueName?: string };
+        score?: number;
+      }>;
+    }>;
+  }>(url);
+  if (!data) return [];
+
+  const out: FotMobTeamSuggestion[] = [];
+  const blocks = data.teamSuggest || [];
+  for (const block of blocks) {
+    for (const opt of (block.options || [])) {
+      const text = opt.text || '';
+      const [namePart, idPart] = text.includes('|') ? text.split('|') : [text, ''];
+      const payload = opt.payload || {};
+      const id = Number(payload.id || idPart);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      out.push({
+        teamId: id,
+        name: (payload.teamName || namePart || '').trim(),
+        countryCode: payload.countryCode,
+        leagueName: payload.leagueName,
+        score: typeof opt.score === 'number' ? opt.score : undefined,
+      });
+    }
+  }
+
+  _cacheSet(cacheKey, out, 6 * 60 * 60 * 1000); // 6h (clubs change rarely)
+  return out;
+}
+
 // ─── Player full data via _next/data ─────────────────────────────────────────
 
 function _slugify(name: string): string {
