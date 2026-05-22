@@ -1,13 +1,11 @@
 /**
- * Player Intel V2 — True Bottom Control Dock.
+ * Player Intel V2 — Bottom Control Dock content.
  *
- * Sits below the preview area (NOT in the right sidebar). Tabs are horizontal,
- * height is collapsible (small strip ↔ expanded panel), state persists in
- * localStorage. Inner content is the existing PlayerIntelV2EditorPanel — its
- * own internal tabs are still used.
+ * Container chrome (height, resizer) is owned by Editor.tsx. This component
+ * renders only the dock's header strip + scrollable inner panel.
  */
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Sparkles } from 'lucide-react';
 import type { OverlayField } from '../../types';
 import PlayerIntelV2EditorPanel from './PlayerIntelV2EditorPanel';
 
@@ -15,10 +13,10 @@ interface Props {
   fields: OverlayField[];
   getDraftValue: (id: string) => unknown;
   applyChanges: (updates: Record<string, unknown>) => void;
+  /** Controlled collapsed state from parent (Editor.tsx). */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
-
-const STORAGE_COLLAPSED = 'reo:player-intel-v2:dock-collapsed:v2';
-const STORAGE_HEIGHT = 'reo:player-intel-v2:dock-height:v1';
 
 const CARD_TITLES_AR: Record<string, string> = {
   attacker_card: 'بطاقة هجومية',
@@ -32,33 +30,18 @@ const CARD_TITLES_AR: Record<string, string> = {
   custom: 'مخصّص',
 };
 
-const PlayerIntelV2BottomDock: React.FC<Props> = ({ fields, getDraftValue, applyChanges }) => {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_COLLAPSED) === '1'; }
-    catch { return false; }
-  });
-  const [tall, setTall] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_HEIGHT) === 'tall'; }
-    catch { return false; }
-  });
+const PlayerIntelV2BottomDock: React.FC<Props> = ({
+  fields,
+  getDraftValue,
+  applyChanges,
+  collapsed: controlledCollapsed,
+  onToggleCollapsed,
+}) => {
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const collapsed = controlledCollapsed ?? internalCollapsed;
+  const toggleCollapsed = onToggleCollapsed ?? (() => setInternalCollapsed((p) => !p));
+
   const [lastToast, setLastToast] = useState<string | null>(null);
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(STORAGE_COLLAPSED, next ? '1' : '0'); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
-  const toggleHeight = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTall((prev) => {
-      const next = !prev;
-      try { localStorage.setItem(STORAGE_HEIGHT, next ? 'tall' : 'normal'); } catch { /* ignore */ }
-      return next;
-    });
-  };
 
   const playerName = String(getDraftValue('samplePlayer') || '');
   const cardType = String(getDraftValue('cardType') || 'attacker_card');
@@ -74,13 +57,8 @@ const PlayerIntelV2BottomDock: React.FC<Props> = ({ fields, getDraftValue, apply
   const cardLabel = CARD_TITLES_AR[cardType] || cardType;
   const variantLabel = variant.replace(/_/g, ' ');
 
-  const dockHeightClass = collapsed ? 'h-[44px]' : (tall ? 'max-h-[45vh]' : 'max-h-[36vh]');
-
   return (
-    <div
-      className={`flex flex-col bg-[#0a0c14] border-t border-white/[0.08] transition-[max-height,height] duration-300 overflow-hidden ${dockHeightClass}`}
-      dir="rtl"
-    >
+    <div className="flex flex-col h-full" dir="rtl">
       {/* Header strip — always visible */}
       <div
         className="h-[44px] flex items-center justify-between gap-3 px-4 cursor-pointer hover:bg-white/[0.02] flex-shrink-0 border-b border-white/[0.04]"
@@ -120,17 +98,6 @@ const PlayerIntelV2BottomDock: React.FC<Props> = ({ fields, getDraftValue, apply
           )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          {!collapsed && (
-            <button
-              type="button"
-              onClick={toggleHeight}
-              className="text-slate-500 hover:text-cyan-400 p-1 rounded transition-colors"
-              aria-label={tall ? 'تصغير الارتفاع' : 'تكبير الارتفاع'}
-              title={tall ? 'ارتفاع عادي' : 'ارتفاع موسّع'}
-            >
-              {tall ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
-          )}
           <span className="text-[10px] text-slate-600 hidden md:inline">
             {collapsed ? 'انقر للفتح' : 'انقر للطيّ'}
           </span>
@@ -144,9 +111,9 @@ const PlayerIntelV2BottomDock: React.FC<Props> = ({ fields, getDraftValue, apply
         </div>
       </div>
 
-      {/* Expanded content — flex-1 + overflow-y-auto so the panel scrolls inside the dock */}
+      {/* Expanded content fills remaining height; inner scrolls */}
       {!collapsed && (
-        <div className="flex-1 overflow-y-auto bg-[#0d1019] [scrollbar-width:thin]">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-[#0d1019] [scrollbar-width:thin]">
           <PlayerIntelV2EditorPanel
             fields={fields}
             getDraftValue={getDraftValue}

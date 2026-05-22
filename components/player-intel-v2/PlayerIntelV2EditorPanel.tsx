@@ -68,7 +68,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [broadcastA, setBroadcastA] = useState<BroadcastFile | null>(null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'basic' | 'metrics' | 'variants' | 'assistant'>('basic');
-  const [activeCategory, setActiveCategory] = useState<string>('attacking');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [assistantText, setAssistantText] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -472,18 +472,54 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   };
 
   const filteredMetrics = useMemo(() => {
-    const cat = METRIC_CATEGORIES[activeCategory];
-    if (!cat) return [];
-    let keys = cat.keys.filter((k) => availableMetricKeys.includes(k) || true); // show all from category
-    if (search) {
-      const q = search.toLowerCase();
-      keys = keys.filter((k) => {
-        const ar = getMetricAr(k);
-        return k.toLowerCase().includes(q) || ar.includes(search);
+    // Build full pool: all category keys + any extra discovered from broadcastA
+    const fromCategories = new Set<string>();
+    Object.values(METRIC_CATEGORIES).forEach((cat) => cat.keys.forEach((k) => fromCategories.add(k)));
+    const fullPool = new Set<string>([...fromCategories, ...availableMetricKeys]);
+
+    let pool: string[];
+    if (activeCategory === 'all') {
+      pool = Array.from(fullPool);
+    } else {
+      const cat = METRIC_CATEGORIES[activeCategory];
+      pool = cat ? cat.keys.slice() : [];
+    }
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      pool = pool.filter((k) => {
+        const ar = getMetricAr(k) || '';
+        return (
+          k.toLowerCase().includes(q) ||
+          ar.toLowerCase().includes(q) ||
+          ar.includes(search.trim()) // raw Arabic match
+        );
       });
     }
-    return keys;
+    return pool;
   }, [activeCategory, availableMetricKeys, search]);
+
+  // Build a value/source/scope map from broadcast for each metric key
+  const metricMeta = useMemo(() => {
+    const map: Record<string, { value?: unknown; source?: string; rank?: number; per90?: number; label?: string }> = {};
+    const cards = broadcastA?.broadcastCards || {};
+    for (const card of Object.values(cards)) {
+      const c = card as { items?: Array<{ key?: string; label?: string; value?: unknown; source?: string; percentileRank?: number; per90?: number }> };
+      for (const it of (c?.items || [])) {
+        if (!it.key) continue;
+        if (!map[it.key]) {
+          map[it.key] = {
+            value: it.value,
+            source: it.source,
+            rank: it.percentileRank,
+            per90: it.per90,
+            label: it.label,
+          };
+        }
+      }
+    }
+    return map;
+  }, [broadcastA]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -915,20 +951,27 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
 
           {/* Categories */}
           <div className="flex flex-wrap gap-1">
-            {Object.entries(METRIC_CATEGORIES).map(([key, cat]) => (
-              <button
-                key={key}
-                onClick={() => setActiveCategory(key)}
-                className={[
-                  'text-[10px] font-bold px-2 py-1 rounded-md transition-colors',
-                  activeCategory === key
-                    ? 'bg-cyan-700 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-200',
-                ].join(' ')}
-              >
-                {cat.label}
-              </button>
-            ))}
+            {[
+              ['all', { label: 'الكل' }],
+              ...Object.entries(METRIC_CATEGORIES),
+            ].map(([key, cat]) => {
+              const k = key as string;
+              const c = cat as { label: string };
+              return (
+                <button
+                  key={k}
+                  onClick={() => setActiveCategory(k)}
+                  className={[
+                    'text-[10px] font-bold px-2.5 py-1 rounded-md transition-colors',
+                    activeCategory === k
+                      ? 'bg-cyan-700 text-white shadow-sm shadow-cyan-900/40'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700',
+                  ].join(' ')}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Selected zones */}
@@ -960,63 +1003,116 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             )}
           </div>
 
-          {/* Available pool */}
+          {/* Available pool — modern cards */}
           <div className="border border-slate-800 rounded-lg p-2 bg-slate-950/50">
-            <div className="text-[10px] text-slate-500 mb-1.5 font-bold uppercase">
-              متاحة من فئة "{METRIC_CATEGORIES[activeCategory]?.label}"
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">
+                {activeCategory === 'all'
+                  ? 'كل الإحصائيات'
+                  : `فئة "${METRIC_CATEGORIES[activeCategory]?.label || activeCategory}"`}
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono">
+                {filteredMetrics.length} متاحة
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto">
-              {filteredMetrics.length === 0 ? (
-                <span className="text-[10px] text-slate-500">لا توجد نتائج</span>
-              ) : (
-                filteredMetrics.map((k) => {
+            {filteredMetrics.length === 0 ? (
+              <div className="text-center py-6 text-[11px] text-slate-500 italic">
+                لا توجد إحصائيات متاحة في هذه الفئة من المصدر الحالي.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto">
+                {filteredMetrics.map((k) => {
                   const inHero = heroKeys.includes(k);
                   const inSec = secondaryKeys.includes(k);
                   const inHidden = hiddenKeys.includes(k);
+                  const meta = metricMeta[k];
+                  const ar = getMetricAr(k) || meta?.label || k;
+                  const value = meta?.value;
+                  const source = meta?.source || (k.startsWith('fbref_') ? 'fbref' : 'fotmob');
+                  const rank = meta?.rank;
+
                   return (
                     <div
                       key={k}
-                      className="flex items-center justify-between bg-slate-900 rounded-md px-2 py-1 text-xs"
+                      className={[
+                        'rounded-md border p-2 transition-colors',
+                        inHero
+                          ? 'bg-cyan-950/40 border-cyan-700/40'
+                          : inSec
+                          ? 'bg-blue-950/30 border-blue-800/40'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-700',
+                      ].join(' ')}
                     >
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-slate-200 truncate">{getMetricAr(k)}</span>
-                        <span className="text-[9px] text-slate-600 font-mono truncate">{k}</span>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12px] font-bold text-slate-100 truncate" title={ar}>
+                            {ar}
+                          </div>
+                          <div className="text-[9px] text-slate-500 font-mono truncate" title={k}>
+                            {k}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {value !== undefined && value !== null && value !== '' && (
+                              <span className="text-[11px] font-black text-white bg-slate-800 px-1.5 py-0.5 rounded font-mono">
+                                {String(value).slice(0, 8)}
+                              </span>
+                            )}
+                            <span
+                              className={[
+                                'text-[8px] font-bold px-1.5 py-0.5 rounded',
+                                source === 'fbref'
+                                  ? 'bg-blue-900/40 text-blue-300'
+                                  : source === 'fotmob'
+                                  ? 'bg-emerald-900/40 text-emerald-300'
+                                  : 'bg-slate-800 text-slate-400',
+                              ].join(' ')}
+                            >
+                              {source}
+                            </span>
+                            {typeof rank === 'number' && (
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-300">
+                                top {Math.round(100 - rank)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+
+                      <div className="flex items-center gap-1 mt-2">
                         <button
                           onClick={() => moveMetric(k, 'hero')}
                           disabled={inHero || heroKeys.length >= 5}
-                          className="text-[9px] bg-cyan-900/40 hover:bg-cyan-800 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-300 px-1.5 py-0.5 rounded"
+                          className="flex-1 text-[9px] font-bold bg-cyan-900/40 hover:bg-cyan-800 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-200 px-1.5 py-1 rounded transition-colors"
                           title="نقل للرئيسية"
                         >
-                          رئيسية
+                          {inHero ? '✓ رئيسية' : 'رئيسية'}
                         </button>
                         <button
                           onClick={() => moveMetric(k, 'secondary')}
                           disabled={inSec || secondaryKeys.length >= 8}
-                          className="text-[9px] bg-blue-900/40 hover:bg-blue-800 disabled:opacity-30 disabled:cursor-not-allowed text-blue-300 px-1.5 py-0.5 rounded"
+                          className="flex-1 text-[9px] font-bold bg-blue-900/40 hover:bg-blue-800 disabled:opacity-30 disabled:cursor-not-allowed text-blue-200 px-1.5 py-1 rounded transition-colors"
                           title="نقل للثانوية"
                         >
-                          ثانوية
+                          {inSec ? '✓ ثانوية' : 'ثانوية'}
                         </button>
                         {(inHero || inSec) && (
                           <button
                             onClick={() => moveMetric(k, 'remove')}
-                            className="text-[9px] bg-red-900/30 hover:bg-red-800/50 text-red-300 px-1 py-0.5 rounded"
+                            className="text-[9px] bg-red-900/30 hover:bg-red-800/50 text-red-300 px-1.5 py-1 rounded"
                             title="إزالة"
                           >
                             ×
                           </button>
                         )}
-                        {inHidden && (
-                          <span className="text-[9px] bg-slate-700 text-slate-300 px-1 py-0.5 rounded">مخفي</span>
+                        {inHidden && !inHero && !inSec && (
+                          <span className="text-[8px] bg-slate-700 text-slate-300 px-1.5 py-1 rounded">مخفي</span>
                         )}
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

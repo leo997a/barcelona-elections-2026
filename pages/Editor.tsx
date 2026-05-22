@@ -19,6 +19,8 @@ import {
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
 import PlayerIntelV2BottomDock from '../components/player-intel-v2/PlayerIntelV2BottomDock';
+import PlayerIntelV2EditorFrame from '../components/player-intel-v2/PlayerIntelV2EditorFrame';
+import PlayerIntelV2DockResizer from '../components/player-intel-v2/PlayerIntelV2DockResizer';
 import {
   filterAvailableMetrics,
   isMetricAvailable,
@@ -512,6 +514,42 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
   const [panelOpen, setPanelOpen] = useState(true);
+
+  // Player Intel V2 dock state — height is resizable, fit mode controls preview scale.
+  const [piDockHeight, setPiDockHeight] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('reo:pi-v2:dock-height-px:v1');
+      const n = stored ? Number(stored) : 320;
+      return Number.isFinite(n) && n >= 220 && n <= 700 ? n : 320;
+    } catch { return 320; }
+  });
+  const [piDockCollapsed, setPiDockCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('reo:player-intel-v2:dock-collapsed:v2') === '1'; }
+    catch { return false; }
+  });
+  const [piPreviewFit, setPiPreviewFit] = useState<'contain' | 'width' | 'actual'>(() => {
+    try {
+      const v = localStorage.getItem('reo:pi-v2:preview-fit:v1');
+      return (v === 'width' || v === 'actual') ? v : 'contain';
+    } catch { return 'contain'; }
+  });
+
+  const setPiDockHeightSafe = (h: number) => {
+    const clamped = Math.max(220, Math.min(700, h));
+    setPiDockHeight(clamped);
+    try { localStorage.setItem('reo:pi-v2:dock-height-px:v1', String(clamped)); } catch { /* ignore */ }
+  };
+  const togglePiDockCollapsed = () => {
+    setPiDockCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('reo:player-intel-v2:dock-collapsed:v2', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const setPiPreviewFitSafe = (m: 'contain' | 'width' | 'actual') => {
+    setPiPreviewFit(m);
+    try { localStorage.setItem('reo:pi-v2:preview-fit:v1', m); } catch { /* ignore */ }
+  };
 
   // Auto-collapse sidebar when Player Intel V2 is active (its controls are in the bottom dock now).
   // User can re-open manually via the toggle button.
@@ -3874,21 +3912,69 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
          {/* Monitor Area */}
          <div className="flex-1 overflow-hidden flex items-center justify-center p-6 relative">
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-            <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
-                 <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
-                 <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
-            </div>
+            {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 ? (
+                /* Player Intel V2 — uses scaled editor frame so the full template stays visible */
+                <PlayerIntelV2EditorFrame fitMode={piPreviewFit}>
+                    <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                </PlayerIntelV2EditorFrame>
+            ) : (
+                <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
+                     <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                     <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
+                </div>
+            )}
+
+            {/* Editor-only fit controls for PLAYER_INTEL_V2 */}
+            {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
+                <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/50 backdrop-blur-md rounded-lg p-1 border border-white/[0.06]">
+                    {[
+                        { id: 'contain' as const, label: 'احتواء' },
+                        { id: 'width' as const, label: 'العرض' },
+                        { id: 'actual' as const, label: '100%' },
+                    ].map((m) => (
+                        <button
+                            key={m.id}
+                            onClick={() => setPiPreviewFitSafe(m.id)}
+                            className={[
+                                'text-[10px] font-bold px-2 py-1 rounded transition-colors',
+                                piPreviewFit === m.id
+                                    ? 'bg-cyan-600 text-white'
+                                    : 'text-slate-400 hover:text-white',
+                            ].join(' ')}
+                        >
+                            {m.label}
+                        </button>
+                    ))}
+                </div>
+            )}
          </div>
 
          {/* True Bottom Control Dock — only for PLAYER_INTEL_V2 */}
          {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (
-            <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0c14]" dir="rtl">
-                <PlayerIntelV2BottomDock
-                    fields={draftOverlay.fields}
-                    getDraftValue={getDraftValue}
-                    applyChanges={(updates) => handleDraftFieldChanges(updates)}
-                />
-            </div>
+            <>
+                {!piDockCollapsed && (
+                    <PlayerIntelV2DockResizer
+                        height={piDockHeight}
+                        onChange={setPiDockHeightSafe}
+                        defaultHeight={320}
+                        onShrink={() => setPiDockHeightSafe(Math.max(220, piDockHeight - 80))}
+                        onExpand={() => setPiDockHeightSafe(Math.min(700, piDockHeight + 80))}
+                    />
+                )}
+                <div
+                    className="shrink-0 border-t border-white/[0.08] bg-[#0a0c14] overflow-hidden"
+                    style={{ height: piDockCollapsed ? 44 : piDockHeight }}
+                    dir="rtl"
+                >
+                    <PlayerIntelV2BottomDock
+                        fields={draftOverlay.fields}
+                        getDraftValue={getDraftValue}
+                        applyChanges={(updates) => handleDraftFieldChanges(updates)}
+                        collapsed={piDockCollapsed}
+                        onToggleCollapsed={togglePiDockCollapsed}
+                    />
+                </div>
+            </>
          )}
 
          {/*  Slot Quick-Bar  */}
