@@ -66,7 +66,7 @@ export interface BroadcastProfile {
   mainLeague?: { leagueId?: number; leagueName?: string; season?: string; stats?: Array<{ title?: string; value?: unknown; localizedTitleId?: string }> };
   /** Competition scope — clarifies whether stats are from the main league, all comps, or recent matches. */
   dataScope: {
-    scopeType: 'main_league' | 'all_available' | 'tournament' | 'recent_matches' | 'unknown';
+    scopeType: 'main_league' | 'season_performance' | 'all_competitions' | 'tournament' | 'recent_matches' | 'unknown';
     label: string;
     season: string;
     competitionName?: string;
@@ -76,6 +76,29 @@ export interface BroadcastProfile {
     /** Other competitions that were found but not actively used as stats source. */
     availableCompetitions?: Array<{ name: string; competitionId?: number; seasonsCount?: number; hasDeepStats?: boolean }>;
   };
+  /** Available scopes for the user to switch between in Editor. */
+  availableScopes?: Array<{
+    id: string;
+    label: string;
+    type: 'main_league' | 'season_performance' | 'all_competitions' | 'recent_matches' | 'tournament';
+    enabled: boolean;
+    sourcePath: string;
+    metricsCount?: number;
+    reasonIfDisabled?: string;
+  }>;
+  /** Flat metric pool — every available metric across all scopes, with provenance. */
+  metricPool?: Array<{
+    key: string;
+    labelEn: string;
+    labelAr?: string;
+    value: unknown;
+    category: string;
+    scopeId: string;
+    source: 'fotmob' | 'fbref';
+    sourcePath: string;
+    per90?: number | null;
+    percentileRank?: number | null;
+  }>;
 }
 
 // ─── Arabic label map (subset — full list in playerIntelV2Labels.ts) ─────────
@@ -139,6 +162,34 @@ function _arLabel(key: string, fallback?: string): string | null {
     if (lower.includes(pat.toLowerCase())) return ar;
   }
   return fallback || null;
+}
+
+// Categories used by the metric pool engine
+const CATEGORY_LABEL_AR: Record<string, string> = {
+  shooting: 'تسديد',
+  passing: 'تمرير',
+  possession: 'استحواذ',
+  defending: 'دفاع',
+  discipline: 'انضباط',
+  creation: 'صناعة لعب',
+  goalkeeping: 'حراسة',
+  general: 'عام',
+  recent: 'فورمة',
+  market: 'سوق',
+  career: 'مسيرة',
+};
+
+function _categoryFromSection(sectionId: string | undefined): string {
+  if (!sectionId) return 'general';
+  const k = sectionId.toLowerCase();
+  if (k.includes('shoot')) return 'shooting';
+  if (k.includes('pass')) return 'passing';
+  if (k.includes('possess')) return 'possession';
+  if (k.includes('defend') || k.includes('defen')) return 'defending';
+  if (k.includes('discip')) return 'discipline';
+  if (k.includes('keep') || k.includes('saves')) return 'goalkeeping';
+  if (k.includes('creat')) return 'creation';
+  return k;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -446,7 +497,7 @@ export function buildBroadcastFromFotMob(
   // mainLeague summary
   const mlObj = raw.mainLeague as Record<string, unknown> | undefined;
 
-  // ── Compute dataScope ───────────────────────────────────────────────────────
+  // ── Compute dataScope + availableScopes + metricPool ──────────────────────
   const statSeasonsArr = raw.statSeasons as Array<{ seasonName?: string; tournaments?: Array<{ name?: string; tournamentId?: number; hasDeepStats?: boolean }> }> | undefined;
   const availableComps: Array<{ name: string; competitionId?: number; seasonsCount?: number; hasDeepStats?: boolean }> = [];
   if (Array.isArray(statSeasonsArr)) {
@@ -467,17 +518,170 @@ export function buildBroadcastFromFotMob(
     availableComps.push(...compMap.values());
   }
 
-  // Determine scope
+  // Determine scope availability
   const hasMainLeague = mlObj && Array.isArray((mlObj as { stats?: unknown }).stats) && ((mlObj as { stats: unknown[] }).stats.length > 0);
   const hasFss = !!(raw.firstSeasonStats as Record<string, unknown> | undefined);
-  const recent = raw.recentMatches as unknown[] | undefined;
+  const fssObj = (raw.firstSeasonStats || {}) as Record<string, unknown>;
+  const fssStatsSection = fssObj.statsSection as { items?: Array<{ title?: string; localizedTitleId?: string; items?: Array<{ localizedTitleId?: string; title?: string; statValue?: unknown; per90?: number; percentileRank?: number }> }> } | undefined;
+  const hasSeasonPerformance = !!(fssStatsSection && Array.isArray(fssStatsSection.items) && fssStatsSection.items.length > 0);
+  const recent = raw.recentMatches as Array<Record<string, unknown>> | undefined;
   const recentCount = Array.isArray(recent) ? recent.length : 0;
 
-  const seasonLabel = (mlObj?.season as string) || (statSeasonsArr?.[0]?.seasonName) || '2025-26';
+  // Career tournament stats — limited (4 fields per tournament)
+  type TournamentEntry = { leagueName?: string; appearances?: unknown; goals?: unknown; assists?: unknown; rating?: unknown };
+  type SeasonEntry = { seasonName?: string; team?: string; tournamentStats?: TournamentEntry[] };
+  const careerSeniorEntries = (((raw.careerHistory as Record<string, unknown> | undefined)?.careerItems as Record<string, { seasonEntries?: SeasonEntry[] }> | undefined)?.senior?.seasonEntries) || [];
+  const currentSeasonName = (mlObj?.season as string) || statSeasonsArr?.[0]?.seasonName || '2025/2026';
+  const currentSeasonTournaments = careerSeniorEntries.find((e) => e.seasonName === currentSeasonName)?.tournamentStats || [];
+  const hasAllCompetitionsLimited = currentSeasonTournaments.length > 1;
+
+  const seasonLabel = currentSeasonName;
   const mainLeagueName = (mlObj as { leagueName?: string })?.leagueName;
 
-  let dataScope: BroadcastProfile['dataScope'];
+  // ── Build availableScopes ───────────────────────────────────────────────────
+  const availableScopes: NonNullable<BroadcastProfile['availableScopes']> = [];
+  if (hasSeasonPerformance) {
+    let seasonMetricsCount = 0;
+    for (const sub of (fssStatsSection?.items || [])) {
+      seasonMetricsCount += (sub.items || []).length;
+    }
+    availableScopes.push({
+      id: 'season_performance',
+      label: `أداء الموسم ${seasonLabel}`,
+      type: 'season_performance',
+      enabled: true,
+      sourcePath: 'pageProps.data.firstSeasonStats.statsSection',
+      metricsCount: seasonMetricsCount,
+    });
+  }
   if (hasMainLeague) {
+    availableScopes.push({
+      id: 'main_league',
+      label: `${mainLeagueName || 'Main League'} · ${seasonLabel}`,
+      type: 'main_league',
+      enabled: true,
+      sourcePath: 'pageProps.data.mainLeague.stats',
+      metricsCount: ((mlObj as { stats?: unknown[] })?.stats?.length) || 0,
+    });
+  }
+  // All competitions — only available with limited stats (4 metrics × N tournaments)
+  availableScopes.push({
+    id: 'all_competitions',
+    label: hasAllCompetitionsLimited
+      ? `كل البطولات ${seasonLabel} (محدود)`
+      : 'كل البطولات (غير متاح)',
+    type: 'all_competitions',
+    enabled: hasAllCompetitionsLimited,
+    sourcePath: 'pageProps.data.careerHistory.careerItems.senior.seasonEntries[*].tournamentStats',
+    metricsCount: hasAllCompetitionsLimited ? currentSeasonTournaments.length * 4 : 0,
+    reasonIfDisabled: hasAllCompetitionsLimited
+      ? undefined
+      : 'FotMob لا يوفّر إحصائيات season totals لكل بطولة منفصلة. الـ careerHistory يقدّم فقط goals/assists/appearances/rating.',
+  });
+  if (recentCount > 0) {
+    availableScopes.push({
+      id: 'recent_matches',
+      label: `آخر ${recentCount} مباراة (مسابقات مختلطة)`,
+      type: 'recent_matches',
+      enabled: true,
+      sourcePath: 'pageProps.data.recentMatches',
+      metricsCount: 8, // aggregates: count/goals/assists/minutes/avg_rating/POTM/yellows/reds
+    });
+  }
+
+  // ── Build metricPool — every metric available with provenance ──────────────
+  const metricPool: NonNullable<BroadcastProfile['metricPool']> = [];
+
+  // From statsSection (season_performance)
+  if (hasSeasonPerformance) {
+    for (const sub of (fssStatsSection?.items || [])) {
+      const cat = _categoryFromSection(sub.localizedTitleId || sub.title);
+      for (const m of (sub.items || [])) {
+        const k = m.localizedTitleId || m.title;
+        if (!k || !_isPresent(m.statValue)) continue;
+        metricPool.push({
+          key: `season_${k}`,
+          labelEn: m.title || k,
+          labelAr: _arLabel(k, m.title) || undefined,
+          value: m.statValue,
+          category: cat,
+          scopeId: 'season_performance',
+          source: 'fotmob',
+          sourcePath: `firstSeasonStats.statsSection.items[${cat}].items[]`,
+          per90: typeof m.per90 === 'number' ? m.per90 : null,
+          percentileRank: typeof m.percentileRank === 'number' ? m.percentileRank : null,
+        });
+      }
+    }
+  }
+
+  // From mainLeague.stats (main_league scope)
+  if (hasMainLeague) {
+    const mlStats = ((mlObj as { stats?: Array<{ title?: string; value?: unknown; localizedTitleId?: string }> })?.stats) || [];
+    for (const s of mlStats) {
+      const k = s.localizedTitleId || s.title;
+      if (!k || !_isPresent(s.value)) continue;
+      metricPool.push({
+        key: `mainleague_${k}`,
+        labelEn: s.title || k,
+        labelAr: _arLabel(k, s.title) || undefined,
+        value: s.value,
+        category: 'general',
+        scopeId: 'main_league',
+        source: 'fotmob',
+        sourcePath: 'mainLeague.stats',
+      });
+    }
+  }
+
+  // From careerHistory.tournamentStats (all_competitions scope, limited)
+  if (hasAllCompetitionsLimited) {
+    for (const t of currentSeasonTournaments) {
+      const lname = t.leagueName || 'Tournament';
+      const key = lname.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      if (_isPresent(t.appearances)) metricPool.push({
+        key: `comp_${key}_appearances`, labelEn: `${lname} — Apps`,
+        labelAr: `${lname} — مباريات`, value: t.appearances, category: 'career',
+        scopeId: 'all_competitions', source: 'fotmob',
+        sourcePath: 'careerHistory.tournamentStats',
+      });
+      if (_isPresent(t.goals)) metricPool.push({
+        key: `comp_${key}_goals`, labelEn: `${lname} — Goals`,
+        labelAr: `${lname} — أهداف`, value: t.goals, category: 'career',
+        scopeId: 'all_competitions', source: 'fotmob',
+        sourcePath: 'careerHistory.tournamentStats',
+      });
+      if (_isPresent(t.assists)) metricPool.push({
+        key: `comp_${key}_assists`, labelEn: `${lname} — Assists`,
+        labelAr: `${lname} — صناعات`, value: t.assists, category: 'career',
+        scopeId: 'all_competitions', source: 'fotmob',
+        sourcePath: 'careerHistory.tournamentStats',
+      });
+      const rating = (t.rating && typeof t.rating === 'object' && 'rating' in t.rating)
+        ? (t.rating as { rating?: unknown }).rating : t.rating;
+      if (_isPresent(rating)) metricPool.push({
+        key: `comp_${key}_rating`, labelEn: `${lname} — Rating`,
+        labelAr: `${lname} — تقييم`, value: rating, category: 'career',
+        scopeId: 'all_competitions', source: 'fotmob',
+        sourcePath: 'careerHistory.tournamentStats',
+      });
+    }
+  }
+
+  // Determine the active scope (prefer season_performance > main_league)
+  let dataScope: BroadcastProfile['dataScope'];
+  if (hasSeasonPerformance) {
+    dataScope = {
+      scopeType: 'season_performance',
+      label: `Season performance · ${seasonLabel}`,
+      season: seasonLabel,
+      competitionName: mainLeagueName,
+      competitionId: (mlObj as { leagueId?: number })?.leagueId,
+      sourcePath: 'pageProps.data.firstSeasonStats.statsSection',
+      confidence: 'high',
+      availableCompetitions: availableComps,
+    };
+  } else if (hasMainLeague) {
     dataScope = {
       scopeType: 'main_league',
       label: `${mainLeagueName || 'Main League'} · ${seasonLabel}`,
@@ -558,6 +762,8 @@ export function buildBroadcastFromFotMob(
         }
       : undefined,
     dataScope,
+    availableScopes,
+    metricPool,
   };
 
   const slug = _slugify(playerName) + '-' + player.id;

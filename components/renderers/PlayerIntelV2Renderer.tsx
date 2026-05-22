@@ -21,6 +21,8 @@ import {
 } from '../player-intel-v2/playerIntelV2MetricResolver';
 import { getMetricAr, cardArTitle } from '../player-intel-v2/playerIntelV2Labels';
 import type { PlayerIntelMasterFull } from '../player-intel-v2/playerIntelV2Types';
+import { getImageOverride, resolveImageUrl, type ImageOverride } from '../player-intel-v2/playerIntelV2ImageStore';
+import { chooseStatLayout, type StatLayoutMode } from '../player-intel-v2/playerIntelV2Layouts';
 
 // ─── Themes ───────────────────────────────────────────────────────────────────
 
@@ -275,8 +277,12 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
     return r.meta;
   }, [sourceB, cardType]);
 
-  const imageA = metaA.imageUrl || PLAYER_IMG_FALLBACK[playerASlug] || null;
-  const imageB = metaB.imageUrl || PLAYER_IMG_FALLBACK[playerBSlug] || null;
+  const imageOverrideA = useMemo(() => getImageOverride(playerASlug), [playerASlug]);
+  const imageOverrideB = useMemo(() => getImageOverride(playerBSlug), [playerBSlug]);
+  const fallbackImageA = metaA.imageUrl || PLAYER_IMG_FALLBACK[playerASlug] || null;
+  const fallbackImageB = metaB.imageUrl || PLAYER_IMG_FALLBACK[playerBSlug] || null;
+  const imageA = resolveImageUrl(imageOverrideA, fallbackImageA);
+  const imageB = resolveImageUrl(imageOverrideB, fallbackImageB);
 
   // Determine actual variant: h2h_duel forces compare style
   const actualVariant = mode === 'compare' && heroB.length > 0
@@ -301,7 +307,9 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
     : null;
 
   const commonProps = {
-    t, metaA, metaB, imageA, imageB, heroA, secondaryA, heroB,
+    t, metaA, metaB, imageA, imageB,
+    imageOverrideA, imageOverrideB,
+    heroA, secondaryA, heroB,
     showSources, showFooter, sourceCoverage, cardTitleAr, mode, scopeLabel,
   };
 
@@ -324,6 +332,8 @@ interface VariantProps {
   metaB: { player: string; club: string; season: string; position: string; cardTitleAr: string; imageUrl: string | null };
   imageA: string | null;
   imageB: string | null;
+  imageOverrideA?: ImageOverride | null;
+  imageOverrideB?: ImageOverride | null;
   heroA: ResolvedMetric[];
   secondaryA: ResolvedMetric[];
   heroB: ResolvedMetric[];
@@ -338,7 +348,7 @@ interface VariantProps {
 // ─── 1. Premium Broadcast Card ────────────────────────────────────────────────
 
 const PremiumBroadcastVariant: React.FC<VariantProps> = ({
-  t, metaA, imageA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
+  t, metaA, imageA, imageOverrideA, heroA, secondaryA, showSources, showFooter, sourceCoverage, cardTitleAr, scopeLabel,
 }) => {
   const heroCols = Math.min(heroA.length || 1, 4);
   return (
@@ -353,7 +363,7 @@ const PremiumBroadcastVariant: React.FC<VariantProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-[35%] z-10 pointer-events-none"
             style={{ background: `linear-gradient(to top, ${t.bgFlat}, transparent)` }} />
           {imageA ? (
-            <PortraitImage src={imageA} t={t} />
+            <PortraitImage src={imageA} t={t} override={imageOverrideA} />
           ) : (
             <ImagePlaceholder t={t} />
           )}
@@ -785,8 +795,16 @@ const ImagePlaceholder: React.FC<{ t: Theme; small?: boolean }> = ({ t, small })
  * Portrait with elegant fallback when FotMob image fails to load.
  * Shows a gradient silhouette instead of empty space or broken icon.
  */
-const PortraitImage: React.FC<{ src: string; t: Theme; size?: 'large' | 'medium' | 'small' }> = ({ src, t, size = 'large' }) => {
+const PortraitImage: React.FC<{
+  src: string;
+  t: Theme;
+  size?: 'large' | 'medium' | 'small';
+  override?: ImageOverride | null;
+}> = ({ src, t, size = 'large', override }) => {
   const [errored, setErrored] = useState(false);
+
+  // Reset error when src changes
+  useEffect(() => { setErrored(false); }, [src]);
 
   if (errored) {
     return (
@@ -806,12 +824,21 @@ const PortraitImage: React.FC<{ src: string; t: Theme; size?: 'large' | 'medium'
     );
   }
 
+  // Apply override fit/position if provided
+  const fit = override?.objectFit || 'contain';
+  const pos = override?.position || 'bottom';
+  const objectClass = fit === 'cover' ? 'object-cover' : 'object-contain';
+  const positionClass = pos === 'top' ? 'object-top' : pos === 'center' ? 'object-center' : 'object-bottom';
+
   return (
     <img
       src={src}
       alt=""
-      className="relative z-0 w-[85%] max-h-[90%] object-contain object-bottom"
-      style={{ filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.7))' }}
+      className={`relative z-0 w-[85%] max-h-[90%] ${objectClass} ${positionClass}`}
+      style={{
+        filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.7))',
+        opacity: typeof override?.opacity === 'number' ? override.opacity : 1,
+      }}
       onError={() => setErrored(true)}
     />
   );

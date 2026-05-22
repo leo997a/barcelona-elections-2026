@@ -21,6 +21,17 @@ import {
   deleteDynamicProfile,
   type DynamicEntry,
 } from './playerIntelV2DynamicStore';
+import {
+  getImageOverride,
+  setImageOverride,
+  clearImageOverride,
+  fileToDataUrl,
+  type ImageOverride,
+  type ImageMode,
+  type ImageObjectFit,
+  type ImagePosition,
+} from './playerIntelV2ImageStore';
+import PlayerIntelV2ImageEditor from './PlayerIntelV2ImageEditor';
 
 const SAMPLES_BASE = '/player-intel-v2-samples';
 
@@ -67,7 +78,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
   const [registry, setRegistry] = useState<RegistryEntry[]>([]);
   const [broadcastA, setBroadcastA] = useState<BroadcastFile | null>(null);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'basic' | 'scope' | 'metrics' | 'variants' | 'assistant'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'scope' | 'metrics' | 'variants' | 'image' | 'assistant'>('basic');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [assistantText, setAssistantText] = useState('');
   const [toast, setToast] = useState<string | null>(null);
@@ -552,6 +563,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
           { id: 'basic', label: 'أساسي' },
           { id: 'scope', label: 'نطاق الإحصائيات' },
           { id: 'metrics', label: 'اختيار الإحصائيات' },
+          { id: 'image', label: 'الصورة' },
           { id: 'variants', label: 'التصاميم' },
           { id: 'assistant', label: 'المساعد' },
         ].map((tab) => (
@@ -1372,6 +1384,19 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ─── IMAGE TAB ─── */}
+      {activeTab === 'image' && (
+        <div className="space-y-3">
+          <div className="text-[11px] text-slate-500 leading-relaxed">
+            تخصيص صورة اللاعب لكل بروفايل. يُحفظ في المتصفح المحلي ولا يُرسل لأي خادم.
+          </div>
+          <PlayerIntelV2ImageEditor slug={playerA} label="اللاعب الأول" />
+          {mode === 'compare' && (
+            <PlayerIntelV2ImageEditor slug={playerB} label="اللاعب الثاني" />
+          )}
         </div>
       )}
 
