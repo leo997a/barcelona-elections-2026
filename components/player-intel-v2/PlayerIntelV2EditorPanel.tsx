@@ -179,9 +179,9 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
     let nextSecondary = cleanedSecondary;
     let nextHidden = cleanedHidden;
 
-    if (target === 'hero' && nextHero.length < 5) {
+    if (target === 'hero' && nextHero.length < 12) {
       nextHero = [...cleanedHero, key];
-    } else if (target === 'secondary' && nextSecondary.length < 8) {
+    } else if (target === 'secondary' && nextSecondary.length < 24) {
       nextSecondary = [...cleanedSecondary, key];
     } else if (target === 'hidden') {
       nextHidden = [...cleanedHidden, key];
@@ -1063,6 +1063,38 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
       {/* ─── METRICS TAB ─── */}
       {activeTab === 'metrics' && (
         <div className="space-y-3">
+          {/* Layout indicator — shows which auto-layout will be used */}
+          {(() => {
+            const totalSelected = heroKeys.length + secondaryKeys.length;
+            const layout =
+              totalSelected === 0 ? null :
+              totalSelected <= 6 ? { id: 'hero_cards', label: '🔥 Hero Cards', desc: 'بطاقات كبيرة بارزة', color: 'cyan' } :
+              totalSelected <= 12 ? { id: 'compact_grid', label: '📊 Compact Grid', desc: 'شبكة 4 أعمدة', color: 'blue' } :
+              totalSelected <= 20 ? { id: 'matrix', label: '🧩 Matrix', desc: 'مصفوفة 5 أعمدة كثيفة', color: 'violet' } :
+              { id: 'data_table', label: '📋 Data Table', desc: 'جدول مكثف 6 أعمدة', color: 'amber' };
+            const colorMap: Record<string, string> = {
+              cyan: 'border-cyan-700/50 bg-cyan-950/30 text-cyan-200',
+              blue: 'border-blue-700/50 bg-blue-950/30 text-blue-200',
+              violet: 'border-violet-700/50 bg-violet-950/30 text-violet-200',
+              amber: 'border-amber-700/50 bg-amber-950/30 text-amber-200',
+            };
+            return layout ? (
+              <div className={`rounded-lg border p-2.5 flex items-center justify-between ${colorMap[layout.color]}`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px] font-black">{layout.label}</span>
+                  <span className="text-[10px] opacity-80">{layout.desc}</span>
+                </div>
+                <span className="text-[11px] font-mono font-bold">
+                  {totalSelected} إحصائية
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-2.5 text-center text-[11px] text-slate-500">
+                اختر preset أدناه أو أضف إحصائيات يدويًا — الـ layout سيتكيّف تلقائيًا (1-6 / 7-12 / 13-20 / 21-30)
+              </div>
+            );
+          })()}
+
           {/* Smart Presets — large cards at the top */}
           <div className="rounded-lg border border-cyan-800/30 bg-gradient-to-br from-cyan-950/30 to-slate-950 p-3">
             <div className="flex items-center justify-between mb-2">
@@ -1094,7 +1126,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="rounded-md border border-cyan-800/30 bg-cyan-950/20 p-2">
               <div className="text-[10px] font-bold uppercase text-cyan-300 mb-1">
-                الإحصائيات الرئيسية ({heroKeys.length}/5)
+                الإحصائيات الرئيسية ({heroKeys.length}/12)
               </div>
               {heroKeys.length === 0 ? (
                 <div className="text-[10px] text-slate-500 italic py-2">— فارغ — اختر preset أو أضف يدويًا</div>
@@ -1117,7 +1149,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
             </div>
             <div className="rounded-md border border-blue-800/30 bg-blue-950/15 p-2">
               <div className="text-[10px] font-bold uppercase text-blue-300 mb-1">
-                الإحصائيات الثانوية ({secondaryKeys.length}/8)
+                الإحصائيات الثانوية ({secondaryKeys.length}/24)
               </div>
               {secondaryKeys.length === 0 ? (
                 <div className="text-[10px] text-slate-500 italic py-2">— فارغ —</div>
@@ -1187,7 +1219,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
           {/* Selected zones */}
           <div className="grid grid-cols-1 gap-2">
             <Zone
-              title={`الإحصائيات الرئيسية (${heroKeys.length}/5)`}
+              title={`الإحصائيات الرئيسية (${heroKeys.length}/12)`}
               keys={heroKeys}
               accent="cyan"
               onMove={moveMetric}
@@ -1195,7 +1227,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
               zone="hero"
             />
             <Zone
-              title={`الإحصائيات الثانوية (${secondaryKeys.length}/8)`}
+              title={`الإحصائيات الثانوية (${secondaryKeys.length}/24)`}
               keys={secondaryKeys}
               accent="blue"
               onMove={moveMetric}
@@ -1291,7 +1323,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
                       <div className="flex items-center gap-1 mt-2">
                         <button
                           onClick={() => moveMetric(k, 'hero')}
-                          disabled={inHero || heroKeys.length >= 5}
+                          disabled={inHero || heroKeys.length >= 12}
                           className="flex-1 text-[9px] font-bold bg-cyan-900/40 hover:bg-cyan-800 disabled:opacity-30 disabled:cursor-not-allowed text-cyan-200 px-1.5 py-1 rounded transition-colors"
                           title="نقل للرئيسية"
                         >
@@ -1299,7 +1331,7 @@ const PlayerIntelV2EditorPanel: React.FC<Props> = ({ fields, getDraftValue, appl
                         </button>
                         <button
                           onClick={() => moveMetric(k, 'secondary')}
-                          disabled={inSec || secondaryKeys.length >= 8}
+                          disabled={inSec || secondaryKeys.length >= 24}
                           className="flex-1 text-[9px] font-bold bg-blue-900/40 hover:bg-blue-800 disabled:opacity-30 disabled:cursor-not-allowed text-blue-200 px-1.5 py-1 rounded transition-colors"
                           title="نقل للثانوية"
                         >

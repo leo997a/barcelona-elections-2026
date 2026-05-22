@@ -16,26 +16,26 @@ export const PLAYER_INTEL_PRESETS: Record<string, PresetDefinition> = {
   attacker_card: {
     id: 'attacker_card',
     label: 'بطاقة هجومية',
-    hero: ['goals', 'assists', 'xg', 'shots'],
-    secondary: ['shots_on_target', 'rating', 'minutes', 'matches'],
+    hero: ['goals', 'assists', 'xg', 'shots', 'shots_on_target', 'rating'],
+    secondary: ['minutes', 'matches', 'fotmob_recent_goals', 'fotmob_recent_avg_rating'],
   },
   playmaker_card: {
     id: 'playmaker_card',
     label: 'صانع لعب',
-    hero: ['assists', 'xa', 'key_passes', 'chances_created'],
-    secondary: ['accurate_passes', 'progressive_passes', 'crosses', 'rating'],
+    hero: ['assists', 'xa', 'key_passes', 'chances_created', 'accurate_passes', 'rating'],
+    secondary: ['progressive_passes', 'crosses', 'goals', 'minutes', 'matches'],
   },
   winger_card: {
     id: 'winger_card',
     label: 'جناح',
-    hero: ['goals', 'assists', 'crosses', 'progressive_carries'],
-    secondary: ['shot_creating_actions', 'touches', 'dribbles', 'rating'],
+    hero: ['goals', 'assists', 'crosses', 'progressive_carries', 'dribbles', 'rating'],
+    secondary: ['shot_creating_actions', 'touches', 'key_passes', 'minutes', 'matches'],
   },
   defender_card: {
     id: 'defender_card',
     label: 'مدافع',
-    hero: ['tackles', 'interceptions', 'blocks', 'aerial_duels_won'],
-    secondary: ['tackles_won', 'clearances', 'rating', 'matches'],
+    hero: ['tackles', 'interceptions', 'blocks', 'aerial_duels_won', 'clearances', 'rating'],
+    secondary: ['tackles_won', 'fouls_committed', 'yellow_cards', 'matches', 'minutes'],
   },
   form_report: {
     id: 'form_report',
@@ -58,8 +58,14 @@ export const PLAYER_INTEL_PRESETS: Record<string, PresetDefinition> = {
   complete_report: {
     id: 'complete_report',
     label: 'تقرير كامل',
-    hero: ['goals', 'assists', 'matches', 'minutes'],
-    secondary: ['rating', 'shots', 'key_passes', 'tackles', 'interceptions', 'yellow_cards'],
+    hero: ['goals', 'assists', 'xg', 'xa', 'rating', 'matches'],
+    secondary: [
+      'shots', 'shots_on_target', 'key_passes', 'chances_created',
+      'accurate_passes', 'progressive_passes', 'crosses',
+      'tackles', 'interceptions', 'blocks', 'clearances',
+      'touches', 'dribbles', 'progressive_carries', 'aerial_duels_won',
+      'minutes', 'yellow_cards', 'red_cards',
+    ],
   },
 };
 
