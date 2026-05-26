@@ -5,6 +5,7 @@ import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectio
 import { THEMES } from './renderers/OverlayConstants';
 import { playCue, stopCue } from '../services/audioEngine';
 import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime';
+import { shouldPlayTemplateSound } from '../utils/templateAudioGate';
 import { RendererProps } from './renderers/SharedComponents';
 
 // Renderers
@@ -188,21 +189,21 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.SCOREBOARD]: 'SCOREBUG_SNAP',
   [OverlayType.LOWER_THIRD]: 'LOWER_THIRD_WIPE',
   [OverlayType.TICKER]: 'DATA_TICK',
-  [OverlayType.ALERT]: 'VAR_BUZZ',
-  [OverlayType.EXCLUSIVE_ALERT]: 'VAR_BUZZ',
-  [OverlayType.SMART_NEWS]: 'TACTICAL_PULSE',
-  [OverlayType.LEADERBOARD]: 'DATA_SLAM',
-  [OverlayType.GUESTS]: 'STADIUM_WHOOSH',
+  [OverlayType.ALERT]: 'IMPORTANT_PING',
+  [OverlayType.EXCLUSIVE_ALERT]: 'IMPORTANT_PING',
+  [OverlayType.SMART_NEWS]: 'LOWER_THIRD_WIPE',
+  [OverlayType.LEADERBOARD]: 'LOWER_THIRD_WIPE',
+  [OverlayType.GUESTS]: 'LOWER_THIRD_WIPE',
   [OverlayType.UCL_DRAW]: 'LUXURY_SWEEP',
   [OverlayType.SOCIAL_MEDIA]: 'LOWER_THIRD_WIPE',
   [OverlayType.TODAYS_EPISODE]: 'BEFORE_THE_KICKOFF',
-  [OverlayType.PLAYER_PROFILE]: 'PLAYER_ENTRANCE',
+  [OverlayType.PLAYER_PROFILE]: 'LOWER_THIRD_WIPE',
   [OverlayType.TOP_VIEWERS]: 'DATA_TICK',
   [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_SWEEP',
   [OverlayType.TRANSFER_NEWS]: 'MERCATO_HIT',
-  [OverlayType.H2H_STATS]: 'DATA_SLAM',
-  [OverlayType.MATCH_STATS]: 'DATA_SLAM',
-  [OverlayType.PLAYER_STATS]: 'DATA_SLAM',
+  [OverlayType.H2H_STATS]: 'LOWER_THIRD_WIPE',
+  [OverlayType.MATCH_STATS]: 'LOWER_THIRD_WIPE',
+  [OverlayType.PLAYER_STATS]: 'LOWER_THIRD_WIPE',
   [OverlayType.BARCA_PREMIUM]: 'LUXURY_SWEEP',
   [OverlayType.TRANSFER_TARGETS]: 'TARGET_REVEAL',
   [OverlayType.BREAKING_HERE_WE_GO]: 'BREAKING_RISER',
@@ -211,38 +212,38 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'CASH_REGISTER',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'DEADLINE_ALARM',
   [OverlayType.MERCATO_X_RAY]: 'TARGET_SCAN',
-  [OverlayType.PLAYER_INTEL_V2]: 'DATA_SLAM',
+  [OverlayType.PLAYER_INTEL_V2]: 'LOWER_THIRD_WIPE',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
-  [OverlayType.SCOREBOARD]: 'BROADCAST_OUT',
+  [OverlayType.SCOREBOARD]: 'SOFT_FADE',
   [OverlayType.LOWER_THIRD]: 'SOFT_FADE',
-  [OverlayType.TICKER]: 'BROADCAST_OUT',
-  [OverlayType.ALERT]: 'BROADCAST_OUT',
-  [OverlayType.EXCLUSIVE_ALERT]: 'BROADCAST_OUT',
+  [OverlayType.TICKER]: 'SOFT_FADE',
+  [OverlayType.ALERT]: 'SOFT_FADE',
+  [OverlayType.EXCLUSIVE_ALERT]: 'SOFT_FADE',
   [OverlayType.SMART_NEWS]: 'SOFT_FADE',
   [OverlayType.LEADERBOARD]: 'SOFT_FADE',
-  [OverlayType.GUESTS]: 'BROADCAST_OUT',
-  [OverlayType.UCL_DRAW]: 'BROADCAST_OUT',
+  [OverlayType.GUESTS]: 'SOFT_FADE',
+  [OverlayType.UCL_DRAW]: 'SOFT_FADE',
   [OverlayType.ELECTION]: 'SOFT_FADE',
   [OverlayType.SOCIAL_MEDIA]: 'SOFT_FADE',
-  [OverlayType.TODAYS_EPISODE]: 'BROADCAST_OUT',
+  [OverlayType.TODAYS_EPISODE]: 'SOFT_FADE',
   [OverlayType.PLAYER_PROFILE]: 'SOFT_FADE',
   [OverlayType.TOP_VIEWERS]: 'SOFT_FADE',
-  [OverlayType.FOOTBALL_PACKAGE]: 'LUXURY_OUT',
-  [OverlayType.TRANSFER_NEWS]: 'LUXURY_OUT',
-  [OverlayType.H2H_STATS]: 'BROADCAST_OUT',
-  [OverlayType.MATCH_STATS]: 'BROADCAST_OUT',
-  [OverlayType.PLAYER_STATS]: 'BROADCAST_OUT',
-  [OverlayType.BARCA_PREMIUM]: 'LUXURY_OUT',
-  [OverlayType.TRANSFER_TARGETS]: 'LUXURY_OUT',
-  [OverlayType.BREAKING_HERE_WE_GO]: 'BROADCAST_OUT',
-  [OverlayType.MERCATO_AGENT_CALL]: 'LUXURY_OUT',
-  [OverlayType.MERCATO_DEAL_TIMELINE]: 'LUXURY_OUT',
-  [OverlayType.MERCATO_BUDGET_TRACKER]: 'BROADCAST_OUT',
-  [OverlayType.MERCATO_DEADLINE_DAY]: 'BROADCAST_OUT',
-  [OverlayType.MERCATO_X_RAY]: 'BROADCAST_OUT',
-  [OverlayType.PLAYER_INTEL_V2]: 'BROADCAST_OUT',
+  [OverlayType.FOOTBALL_PACKAGE]: 'SOFT_FADE',
+  [OverlayType.TRANSFER_NEWS]: 'SOFT_FADE',
+  [OverlayType.H2H_STATS]: 'SOFT_FADE',
+  [OverlayType.MATCH_STATS]: 'SOFT_FADE',
+  [OverlayType.PLAYER_STATS]: 'SOFT_FADE',
+  [OverlayType.BARCA_PREMIUM]: 'SOFT_FADE',
+  [OverlayType.TRANSFER_TARGETS]: 'SOFT_FADE',
+  [OverlayType.BREAKING_HERE_WE_GO]: 'SOFT_FADE',
+  [OverlayType.MERCATO_AGENT_CALL]: 'SOFT_FADE',
+  [OverlayType.MERCATO_DEAL_TIMELINE]: 'SOFT_FADE',
+  [OverlayType.MERCATO_BUDGET_TRACKER]: 'SOFT_FADE',
+  [OverlayType.MERCATO_DEADLINE_DAY]: 'SOFT_FADE',
+  [OverlayType.MERCATO_X_RAY]: 'SOFT_FADE',
+  [OverlayType.PLAYER_INTEL_V2]: 'SOFT_FADE',
 };
 
 const CSS = `
@@ -319,7 +320,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const scale = Number(getField('scale') || 1);
   const posX = Number(getField('positionX') || 0);
   const posY = Number(getField('positionY') || 0);
-  const soundEnabled = getField('soundEnabled') !== false;
   const soundVolume = Number(getField('soundVolume') ?? 0.7);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -369,8 +369,15 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   };
 
   const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
-      if (isEditor) return; 
-      if (!soundEnabled) return;
+      if (isEditor) return;
+      // Single universal audio gate. Replaces the old `if (!soundEnabled) return`
+      // check, plus consults runtime profile + volume floor + visibility.
+      // Note: For EXIT we pass the *outgoing* visibility, since by the time
+      // the EXIT cue fires, isVisible has already flipped to false.
+      const gateEvent = type === 'EXIT' ? 'EXIT' : type === 'TRANSITION' ? 'TRANSITION' : 'ENTRY';
+      // Build a temp config view that satisfies the ENTRY visibility check.
+      const gateConfig = type === 'ENTRY' ? { ...config, isVisible: true } : config;
+      if (!shouldPlayTemplateSound(gateConfig, gateEvent)) return;
       try {
           const cue = resolveSynthCue(type);
           if (type === 'EXIT') stopCue('BEFORE_THE_KICKOFF', 120);

@@ -72,9 +72,83 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
   return additions;
 };
 
+/**
+ * Field group ordering. When the editor renders fields by group, this
+ * order is used so every template feels consistent.
+ */
+export const FIELD_GROUP_ORDER = [
+  'content',     // text, names, numbers, images
+  'display',     // size, position, theme
+  'transitions', // transitionIn / transitionOut
+  'audio',       // soundEnabled / soundVolume / soundInStyle / soundOutStyle
+  'advanced',    // raw / debug / template-specific
+] as const;
+
+export type FieldGroup = typeof FIELD_GROUP_ORDER[number];
+
+/**
+ * Pure helper. Returns deduplicated fields, keeping the first occurrence
+ * of each id. Subsequent duplicates are dropped. Emits a console warn in
+ * dev for traceability.
+ */
+export const dedupeFields = (fields: OverlayField[]): OverlayField[] => {
+  const seen = new Set<string>();
+  const out: OverlayField[] = [];
+  for (const f of fields) {
+    if (seen.has(f.id)) {
+      // Helpful trace in dev only; never throws.
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.warn(`[dedupeFields] duplicate field id "${f.id}" dropped`);
+      }
+      continue;
+    }
+    seen.add(f.id);
+    out.push(f);
+  }
+  return out;
+};
+
+/**
+ * Identify which group a field belongs to. Conservative: defaults to
+ * 'content' for unknown ids, keeping current behavior intact.
+ */
+export const fieldGroup = (id: string): FieldGroup => {
+  if (id === 'transitionIn' || id === 'transitionOut') return 'transitions';
+  if (id === 'soundEnabled' || id === 'soundVolume' || id === 'soundInStyle' || id === 'soundOutStyle') return 'audio';
+  if (id === 'scale' || id === 'positionX' || id === 'positionY' || id === 'themePreset') return 'display';
+  return 'content';
+};
+
+/**
+ * Stable-sort fields so display order is consistent across templates.
+ * Order:
+ *   1. Content fields (in their original order)
+ *   2. Display fields
+ *   3. Transitions
+ *   4. Audio
+ *   5. Advanced
+ *
+ * Within a group, original order is preserved.
+ */
+export const normalizeTemplateFields = (fields: OverlayField[]): OverlayField[] => {
+  const deduped = dedupeFields(fields);
+  const groups: Record<FieldGroup, OverlayField[]> = {
+    content: [], display: [], transitions: [], audio: [], advanced: [],
+  };
+  for (const f of deduped) groups[fieldGroup(f.id)].push(f);
+  return [
+    ...groups.content,
+    ...groups.display,
+    ...groups.transitions,
+    ...groups.audio,
+    ...groups.advanced,
+  ];
+};
+
 const withBroadcastControls = (template: OverlayConfig): OverlayConfig => ({
   ...template,
-  fields: [...template.fields, ...createBroadcastControlFields(template.fields)],
+  fields: dedupeFields([...template.fields, ...createBroadcastControlFields(template.fields)]),
 });
 
 const broadcastMotionPreset = (

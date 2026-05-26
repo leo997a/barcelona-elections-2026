@@ -63,8 +63,13 @@ const useMercatoAudio = (
     const customVoiceUrl = String(getField('customVoiceUrl') || '');
     const signaturePhrase = String(getField('signaturePhrase') || '');
     const intensity = Number(getField('audioIntensity') ?? 1.0);
-    const enableVoice = getField('enableVoice') !== false;
-    const enableSfx = getField('enableSfx') !== false;
+    // Universal mute respect: if the broadcast-level soundEnabled is false,
+    // disable BOTH voice and sfx, regardless of mercato-specific switches.
+    const universalSound = getField('soundEnabled') !== false;
+    const universalVolume = Number(getField('soundVolume') ?? 0.7);
+    const universalGate = universalSound && universalVolume > 0;
+    const enableVoice = universalGate && getField('enableVoice') !== false;
+    const enableSfx = universalGate && getField('enableSfx') !== false;
 
     // Stop any previous session first (prevents overlap)
     stopMercatoStory();

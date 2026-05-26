@@ -23,12 +23,24 @@ export interface AudioProfile {
   updateCue: string;
 }
 
+/**
+ * Premium subtle default. Replaces the previous loud STADIUM_WHOOSH default.
+ *
+ * Policy: every template inherits a soft, broadcast-respectable audio
+ * profile by default. Strong cues (MERCATO_HIT, BREAKING_RISER, GOAL_HORN)
+ * are reserved for templates whose subject warrants intensity (mercato,
+ * breaking news, goals). Everything else uses subtle cues so the default
+ * UX is never embarrassing or jarring.
+ *
+ * Volume floor is 0.55 (was 0.7) so even when templates inherit the
+ * default they sound polite, not loud.
+ */
 export const DEFAULT_AUDIO_PROFILE: AudioProfile = {
-  id: 'broadcast_default',
+  id: 'premium_subtle',
   enabled: true,
-  volume: 0.7,
-  inCue: 'STADIUM_WHOOSH',
-  outCue: 'BROADCAST_OUT',
+  volume: 0.55,
+  inCue: 'LOWER_THIRD_WIPE',  // soft wipe, not a whoosh
+  outCue: 'SOFT_FADE',
   updateCue: 'DATA_TICK',
 };
 
@@ -36,38 +48,46 @@ export const DEFAULT_AUDIO_PROFILE: AudioProfile = {
  * Per-template-type audio mapping. Every value MUST come from the
  * existing audioEngine cue catalog. No new audio files are added here.
  *
- * If a type is missing it falls back to DEFAULT_AUDIO_PROFILE — never
- * silent, never random.
+ * Default policy (post-AUDIO-SETTINGS-X3):
+ *   - Generic data templates (stats, profile, viewers, social, smart news)
+ *     → soft cues (LOWER_THIRD_WIPE / SOFT_FADE / DATA_TICK), volume 0.5-0.6
+ *   - Score / scoreboard templates → SCOREBUG_SNAP (sharp but short), 0.6
+ *   - Alert / breaking templates   → keep stronger cues, but capped at 0.7
+ *   - Mercato deals / official     → keep MERCATO_HIT / HERE_WE_GO_STING,
+ *                                     these templates are about transfers
+ *                                     and the cue is part of their identity.
+ *
+ * If a type is missing it falls back to DEFAULT_AUDIO_PROFILE (premium_subtle).
  */
 export const TEMPLATE_AUDIO_PROFILES: Partial<Record<OverlayType, AudioProfile>> = {
-  [OverlayType.SCOREBOARD]:           { id: 'scoreboard', enabled: true, volume: 0.7, inCue: 'SCOREBUG_SNAP',     outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.LOWER_THIRD]:          { id: 'lower_third', enabled: true, volume: 0.65, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
-  [OverlayType.TICKER]:               { id: 'ticker', enabled: true, volume: 0.55, inCue: 'DATA_TICK',         outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.ALERT]:                { id: 'alert', enabled: true, volume: 0.85, inCue: 'VAR_BUZZ',          outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.EXCLUSIVE_ALERT]:      { id: 'exclusive_alert', enabled: true, volume: 0.85, inCue: 'VAR_BUZZ',  outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.SMART_NEWS]:           { id: 'smart_news', enabled: true, volume: 0.7, inCue: 'TACTICAL_PULSE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
-  [OverlayType.LEADERBOARD]:          { id: 'leaderboard', enabled: true, volume: 0.7, inCue: 'DATA_SLAM',     outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
-  [OverlayType.GUESTS]:               { id: 'guests', enabled: true, volume: 0.7, inCue: 'STADIUM_WHOOSH',     outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.UCL_DRAW]:             { id: 'ucl_draw', enabled: true, volume: 0.75, inCue: 'LUXURY_SWEEP',    outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.ELECTION]:             { id: 'election', enabled: true, volume: 0.7, inCue: 'RESULTS_STING',    outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
-  [OverlayType.SOCIAL_MEDIA]:         { id: 'social_media', enabled: true, volume: 0.6, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
-  [OverlayType.TODAYS_EPISODE]:       { id: 'todays_episode', enabled: true, volume: 0.65, inCue: 'BEFORE_THE_KICKOFF', outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.PLAYER_PROFILE]:       { id: 'player_profile', enabled: true, volume: 0.7, inCue: 'PLAYER_ENTRANCE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
-  [OverlayType.TOP_VIEWERS]:          { id: 'top_viewers', enabled: true, volume: 0.6, inCue: 'DATA_TICK',     outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
-  [OverlayType.FOOTBALL_PACKAGE]:     { id: 'football_package', enabled: true, volume: 0.75, inCue: 'LUXURY_SWEEP', outCue: 'LUXURY_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.H2H_STATS]:            { id: 'h2h_stats', enabled: true, volume: 0.7, inCue: 'DATA_SLAM',       outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.TRANSFER_NEWS]:        { id: 'transfer_news', enabled: true, volume: 0.75, inCue: 'MERCATO_HIT', outCue: 'LUXURY_OUT',    updateCue: 'DATA_TICK' },
-  [OverlayType.BARCA_PREMIUM]:        { id: 'barca_premium', enabled: true, volume: 0.75, inCue: 'LUXURY_SWEEP', outCue: 'LUXURY_OUT',   updateCue: 'DATA_TICK' },
-  [OverlayType.MATCH_STATS]:          { id: 'match_stats', enabled: true, volume: 0.7, inCue: 'DATA_SLAM',     outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.PLAYER_STATS]:         { id: 'player_stats', enabled: true, volume: 0.7, inCue: 'DATA_SLAM',    outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.TRANSFER_TARGETS]:     { id: 'transfer_targets', enabled: true, volume: 0.7, inCue: 'TARGET_REVEAL', outCue: 'LUXURY_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.BREAKING_HERE_WE_GO]:  { id: 'breaking_here_we_go', enabled: true, volume: 0.85, inCue: 'BREAKING_RISER', outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.MERCATO_AGENT_CALL]:   { id: 'mercato_agent_call', enabled: true, volume: 0.75, inCue: 'AGENT_CALL', outCue: 'LUXURY_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.MERCATO_DEAL_TIMELINE]: { id: 'mercato_deal_timeline', enabled: true, volume: 0.7, inCue: 'TARGET_REVEAL', outCue: 'LUXURY_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.MERCATO_BUDGET_TRACKER]: { id: 'mercato_budget_tracker', enabled: true, volume: 0.7, inCue: 'CASH_REGISTER', outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.MERCATO_DEADLINE_DAY]: { id: 'mercato_deadline_day', enabled: true, volume: 0.85, inCue: 'DEADLINE_ALARM', outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.MERCATO_X_RAY]:        { id: 'mercato_x_ray', enabled: true, volume: 0.7, inCue: 'TARGET_SCAN',  outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
-  [OverlayType.PLAYER_INTEL_V2]:      { id: 'player_intel_v2', enabled: true, volume: 0.7, inCue: 'DATA_SLAM',  outCue: 'BROADCAST_OUT', updateCue: 'DATA_TICK' },
+  [OverlayType.SCOREBOARD]:           { id: 'scoreboard', enabled: true, volume: 0.6, inCue: 'SCOREBUG_SNAP',     outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.LOWER_THIRD]:          { id: 'lower_third', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.TICKER]:               { id: 'ticker', enabled: true, volume: 0.45, inCue: 'DATA_TICK',         outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.ALERT]:                { id: 'alert', enabled: true, volume: 0.7, inCue: 'IMPORTANT_PING',     outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.EXCLUSIVE_ALERT]:      { id: 'exclusive_alert', enabled: true, volume: 0.7, inCue: 'IMPORTANT_PING', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.SMART_NEWS]:           { id: 'smart_news', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.LEADERBOARD]:          { id: 'leaderboard', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.GUESTS]:               { id: 'guests', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.UCL_DRAW]:             { id: 'ucl_draw', enabled: true, volume: 0.6, inCue: 'LUXURY_SWEEP',    outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.ELECTION]:             { id: 'election', enabled: true, volume: 0.6, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.SOCIAL_MEDIA]:         { id: 'social_media', enabled: true, volume: 0.5, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.TODAYS_EPISODE]:       { id: 'todays_episode', enabled: true, volume: 0.55, inCue: 'BEFORE_THE_KICKOFF', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.PLAYER_PROFILE]:       { id: 'player_profile', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.TOP_VIEWERS]:          { id: 'top_viewers', enabled: true, volume: 0.45, inCue: 'DATA_TICK',     outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.FOOTBALL_PACKAGE]:     { id: 'football_package', enabled: true, volume: 0.6, inCue: 'LUXURY_SWEEP', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.H2H_STATS]:            { id: 'h2h_stats', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.TRANSFER_NEWS]:        { id: 'transfer_news', enabled: true, volume: 0.65, inCue: 'MERCATO_HIT', outCue: 'SOFT_FADE',    updateCue: 'DATA_TICK' },
+  [OverlayType.BARCA_PREMIUM]:        { id: 'barca_premium', enabled: true, volume: 0.6, inCue: 'LUXURY_SWEEP', outCue: 'SOFT_FADE',   updateCue: 'DATA_TICK' },
+  [OverlayType.MATCH_STATS]:          { id: 'match_stats', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.PLAYER_STATS]:         { id: 'player_stats', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.TRANSFER_TARGETS]:     { id: 'transfer_targets', enabled: true, volume: 0.6, inCue: 'TARGET_REVEAL', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.BREAKING_HERE_WE_GO]:  { id: 'breaking_here_we_go', enabled: true, volume: 0.7, inCue: 'BREAKING_RISER', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.MERCATO_AGENT_CALL]:   { id: 'mercato_agent_call', enabled: true, volume: 0.65, inCue: 'AGENT_CALL', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.MERCATO_DEAL_TIMELINE]: { id: 'mercato_deal_timeline', enabled: true, volume: 0.6, inCue: 'TARGET_REVEAL', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.MERCATO_BUDGET_TRACKER]: { id: 'mercato_budget_tracker', enabled: true, volume: 0.6, inCue: 'CASH_REGISTER', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.MERCATO_DEADLINE_DAY]: { id: 'mercato_deadline_day', enabled: true, volume: 0.7, inCue: 'DEADLINE_ALARM', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.MERCATO_X_RAY]:        { id: 'mercato_x_ray', enabled: true, volume: 0.6, inCue: 'TARGET_SCAN',  outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
+  [OverlayType.PLAYER_INTEL_V2]:      { id: 'player_intel_v2', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
 };
 
 /**

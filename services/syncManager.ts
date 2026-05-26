@@ -20,7 +20,7 @@ import {
   type Database,
   type Unsubscribe,
 } from 'firebase/database';
-import { ActionCommand, FirebaseWebConfig, OverlayConfig, SecureSyncConfig, SyncStatus } from '../types';
+import { ActionCommand, FirebaseWebConfig, OverlayConfig, OverlayField, SecureSyncConfig, SyncStatus } from '../types';
 import { decodeBase64UrlUtf8, encodeBase64UrlUtf8, generateSecureToken } from '../utils/base64';
 import { normalizeElectionOverlay } from '../utils/election';
 import { firebaseConfig, isFirebaseConfigured } from './firebase';
@@ -533,19 +533,48 @@ class SyncManager {
           nextOverlay = { ...overlay, isVisible: command.value };
           break;
 
-        case 'update_field':
-          nextOverlay = {
-            ...overlay,
-            fields: overlay.fields.map(field =>
-              field.id === command.fieldId
-                ? {
-                    ...field,
-                    value: command.value as string | number | boolean | string[],
-                  }
-                : field
-            ),
-          };
+        case 'update_field': {
+          const has = overlay.fields.some(f => f.id === command.fieldId);
+          if (!has) {
+            // Field doesn't exist — auto-inject it for known broadcast-control
+            // fields so toggling Mute (or volume / sound style) works on
+            // overlays saved before withBroadcastControls injected those
+            // fields. Limited whitelist to avoid arbitrary field injection.
+            const KNOWN_FIELDS: Record<string, { label: string; type: 'boolean' | 'range' | 'select' | 'text' }> = {
+              soundEnabled:  { label: 'تفعيل الصوت', type: 'boolean' },
+              soundVolume:   { label: 'مستوى الصوت', type: 'range' },
+              soundInStyle:  { label: 'مؤثر الظهور', type: 'select' },
+              soundOutStyle: { label: 'مؤثر الإخفاء', type: 'select' },
+              transitionIn:  { label: 'انتقال الظهور', type: 'select' },
+              transitionOut: { label: 'انتقال الإخفاء', type: 'select' },
+            };
+            const meta = KNOWN_FIELDS[command.fieldId];
+            if (meta) {
+              const newField = {
+                id: command.fieldId,
+                label: meta.label,
+                type: meta.type,
+                value: command.value as string | number | boolean | string[],
+              } as OverlayField;
+              nextOverlay = { ...overlay, fields: [...overlay.fields, newField] };
+            } else {
+              nextOverlay = overlay;
+            }
+          } else {
+            nextOverlay = {
+              ...overlay,
+              fields: overlay.fields.map(field =>
+                field.id === command.fieldId
+                  ? {
+                      ...field,
+                      value: command.value as string | number | boolean | string[],
+                    }
+                  : field
+              ),
+            };
+          }
           break;
+        }
 
         case 'increment_field':
           nextOverlay = {
