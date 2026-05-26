@@ -4,6 +4,7 @@ import ElectionOverlay from './ElectionOverlay';
 import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectionStyle } from '../utils/election';
 import { THEMES } from './renderers/OverlayConstants';
 import { playCue, stopCue } from '../services/audioEngine';
+import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime';
 import { RendererProps } from './renderers/SharedComponents';
 
 // Renderers
@@ -62,6 +63,10 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'tv-data-rush',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'tv-zoom-flash',
   [OverlayType.MERCATO_X_RAY]: 'tv-vertical-reveal',
+  [OverlayType.H2H_STATS]: 'tv-data-rush',
+  [OverlayType.MATCH_STATS]: 'tv-data-rush',
+  [OverlayType.BARCA_PREMIUM]: 'tv-stadium-sweep',
+  [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -89,6 +94,10 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'tv-data-rush-out',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'tv-zoom-out',
   [OverlayType.MERCATO_X_RAY]: 'tv-vertical-reveal-out',
+  [OverlayType.H2H_STATS]: 'tv-data-rush-out',
+  [OverlayType.MATCH_STATS]: 'tv-data-rush-out',
+  [OverlayType.BARCA_PREMIUM]: 'tv-stadium-sweep-out',
+  [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -116,6 +125,10 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'DATA_RUSH',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'SPOTLIGHT_POP',
   [OverlayType.MERCATO_X_RAY]: 'VERTICAL_REVEAL',
+  [OverlayType.H2H_STATS]: 'DATA_RUSH',
+  [OverlayType.MATCH_STATS]: 'DATA_RUSH',
+  [OverlayType.BARCA_PREMIUM]: 'STADIUM_SWEEP',
+  [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -143,6 +156,10 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'DATA_RUSH_OUT',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'SPOTLIGHT_POP_OUT',
   [OverlayType.MERCATO_X_RAY]: 'VERTICAL_REVEAL_OUT',
+  [OverlayType.H2H_STATS]: 'DATA_RUSH_OUT',
+  [OverlayType.MATCH_STATS]: 'DATA_RUSH_OUT',
+  [OverlayType.BARCA_PREMIUM]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -194,6 +211,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'CASH_REGISTER',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'DEADLINE_ALARM',
   [OverlayType.MERCATO_X_RAY]: 'TARGET_SCAN',
+  [OverlayType.PLAYER_INTEL_V2]: 'DATA_SLAM',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -224,6 +242,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: 'BROADCAST_OUT',
   [OverlayType.MERCATO_DEADLINE_DAY]: 'BROADCAST_OUT',
   [OverlayType.MERCATO_X_RAY]: 'BROADCAST_OUT',
+  [OverlayType.PLAYER_INTEL_V2]: 'BROADCAST_OUT',
 };
 
 const CSS = `
@@ -335,10 +354,18 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
 
       const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
       if (fieldCue !== 'DEFAULT') return fieldCue;
-      if (type === 'TRANSITION') return 'DATA_TICK';
+      if (type === 'TRANSITION') {
+          // Universal transition fallback — resolve via runtime profile
+          // so every template ticks consistently.
+          return resolveTemplateAudio(config).updateCue;
+      }
+      // ENTRY / EXIT: prefer the per-type SOUND_*_DEFAULTS map for backward
+      // compatibility, then fall back to the universal runtime profile so
+      // NO template ever plays a generic STADIUM_WHOOSH by accident.
+      const profile = resolveTemplateAudio(config);
       return type === 'EXIT'
-          ? SOUND_OUT_DEFAULTS[config.type] || 'BROADCAST_OUT'
-          : SOUND_IN_DEFAULTS[config.type] || 'STADIUM_WHOOSH';
+          ? SOUND_OUT_DEFAULTS[config.type] || profile.outCue
+          : SOUND_IN_DEFAULTS[config.type] || profile.inCue;
   };
 
   const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
@@ -387,6 +414,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           }
           setMounted(true);
           requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
+          recordDiagnostic(config, 'show');
       } else if (!isNowVisible && prevVisible === true) {
           if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
               lastSoundAt.current = now;
@@ -400,6 +428,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   setAnimCls('');
               }
           }, 600);
+          recordDiagnostic(config, 'hide');
       }
 
       previousVisibilityRef.current = isNowVisible;

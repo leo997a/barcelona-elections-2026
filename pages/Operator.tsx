@@ -3,6 +3,7 @@ import { OverlayConfig, OverlayType } from '../types';
 import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
+import TemplateControlBar from '../components/TemplateControlBar';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
@@ -115,6 +116,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
             <span className={`px-2 py-0.5 rounded text-xs font-mono ${selectedOverlay.isVisible ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
               {selectedOverlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
             </span>
+            <TemplateControlBar overlay={selectedOverlay} compact />
           </div>
           <button
             onClick={() => setShowStreamDeckModal(true)}
