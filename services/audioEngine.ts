@@ -201,6 +201,8 @@ const _legacyKeys = [
   'TIMER_TICK', 'COUNTDOWN_FINAL',
   // AUDIO-PACKS-X5 — soft scene cues (call/chat/recording/notification)
   'SOFT_CALL_CONNECT', 'SOFT_CHAT_TICK', 'SOFT_RECORDING_BEEP', 'SOFT_NOTIFICATION_PULSE',
+  // MERCATO-QUALITY-X7 — chat/call private scene cues (original, not copies)
+  'SOFT_CHAT_INCOMING', 'SOFT_CHAT_OUTGOING', 'SOFT_CALL_RING_LIGHT', 'SOFT_CALL_END', 'SOFT_TYPING_PULSE',
 ];
 const _legacyEntries: PreviewableCue[] = _legacyKeys
   // Drop any that already appear in featured/library to avoid duplicates.
@@ -261,6 +263,12 @@ const SOUND_PRIORITY: Record<string, number> = {
   SOFT_CHAT_TICK: 18,
   SOFT_RECORDING_BEEP: 15,
   SOFT_NOTIFICATION_PULSE: 22,
+  // MERCATO-QUALITY-X7 — private chat/call scene
+  SOFT_CHAT_INCOMING: 20,
+  SOFT_CHAT_OUTGOING: 18,
+  SOFT_CALL_RING_LIGHT: 28,
+  SOFT_CALL_END: 22,
+  SOFT_TYPING_PULSE: 12,
   HARD_CUT: 0,
 };
 
@@ -732,6 +740,28 @@ const playLuxurySynth = (cue: string, volume: number) => {
     // Soft notification — two-tone pulse with gentle envelope.
     hit(now,        660, 0.12, 0.18, 'sine');
     hit(now + 0.10, 880, 0.14, 0.18, 'sine');
+  } else if (cue === 'SOFT_CHAT_INCOMING') {
+    // Original "incoming message" — descending two-tone, NOT a copy of any
+    // popular messenger app sound. Sine waves only, very low gain, short decay.
+    hit(now,        1175, 0.08, 0.16, 'sine');  // D6
+    hit(now + 0.09, 880,  0.10, 0.16, 'sine');  // A5
+  } else if (cue === 'SOFT_CHAT_OUTGOING') {
+    // Original "sent message" — ascending two-tone, brighter than incoming.
+    hit(now,        880,  0.06, 0.13, 'sine');  // A5
+    hit(now + 0.07, 1320, 0.08, 0.15, 'sine');  // E6
+  } else if (cue === 'SOFT_CALL_RING_LIGHT') {
+    // Polite dial ring — two evenly-spaced pulses, NOT a phone copy.
+    hit(now,        660, 0.18, 0.16, 'sine');
+    hit(now + 0.45, 660, 0.18, 0.16, 'sine');
+  } else if (cue === 'SOFT_CALL_END') {
+    // Call ended — short descending tone.
+    hit(now,        700, 0.08, 0.14, 'sine');
+    hit(now + 0.10, 500, 0.12, 0.14, 'sine');
+  } else if (cue === 'SOFT_TYPING_PULSE') {
+    // Typing indicator — three quick taps, very low.
+    hit(now,        1500, 0.04, 0.10, 'sine');
+    hit(now + 0.08, 1500, 0.04, 0.10, 'sine');
+    hit(now + 0.16, 1500, 0.04, 0.10, 'sine');
   } else {
     hit(now, 58, 0.62, 0.62);
     shimmer(now + 0.06, 220, 0.72, 0.18);

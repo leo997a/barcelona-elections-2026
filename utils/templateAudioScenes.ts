@@ -22,6 +22,7 @@ export type AudioSceneId =
   | 'premium_subtle'
   | 'mercato_call_room'
   | 'mercato_chat_whisper'
+  | 'mercato_private_chat_call'
   | 'breaking_news_clean'
   | 'official_club_statement'
   | 'deadline_drama'
@@ -128,6 +129,21 @@ export const TEMPLATE_AUDIO_SCENES: Record<AudioSceneId, AudioScene> = {
     updateCue: 'SOFT_CHAT_TICK',
     volumeMultiplier: 0.5,
     voiceRecommended: false,
+    defaultVoiceTrigger: 'manual_only',
+    recommendedFor: [],
+  },
+  mercato_private_chat_call: {
+    id: 'mercato_private_chat_call',
+    labelAr: 'مكالمة/دردشة خاصة',
+    labelEn: 'Private Chat & Call',
+    descriptionAr: 'مشهد مكالمة خاصة + دردشة (incoming/outgoing/ring/end). أصوات أصلية مستوحاة من تجربة المراسلة بدون نسخ ملفات تطبيقات محمية.',
+    defaultSfxProfile: 'mercato_private_chat_call',
+    enterCue: 'SOFT_CALL_RING_LIGHT',
+    exitCue: 'SOFT_CALL_END',
+    updateCue: 'SOFT_CHAT_INCOMING',
+    ambientCue: 'SOFT_TYPING_PULSE',
+    volumeMultiplier: 0.5,
+    voiceRecommended: true,
     defaultVoiceTrigger: 'manual_only',
     recommendedFor: [],
   },

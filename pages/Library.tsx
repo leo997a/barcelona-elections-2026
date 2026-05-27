@@ -5,6 +5,7 @@ import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
+import { listCategories, getTaxonomy, type CategoryKey } from '../utils/templateTaxonomy';
 import OverlayRenderer from '../components/OverlayRenderer';
 
 interface LibraryProps {
@@ -241,6 +242,7 @@ const MyCard: React.FC<{
 
 const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite }) => {
   const [mainTab, setMainTab] = useState<MainTab>('catalog');
+  const [activeCategory, setActiveCategory] = useState<CategoryKey | 'ALL'>('ALL');
   const [activeType, setActiveType] = useState('ALL');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [searchQ, setSearchQ] = useState('');
@@ -248,17 +250,31 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
 
   const allTemplates = useMemo(() => getVisibleTemplates(), []);
 
+  const categoryFilter = (type: OverlayType): boolean => {
+    if (activeCategory === 'ALL') return true;
+    return getTaxonomy(type).category === activeCategory;
+  };
+
   // Catalog filtering
   const catalogList = useMemo(() => {
     let list = [...allTemplates];
+    list = list.filter(t => categoryFilter(t.type));
     if (activeType !== 'ALL') list = list.filter(t => t.type === activeType);
     if (searchQ.trim()) list = list.filter(t => t.name.toLowerCase().includes(searchQ.toLowerCase()) || t.type.toLowerCase().includes(searchQ.toLowerCase()));
+    // Sort by taxonomy priority within category, then by name
+    list.sort((a, b) => {
+      const ta = getTaxonomy(a.type);
+      const tb = getTaxonomy(b.type);
+      if (ta.priority !== tb.priority) return ta.priority - tb.priority;
+      return a.name.localeCompare(b.name, 'ar');
+    });
     return list;
-  }, [allTemplates, activeType, searchQ]);
+  }, [allTemplates, activeType, searchQ, activeCategory]);
 
   // My overlays filtering
   const myList = useMemo(() => {
     let list = [...overlays];
+    list = list.filter(o => categoryFilter(o.type));
     if (showFavOnly) list = list.filter(o => favoriteIds.includes(o.id));
     if (activeType !== 'ALL') list = list.filter(o => o.type === activeType);
     if (searchQ.trim()) list = list.filter(o => o.name.toLowerCase().includes(searchQ.toLowerCase()) || o.type.toLowerCase().includes(searchQ.toLowerCase()));
@@ -266,7 +282,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
     else if (sortBy === 'live') list.sort((a, b) => (b.isVisible ? 1 : 0) - (a.isVisible ? 1 : 0));
     else list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return list;
-  }, [overlays, showFavOnly, activeType, searchQ, sortBy, favoriteIds]);
+  }, [overlays, showFavOnly, activeType, searchQ, sortBy, favoriteIds, activeCategory]);
 
   const handleCopyToken = (overlay: OverlayConfig, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -310,8 +326,27 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
 
       {/* ── LEFT SIDEBAR ── */}
       <div className="w-52 flex-shrink-0 bg-[#0d1117] border-l border-gray-800/80 flex flex-col overflow-y-auto">
+        {/* AUDIO-X8: Category bar (top-level taxonomy) */}
         <div className="p-3 border-b border-gray-800/60">
-          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">التصنيف</p>
+          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">الفئة الرئيسية</p>
+          <button
+            onClick={() => { setActiveCategory('ALL'); setActiveType('ALL'); }}
+            className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-bold transition-all flex items-center justify-between ${activeCategory === 'ALL' ? 'bg-white/10 text-white border border-white/20' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+            <span>📋 كل الفئات</span>
+          </button>
+          {listCategories().map(cat => (
+            <button
+              key={cat.key}
+              onClick={() => { setActiveCategory(cat.key); setActiveType('ALL'); }}
+              className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-bold transition-all flex items-center justify-between ${activeCategory === cat.key ? 'border' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}
+              style={activeCategory === cat.key ? { background: `${cat.accent}20`, color: cat.accent, borderColor: `${cat.accent}50` } : undefined}>
+              <span>{cat.icon} {cat.labelAr}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="p-3 border-b border-gray-800/60">
+          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">نوع القالب</p>
           {TYPE_FILTERS.map(f => (
             <button key={f.id} onClick={() => setActiveType(f.id)}
               className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-medium transition-all block ${activeType === f.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
