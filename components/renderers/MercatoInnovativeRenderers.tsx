@@ -59,17 +59,36 @@ const useMercatoAudio = (
 
     // Template just became visible — start the story
     const profileId = String(getField('audioProfile') || 'fabrizioBreaking');
-    const voicePackId = String(getField('voicePackId') || 'none');
-    const customVoiceUrl = String(getField('customVoiceUrl') || '');
+    // Voice source: prefer universal voiceLibraryId / voiceDirectUrl, fall
+    // back to mercato-specific voicePackId for backward compatibility.
+    const universalLibraryId = String(getField('voiceLibraryId') || '');
+    const universalDirectUrl = String(getField('voiceDirectUrl') || '');
+    const legacyPackId = String(getField('voicePackId') || 'none');
+    const voicePackId = universalLibraryId && universalLibraryId !== 'none'
+      ? universalLibraryId
+      : legacyPackId;
+    const customVoiceUrl = universalDirectUrl || String(getField('customVoiceUrl') || '');
     const signaturePhrase = String(getField('signaturePhrase') || '');
     const intensity = Number(getField('audioIntensity') ?? 1.0);
-    // Universal mute respect: if the broadcast-level soundEnabled is false,
-    // disable BOTH voice and sfx, regardless of mercato-specific switches.
+    // Universal mute respect: master gate + per-channel toggles.
+    // Voice runs independently from sfx — both can be on, both off,
+    // or one of them, controlled via the universal AudioSettingsPanel.
     const universalSound = getField('soundEnabled') !== false;
     const universalVolume = Number(getField('soundVolume') ?? 0.7);
     const universalGate = universalSound && universalVolume > 0;
-    const enableVoice = universalGate && getField('enableVoice') !== false;
-    const enableSfx = universalGate && getField('enableSfx') !== false;
+    // Voice: prefer the universal voiceEnabled toggle; fall back to legacy
+    // mercato-specific enableVoice for templates upgraded mid-flight.
+    const voiceEnabledUniversal = getField('voiceEnabled');
+    const voiceEnabledResolved = voiceEnabledUniversal === undefined
+      ? getField('enableVoice') !== false
+      : voiceEnabledUniversal === true;
+    // SFX: prefer universal sfxEnabled, fall back to legacy enableSfx.
+    const sfxEnabledUniversal = getField('sfxEnabled');
+    const sfxEnabledResolved = sfxEnabledUniversal === undefined
+      ? getField('enableSfx') !== false
+      : sfxEnabledUniversal === true;
+    const enableVoice = universalGate && voiceEnabledResolved;
+    const enableSfx = universalGate && sfxEnabledResolved;
 
     // Stop any previous session first (prevents overlap)
     stopMercatoStory();

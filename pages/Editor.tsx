@@ -22,6 +22,7 @@ import PlayerIntelV2BottomDock from '../components/player-intel-v2/PlayerIntelV2
 import PlayerIntelV2EditorFrame from '../components/player-intel-v2/PlayerIntelV2EditorFrame';
 import PlayerIntelV2DockResizer from '../components/player-intel-v2/PlayerIntelV2DockResizer';
 import TemplateControlBar from '../components/TemplateControlBar';
+import AudioSettingsPanel from '../components/AudioSettingsPanel';
 import {
   filterAvailableMetrics,
   isMetricAvailable,
@@ -3258,6 +3259,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          {/* AUDIO-X4: Universal audio panel — shows on every template's sound tab */}
+          {activeTab === 'sound' && draftOverlay.type !== OverlayType.ELECTION && (
+            <AudioSettingsPanel
+              overlay={draftOverlay}
+              onUpdate={(id, val) => handleDraftFieldChange(id, val)}
+              compact
+            />
+          )}
+
           {/* FIELDS TAB */}
           {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound', 'football-main', 'football-lineup', 'football-score'].includes(activeTab) && (
              <>
@@ -3307,7 +3317,14 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   } else {
                       // UNIVERSAL SMART TABS for ALL non-election templates
                       const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime', 'matchPanelScale', 'playerPanelScale', 'creatorBadgeScale', 'creatorPositionX', 'creatorPositionY'];
-                      const SOUND_FIELDS = ['soundEnabled', 'soundVolume', 'useTTS', 'ttsText', 'soundInStyle', 'soundOutStyle'];
+                      const SOUND_FIELDS = [
+                        'soundEnabled', 'soundVolume',
+                        'useTTS', 'ttsText',
+                        'soundInStyle', 'soundOutStyle',
+                        // AUDIO-X4 universal voice/sfx fields
+                        'sfxEnabled', 'voiceEnabled', 'voiceLibraryId',
+                        'voiceDirectUrl', 'voiceTrigger', 'voiceVolume', 'duckSfx',
+                      ];
                       const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);

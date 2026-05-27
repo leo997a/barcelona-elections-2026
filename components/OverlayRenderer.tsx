@@ -5,7 +5,8 @@ import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectio
 import { THEMES } from './renderers/OverlayConstants';
 import { playCue, stopCue } from '../services/audioEngine';
 import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime';
-import { shouldPlayTemplateSound } from '../utils/templateAudioGate';
+import { shouldPlayTemplateSound, shouldPlayVoiceCue } from '../utils/templateAudioGate';
+import { resolveVoiceUrl } from '../utils/voiceLibrary';
 import { RendererProps } from './renderers/SharedComponents';
 
 // Renderers
@@ -377,17 +378,36 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const gateEvent = type === 'EXIT' ? 'EXIT' : type === 'TRANSITION' ? 'TRANSITION' : 'ENTRY';
       // Build a temp config view that satisfies the ENTRY visibility check.
       const gateConfig = type === 'ENTRY' ? { ...config, isVisible: true } : config;
-      if (!shouldPlayTemplateSound(gateConfig, gateEvent)) return;
-      try {
-          const cue = resolveSynthCue(type);
-          if (type === 'EXIT') stopCue('BEFORE_THE_KICKOFF', 120);
-          await playCue(cue, {
-              volume: soundVolume,
-              loop: cue === 'BEFORE_THE_KICKOFF',
-              loopStart: cue === 'BEFORE_THE_KICKOFF' ? 19 : undefined,
-              loopEnd: cue === 'BEFORE_THE_KICKOFF' ? 79 : undefined,
-          });
-      } catch (e) { /* Ignore */ }
+      const sfxAllowed = shouldPlayTemplateSound(gateConfig, gateEvent);
+      if (sfxAllowed) {
+          try {
+              const cue = resolveSynthCue(type);
+              if (type === 'EXIT') stopCue('BEFORE_THE_KICKOFF', 120);
+              await playCue(cue, {
+                  volume: soundVolume,
+                  loop: cue === 'BEFORE_THE_KICKOFF',
+                  loopStart: cue === 'BEFORE_THE_KICKOFF' ? 19 : undefined,
+                  loopEnd: cue === 'BEFORE_THE_KICKOFF' ? 79 : undefined,
+              });
+          } catch (e) { /* Ignore */ }
+      }
+      // Voice cue: independent of sfx. Fires only on the configured trigger.
+      if (type === 'ENTRY' || type === 'EXIT' || type === 'TRANSITION') {
+          const trigger = type === 'ENTRY' ? 'on_enter' : type === 'TRANSITION' ? 'on_update' : null;
+          if (trigger && shouldPlayVoiceCue(gateConfig, trigger)) {
+              const libraryId = String(getField('voiceLibraryId') || 'none');
+              const directUrl = String(getField('voiceDirectUrl') || '');
+              const voiceVol = Number(getField('voiceVolume') ?? 0.9);
+              const url = resolveVoiceUrl(libraryId, directUrl);
+              if (url) {
+                  try {
+                      const a = new Audio(url);
+                      a.volume = Math.max(0, Math.min(1, voiceVol));
+                      void a.play();
+                  } catch { /* ignore */ }
+              }
+          }
+      }
   };
 
   // ── Strict Mode & Debounce Guards ──────────────────────────────────────────

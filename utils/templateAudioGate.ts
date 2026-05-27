@@ -38,7 +38,7 @@ export function shouldPlayTemplateSound(
   overlay: OverlayConfig,
   eventType: AudioEventType,
 ): boolean {
-  // 1. Explicit per-instance disable
+  // 1. Master mute (covers everything)
   const enabled = fieldValue(overlay, 'soundEnabled');
   if (enabled === false) return false;
 
@@ -46,18 +46,49 @@ export function shouldPlayTemplateSound(
   const vol = fieldValue(overlay, 'soundVolume');
   if (typeof vol === 'number' && vol <= 0) return false;
 
-  // 3. Runtime profile gate (template-type level)
+  // 3. SFX disabled — blocks ENTRY / EXIT / TRANSITION cues only.
+  //    Voice cues are guarded separately via shouldPlayVoiceCue.
+  if (eventType === 'ENTRY' || eventType === 'EXIT' || eventType === 'TRANSITION') {
+    const sfx = fieldValue(overlay, 'sfxEnabled');
+    if (sfx === false) return false;
+  }
+
+  // 4. Runtime profile gate (template-type level)
   const profile = resolveTemplateAudio(overlay);
   if (profile.enabled === false) return false;
   if (profile.volume <= 0) return false;
 
-  // 4. ENTRY only fires when overlay is visible (anti-random-fire guard)
+  // 5. ENTRY only fires when overlay is visible (anti-random-fire guard)
   //    EXIT fires during exit transition; we do not block it here.
   if (eventType === 'ENTRY' && overlay.isVisible !== true) {
     return false;
   }
 
   return true;
+}
+
+/**
+ * Voice-specific gate. Used by Mercato + any template that fires a
+ * pre-recorded voice cue. Independent of SFX so the user can run voice
+ * without SFX or vice-versa.
+ *
+ * @param overlay  The overlay config
+ * @param trigger  The trigger that just fired (must match voiceTrigger
+ *                 field, or 'manual' for explicit Preview clicks).
+ */
+export function shouldPlayVoiceCue(
+  overlay: OverlayConfig,
+  trigger: 'on_enter' | 'on_update' | 'on_alert' | 'manual',
+): boolean {
+  // Master mute
+  if (fieldValue(overlay, 'soundEnabled') === false) return false;
+  if (fieldValue(overlay, 'voiceEnabled') !== true) return false;
+  const vol = fieldValue(overlay, 'voiceVolume');
+  if (typeof vol === 'number' && vol <= 0) return false;
+  // Manual preview always wins (user-initiated)
+  if (trigger === 'manual') return true;
+  const configured = String(fieldValue(overlay, 'voiceTrigger') ?? 'manual_only');
+  return configured === trigger;
 }
 
 /**

@@ -69,6 +69,61 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
     });
   }
 
+  // ─── AUDIO-X4: Universal voice/sfx controls (hidden in UI by default) ──────
+  // Every template inherits these fields so the voice library is technically
+  // available everywhere. The Editor UI only surfaces them when sfxEnabled
+  // or voiceEnabled flips on, so default templates stay clean.
+
+  if (!hasField('sfxEnabled')) {
+    additions.push({ id: 'sfxEnabled', label: 'تفعيل المؤثرات', type: 'boolean', value: true });
+  }
+
+  if (!hasField('voiceEnabled')) {
+    additions.push({ id: 'voiceEnabled', label: 'تفعيل الصوت الحقيقي', type: 'boolean', value: false });
+  }
+
+  if (!hasField('voiceLibraryId')) {
+    additions.push({
+      id: 'voiceLibraryId',
+      label: 'صوت من المكتبة',
+      type: 'select',
+      value: 'none',
+      // Options resolved at render time from utils/voiceLibrary.
+      options: [
+        { value: 'none', label: '— بدون صوت —' },
+        { value: 'mercato_here_we_go', label: 'Here we go' },
+        { value: 'mercato_agreement_close', label: 'Agreement close' },
+      ],
+    });
+  }
+
+  if (!hasField('voiceDirectUrl')) {
+    additions.push({ id: 'voiceDirectUrl', label: 'رابط صوت مباشر (mp3/wav)', type: 'text', value: '' });
+  }
+
+  if (!hasField('voiceTrigger')) {
+    additions.push({
+      id: 'voiceTrigger',
+      label: 'متى يشتغل الصوت',
+      type: 'select',
+      value: 'manual_only',
+      options: [
+        { value: 'manual_only', label: 'يدوي فقط' },
+        { value: 'on_enter', label: 'عند الدخول IN' },
+        { value: 'on_update', label: 'عند التحديث' },
+        { value: 'on_alert', label: 'عند تنبيه' },
+      ],
+    });
+  }
+
+  if (!hasField('voiceVolume')) {
+    additions.push({ id: 'voiceVolume', label: 'مستوى الصوت الحقيقي', type: 'range', value: 0.9, min: 0, max: 1.5, step: 0.05 });
+  }
+
+  if (!hasField('duckSfx')) {
+    additions.push({ id: 'duckSfx', label: 'خفض المؤثرات أثناء الصوت', type: 'boolean', value: true });
+  }
+
   return additions;
 };
 
@@ -115,7 +170,14 @@ export const dedupeFields = (fields: OverlayField[]): OverlayField[] => {
  */
 export const fieldGroup = (id: string): FieldGroup => {
   if (id === 'transitionIn' || id === 'transitionOut') return 'transitions';
-  if (id === 'soundEnabled' || id === 'soundVolume' || id === 'soundInStyle' || id === 'soundOutStyle') return 'audio';
+  if (
+    id === 'soundEnabled' || id === 'soundVolume' ||
+    id === 'soundInStyle' || id === 'soundOutStyle' ||
+    id === 'sfxEnabled' || id === 'voiceEnabled' ||
+    id === 'voiceLibraryId' || id === 'voiceDirectUrl' ||
+    id === 'voiceTrigger' || id === 'voiceVolume' ||
+    id === 'duckSfx'
+  ) return 'audio';
   if (id === 'scale' || id === 'positionX' || id === 'positionY' || id === 'themePreset') return 'display';
   return 'content';
 };

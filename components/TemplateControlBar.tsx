@@ -23,7 +23,6 @@ import { syncManager } from '../services/syncManager';
 import {
   buildAction,
   recordDiagnostic,
-  resolveTemplateAudio,
   deriveStatus,
   type TemplateAction,
 } from '../utils/templateRuntime';
@@ -39,7 +38,17 @@ interface Props {
 
 const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = false, className }) => {
   const status = deriveStatus(overlay);
-  const audio = resolveTemplateAudio(overlay);
+
+  // CRITICAL FIX (AUDIO-X4): The button MUST reflect the literal field value,
+  // not a resolved profile fallback. Previously we used resolveTemplateAudio()
+  // which returns enabled=true when the field is missing — making the icon
+  // show "enabled" while the field was actually undefined. After the user
+  // clicked Mute the field gained value=false, the icon flipped to muted,
+  // and the user perceived this as "auto-mute". The fix: read the field
+  // directly. Field default (true) is established at template creation by
+  // withBroadcastControls, so this is always defined for new overlays.
+  const soundEnabledField = overlay.fields.find(f => f.id === 'soundEnabled');
+  const soundEnabled = soundEnabledField === undefined ? true : soundEnabledField.value !== false;
 
   const dispatch = (action: TemplateAction, payload?: { fieldId?: string; value?: unknown }) => {
     if (action === 'preview') {
@@ -54,7 +63,7 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = fal
   };
 
   const toggleAudio = () => {
-    dispatch('update', { fieldId: 'soundEnabled', value: !audio.enabled });
+    dispatch('update', { fieldId: 'soundEnabled', value: !soundEnabled });
   };
 
   const isLive = status === 'live';
@@ -141,15 +150,15 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = fal
         onClick={toggleAudio}
         className={[
           'font-bold rounded-md flex items-center gap-1',
-          audio.enabled
+          soundEnabled
             ? 'bg-cyan-900/40 hover:bg-cyan-800 text-cyan-200'
             : 'bg-slate-800 hover:bg-slate-700 text-slate-400',
           sizeBtn,
         ].join(' ')}
-        title={audio.enabled ? `الصوت مُفعَّل · ${audio.inCue}` : 'الصوت متوقف'}
+        title={soundEnabled ? 'الصوت مُفعَّل' : 'الصوت متوقف'}
       >
-        {audio.enabled ? <Volume2 className={sizeIcon} /> : <VolumeX className={sizeIcon} />}
-        {!compact && <span>{audio.enabled ? 'صوت' : 'صامت'}</span>}
+        {soundEnabled ? <Volume2 className={sizeIcon} /> : <VolumeX className={sizeIcon} />}
+        {!compact && <span>{soundEnabled ? 'صوت' : 'صامت'}</span>}
       </button>
 
       {/* Reset */}
