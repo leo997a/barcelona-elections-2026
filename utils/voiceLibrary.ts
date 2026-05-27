@@ -19,15 +19,23 @@
 
 export type VoiceTrigger = 'manual_only' | 'on_enter' | 'on_update' | 'on_alert';
 
+export type VoiceCategory = 'mercato' | 'call' | 'news' | 'official' | 'alert' | 'custom' | 'generic';
+
 export interface VoiceLibraryEntry {
   id: string;
   labelAr: string;
   labelEn: string;
   url: string;
-  category: 'mercato' | 'breaking' | 'sport' | 'generic';
+  category: VoiceCategory;
   durationMs?: number;
   /** Templates this cue is most appropriate for. UI may surface them first. */
   recommendedFor?: string[];
+  /**
+   * If true, the entry is shown in the picker but the option is disabled
+   * because the audio file is not present yet (placeholder for a future
+   * audio-pack delivery). resolveVoiceUrl returns null for these.
+   */
+  unavailable?: boolean;
 }
 
 /**
@@ -61,17 +69,22 @@ export function getVoiceEntry(id: string): VoiceLibraryEntry | null {
 
 export function listVoicesForTemplate(templateType: string): VoiceLibraryEntry[] {
   // Recommended first, then everything else. Never empty: every template
-  // can browse the full library.
+  // can browse the full library. Unavailable entries are still listed but
+  // marked so the UI can disable them.
   const recommended = VOICE_LIBRARY.filter(e => e.recommendedFor?.includes(templateType));
   const others = VOICE_LIBRARY.filter(e => !e.recommendedFor?.includes(templateType));
   return [...recommended, ...others];
+}
+
+export function listVoicesByCategory(category: VoiceCategory): VoiceLibraryEntry[] {
+  return VOICE_LIBRARY.filter(e => e.category === category);
 }
 
 /**
  * Resolve which URL to actually play for a voice cue.
  * Priority:
  *   1. directUrl (user-supplied — highest priority, full control)
- *   2. library entry by id
+ *   2. library entry by id (only if not marked unavailable)
  *   3. null (no voice)
  */
 export function resolveVoiceUrl(libraryId: string | undefined, directUrl: string | undefined): string | null {
@@ -79,5 +92,6 @@ export function resolveVoiceUrl(libraryId: string | undefined, directUrl: string
   if (direct) return direct;
   if (!libraryId || libraryId === 'none') return null;
   const entry = getVoiceEntry(libraryId);
-  return entry?.url || null;
+  if (!entry || entry.unavailable) return null;
+  return entry.url || null;
 }

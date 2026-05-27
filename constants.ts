@@ -124,6 +124,10 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
     additions.push({ id: 'duckSfx', label: 'خفض المؤثرات أثناء الصوت', type: 'boolean', value: true });
   }
 
+  if (!hasField('audioSceneId')) {
+    additions.push({ id: 'audioSceneId', label: 'مشهد صوتي', type: 'text', value: '' });
+  }
+
   return additions;
 };
 
@@ -176,7 +180,7 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'sfxEnabled' || id === 'voiceEnabled' ||
     id === 'voiceLibraryId' || id === 'voiceDirectUrl' ||
     id === 'voiceTrigger' || id === 'voiceVolume' ||
-    id === 'duckSfx'
+    id === 'duckSfx' || id === 'audioSceneId'
   ) return 'audio';
   if (id === 'scale' || id === 'positionX' || id === 'positionY' || id === 'themePreset') return 'display';
   return 'content';
@@ -2708,6 +2712,244 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
   },
 ];
 
+// ─── MERCATO-TEMPLATES-X6 — 10 new mercato variants via factory ─────────────
+//
+// All 10 templates share:
+//   - OverlayType.MERCATO_UNIFIED (one renderer branches on mercatoVariant)
+//   - inherited broadcast controls (transitions + audio + voice via
+//     withBroadcastControls)
+//   - per-template default audioSceneId (matches utils/templateAudioScenes)
+//
+// The factory keeps the per-template fields list focused on data only.
+
+interface MercatoTemplateInput {
+  id: string;
+  variant: string;            // mercatoVariant value
+  name: string;
+  templateIcon: string;
+  templateAccent: string;
+  description: string;
+  audioSceneId: string;       // matches utils/templateAudioScenes id
+  dataFields: OverlayField[]; // template-specific data fields
+}
+
+const createMercatoTemplate = (input: MercatoTemplateInput): OverlayConfig => ({
+  id: input.id,
+  templateId: input.id,
+  name: input.name,
+  type: OverlayType.MERCATO_UNIFIED,
+  isVisible: false,
+  templateIcon: input.templateIcon,
+  templateAccent: input.templateAccent,
+  templateGroup: 'MERCATO_PACKAGE',
+  templateDescription: input.description,
+  theme: { primaryColor: input.templateAccent, secondaryColor: '#050608', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
+  slots: {},
+  fields: [
+    { id: 'mercatoVariant', label: 'نوع القالب', type: 'hidden', value: input.variant },
+    { id: 'audioSceneId', label: 'مشهد صوتي افتراضي', type: 'hidden', value: input.audioSceneId },
+    { id: 'visualTheme', label: 'نمط التصميم', type: 'select', value: 'TACTICAL_DARK', options: [
+      { value: 'TACTICAL_DARK', label: '⚫ Tactical Dark' },
+      { value: 'CLEAN_BROADCAST', label: '🔷 Clean Broadcast' },
+      { value: 'LUXE_GOLD', label: '🟡 Luxe Gold' },
+    ] },
+    ...input.dataFields,
+    { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.4, step: 0.05 },
+    { id: 'positionY', label: 'إزاحة Y', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+    { id: 'positionX', label: 'إزاحة X', type: 'range', value: 0, min: -300, max: 300, step: 5 },
+  ],
+});
+
+const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
+  // 1. Agent Call #2
+  createMercatoTemplate({
+    id: 'template-mercato-x6-agent-call',
+    variant: 'agent_call',
+    name: 'ميركاتو — مكالمة الوكيل #2',
+    templateIcon: '📞',
+    templateAccent: '#22d3ee',
+    description: 'مكالمة وكيل مع transcript مباشر + سياق الصفقة. مشهد صوتي: غرفة مكالمة.',
+    audioSceneId: 'mercato_call_room',
+    dataFields: [
+      { id: 'callerName', label: 'اسم الوكيل', type: 'text', value: 'AGENT — JORGE MENDES' },
+      { id: 'callerRole', label: 'الجهة', type: 'text', value: 'GESTIFUTE' },
+      { id: 'callDuration', label: 'مدة المكالمة', type: 'text', value: '03:42' },
+      { id: 'dealHeadline', label: 'عنوان الصفقة', type: 'text', value: 'Negotiating €58M deal' },
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Nico Williams' },
+      { id: 'dealValue', label: 'قيمة الصفقة', type: 'text', value: '€58M + bonuses' },
+      { id: 'chatLines', label: 'محادثة JSON', type: 'textarea', value: JSON.stringify([
+        { side: 'reporter', text: 'Jorge, can you confirm the deal?' },
+        { side: 'agent', text: 'Very close. Medical scheduled.' },
+        { side: 'reporter', text: 'The fee?' },
+        { side: 'agent', text: 'Clubs agreed. Soon.' },
+      ], null, 2) },
+    ],
+  }),
+  // 2. Deal Radar
+  createMercatoTemplate({
+    id: 'template-mercato-x6-deal-radar',
+    variant: 'deal_radar',
+    name: 'ميركاتو — رادار صفقة',
+    templateIcon: '📡',
+    templateAccent: '#22d3ee',
+    description: 'رادار احتمالية الصفقة + كومة المصادر بدرجات الموثوقية.',
+    audioSceneId: 'analysis_lab',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player Name' },
+      { id: 'probability', label: 'احتمالية الصفقة (%)', type: 'range', value: 65, min: 0, max: 100, step: 1 },
+      { id: 'sources', label: 'المصادر JSON', type: 'textarea', value: JSON.stringify([
+        { name: 'Fabrizio Romano', reliability: 95 },
+        { name: 'David Ornstein', reliability: 90 },
+        { name: 'Local outlet', reliability: 60 },
+      ], null, 2) },
+    ],
+  }),
+  // 3. Club Statement
+  createMercatoTemplate({
+    id: 'template-mercato-x6-club-statement',
+    variant: 'club_statement',
+    name: 'ميركاتو — بيان نادٍ رسمي',
+    templateIcon: '📜',
+    templateAccent: '#fbbf24',
+    description: 'بيان نادٍ رسمي بتنسيق صحفي. مشهد صوتي: ختم رسمي.',
+    audioSceneId: 'official_club_statement',
+    dataFields: [
+      { id: 'clubName', label: 'اسم النادي', type: 'text', value: 'FC BARCELONA' },
+      { id: 'statementTitle', label: 'عنوان البيان', type: 'text', value: 'بيان رسمي' },
+      { id: 'statementBody', label: 'نص البيان', type: 'textarea', value: 'يعلن النادي عن...' },
+      { id: 'statementDate', label: 'تاريخ البيان', type: 'text', value: '22 May 2026' },
+    ],
+  }),
+  // 4. Deadline Hour
+  createMercatoTemplate({
+    id: 'template-mercato-x6-deadline-hour',
+    variant: 'deadline_hour',
+    name: 'ميركاتو — ساعة الحسم',
+    templateIcon: '⏱️',
+    templateAccent: '#ef4444',
+    description: 'عداد تنازلي + مرحلة الصفقة. مشهد صوتي: دراما آخر موعد.',
+    audioSceneId: 'deadline_drama',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'dealStatus', label: 'حالة الصفقة', type: 'text', value: 'مفاوضات نهائية' },
+      { id: 'minutesLeft', label: 'دقائق متبقية', type: 'text', value: '12' },
+      { id: 'secondsLeft', label: 'ثوان متبقية', type: 'text', value: '34' },
+      { id: 'dealStage', label: 'المرحلة', type: 'select', value: 'agreement', options: [
+        { value: 'rumor', label: 'شائعة' },
+        { value: 'talks', label: 'محادثات' },
+        { value: 'agreement', label: 'اتفاق' },
+        { value: 'medical', label: 'طبي' },
+        { value: 'announce', label: 'إعلان' },
+      ] },
+    ],
+  }),
+  // 5. Source Confidence
+  createMercatoTemplate({
+    id: 'template-mercato-x6-source-confidence',
+    variant: 'source_confidence',
+    name: 'ميركاتو — لوحة ثقة المصادر',
+    templateIcon: '🎯',
+    templateAccent: '#22c55e',
+    description: 'تصنيف المصادر (A/B/C) مع الحالة الحالية. مشهد صوتي: مختبر التحليل.',
+    audioSceneId: 'analysis_lab',
+    dataFields: [
+      { id: 'sources', label: 'مصادر JSON', type: 'textarea', value: JSON.stringify([
+        { name: 'Fabrizio Romano', tier: 'A', status: 'تأكيد' },
+        { name: 'David Ornstein', tier: 'A', status: 'تأكيد' },
+        { name: 'L\'Equipe', tier: 'B', status: 'محتمل' },
+        { name: 'Local source', tier: 'C', status: 'شائعة' },
+      ], null, 2) },
+    ],
+  }),
+  // 6. Clause Reveal
+  createMercatoTemplate({
+    id: 'template-mercato-x6-clause-reveal',
+    variant: 'clause_reveal',
+    name: 'ميركاتو — كشف بند مخفي',
+    templateIcon: '📄',
+    templateAccent: '#f59e0b',
+    description: 'كشف بند خاص في عقد اللاعب. مشهد صوتي: اتفاق وشيك.',
+    audioSceneId: 'transfer_agreement_close',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'clauseTitle', label: 'عنوان البند', type: 'text', value: 'بند فسخ' },
+      { id: 'clauseBody', label: 'نص البند', type: 'textarea', value: 'في حال انتقال اللاعب...' },
+      { id: 'clauseValue', label: 'القيمة', type: 'text', value: '€100M' },
+    ],
+  }),
+  // 7. Medical Tracker
+  createMercatoTemplate({
+    id: 'template-mercato-x6-medical-tracker',
+    variant: 'medical_tracker',
+    name: 'ميركاتو — متابعة الفحص الطبي',
+    templateIcon: '🏥',
+    templateAccent: '#22c55e',
+    description: '4 مراحل: وصول، فحص طبي، توقيع، إعلان. مشهد صوتي: ناعم احترافي.',
+    audioSceneId: 'premium_subtle',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'medicalStage', label: 'المرحلة الحالية', type: 'select', value: 'medical', options: [
+        { value: 'travel', label: 'وصول' },
+        { value: 'medical', label: 'فحص طبي' },
+        { value: 'signing', label: 'توقيع' },
+        { value: 'announce', label: 'إعلان' },
+      ] },
+    ],
+  }),
+  // 8. Hijack Alert
+  createMercatoTemplate({
+    id: 'template-mercato-x6-hijack-alert',
+    variant: 'hijack_alert',
+    name: 'ميركاتو — إنذار خطف صفقة',
+    templateIcon: '⚠️',
+    templateAccent: '#ef4444',
+    description: 'تنبيه نادٍ منافس يحاول خطف الصفقة. مشهد صوتي: خبر عاجل نظيف.',
+    audioSceneId: 'breaking_news_clean',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'originalClub', label: 'النادي الأصلي', type: 'text', value: 'Original Club' },
+      { id: 'hijackClub', label: 'النادي الخاطف', type: 'text', value: 'Hijack Club' },
+      { id: 'riskLevel', label: 'مستوى الخطر (%)', type: 'range', value: 70, min: 0, max: 100, step: 5 },
+    ],
+  }),
+  // 9. Personal Terms
+  createMercatoTemplate({
+    id: 'template-mercato-x6-personal-terms',
+    variant: 'personal_terms',
+    name: 'ميركاتو — مكتب الشروط الشخصية',
+    templateIcon: '💼',
+    templateAccent: '#22d3ee',
+    description: 'الشروط الشخصية: راتب، سنوات، عمولة، حالة. مشهد صوتي: دردشة همس.',
+    audioSceneId: 'mercato_chat_whisper',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'salary', label: 'الراتب السنوي', type: 'text', value: '€12M' },
+      { id: 'contractYears', label: 'سنوات العقد', type: 'text', value: '5' },
+      { id: 'agentFee', label: 'عمولة الوكيل', type: 'text', value: '€5M' },
+      { id: 'termsStatus', label: 'الحالة', type: 'text', value: 'مفاوضات نهائية' },
+    ],
+  }),
+  // 10. Here We Go Build-Up
+  createMercatoTemplate({
+    id: 'template-mercato-x6-here-we-go-buildup',
+    variant: 'here_we_go_buildup',
+    name: 'ميركاتو — تمهيد قبل الحسم',
+    templateIcon: '📈',
+    templateAccent: '#22d3ee',
+    description: 'جدول زمني من شائعة إلى محادثات متقدمة. مشهد صوتي: اتفاق وشيك.',
+    audioSceneId: 'transfer_agreement_close',
+    dataFields: [
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Player' },
+      { id: 'timelineEntries', label: 'الجدول الزمني JSON', type: 'textarea', value: JSON.stringify([
+        { stage: 'شائعة أولى', date: '15 May', note: 'تقارير من Fabrizio Romano' },
+        { stage: 'بداية محادثات', date: '18 May', note: 'تواصل بين الناديين' },
+        { stage: 'اتفاق المبدأ', date: '21 May', note: 'الناديان يقتربان من تفاهم' },
+        { stage: 'تفاصيل الشروط', date: '22 May', note: 'الفحص الطبي قريب' },
+      ], null, 2) },
+    ],
+  }),
+];
+
 const _allTemplates: OverlayConfig[] = [
   ...INITIAL_TEMPLATE_DEFINITIONS,
   ...BARCELONA_ELECTION_TEMPLATES,
@@ -2716,6 +2958,7 @@ const _allTemplates: OverlayConfig[] = [
   ...TRANSFER_TARGETS_TEMPLATES,
   ...BREAKING_HERE_WE_GO_TEMPLATES,
   ...MERCATO_INNOVATIVE_TEMPLATES,
+  ...MERCATO_X6_TEMPLATES,
   ...PLAYER_INTEL_V2_TEMPLATES,
 ];
 const _seenIds = new Set<string>();

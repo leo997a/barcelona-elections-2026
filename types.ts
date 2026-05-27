@@ -27,7 +27,11 @@ export enum OverlayType {
   MERCATO_BUDGET_TRACKER = 'MERCATO_BUDGET_TRACKER',
   MERCATO_DEADLINE_DAY = 'MERCATO_DEADLINE_DAY',
   MERCATO_X_RAY = 'MERCATO_X_RAY',
-  PLAYER_INTEL_V2 = 'PLAYER_INTEL_V2'
+  PLAYER_INTEL_V2 = 'PLAYER_INTEL_V2',
+  // AUDIO-PACKS-X5 / MERCATO-TEMPLATES-X6 — 10 new mercato variants
+  // (rendered by a single MercatoUnifiedRenderer that branches on the
+  // mercatoVariant field; all share the broadcast control + audio infra).
+  MERCATO_UNIFIED = 'MERCATO_UNIFIED'
 }
 
 export type OverlayStatus = 'LIVE' | 'PREVIEW' | 'HIDDEN';

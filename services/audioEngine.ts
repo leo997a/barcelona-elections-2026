@@ -199,6 +199,8 @@ const _legacyKeys = [
   'TROPHY_FANFARE', 'CINEMATIC_DROP', 'CINEMATIC_RISE', 'IMPACT_BOOM',
   'GLITCH_TRANSITION', 'DIGITAL_SWEEP', 'MAGIC_REVEAL', 'SUSPENSE_RISE',
   'TIMER_TICK', 'COUNTDOWN_FINAL',
+  // AUDIO-PACKS-X5 — soft scene cues (call/chat/recording/notification)
+  'SOFT_CALL_CONNECT', 'SOFT_CHAT_TICK', 'SOFT_RECORDING_BEEP', 'SOFT_NOTIFICATION_PULSE',
 ];
 const _legacyEntries: PreviewableCue[] = _legacyKeys
   // Drop any that already appear in featured/library to avoid duplicates.
@@ -253,6 +255,12 @@ const SOUND_PRIORITY: Record<string, number> = {
   BROADCAST_OUT: 15,
   LUXURY_OUT: 15,
   SOFT_FADE: 10,
+  // AUDIO-PACKS-X5 — soft scene cues are intentionally low-priority so they
+  // never preempt scoreboard / breaking-news cues running in parallel.
+  SOFT_CALL_CONNECT: 25,
+  SOFT_CHAT_TICK: 18,
+  SOFT_RECORDING_BEEP: 15,
+  SOFT_NOTIFICATION_PULSE: 22,
   HARD_CUT: 0,
 };
 
@@ -708,6 +716,22 @@ const playLuxurySynth = (cue: string, volume: number) => {
     hit(now + 0.04, 180, 0.12, 0.32, 'square');
     shimmer(now + 0.02, 440, 0.42, 0.22);
     sweep(now + 0.004, 0.28, 2600, 580, 0.18, 'bandpass');
+  } else if (cue === 'SOFT_CALL_CONNECT') {
+    // Two short polite beeps (call ringing/connect). No bass, no shimmer, no sweep.
+    // ~880Hz then ~1100Hz, brief decay. Volume capped low by gain stage.
+    hit(now,        880, 0.10, 0.18, 'sine');
+    hit(now + 0.18, 1100, 0.12, 0.18, 'sine');
+  } else if (cue === 'SOFT_CHAT_TICK') {
+    // Single subtle tick — a chat message arrival sound, not noisy.
+    hit(now, 1320, 0.06, 0.16, 'sine');
+    hit(now + 0.01, 1980, 0.04, 0.10, 'sine');
+  } else if (cue === 'SOFT_RECORDING_BEEP') {
+    // Quiet recording-indicator pip. One pulse only.
+    hit(now, 1000, 0.08, 0.14, 'sine');
+  } else if (cue === 'SOFT_NOTIFICATION_PULSE') {
+    // Soft notification — two-tone pulse with gentle envelope.
+    hit(now,        660, 0.12, 0.18, 'sine');
+    hit(now + 0.10, 880, 0.14, 0.18, 'sine');
   } else {
     hit(now, 58, 0.62, 0.62);
     shimmer(now + 0.06, 220, 0.72, 0.18);

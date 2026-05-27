@@ -19,14 +19,17 @@
  *     references real files in public/audio/voice-packs.
  */
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Mic, MicOff, Play, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Volume2, VolumeX, Mic, MicOff, Play, RotateCcw, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import type { OverlayConfig } from '../types';
 import { listVoicesForTemplate, resolveVoiceUrl, NO_VOICE_OPTION } from '../utils/voiceLibrary';
+import { listAudioScenes, getAudioScene, sceneToFieldUpdates, sceneToFieldUpdatesWithVoice } from '../utils/templateAudioScenes';
 import { playCue } from '../services/audioEngine';
 
 interface Props {
   overlay: OverlayConfig;
   onUpdate: (fieldId: string, value: string | number | boolean) => void;
+  /** Optional batched update — caller passes if multiple fields can be applied in one tick. */
+  onUpdateMany?: (updates: Record<string, string | number | boolean>) => void;
   /** Compact mode for tight side panels. */
   compact?: boolean;
 }
@@ -37,7 +40,7 @@ const fieldVal = <T,>(overlay: OverlayConfig, id: string, fallback: T): T => {
   return f.value as unknown as T;
 };
 
-const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, compact = false }) => {
+const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, compact = false }) => {
   const soundEnabled = fieldVal<boolean>(overlay, 'soundEnabled', true);
   const soundVolume = fieldVal<number>(overlay, 'soundVolume', 0.7);
   const sfxEnabled = fieldVal<boolean>(overlay, 'sfxEnabled', true);
@@ -49,10 +52,31 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, compact = fals
   const voiceTrigger = fieldVal<string>(overlay, 'voiceTrigger', 'manual_only');
   const voiceVolume = fieldVal<number>(overlay, 'voiceVolume', 0.9);
   const duckSfx = fieldVal<boolean>(overlay, 'duckSfx', true);
+  const audioSceneId = fieldVal<string>(overlay, 'audioSceneId', '');
 
   const [showResolved, setShowResolved] = useState(false);
+  const [showScenePicker, setShowScenePicker] = useState(false);
 
   const voiceList = listVoicesForTemplate(String(overlay.type));
+  const scenes = listAudioScenes();
+
+  const applyUpdates = (updates: Record<string, string | number | boolean>) => {
+    if (onUpdateMany) {
+      onUpdateMany(updates);
+    } else {
+      Object.entries(updates).forEach(([id, val]) => onUpdate(id, val));
+    }
+  };
+
+  const applyScene = (sceneId: string, withVoice: boolean) => {
+    const scene = getAudioScene(sceneId);
+    if (!scene) return;
+    const updates = withVoice
+      ? sceneToFieldUpdatesWithVoice(scene)
+      : sceneToFieldUpdates(scene);
+    // Persist the chosen scene id so the UI reflects it on next render.
+    applyUpdates({ ...updates, audioSceneId: scene.id });
+  };
 
   const previewVoice = async () => {
     if (!soundEnabled) return;
@@ -89,6 +113,7 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, compact = fals
     onUpdate('voiceTrigger', 'manual_only');
     onUpdate('voiceVolume', 0.9);
     onUpdate('duckSfx', true);
+    onUpdate('audioSceneId', '');
   };
 
   const sectionPad = compact ? 'p-2' : 'p-3';
@@ -125,6 +150,70 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, compact = fals
             className="w-full disabled:opacity-40"
           />
         </div>
+      </div>
+
+      {/* ─── Scene picker (AUDIO-PACKS-X5) ─── */}
+      <div className={`rounded-lg border border-amber-900/40 bg-slate-950/40 ${sectionPad} space-y-2`}>
+        <div className="flex items-center justify-between">
+          <span className={`font-black uppercase tracking-wide text-amber-300 ${labelSize} flex items-center gap-1.5`}>
+            <Sparkles className="w-3 h-3" />
+            مشهد صوتي
+          </span>
+          <button
+            onClick={() => setShowScenePicker(s => !s)}
+            className={`text-slate-400 hover:text-slate-200 ${labelSize}`}
+          >
+            {showScenePicker ? 'إخفاء' : 'إظهار'}
+          </button>
+        </div>
+        {audioSceneId && (
+          <div className="text-[10px] text-amber-200">
+            المشهد الحالي: <span className="font-bold">{getAudioScene(audioSceneId)?.labelAr || audioSceneId}</span>
+          </div>
+        )}
+        {showScenePicker && (
+          <div className="space-y-1 max-h-60 overflow-y-auto">
+            {scenes.map(s => (
+              <div
+                key={s.id}
+                className={[
+                  'rounded p-2 border',
+                  audioSceneId === s.id
+                    ? 'border-amber-700/50 bg-amber-900/20'
+                    : 'border-slate-800 bg-slate-900/40 hover:border-slate-700',
+                ].join(' ')}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-[11px] font-bold text-slate-100 ${audioSceneId === s.id ? 'text-amber-200' : ''}`}>
+                      {s.labelAr}
+                    </div>
+                    <div className="text-[9px] text-slate-500 leading-relaxed mt-0.5">{s.descriptionAr}</div>
+                  </div>
+                </div>
+                <div className="flex gap-1 mt-1.5">
+                  <button
+                    onClick={() => applyScene(s.id, false)}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] font-bold py-1 rounded"
+                    title="يطبّق المؤثرات فقط — لا يفعّل الصوت الحقيقي"
+                  >
+                    تطبيق
+                  </button>
+                  {s.voiceRecommended && (
+                    <button
+                      onClick={() => applyScene(s.id, true)}
+                      className="flex-1 bg-purple-800 hover:bg-purple-700 text-purple-100 text-[9px] font-bold py-1 rounded flex items-center justify-center gap-1"
+                      title="يطبّق المشهد ويفعّل الصوت الحقيقي"
+                    >
+                      <Mic className="w-2.5 h-2.5" />
+                      + Voice
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── B. SFX ─── */}
