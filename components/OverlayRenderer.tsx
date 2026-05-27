@@ -363,6 +363,11 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
       if (fieldCue !== 'DEFAULT') return fieldCue;
       if (type === 'TRANSITION') {
+          // Phase A3 — prefer scene-level audioUpdateCue if present
+          // (set by sceneToFieldUpdates), otherwise fall back to the
+          // template's runtime profile updateCue.
+          const sceneUpdateCue = String(getField('audioUpdateCue') || '');
+          if (sceneUpdateCue) return sceneUpdateCue;
           // Universal transition fallback — resolve via runtime profile
           // so every template ticks consistently.
           return resolveTemplateAudio(config).updateCue;

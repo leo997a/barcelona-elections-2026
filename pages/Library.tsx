@@ -5,7 +5,7 @@ import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
-import { listCategories, getTaxonomy, type CategoryKey } from '../utils/templateTaxonomy';
+import { listCategories, listSubcategoriesFor, getTaxonomy, type CategoryKey } from '../utils/templateTaxonomy';
 import OverlayRenderer from '../components/OverlayRenderer';
 
 interface LibraryProps {
@@ -50,34 +50,9 @@ const ACCENT: Record<string, string> = {
   [OverlayType.MERCATO_X_RAY]: '#a855f7',
 };
 
-const TYPE_FILTERS = [
-  { id: 'ALL', label: 'الكل' },
-  { id: OverlayType.FOOTBALL_PACKAGE, label: 'Projection' },
-  { id: OverlayType.SCOREBOARD,      label: 'سكور بورد' },
-  { id: OverlayType.MATCH_STATS,     label: 'Match Stats' },
-  { id: OverlayType.PLAYER_STATS,    label: 'Player Stats' },
-  { id: OverlayType.H2H_STATS,       label: 'H2H' },
-  { id: OverlayType.TRANSFER_NEWS,   label: 'Transfers' },
-  { id: OverlayType.TRANSFER_TARGETS,   label: 'أهداف الانتقالات' },
-  { id: OverlayType.BREAKING_HERE_WE_GO, label: 'Here We Go' },
-  { id: OverlayType.MERCATO_AGENT_CALL,  label: 'مكالمة وكيل' },
-  { id: OverlayType.MERCATO_DEAL_TIMELINE, label: 'خط زمني صفقة' },
-  { id: OverlayType.MERCATO_BUDGET_TRACKER, label: 'ميزانية النادي' },
-  { id: OverlayType.MERCATO_DEADLINE_DAY, label: 'Deadline Day' },
-  { id: OverlayType.MERCATO_X_RAY,       label: 'X-Ray لاعب' },
-  { id: OverlayType.BARCA_PREMIUM,   label: 'Barca' },
-  { id: OverlayType.LOWER_THIRD,     label: 'أسماء' },
-  { id: OverlayType.TICKER,          label: 'شريط أخبار' },
-  { id: OverlayType.GUESTS,          label: 'ضيوف' },
-  { id: OverlayType.PLAYER_PROFILE,  label: 'لاعبون' },
-  { id: OverlayType.LEADERBOARD,     label: 'Leaderboard' },
-  { id: OverlayType.SMART_NEWS,      label: 'أخبار ذكية' },
-  { id: OverlayType.EXCLUSIVE_ALERT, label: 'خبر حصري' },
-  { id: OverlayType.UCL_DRAW,        label: 'قرعة UCL' },
-  { id: OverlayType.ELECTION,        label: 'انتخابات' },
-  { id: OverlayType.SOCIAL_MEDIA,    label: 'سوشيال' },
-  { id: OverlayType.TODAYS_EPISODE,  label: 'حلقة اليوم' },
-];
+// Phase A5 — TYPE_FILTERS removed; replaced by dynamic subcategory sidebar
+// driven by utils/templateTaxonomy. The previous flat 25-entry filter list
+// duplicated category logic and confused the user.
 
 // ─── Shared live-preview thumbnail ────────────────────────────────────────────
 
@@ -243,6 +218,9 @@ const MyCard: React.FC<{
 const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite }) => {
   const [mainTab, setMainTab] = useState<MainTab>('catalog');
   const [activeCategory, setActiveCategory] = useState<CategoryKey | 'ALL'>('ALL');
+  // Phase A5 — subcategory replaces the flat TYPE_FILTERS noise.
+  // 'ALL' means: show every template inside the active category.
+  const [activeSubcategory, setActiveSubcategory] = useState<string>('ALL');
   const [activeType, setActiveType] = useState('ALL');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [searchQ, setSearchQ] = useState('');
@@ -255,10 +233,21 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
     return getTaxonomy(type).category === activeCategory;
   };
 
+  const subcategoryFilter = (type: OverlayType): boolean => {
+    if (activeSubcategory === 'ALL') return true;
+    return getTaxonomy(type).subcategory === activeSubcategory;
+  };
+
+  const subcategoriesForActive = useMemo(() => {
+    if (activeCategory === 'ALL') return [];
+    return listSubcategoriesFor(activeCategory);
+  }, [activeCategory]);
+
   // Catalog filtering
   const catalogList = useMemo(() => {
     let list = [...allTemplates];
     list = list.filter(t => categoryFilter(t.type));
+    list = list.filter(t => subcategoryFilter(t.type));
     if (activeType !== 'ALL') list = list.filter(t => t.type === activeType);
     if (searchQ.trim()) list = list.filter(t => t.name.toLowerCase().includes(searchQ.toLowerCase()) || t.type.toLowerCase().includes(searchQ.toLowerCase()));
     // Sort by taxonomy priority within category, then by name
@@ -269,12 +258,13 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       return a.name.localeCompare(b.name, 'ar');
     });
     return list;
-  }, [allTemplates, activeType, searchQ, activeCategory]);
+  }, [allTemplates, activeType, searchQ, activeCategory, activeSubcategory]);
 
   // My overlays filtering
   const myList = useMemo(() => {
     let list = [...overlays];
     list = list.filter(o => categoryFilter(o.type));
+    list = list.filter(o => subcategoryFilter(o.type));
     if (showFavOnly) list = list.filter(o => favoriteIds.includes(o.id));
     if (activeType !== 'ALL') list = list.filter(o => o.type === activeType);
     if (searchQ.trim()) list = list.filter(o => o.name.toLowerCase().includes(searchQ.toLowerCase()) || o.type.toLowerCase().includes(searchQ.toLowerCase()));
@@ -282,7 +272,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
     else if (sortBy === 'live') list.sort((a, b) => (b.isVisible ? 1 : 0) - (a.isVisible ? 1 : 0));
     else list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return list;
-  }, [overlays, showFavOnly, activeType, searchQ, sortBy, favoriteIds, activeCategory]);
+  }, [overlays, showFavOnly, activeType, searchQ, sortBy, favoriteIds, activeCategory, activeSubcategory]);
 
   const handleCopyToken = (overlay: OverlayConfig, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -326,18 +316,18 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
 
       {/* ── LEFT SIDEBAR ── */}
       <div className="w-52 flex-shrink-0 bg-[#0d1117] border-l border-gray-800/80 flex flex-col overflow-y-auto">
-        {/* AUDIO-X8: Category bar (top-level taxonomy) */}
+        {/* Phase A5: Category bar (top-level taxonomy) */}
         <div className="p-3 border-b border-gray-800/60">
           <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">الفئة الرئيسية</p>
           <button
-            onClick={() => { setActiveCategory('ALL'); setActiveType('ALL'); }}
+            onClick={() => { setActiveCategory('ALL'); setActiveSubcategory('ALL'); setActiveType('ALL'); }}
             className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-bold transition-all flex items-center justify-between ${activeCategory === 'ALL' ? 'bg-white/10 text-white border border-white/20' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
             <span>📋 كل الفئات</span>
           </button>
           {listCategories().map(cat => (
             <button
               key={cat.key}
-              onClick={() => { setActiveCategory(cat.key); setActiveType('ALL'); }}
+              onClick={() => { setActiveCategory(cat.key); setActiveSubcategory('ALL'); setActiveType('ALL'); }}
               className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-bold transition-all flex items-center justify-between ${activeCategory === cat.key ? 'border' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}
               style={activeCategory === cat.key ? { background: `${cat.accent}20`, color: cat.accent, borderColor: `${cat.accent}50` } : undefined}>
               <span>{cat.icon} {cat.labelAr}</span>
@@ -345,15 +335,28 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
           ))}
         </div>
 
-        <div className="p-3 border-b border-gray-800/60">
-          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">نوع القالب</p>
-          {TYPE_FILTERS.map(f => (
-            <button key={f.id} onClick={() => setActiveType(f.id)}
-              className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-medium transition-all block ${activeType === f.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
-              {f.label}
+        {/* Phase A5: Subcategory dynamic filter — replaces the old flat
+            TYPE_FILTERS list (24 noisy entries). Only appears when a
+            specific category is active, otherwise the whole pane is a
+            single category list. */}
+        {activeCategory !== 'ALL' && subcategoriesForActive.length > 0 && (
+          <div className="p-3 border-b border-gray-800/60">
+            <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">المجموعة الفرعية</p>
+            <button
+              onClick={() => setActiveSubcategory('ALL')}
+              className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-medium transition-all block ${activeSubcategory === 'ALL' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+              الكل
             </button>
-          ))}
-        </div>
+            {subcategoriesForActive.map(sub => (
+              <button
+                key={sub.key}
+                onClick={() => setActiveSubcategory(sub.key)}
+                className={`w-full text-right px-3 py-2 rounded-lg mb-0.5 text-[11px] font-medium transition-all block ${activeSubcategory === sub.key ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-500 hover:bg-gray-800/60 hover:text-white'}`}>
+                {sub.labelAr}
+              </button>
+            ))}
+          </div>
+        )}
         {mainTab === 'mine' && (
           <div className="p-3">
             <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-2 px-1">العرض</p>

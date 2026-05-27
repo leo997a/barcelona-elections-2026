@@ -193,6 +193,23 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
                 </div>
                 <div className="flex gap-1 mt-1.5">
                   <button
+                    onClick={() => {
+                      // Phase A2 — Test Play: fire the scene's enter cue
+                      // immediately so the user hears the scene before
+                      // committing to apply it. Bypasses the editor's
+                      // isEditor=true silence guard by calling playCue
+                      // directly with the scene's volume baseline.
+                      const vol = Math.max(0, Math.min(1, soundVolume * (s.volumeMultiplier || 1)));
+                      void playCue(s.enterCue, { volume: vol });
+                    }}
+                    className="bg-emerald-800/70 hover:bg-emerald-700 text-emerald-100 text-[9px] font-bold py-1 px-2 rounded flex items-center justify-center gap-1"
+                    title={`تجربة فورية: ${s.enterCue}`}
+                    aria-label={`Test play scene ${s.id}`}
+                  >
+                    <Play className="w-2.5 h-2.5" />
+                    اختبار
+                  </button>
+                  <button
                     onClick={() => applyScene(s.id, false)}
                     className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9px] font-bold py-1 rounded"
                     title="يطبّق المؤثرات فقط — لا يفعّل الصوت الحقيقي"

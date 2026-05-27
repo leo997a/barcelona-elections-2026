@@ -19,6 +19,7 @@
  */
 import React from 'react';
 import { RendererProps } from './SharedComponents';
+import { useEffect, useRef } from 'react';
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
 
@@ -140,10 +141,38 @@ const ProgressBar: React.FC<{ t: UnifiedTheme; value: number; color?: string; he
 
 // ─── Main router ────────────────────────────────────────────────────────────
 
-export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle }) => {
+export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle, playSound }) => {
   const variant = String(getField('mercatoVariant') || 'agent_call');
   const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
   const t = getTheme(themeId);
+
+  // Phase A3 — UPDATE cue hook.
+  // Watches the variant's "live" data fields (transcript, duration, probability,
+  // risk, medical stage, deal stage). Whenever any of them changes while the
+  // overlay is on-air, fire playSound('TRANSITION') so the configured scene
+  // updateCue (e.g. SOFT_CHAT_INCOMING for the call scene) is heard.
+  // The OverlayRenderer-level gate still applies (mute / sfx disabled / etc.).
+  const watchedKey = [
+    String(getField('chatLines') || ''),       // agent_call
+    String(getField('callDuration') || ''),    // agent_call
+    String(getField('probability') || ''),     // deal_radar
+    String(getField('riskLevel') || ''),       // hijack_alert
+    String(getField('medicalStage') || ''),    // medical_tracker
+    String(getField('dealStage') || ''),       // deadline_hour
+    String(getField('confidencePct') || ''),   // agent_call
+    String(getField('timelineEntries') || ''), // here_we_go_buildup
+    String(getField('sources') || ''),         // deal_radar / source_confidence
+  ].join('|');
+
+  const previousWatchedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = previousWatchedRef.current;
+    previousWatchedRef.current = watchedKey;
+    // Skip the first mount — we only want to fire on actual changes.
+    if (prev === null) return;
+    if (prev === watchedKey) return;
+    void playSound('TRANSITION');
+  }, [watchedKey, playSound]);
 
   return (
     <div style={containerStyle}>

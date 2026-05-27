@@ -128,6 +128,12 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
     additions.push({ id: 'audioSceneId', label: 'مشهد صوتي', type: 'text', value: '' });
   }
 
+  // Phase A1 — dedicated UPDATE cue field (was implicit; now explicit so
+  // templates that fire playSound('TRANSITION') can read it directly).
+  if (!hasField('audioUpdateCue')) {
+    additions.push({ id: 'audioUpdateCue', label: 'مؤثر التحديث', type: 'text', value: '' });
+  }
+
   return additions;
 };
 
@@ -180,7 +186,8 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'sfxEnabled' || id === 'voiceEnabled' ||
     id === 'voiceLibraryId' || id === 'voiceDirectUrl' ||
     id === 'voiceTrigger' || id === 'voiceVolume' ||
-    id === 'duckSfx' || id === 'audioSceneId'
+    id === 'duckSfx' || id === 'audioSceneId' ||
+    id === 'audioUpdateCue'
   ) return 'audio';
   if (id === 'scale' || id === 'positionX' || id === 'positionY' || id === 'themePreset') return 'display';
   return 'content';

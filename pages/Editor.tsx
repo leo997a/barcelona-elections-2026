@@ -23,6 +23,7 @@ import PlayerIntelV2EditorFrame from '../components/player-intel-v2/PlayerIntelV
 import PlayerIntelV2DockResizer from '../components/player-intel-v2/PlayerIntelV2DockResizer';
 import TemplateControlBar from '../components/TemplateControlBar';
 import AudioSettingsPanel from '../components/AudioSettingsPanel';
+import DiagnosticStrip from '../components/DiagnosticStrip';
 import {
   filterAvailableMetrics,
   isMetricAvailable,
@@ -3324,6 +3325,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // AUDIO-X4 universal voice/sfx fields
                         'sfxEnabled', 'voiceEnabled', 'voiceLibraryId',
                         'voiceDirectUrl', 'voiceTrigger', 'voiceVolume', 'duckSfx',
+                        // Phase A4 — scene fields surface as audio settings
+                        'audioSceneId', 'audioUpdateCue',
                       ];
                       const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
@@ -3968,6 +3971,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 </div>
             )}
          </div>
+
+         {/* Phase A6: Diagnostic Strip — surfaces runtime state under preview */}
+         <DiagnosticStrip overlay={liveOverlay} />
 
          {/* True Bottom Control Dock — only for PLAYER_INTEL_V2 */}
          {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 && (

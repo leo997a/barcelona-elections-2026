@@ -243,14 +243,35 @@ export function listAudioScenes(): AudioScene[] {
 
 /**
  * Map a scene to the field updates the Editor should apply when the user
- * picks "apply scene". Returns ONLY audio-related fields.
+ * picks "apply scene".
+ *
+ * Phase A1 fix: previously returned only 3 fields (soundInStyle, soundOutStyle,
+ * sfxEnabled). The scene's `updateCue`, `volumeMultiplier`, and `audioSceneId`
+ * itself were silently dropped, which made the picker feel like a no-op.
+ * Now writes the full audio surface so the live runtime fully reflects the
+ * chosen scene — including the new `audioUpdateCue` field consumed by the
+ * Mercato TRANSITION hook (Phase A3).
  */
 export function sceneToFieldUpdates(scene: AudioScene): Record<string, string | number | boolean> {
-  return {
+  const out: Record<string, string | number | boolean> = {
+    audioSceneId: scene.id,
     soundInStyle: scene.enterCue,
     soundOutStyle: scene.exitCue,
     sfxEnabled: true,
   };
+  // updateCue is stored in a dedicated field (not in soundIn/Out) so the
+  // ENTRY/EXIT defaults stay independent of the per-event cue used for data
+  // updates. Templates that fire playSound('TRANSITION') consume this.
+  if (scene.updateCue) out.audioUpdateCue = scene.updateCue;
+  // Volume multiplier nudges the master soundVolume when the user explicitly
+  // picks a scene. We only push it if it differs from the default (0.55) so
+  // we don't override a user's earlier manual setting unnecessarily.
+  if (typeof scene.volumeMultiplier === 'number' && scene.volumeMultiplier > 0) {
+    // Map the scene multiplier (0–1) to the user-facing soundVolume scale
+    // which ranges 0–1.5. We cap at 1.0 to stay polite by default.
+    out.soundVolume = Math.min(1.0, scene.volumeMultiplier);
+  }
+  return out;
 }
 
 /**
