@@ -726,42 +726,43 @@ const playLuxurySynth = (cue: string, volume: number) => {
     sweep(now + 0.004, 0.28, 2600, 580, 0.18, 'bandpass');
   } else if (cue === 'SOFT_CALL_CONNECT') {
     // Two short polite beeps (call ringing/connect). No bass, no shimmer, no sweep.
-    // ~880Hz then ~1100Hz, brief decay. Volume capped low by gain stage.
-    hit(now,        880, 0.10, 0.18, 'sine');
-    hit(now + 0.18, 1100, 0.12, 0.18, 'sine');
+    // Phase-A-Hotfix-1: gain raised from 0.18 to 0.32 so the cue is actually
+    // audible above OBS/system audio without becoming aggressive.
+    hit(now,        880, 0.10, 0.32, 'sine');
+    hit(now + 0.18, 1100, 0.12, 0.32, 'sine');
   } else if (cue === 'SOFT_CHAT_TICK') {
-    // Single subtle tick — a chat message arrival sound, not noisy.
-    hit(now, 1320, 0.06, 0.16, 'sine');
-    hit(now + 0.01, 1980, 0.04, 0.10, 'sine');
+    // Single subtle tick — chat message arrival. Audible but unobtrusive.
+    hit(now, 1320, 0.06, 0.30, 'sine');
+    hit(now + 0.01, 1980, 0.04, 0.20, 'sine');
   } else if (cue === 'SOFT_RECORDING_BEEP') {
     // Quiet recording-indicator pip. One pulse only.
-    hit(now, 1000, 0.08, 0.14, 'sine');
+    hit(now, 1000, 0.08, 0.28, 'sine');
   } else if (cue === 'SOFT_NOTIFICATION_PULSE') {
     // Soft notification — two-tone pulse with gentle envelope.
-    hit(now,        660, 0.12, 0.18, 'sine');
-    hit(now + 0.10, 880, 0.14, 0.18, 'sine');
+    hit(now,        660, 0.12, 0.32, 'sine');
+    hit(now + 0.10, 880, 0.14, 0.32, 'sine');
   } else if (cue === 'SOFT_CHAT_INCOMING') {
     // Original "incoming message" — descending two-tone, NOT a copy of any
-    // popular messenger app sound. Sine waves only, very low gain, short decay.
-    hit(now,        1175, 0.08, 0.16, 'sine');  // D6
-    hit(now + 0.09, 880,  0.10, 0.16, 'sine');  // A5
+    // popular messenger app sound. Sine waves only.
+    hit(now,        1175, 0.08, 0.32, 'sine');  // D6
+    hit(now + 0.09, 880,  0.10, 0.32, 'sine');  // A5
   } else if (cue === 'SOFT_CHAT_OUTGOING') {
     // Original "sent message" — ascending two-tone, brighter than incoming.
-    hit(now,        880,  0.06, 0.13, 'sine');  // A5
-    hit(now + 0.07, 1320, 0.08, 0.15, 'sine');  // E6
+    hit(now,        880,  0.06, 0.26, 'sine');  // A5
+    hit(now + 0.07, 1320, 0.08, 0.30, 'sine');  // E6
   } else if (cue === 'SOFT_CALL_RING_LIGHT') {
     // Polite dial ring — two evenly-spaced pulses, NOT a phone copy.
-    hit(now,        660, 0.18, 0.16, 'sine');
-    hit(now + 0.45, 660, 0.18, 0.16, 'sine');
+    hit(now,        660, 0.18, 0.30, 'sine');
+    hit(now + 0.45, 660, 0.18, 0.30, 'sine');
   } else if (cue === 'SOFT_CALL_END') {
     // Call ended — short descending tone.
-    hit(now,        700, 0.08, 0.14, 'sine');
-    hit(now + 0.10, 500, 0.12, 0.14, 'sine');
+    hit(now,        700, 0.08, 0.28, 'sine');
+    hit(now + 0.10, 500, 0.12, 0.28, 'sine');
   } else if (cue === 'SOFT_TYPING_PULSE') {
     // Typing indicator — three quick taps, very low.
-    hit(now,        1500, 0.04, 0.10, 'sine');
-    hit(now + 0.08, 1500, 0.04, 0.10, 'sine');
-    hit(now + 0.16, 1500, 0.04, 0.10, 'sine');
+    hit(now,        1500, 0.04, 0.18, 'sine');
+    hit(now + 0.08, 1500, 0.04, 0.18, 'sine');
+    hit(now + 0.16, 1500, 0.04, 0.18, 'sine');
   } else {
     hit(now, 58, 0.62, 0.62);
     shimmer(now + 0.06, 220, 0.72, 0.18);

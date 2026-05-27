@@ -101,6 +101,17 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
     void playCue(cue, { volume: Math.max(0, Math.min(1, soundVolume)) });
   };
 
+  // Phase-A-Hotfix-1: Test UPDATE — exercises the same cue path used by
+  // runtime TRANSITION events. Reads audioUpdateCue first (set by scene
+  // apply), falls back to the resolved profile updateCue.
+  const audioUpdateCue = fieldVal<string>(overlay, 'audioUpdateCue', '');
+  const previewUpdate = () => {
+    if (!soundEnabled || !sfxEnabled) return;
+    // Mirror OverlayRenderer.resolveSynthCue('TRANSITION') exactly.
+    const cue = audioUpdateCue || 'DATA_TICK';
+    void playCue(cue, { volume: Math.max(0, Math.min(1, soundVolume)) });
+  };
+
   const resetAudio = () => {
     onUpdate('soundEnabled', true);
     onUpdate('soundVolume', 0.55);
@@ -254,24 +265,36 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
 
         {sfxEnabled && soundEnabled && (
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 onClick={previewIn}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
               >
                 <Play className="w-2.5 h-2.5" />
-                معاينة IN
+                IN
               </button>
               <button
                 onClick={previewOut}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
               >
                 <Play className="w-2.5 h-2.5" />
-                معاينة OUT
+                OUT
+              </button>
+              <button
+                onClick={previewUpdate}
+                disabled={!audioUpdateCue}
+                title={audioUpdateCue ? `تجربة صوت التحديث: ${audioUpdateCue}` : 'لا يوجد updateCue معرَّف — طبّق مشهدًا أولًا'}
+                className="bg-amber-900/40 hover:bg-amber-800/60 disabled:opacity-30 disabled:cursor-not-allowed text-amber-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
+              >
+                <Play className="w-2.5 h-2.5" />
+                UPDATE
               </button>
             </div>
             <div className={`text-[9px] text-slate-500 leading-relaxed`}>
-              المؤثرات تعمل تلقائيًا عند IN/OUT. التحكم بالـ cues من قسم "متقدم".
+              IN/OUT يشتغلان تلقائيًا. UPDATE يُسمَع فقط عند تغيّر بيانات حساسة على البث (مثل chatLines أو probability).
+              {audioUpdateCue && (
+                <span className="block mt-1 text-amber-300/80 font-mono">cue حالي: {audioUpdateCue}</span>
+              )}
             </div>
           </div>
         )}

@@ -19,7 +19,8 @@
  */
 import React from 'react';
 import { RendererProps } from './SharedComponents';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { evaluateTransitionAttempt } from '../../utils/templateTransitionDiagnostics';
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
 
@@ -141,17 +142,21 @@ const ProgressBar: React.FC<{ t: UnifiedTheme; value: number; color?: string; he
 
 // ─── Main router ────────────────────────────────────────────────────────────
 
-export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ getField, containerStyle, contentWrapperStyle, playSound }) => {
+export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, playSound }) => {
   const variant = String(getField('mercatoVariant') || 'agent_call');
   const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
   const t = getTheme(themeId);
 
-  // Phase A3 — UPDATE cue hook.
-  // Watches the variant's "live" data fields (transcript, duration, probability,
-  // risk, medical stage, deal stage). Whenever any of them changes while the
-  // overlay is on-air, fire playSound('TRANSITION') so the configured scene
-  // updateCue (e.g. SOFT_CHAT_INCOMING for the call scene) is heard.
-  // The OverlayRenderer-level gate still applies (mute / sfx disabled / etc.).
+  // Phase-A-Hotfix-1 — UPDATE cue hook with module-level state.
+  //
+  // Previous implementation used a useRef first-mount guard which broke in
+  // two real-world cases: (a) renderer remount on SSE reconnect and (b)
+  // identical-seed re-runs caused by playSound prop reference instability.
+  //
+  // Now we delegate to evaluateTransitionAttempt() which:
+  //   - Tracks watchedHash per overlay.id at module scope (survives remount).
+  //   - Seeds on first sight, fires on subsequent change.
+  //   - Records the reason for every block so DiagnosticStrip can show it.
   const watchedKey = [
     String(getField('chatLines') || ''),       // agent_call
     String(getField('callDuration') || ''),    // agent_call
@@ -164,15 +169,14 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ getField, cont
     String(getField('sources') || ''),         // deal_radar / source_confidence
   ].join('|');
 
-  const previousWatchedRef = useRef<string | null>(null);
   useEffect(() => {
-    const prev = previousWatchedRef.current;
-    previousWatchedRef.current = watchedKey;
-    // Skip the first mount — we only want to fire on actual changes.
-    if (prev === null) return;
-    if (prev === watchedKey) return;
-    void playSound('TRANSITION');
-  }, [watchedKey, playSound]);
+    const attempt = evaluateTransitionAttempt(config, watchedKey, !!playSound);
+    if (attempt.blockedBy === null) {
+      // Cue is allowed; OverlayRenderer.playSound applies its own gate
+      // and resolves the actual cue id from audioUpdateCue / profile.
+      void playSound('TRANSITION');
+    }
+  }, [watchedKey, playSound, config]);
 
   return (
     <div style={containerStyle}>

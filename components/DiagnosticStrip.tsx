@@ -7,11 +7,12 @@
  * Renders for the active overlay only. Refreshes lazily when overlay
  * fields change. No heavy state, no subscriptions — purely derived.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Activity, Volume2, VolumeX, Sparkles, Wifi, WifiOff } from 'lucide-react';
 import type { OverlayConfig } from '../types';
 import { getDiagnostic, deriveStatus } from '../utils/templateRuntime';
 import { getAudioScene } from '../utils/templateAudioScenes';
+import { getLastTransitionAttempt, reasonLabelAr } from '../utils/templateTransitionDiagnostics';
 
 interface Props {
   overlay: OverlayConfig;
@@ -48,6 +49,15 @@ const DiagnosticStrip: React.FC<Props> = ({ overlay, streamDeckConnected = null 
 
   const scene = audioInfo.sceneId ? getAudioScene(audioInfo.sceneId) : null;
   const isLive = status === 'live';
+
+  // Phase-A-Hotfix-1 — surface last TRANSITION attempt. Polls every 1s
+  // so a recent attempt becomes visible without depending on parent re-render.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const i = window.setInterval(() => setTick(t => t + 1), 1000);
+    return () => window.clearInterval(i);
+  }, []);
+  const lastTransition = useMemo(() => getLastTransitionAttempt(overlay.id), [overlay.id, overlay.fields, tick]);
 
   return (
     <div
@@ -98,6 +108,22 @@ const DiagnosticStrip: React.FC<Props> = ({ overlay, streamDeckConnected = null 
         <Sparkles className="w-3 h-3" />
         <span>{scene ? scene.labelAr : 'بدون مشهد'}</span>
       </span>
+
+      {/* Phase-A-Hotfix-1: last transition attempt */}
+      {lastTransition && (
+        <>
+          <span className="text-slate-700">·</span>
+          <span
+            className="flex items-center gap-1"
+            title={`watchedHash: ${lastTransition.watchedHashAfter.slice(0, 60)}...`}
+          >
+            <span className="text-slate-500">UPDATE:</span>
+            <span className={lastTransition.blockedBy === null ? 'text-emerald-300' : 'text-slate-400'}>
+              {reasonLabelAr(lastTransition.blockedBy)}
+            </span>
+          </span>
+        </>
+      )}
 
       {/* Optional Stream Deck status (right-most) */}
       {streamDeckConnected !== null && (
