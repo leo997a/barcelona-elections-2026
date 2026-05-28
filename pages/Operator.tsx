@@ -109,6 +109,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = !selectedOverlay.isVisible || (singleProgramMode && liveOverlaysCount > 1);
+  const programModeLabel = singleProgramMode ? 'SINGLE' : 'MULTI';
+  const programModeTitle = singleProgramMode
+    ? 'Single Program مفعل: TAKE IN يخرج القوالب الأخرى ويبقي قالبًا واحدًا في Program OBS'
+    : 'Multi Program: رابط Program OBS يسمح بعرض أكثر من قالب حي في نفس الوقت';
 
   return (
     <div className="flex h-full bg-gray-950">
@@ -162,13 +166,16 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
               {selectedOverlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
             </span>
             <span
-              className={`px-2 py-0.5 rounded text-xs font-mono border ${
+              className={`px-2 py-0.5 rounded text-xs font-mono border flex items-center gap-1.5 ${
                 liveOverlaysCount > 0
                   ? 'bg-red-950/40 text-red-300 border-red-700/40'
                   : 'bg-gray-800 text-gray-500 border-gray-700'
               }`}
-              title="عدد القوالب التي ستظهر داخل رابط Program OBS">
-              PROGRAM {liveOverlaysCount}
+              title={programModeTitle}>
+              <span>PROGRAM {liveOverlaysCount}</span>
+              <span className={`rounded px-1 py-0.5 text-[9px] font-black ${singleProgramMode ? 'bg-cyan-500/20 text-cyan-200' : 'bg-gray-700 text-gray-300'}`}>
+                {programModeLabel}
+              </span>
             </span>
             <TemplateControlBar
               overlay={selectedOverlay}
