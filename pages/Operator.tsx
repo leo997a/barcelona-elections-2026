@@ -11,11 +11,19 @@ interface OperatorProps {
 }
 
 const ELECTION_SOUNDS = ['RESULTS_STING', 'QUOTE_SWEEP', 'VERSUS_IMPACT', 'SIDEBAR_CHIME', 'DATA_PULSE', 'COUNTDOWN_TICK', 'BREAKING_WHOOSH', 'SOFT_FADE'];
+const SINGLE_PROGRAM_MODE_KEY = 'rge_operator_single_program_mode';
 
 const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   const [selectedId, setSelectedId] = useState<string | null>(overlays.length > 0 ? overlays[0].id : null);
   const [showStreamDeckModal, setShowStreamDeckModal] = useState(false);
   const [programObsCopied, setProgramObsCopied] = useState(false);
+  const [singleProgramMode, setSingleProgramMode] = useState(() => {
+    try {
+      return localStorage.getItem(SINGLE_PROGRAM_MODE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   const selectedOverlay = overlays.find(o => o.id === selectedId);
   const secureContext = syncManager.getSmartTokenContext();
@@ -31,6 +39,31 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   }, [selectedOverlay]);
   const setVisibility = (overlay: OverlayConfig, isVisible: boolean) => {
     syncManager.updateLiveField(overlay.id, 'isVisible', isVisible);
+  };
+
+  const takeInOverlay = (overlay: OverlayConfig) => {
+    if (singleProgramMode) {
+      overlays.forEach(candidate => {
+        if (candidate.id !== overlay.id && candidate.isVisible) {
+          syncManager.updateLiveField(candidate.id, 'isVisible', false);
+        }
+      });
+    }
+    setVisibility(overlay, true);
+  };
+
+  const takeOutOverlay = (overlay: OverlayConfig) => {
+    setVisibility(overlay, false);
+  };
+
+  const toggleSingleProgramMode = () => {
+    setSingleProgramMode(current => {
+      const next = !current;
+      try {
+        localStorage.setItem(SINGLE_PROGRAM_MODE_KEY, next ? '1' : '0');
+      } catch { /* ignore storage errors */ }
+      return next;
+    });
   };
 
   const copyProgramObsUrl = async () => {
@@ -74,6 +107,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   };
 
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
+
+  const canTakeInSelected = !selectedOverlay.isVisible || (singleProgramMode && liveOverlaysCount > 1);
 
   return (
     <div className="flex h-full bg-gray-950">
@@ -135,9 +170,30 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
               title="عدد القوالب التي ستظهر داخل رابط Program OBS">
               PROGRAM {liveOverlaysCount}
             </span>
-            <TemplateControlBar overlay={selectedOverlay} compact />
+            <TemplateControlBar
+              overlay={selectedOverlay}
+              compact
+              onShow={() => takeInOverlay(selectedOverlay)}
+              onHide={() => takeOutOverlay(selectedOverlay)}
+              onReset={() => takeOutOverlay(selectedOverlay)}
+              allowShowWhenLive={singleProgramMode && liveOverlaysCount > 1}
+            />
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleSingleProgramMode}
+              aria-pressed={singleProgramMode}
+              className={`text-xs flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
+                singleProgramMode
+                  ? 'bg-cyan-600/20 text-cyan-200 border-cyan-500/40'
+                  : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-white'
+              }`}
+              title="عند التفعيل، TAKE IN يخرج القوالب الأخرى قبل إدخال القالب الحالي">
+              <span className={`h-3.5 w-6 rounded-full p-0.5 transition-colors ${singleProgramMode ? 'bg-cyan-500' : 'bg-gray-600'}`}>
+                <span className={`block h-2.5 w-2.5 rounded-full bg-white transition-transform ${singleProgramMode ? '-translate-x-3' : ''}`} />
+              </span>
+              Single Program
+            </button>
             <button
               onClick={copyProgramObsUrl}
               className="text-xs flex items-center gap-2 text-green-300 hover:text-white bg-green-600/15 hover:bg-green-600/25 px-3 py-1.5 rounded-lg border border-green-500/35"
@@ -158,10 +214,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
         <div className="flex-1 p-8 overflow-y-auto">
           <div className="mb-8 grid grid-cols-2 gap-4 max-w-3xl mx-auto">
             <button
-              onClick={() => setVisibility(selectedOverlay, true)}
-              disabled={selectedOverlay.isVisible}
+              onClick={() => takeInOverlay(selectedOverlay)}
+              disabled={!canTakeInSelected}
               className={`py-6 rounded-2xl text-2xl font-bold shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-4 ${
-                selectedOverlay.isVisible
+                !canTakeInSelected
                   ? 'bg-emerald-950/40 text-emerald-700 border-4 border-emerald-950/60 cursor-not-allowed'
                   : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 border-4 border-green-800'
               }`}
@@ -170,7 +226,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
               <span>TAKE IN</span>
             </button>
             <button
-              onClick={() => setVisibility(selectedOverlay, false)}
+              onClick={() => takeOutOverlay(selectedOverlay)}
               disabled={!selectedOverlay.isVisible}
               className={`py-6 rounded-2xl text-2xl font-bold shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-4 ${
                 !selectedOverlay.isVisible

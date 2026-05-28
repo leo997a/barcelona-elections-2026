@@ -31,12 +31,18 @@ interface Props {
   overlay: OverlayConfig;
   /** Optional preview callback. Caller decides what preview means. */
   onPreview?: () => void;
+  /** Optional command overrides for hosts that need extra policy before IN/OUT. */
+  onShow?: () => void;
+  onHide?: () => void;
+  onReset?: () => void;
+  /** Allow a host policy action even while the overlay is already live. */
+  allowShowWhenLive?: boolean;
   /** Compact mode: smaller buttons, fewer labels. */
   compact?: boolean;
   className?: string;
 }
 
-const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = false, className }) => {
+const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHide, onReset, allowShowWhenLive = false, compact = false, className }) => {
   const status = deriveStatus(overlay);
 
   // CRITICAL FIX (AUDIO-X4): The button MUST reflect the literal field value,
@@ -54,6 +60,21 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = fal
     if (action === 'preview') {
       recordDiagnostic(overlay, 'preview');
       onPreview?.();
+      return;
+    }
+    if (action === 'show' && onShow) {
+      recordDiagnostic(overlay, 'show');
+      onShow();
+      return;
+    }
+    if (action === 'hide' && onHide) {
+      recordDiagnostic(overlay, 'hide');
+      onHide();
+      return;
+    }
+    if (action === 'reset' && onReset) {
+      recordDiagnostic(overlay, 'reset');
+      onReset();
       return;
     }
     const cmd = buildAction(overlay, action, payload);
@@ -114,10 +135,10 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, compact = fal
       {/* IN */}
       <button
         onClick={() => dispatch('show')}
-        disabled={isLive}
+        disabled={isLive && !allowShowWhenLive}
         className={[
           'font-bold rounded-md flex items-center gap-1 transition-colors',
-          isLive
+          isLive && !allowShowWhenLive
             ? 'bg-emerald-900/30 text-emerald-700/50 cursor-not-allowed'
             : 'bg-emerald-600 hover:bg-emerald-500 text-white',
           sizeBtn,
