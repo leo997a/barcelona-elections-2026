@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check } from 'lucide-react';
+import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
+import { resolveTemplateById } from '../utils/templateRegistry';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
@@ -13,10 +14,14 @@ interface OperatorProps {
 const ELECTION_SOUNDS = ['RESULTS_STING', 'QUOTE_SWEEP', 'VERSUS_IMPACT', 'SIDEBAR_CHIME', 'DATA_PULSE', 'COUNTDOWN_TICK', 'BREAKING_WHOOSH', 'SOFT_FADE'];
 const SINGLE_PROGRAM_MODE_KEY = 'rge_operator_single_program_mode';
 
-const Operator: React.FC<OperatorProps> = ({ overlays }) => {
+const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
   const [selectedId, setSelectedId] = useState<string | null>(overlays.length > 0 ? overlays[0].id : null);
   const [showStreamDeckModal, setShowStreamDeckModal] = useState(false);
   const [programObsCopied, setProgramObsCopied] = useState(false);
+  const [operatorSearch, setOperatorSearch] = useState('');
+  const [showOnlyLive, setShowOnlyLive] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [nameSavedPulse, setNameSavedPulse] = useState(false);
   const [singleProgramMode, setSingleProgramMode] = useState(() => {
     try {
       return localStorage.getItem(SINGLE_PROGRAM_MODE_KEY) === '1';
@@ -28,6 +33,38 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   const selectedOverlay = overlays.find(o => o.id === selectedId);
   const secureContext = syncManager.getSmartTokenContext();
   const liveOverlaysCount = overlays.filter(overlay => overlay.isVisible).length;
+  const filteredOverlays = useMemo(() => {
+    const needle = operatorSearch.trim().toLowerCase();
+    return overlays
+      .filter(overlay => !showOnlyLive || overlay.isVisible)
+      .filter(overlay => {
+        if (!needle) return true;
+        return [
+          overlay.name,
+          overlay.type,
+          overlay.templateIcon || '',
+          overlay.templateId || overlay.id,
+        ].some(value => String(value).toLowerCase().includes(needle));
+      })
+      .sort((left, right) => {
+        if (left.isVisible !== right.isVisible) return left.isVisible ? -1 : 1;
+        return (right.createdAt || 0) - (left.createdAt || 0);
+      });
+  }, [operatorSearch, overlays, showOnlyLive]);
+
+  useEffect(() => {
+    if (overlays.length === 0) {
+      if (selectedId) setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !overlays.some(overlay => overlay.id === selectedId)) {
+      setSelectedId(overlays[0].id);
+    }
+  }, [overlays, selectedId]);
+
+  useEffect(() => {
+    if (selectedOverlay) setDraftName(selectedOverlay.name);
+  }, [selectedOverlay?.id, selectedOverlay?.name]);
 
   const selectedMeta = useMemo(() => {
     if (!selectedOverlay) return null;
@@ -40,6 +77,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
   const setVisibility = (overlay: OverlayConfig, isVisible: boolean) => {
     syncManager.updateLiveField(overlay.id, 'isVisible', isVisible);
   };
+
+  const canTakeIn = (overlay: OverlayConfig) => !overlay.isVisible || (singleProgramMode && liveOverlaysCount > 1);
 
   const takeInOverlay = (overlay: OverlayConfig) => {
     if (singleProgramMode) {
@@ -54,6 +93,12 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
   const takeOutOverlay = (overlay: OverlayConfig) => {
     setVisibility(overlay, false);
+  };
+
+  const takeOutAllVisible = () => {
+    overlays.forEach(overlay => {
+      if (overlay.isVisible) setVisibility(overlay, false);
+    });
   };
 
   const toggleSingleProgramMode = () => {
@@ -79,6 +124,29 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
   const updateField = (overlay: OverlayConfig, fieldId: string, value: any) => {
     syncManager.updateLiveField(overlay.id, fieldId, value);
+  };
+
+  const saveSelectedName = () => {
+    if (!selectedOverlay) return;
+    const nextName = draftName.trim();
+    if (!nextName || nextName === selectedOverlay.name) return;
+    onUpdate({ ...selectedOverlay, name: nextName });
+    setNameSavedPulse(true);
+    setTimeout(() => setNameSavedPulse(false), 1600);
+  };
+
+  const resetSelectedName = () => {
+    if (!selectedOverlay) return;
+    const template = resolveTemplateById(selectedOverlay.templateId || selectedOverlay.id);
+    const baseName = template.name || selectedOverlay.name;
+    if (baseName === selectedOverlay.name) {
+      setDraftName(baseName);
+      return;
+    }
+    setDraftName(baseName);
+    onUpdate({ ...selectedOverlay, name: baseName });
+    setNameSavedPulse(true);
+    setTimeout(() => setNameSavedPulse(false), 1600);
   };
 
   const getFieldValue = (overlay: OverlayConfig, fieldId: string, fallback: any = '') =>
@@ -108,7 +176,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
-  const canTakeInSelected = !selectedOverlay.isVisible || (singleProgramMode && liveOverlaysCount > 1);
+  const canTakeInSelected = canTakeIn(selectedOverlay);
   const programModeLabel = singleProgramMode ? 'SINGLE' : 'MULTI';
   const programModeTitle = singleProgramMode
     ? 'Single Program مفعل: TAKE IN يخرج القوالب الأخرى ويبقي قالبًا واحدًا في Program OBS'
@@ -116,25 +184,69 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
 
   return (
     <div className="flex h-full bg-gray-950">
-      <div className="w-80 bg-darker border-l border-gray-800 flex flex-col">
-        <div className="p-4 border-b border-gray-800">
+      <div className="w-96 bg-darker border-l border-gray-800 flex flex-col">
+        <div className="p-4 border-b border-gray-800 space-y-3">
           <h2 className="font-bold text-white flex items-center gap-2">
             <Cast className="w-5 h-5 text-green-500" />
             <span>قائمة التشغيل</span>
           </h2>
+          <div className="rounded-lg border border-gray-800 bg-gray-950 px-2 py-1 text-[10px] font-black text-gray-400">
+            {liveOverlaysCount}/{overlays.length} LIVE
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+            <input
+              value={operatorSearch}
+              onChange={event => setOperatorSearch(event.target.value)}
+              placeholder="ابحث عن قالب أو نوع..."
+              className="h-10 w-full rounded-lg border border-gray-800 bg-gray-950 pr-9 pl-3 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-blue-500"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setShowOnlyLive(current => !current)}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+                showOnlyLive
+                  ? 'border-red-500/50 bg-red-600/15 text-red-200'
+                  : 'border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-700 hover:text-white'
+              }`}
+            >
+              <ListFilter className="h-3.5 w-3.5" />
+              LIVE فقط
+            </button>
+            <button
+              onClick={takeOutAllVisible}
+              disabled={liveOverlaysCount === 0}
+              className="flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-950/20 px-3 py-2 text-xs font-bold text-red-200 transition-colors hover:bg-red-900/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-900 disabled:text-gray-600"
+            >
+              <PowerOff className="h-3.5 w-3.5" />
+              إخراج الكل
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {overlays.map(overlay => (
-            <button
+          {filteredOverlays.length === 0 && (
+            <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/40 p-5 text-center text-xs text-gray-500">
+              لا توجد قوالب مطابقة داخل غرفة التحكم.
+            </div>
+          )}
+
+          {filteredOverlays.map(overlay => (
+            <div
               key={overlay.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedId(overlay.id)}
-              className={`w-full p-3 rounded-lg border text-right transition-all flex items-center justify-between group ${
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
+              }}
+              className={`w-full p-3 rounded-lg border text-right transition-all grid grid-cols-[1fr_auto] gap-3 group cursor-pointer ${
                 selectedId === overlay.id ? 'bg-blue-900/20 border-blue-500/50 shadow-lg shadow-blue-900/10' : 'bg-gray-900 border-gray-800 hover:border-gray-600'
               }`}
             >
               <div className="min-w-0">
                 <div className="font-bold text-white mb-1 truncate">{overlay.name}</div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="text-[10px] text-gray-500 font-mono uppercase bg-gray-950 w-max px-1 rounded border border-gray-800">{overlay.type}</div>
                   {overlay.templateIcon && (
                     <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 rounded border border-white/10 px-1.5 py-0.5">
@@ -143,9 +255,35 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={event => {
+                    event.stopPropagation();
+                    takeInOverlay(overlay);
+                    setSelectedId(overlay.id);
+                  }}
+                  disabled={!canTakeIn(overlay)}
+                  className="h-8 w-8 rounded-lg border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
+                  title="TAKE IN"
+                >
+                  <Play className="mx-auto h-3.5 w-3.5 fill-current" />
+                </button>
+                <button
+                  type="button"
+                  onClick={event => {
+                    event.stopPropagation();
+                    takeOutOverlay(overlay);
+                    setSelectedId(overlay.id);
+                  }}
+                  disabled={!overlay.isVisible}
+                  className="h-8 w-8 rounded-lg border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
+                  title="TAKE OUT"
+                >
+                  <Square className="mx-auto h-3.5 w-3.5 fill-current" />
+                </button>
                 <span
-                  className={`w-8 h-8 rounded flex items-center justify-center ${
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
                   }`}
                   title={overlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
@@ -153,15 +291,15 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                   {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </span>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>
 
       <div className="flex-1 flex flex-col bg-gray-950">
         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-6 bg-gray-900/50">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-white">{selectedOverlay.name}</h1>
+          <div className="min-w-0 flex items-center gap-4">
+            <h1 className="min-w-0 max-w-[26rem] truncate text-xl font-bold text-white">{selectedOverlay.name}</h1>
             <span className={`px-2 py-0.5 rounded text-xs font-mono ${selectedOverlay.isVisible ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
               {selectedOverlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
             </span>
@@ -219,6 +357,63 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
         </div>
 
         <div className="flex-1 p-8 overflow-y-auto">
+          <div className="mb-6 grid grid-cols-1 gap-4 max-w-5xl mx-auto lg:grid-cols-[1fr_auto]">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <PencilLine className="h-4 w-4 text-blue-300" />
+                  اسم القالب داخل غرفة التحكم
+                </div>
+                {nameSavedPulse && (
+                  <span className="rounded-full border border-green-500/30 bg-green-600/15 px-2 py-0.5 text-[10px] font-black text-green-200">
+                    تم الحفظ
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={draftName}
+                  onChange={event => setDraftName(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') saveSelectedName();
+                  }}
+                  className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm font-bold text-white outline-none transition-colors focus:border-blue-500"
+                  placeholder="اكتب اسمًا واضحًا لهذا القالب..."
+                />
+                <button
+                  onClick={saveSelectedName}
+                  disabled={!draftName.trim() || draftName.trim() === selectedOverlay.name}
+                  className="flex items-center gap-2 rounded-lg border border-blue-500/35 bg-blue-600/15 px-4 py-2 text-xs font-bold text-blue-100 transition-colors hover:bg-blue-600/25 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  حفظ
+                </button>
+                <button
+                  onClick={resetSelectedName}
+                  className="flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-xs font-bold text-gray-300 transition-colors hover:border-gray-600 hover:text-white"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  الأصل
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 rounded-xl border border-gray-800 bg-gray-900/80 p-4 text-center lg:w-80">
+              <div>
+                <div className="text-[10px] font-black text-gray-500">كل القوالب</div>
+                <div className="mt-1 text-lg font-black text-white">{overlays.length}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-gray-500">على الهواء</div>
+                <div className="mt-1 text-lg font-black text-red-300">{liveOverlaysCount}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-gray-500">الوضع</div>
+                <div className="mt-1 text-lg font-black text-cyan-200">{programModeLabel}</div>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-8 grid grid-cols-2 gap-4 max-w-3xl mx-auto">
             <button
               onClick={() => takeInOverlay(selectedOverlay)}
