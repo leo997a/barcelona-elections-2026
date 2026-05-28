@@ -288,11 +288,12 @@ export function listAudioScenes(): AudioScene[] {
  * Mercato TRANSITION hook (Phase A3).
  */
 export function sceneToFieldUpdates(scene: AudioScene): Record<string, string | number | boolean> {
+  const hasAudibleSfx = scene.volumeMultiplier > 0;
   const out: Record<string, string | number | boolean> = {
     audioSceneId: scene.id,
     soundInStyle: scene.enterCue,
     soundOutStyle: scene.exitCue,
-    sfxEnabled: true,
+    sfxEnabled: hasAudibleSfx,
   };
   // updateCue is stored in a dedicated field (not in soundIn/Out) so the
   // ENTRY/EXIT defaults stay independent of the per-event cue used for data
@@ -301,7 +302,7 @@ export function sceneToFieldUpdates(scene: AudioScene): Record<string, string | 
   // Volume multiplier nudges the master soundVolume when the user explicitly
   // picks a scene. We only push it if it differs from the default (0.55) so
   // we don't override a user's earlier manual setting unnecessarily.
-  if (typeof scene.volumeMultiplier === 'number' && scene.volumeMultiplier > 0) {
+  if (typeof scene.volumeMultiplier === 'number' && hasAudibleSfx) {
     // Map the scene multiplier (0–1) to the user-facing soundVolume scale
     // which ranges 0–1.5. We cap at 1.0 to stay polite by default.
     out.soundVolume = Math.min(1.0, scene.volumeMultiplier);

@@ -23,6 +23,7 @@ import { Volume2, VolumeX, Mic, MicOff, Play, RotateCcw, ChevronDown, ChevronUp,
 import type { OverlayConfig } from '../types';
 import { listVoicesForTemplate, resolveVoiceUrl, NO_VOICE_OPTION } from '../utils/voiceLibrary';
 import { listAudioScenes, getAudioScene, sceneToFieldUpdates, sceneToFieldUpdatesWithVoice } from '../utils/templateAudioScenes';
+import { resolveTemplateAudio } from '../utils/templateRuntime';
 import { playCue } from '../services/audioEngine';
 
 /**
@@ -209,23 +210,26 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
   const previewUpdate = () => {
     if (!soundEnabled || !sfxEnabled) return;
     // Mirror OverlayRenderer.resolveSynthCue('TRANSITION') exactly.
-    const cue = audioUpdateCue || 'DATA_TICK';
+    const cue = audioUpdateCue || resolveTemplateAudio(overlay).updateCue || 'DATA_TICK';
     void playCue(cue, { volume: Math.max(0, Math.min(1, soundVolume)) });
   };
 
   const resetAudio = () => {
-    onUpdate('soundEnabled', true);
-    onUpdate('soundVolume', 0.55);
-    onUpdate('sfxEnabled', true);
-    onUpdate('soundInStyle', 'DEFAULT');
-    onUpdate('soundOutStyle', 'DEFAULT');
-    onUpdate('voiceEnabled', false);
-    onUpdate('voiceLibraryId', 'none');
-    onUpdate('voiceDirectUrl', '');
-    onUpdate('voiceTrigger', 'manual_only');
-    onUpdate('voiceVolume', 0.9);
-    onUpdate('duckSfx', true);
-    onUpdate('audioSceneId', '');
+    applyUpdates({
+      soundEnabled: true,
+      soundVolume: 0.55,
+      sfxEnabled: true,
+      soundInStyle: 'DEFAULT',
+      soundOutStyle: 'DEFAULT',
+      audioUpdateCue: '',
+      voiceEnabled: false,
+      voiceLibraryId: 'none',
+      voiceDirectUrl: '',
+      voiceTrigger: 'manual_only',
+      voiceVolume: 0.9,
+      duckSfx: true,
+      audioSceneId: '',
+    });
   };
 
   const sectionPad = compact ? 'p-2' : 'p-3';

@@ -3266,6 +3266,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             <AudioSettingsPanel
               overlay={draftOverlay}
               onUpdate={(id, val) => handleDraftFieldChange(id, val)}
+              onUpdateMany={(updates) => handleDraftFieldChanges(updates)}
               compact
             />
           )}
