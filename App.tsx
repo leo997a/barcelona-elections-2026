@@ -343,6 +343,7 @@ const App: React.FC = () => {
   };
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [hashPath, setHashPath] = useState(window.location.hash);
+  const [hasLoadedOverlays, setHasLoadedOverlays] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('rge_favorites') || '[]'); } catch { return []; }
   });
@@ -392,7 +393,10 @@ const App: React.FC = () => {
 
   // Sync Manager Subscription
   useEffect(() => {
-    const unsubscribe = syncManager.subscribe(setOverlays);
+    const unsubscribe = syncManager.subscribe(data => {
+      setOverlays(data);
+      setHasLoadedOverlays(true);
+    });
     return unsubscribe;
   }, []);
 
@@ -527,6 +531,10 @@ const App: React.FC = () => {
   // RENDER: Main App
   // ----------------------------------------------------
   const selectedOverlay = overlays.find(o => o.id === selectedOverlayId);
+  const editOverlayId = extractEditOverlayId(hashPath);
+  const missingEditOverlayId = hasLoadedOverlays && editOverlayId && !overlays.some(o => o.id === editOverlayId)
+    ? editOverlayId
+    : null;
 
   return (
     <div className="flex h-screen bg-gray-950 text-white font-sans overflow-hidden" dir="rtl">
@@ -562,6 +570,7 @@ const App: React.FC = () => {
                    onNavigateOperator={() => setRoute('operator')}
                    favoriteIds={favoriteIds}
                    onToggleFavorite={handleToggleFavorite}
+                   missingEditOverlayId={missingEditOverlayId}
                  />
                )}
                

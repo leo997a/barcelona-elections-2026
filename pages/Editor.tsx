@@ -480,6 +480,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiError, setAiError] = useState(false);
   const [previewChroma, setPreviewChroma] = useState(false);
+  const [editLinkCopied, setEditLinkCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const matchStatsJsonInputRef = useRef<HTMLInputElement>(null);
@@ -1099,6 +1100,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const updateLiveControl = (fieldId: string, value: any) => {
       syncManager.updateLiveField(liveOverlay.id, fieldId, value);
+  };
+
+  const copyEditLink = async () => {
+      try {
+          await navigator.clipboard.writeText(syncManager.buildEditUrl(liveOverlay.id));
+          setEditLinkCopied(true);
+          setTimeout(() => setEditLinkCopied(false), 1800);
+      } catch {
+          alert('تعذر نسخ رابط التعديل');
+      }
   };
 
   const handleGenerateScoreboardData = async () => {
@@ -3924,6 +3935,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              </div>
              <div className="flex items-center gap-2">
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>Chroma</button>
+                 <button
+                    onClick={copyEditLink}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 rounded-lg text-xs font-bold border border-cyan-500/30 transition-colors"
+                    title="نسخ رابط تعديل هذا القالب">
+                     <Copy className="w-3.5 h-3.5" />
+                     <span>{editLinkCopied ? 'Copied' : 'Edit Link'}</span>
+                 </button>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
                     const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);

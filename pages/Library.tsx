@@ -16,6 +16,7 @@ interface LibraryProps {
   onNavigateOperator: () => void;
   favoriteIds: string[];
   onToggleFavorite: (id: string) => void;
+  missingEditOverlayId?: string | null;
 }
 
 type MainTab = 'catalog' | 'mine';
@@ -223,7 +224,7 @@ const MyCard: React.FC<{
 
 // ─── Main Library ─────────────────────────────────────────────────────────────
 
-const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite }) => {
+const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite, missingEditOverlayId }) => {
   const [mainTab, setMainTab] = useState<MainTab>('catalog');
   const [activeCategory, setActiveCategory] = useState<CategoryKey | 'ALL'>('ALL');
   // Phase A5 — subcategory replaces the flat TYPE_FILTERS noise.
@@ -478,6 +479,15 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
 
         {/* Grid */}
         <div className="flex-1 overflow-y-auto p-5">
+          {missingEditOverlayId && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-amber-200">
+              <Link2 className="w-4 h-4 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold">رابط القالب غير موجود في هذا الاستوديو.</p>
+                <p className="text-[10px] text-amber-200/70 font-mono truncate" dir="ltr">{missingEditOverlayId}</p>
+              </div>
+            </div>
+          )}
 
           {/* CATALOG TAB */}
           {mainTab === 'catalog' && (
