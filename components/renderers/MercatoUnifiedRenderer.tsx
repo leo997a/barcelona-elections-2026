@@ -78,6 +78,103 @@ const safeParse = <T,>(s: string, fallback: T): T => {
 
 interface ChatLine { side: 'reporter' | 'agent' | string; text: string; }
 
+// X13 — return up to 2 initials. Strips connector words and prefixes like
+// "AGENT —". Used as a fallback when an avatar image is missing so we
+// never leave an empty grey square on broadcast.
+const getInitials = (name: string): string => {
+  if (!name) return '··';
+  // Drop everything before an em-dash (e.g., "AGENT — JORGE MENDES")
+  const cleaned = name.split('—').slice(-1)[0].trim();
+  const parts = cleaned.split(/\s+/).filter(p => p.length > 1);
+  if (parts.length === 0) return cleaned.slice(0, 2).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+// X13 — detect Arabic/Hebrew (RTL) so transcript bubbles auto-direct.
+const ARABIC_RANGE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+const isRtl = (s: string): boolean => ARABIC_RANGE.test(s);
+
+// X13 — small reusable SVG glyphs replacing emojis on broadcast.
+const Icon: React.FC<{ name: string; size?: number; color?: string }> = ({ name, size = 18, color = 'currentColor' }) => {
+  const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  switch (name) {
+    case 'phone':       return <svg {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></svg>;
+    case 'doc':         return <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h6M9 9h1" /></svg>;
+    case 'stamp':       return <svg {...props}><path d="M12 2v4" /><circle cx="12" cy="11" r="5" /><path d="M5 19h14M5 22h14" /></svg>;
+    case 'lock':        return <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
+    case 'plane':       return <svg {...props}><path d="M17.8 19.2 16 11l3.5-3.5a2.83 2.83 0 1 0-4-4L12 7 3.8 5.2a1 1 0 0 0-.95 1.65l4.42 5.16-2.43 2.43H2l1.5 2 2 1.5v-2.84l2.43-2.43 5.16 4.42a1 1 0 0 0 1.65-.95Z" /></svg>;
+    case 'hospital':    return <svg {...props}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 8v8M8 12h8" /></svg>;
+    case 'signature':   return <svg {...props}><path d="m20 18-3.7-3.7" /><path d="M3 17h6c2 0 4-2 4-5s-1-5-3-5-3 2-3 5 2 5 4 5h7" /></svg>;
+    case 'megaphone':   return <svg {...props}><path d="M3 11v2a4 4 0 0 0 4 4h2v-10H7a4 4 0 0 0-4 4Z" /><path d="m9 7 11-4v18L9 17" /></svg>;
+    case 'warning':     return <svg {...props}><path d="m10.29 3.86-8.16 14a2 2 0 0 0 1.71 3h16.32a2 2 0 0 0 1.71-3l-8.16-14a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" /></svg>;
+    case 'briefcase':   return <svg {...props}><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
+    case 'sparkle':     return <svg {...props}><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /><path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" /></svg>;
+    case 'clock':       return <svg {...props}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>;
+    case 'check':       return <svg {...props}><path d="M20 6 9 17l-5-5" /></svg>;
+    case 'pulse':       return <svg {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>;
+    case 'arrow':       return <svg {...props}><path d="M5 12h14M13 5l7 7-7 7" /></svg>;
+    default:            return null;
+  }
+};
+
+// X13 — initials avatar with optional image fallback. Colored ring uses
+// theme accent. Never leaves an empty box.
+const Avatar: React.FC<{ t: UnifiedTheme; name?: string; image?: string; size?: number; accent?: string }> = ({ t, name = '', image, size = 56, accent }) => {
+  const accentColor = accent || t.accent;
+  const initials = getInitials(name);
+  if (image) {
+    return (
+      <div style={{ width: size, height: size }} className="rounded-full overflow-hidden flex-shrink-0 relative" >
+        <img src={image} alt="" className="w-full h-full object-cover" onError={(e) => {
+          const el = e.currentTarget as HTMLImageElement;
+          el.style.display = 'none';
+          const parent = el.parentElement;
+          if (parent && !parent.querySelector('[data-initials]')) {
+            const span = document.createElement('span');
+            span.setAttribute('data-initials', '1');
+            span.textContent = initials;
+            span.className = 'absolute inset-0 flex items-center justify-center font-black';
+            span.style.background = `${accentColor}20`;
+            span.style.color = accentColor;
+            span.style.fontSize = `${size * 0.36}px`;
+            parent.appendChild(span);
+          }
+        }} />
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-full flex items-center justify-center font-black flex-shrink-0"
+      style={{
+        width: size, height: size,
+        background: `${accentColor}20`,
+        color: accentColor,
+        border: `2px solid ${accentColor}40`,
+        fontSize: `${size * 0.36}px`,
+      }}>
+      {initials}
+    </div>
+  );
+};
+
+// X13 — broadcast-style audio waveform bars, animated. Pure CSS.
+const Waveform: React.FC<{ color: string; bars?: number; height?: number }> = ({ color, bars = 12, height = 18 }) => (
+  <div className="flex items-end gap-[2px]" style={{ height }} aria-hidden>
+    {Array.from({ length: bars }).map((_, i) => (
+      <span key={i} style={{
+        width: 2,
+        height: '100%',
+        background: color,
+        borderRadius: 1,
+        animation: `mercatoWave 1.${(i % 9) + 1}s ease-in-out ${i * 0.07}s infinite`,
+        transformOrigin: 'bottom',
+      }} />
+    ))}
+    <style>{`@keyframes mercatoWave { 0%,100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }`}</style>
+  </div>
+);
+
 // ─── Shared primitives ─────────────────────────────────────────────────────
 
 const Pill: React.FC<{ t: UnifiedTheme; color?: string; label: string; pulse?: boolean; small?: boolean }> = ({ t, color, label, pulse, small }) => (
@@ -203,7 +300,7 @@ interface VariantProps {
   getField: (id: string) => unknown;
 }
 
-// ─── 1. Agent Call (X7 redesigned) ─────────────────────────────────────────
+// ─── 1. Agent Call (X13 polish — initials avatar, waveform, dynamic source) ───
 
 const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const callerName = String(getField('callerName') || 'AGENT');
@@ -219,10 +316,12 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const confidencePct = Math.max(0, Math.min(100, Number(getField('confidencePct') ?? 85)));
   const lines = safeParse<ChatLine[]>(String(getField('chatLines') || '[]'), []);
 
+  const isLive = callStatus === 'live';
+  const isPrivate = callStatus === 'private_source';
   const statusPill =
     callStatus === 'recorded'
       ? <Pill t={t} color={t.warning} label="RECORDED" small />
-      : callStatus === 'private_source'
+      : isPrivate
       ? <Pill t={t} color={t.accent2} label="PRIVATE SOURCE" small />
       : <Pill t={t} color={t.danger} label="LIVE" pulse small />;
 
@@ -234,14 +333,22 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         border: `1px solid ${t.border}`,
       }}>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-[20px] font-black"
-            style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}40` }}>
-            📞
+          <div className="relative">
+            <Avatar t={t} name={callerName} accent={t.accent} size={52} />
+            {isLive && (
+              <span className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center" style={{
+                background: t.danger,
+                border: `2px solid ${t.surfaceDeep}`,
+              }}>
+                <Icon name="phone" size={9} color="#fff" />
+              </span>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
               {statusPill}
-              <span className="text-[10px] font-mono" style={{ color: t.dim }}>● {callDuration}</span>
+              <span className="text-[10px] font-mono" style={{ color: t.dim }}>{callDuration}</span>
+              {isLive && <Waveform color={t.danger} bars={10} height={14} />}
             </div>
             <div className="text-[20px] font-black leading-tight mt-0.5" style={{ color: t.text }}>{callerName}</div>
             {callerRole && <div className="text-[11px]" style={{ color: t.sub }}>{callerRole}</div>}
@@ -262,22 +369,22 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         {/* Left: Deal context */}
         <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
           <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent2 }}>صفقة</div>
-          {playerImage ? (
-            <img src={playerImage} alt="" className="w-full rounded-lg object-cover" style={{ aspectRatio: '4/5', maxHeight: '180px' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-          ) : null}
-          <div>
-            <div className="text-[18px] font-black leading-tight" style={{ color: t.text }}>{playerName}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: t.sub }}>{dealHeadline}</div>
+          <div className="flex items-center gap-3">
+            <Avatar t={t} name={playerName} image={playerImage} accent={t.accent2} size={64} />
+            <div className="min-w-0 flex-1">
+              <div className="text-[16px] font-black leading-tight truncate" style={{ color: t.text }}>{playerName || '—'}</div>
+              {dealHeadline && <div className="text-[10px] mt-0.5 line-clamp-2" style={{ color: t.sub }}>{dealHeadline}</div>}
+            </div>
           </div>
           {(clubFrom || clubTo) && (
             <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-              <div className="text-[10px] text-center flex-1" style={{ color: t.sub }}>
-                <div className="opacity-60 text-[8px]">من</div>
+              <div className="text-[10px] text-center flex-1">
+                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>من</div>
                 <div className="font-bold mt-0.5" style={{ color: t.text }}>{clubFrom || '—'}</div>
               </div>
-              <div className="text-[14px]" style={{ color: t.accent }}>›</div>
-              <div className="text-[10px] text-center flex-1" style={{ color: t.sub }}>
-                <div className="opacity-60 text-[8px]">إلى</div>
+              <div style={{ color: t.accent }}><Icon name="arrow" size={14} /></div>
+              <div className="text-[10px] text-center flex-1">
+                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>إلى</div>
                 <div className="font-bold mt-0.5" style={{ color: t.text }}>{clubTo || '—'}</div>
               </div>
             </div>
@@ -296,10 +403,14 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {lines.length === 0 ? (
-              <div className="text-center text-[12px] py-8" style={{ color: t.dim }}>أضف محادثة المكالمة في الإعدادات</div>
+              <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
+                <Icon name="phone" size={28} color={t.dim} />
+                <div className="text-[12px]">في انتظار بدء المكالمة</div>
+              </div>
             ) : (
               lines.map((line, i) => {
                 const isAgent = line.side === 'agent';
+                const lineRtl = isRtl(line.text);
                 return (
                   <div key={i} className={`flex ${isAgent ? 'justify-start' : 'justify-end'}`}>
                     <div className="max-w-[78%] rounded-2xl px-4 py-2" style={{
@@ -312,7 +423,10 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
                       <div className="text-[8px] font-bold uppercase opacity-60 mb-0.5" style={{ color: isAgent ? t.sub : t.accent }}>
                         {isAgent ? 'AGENT' : 'REPORTER'}
                       </div>
-                      <div className="text-[13px] leading-relaxed" style={{ direction: 'ltr', textAlign: 'left' }}>{line.text}</div>
+                      <div className="text-[13px] leading-relaxed" style={{
+                        direction: lineRtl ? 'rtl' : 'ltr',
+                        textAlign: lineRtl ? 'right' : 'left',
+                      }}>{line.text}</div>
                     </div>
                   </div>
                 );
@@ -321,29 +435,37 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
         </div>
 
-        {/* Right: Source / Status */}
+        {/* Right: Source / dynamic stages from chat length */}
         <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.warning }}>المصدر</div>
-          <div className="rounded-lg p-3 text-center" style={{ background: t.surfaceDeep, border: `1px dashed ${t.border}` }}>
-            <div className="text-[28px] mb-1">🔒</div>
-            <div className="text-[11px] font-bold" style={{ color: t.text }}>مصدر مغلق</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>المصدر</div>
+          <div className="rounded-lg p-3 text-center" style={{
+            background: t.surfaceDeep,
+            border: `1px dashed ${isPrivate ? t.accent2 : t.border}`,
+          }}>
+            <div className="flex justify-center mb-1.5"><Icon name="lock" size={26} color={isPrivate ? t.accent2 : t.warning} /></div>
+            <div className="text-[11px] font-bold" style={{ color: t.text }}>{isPrivate ? 'مصدر خاص مغلق' : 'مصدر مغلق'}</div>
             <div className="text-[9px] mt-1" style={{ color: t.dim }}>المعلومة من داخل غرفة المفاوضات</div>
           </div>
           <div className="rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-            <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>الحالة</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>تقدم الصفقة</div>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.success }} />
-                <span className="text-[10px]" style={{ color: t.text }}>اتفاق المبدأ</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: t.warning }} />
-                <span className="text-[10px]" style={{ color: t.text }}>الفحص الطبي</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dim }} />
-                <span className="text-[10px]" style={{ color: t.dim }}>الإعلان</span>
-              </div>
+              {/* Stages now reflect confidencePct so the right panel feels alive */}
+              {[
+                { label: 'اتفاق المبدأ', threshold: 40 },
+                { label: 'الفحص الطبي', threshold: 70 },
+                { label: 'الإعلان الرسمي', threshold: 95 },
+              ].map((stage, i) => {
+                const reached = confidencePct >= stage.threshold;
+                const active = confidencePct >= (i === 0 ? 0 : [40, 70][i - 1]) && confidencePct < stage.threshold;
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${active ? 'animate-pulse' : ''}`} style={{
+                      background: reached ? t.success : active ? t.warning : t.dim,
+                    }} />
+                    <span className="text-[10px]" style={{ color: reached ? t.text : active ? t.text : t.dim }}>{stage.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="mt-auto text-[9px] font-mono text-center opacity-60" style={{ color: t.dim }}>
@@ -355,7 +477,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   );
 };
 
-// ─── 2. Deal Radar (X7 polish) ─────────────────────────────────────────────
+// ─── 2. Deal Radar (X13 polish — real blips, tier colors) ─────────────────
 
 const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
@@ -363,6 +485,9 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const sources = safeParse<{ name: string; reliability: number }[]>(String(getField('sources') || '[]'), []);
   const cx = 110, cy = 110, R = 90;
   const sweepRad = (probability / 100) * 2 * Math.PI;
+
+  // X13 — color a source pill by reliability tier (green ≥80 / amber ≥50 / red below).
+  const tierColor = (rel: number) => rel >= 80 ? t.success : rel >= 50 ? t.warning : t.danger;
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -374,8 +499,12 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
         pills={<Pill t={t} label={`${probability}% احتمالية`} pulse />}
       />
       <div className="flex-1 grid grid-cols-[280px_1fr] gap-3 min-h-0">
-        <div className="rounded-xl flex flex-col items-center justify-center p-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          <svg width="220" height="220" viewBox="0 0 220 220">
+        <div className="rounded-xl flex flex-col items-center justify-center p-3 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          {/* Subtle scanning glow */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: `radial-gradient(circle at 50% 50%, ${t.accent}10 0%, transparent 60%)`,
+          }} />
+          <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10">
             {/* Concentric grid */}
             {[1, 0.66, 0.33].map((m, i) => (
               <circle key={i} cx={cx} cy={cy} r={R * m} fill="none" stroke={t.border} strokeWidth="1" />
@@ -383,34 +512,56 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
             {/* Cross */}
             <line x1={cx} y1={cy - R - 6} x2={cx} y2={cy + R + 6} stroke={t.border} strokeWidth="1" />
             <line x1={cx - R - 6} y1={cy} x2={cx + R + 6} y2={cy} stroke={t.border} strokeWidth="1" />
-            <line x1={cx - R * 0.7} y1={cy - R * 0.7} x2={cx + R * 0.7} y2={cy + R * 0.7} stroke={t.border} strokeWidth="0.5" opacity="0.6" />
-            <line x1={cx + R * 0.7} y1={cy - R * 0.7} x2={cx - R * 0.7} y2={cy + R * 0.7} stroke={t.border} strokeWidth="0.5" opacity="0.6" />
             {/* Sweep */}
             <path
               d={`M ${cx} ${cy} L ${cx + R * Math.cos(-Math.PI / 2)} ${cy + R * Math.sin(-Math.PI / 2)} A ${R} ${R} 0 ${probability > 50 ? 1 : 0} 1 ${cx + R * Math.cos(-Math.PI / 2 + sweepRad)} ${cy + R * Math.sin(-Math.PI / 2 + sweepRad)} Z`}
               fill={t.accent}
               opacity={0.25}
             />
-            <circle cx={cx} cy={cy} r="3" fill={t.accent} />
+            {/* Source blips — placed by tier on concentric rings */}
+            {sources.slice(0, 8).map((s, i) => {
+              const angle = (i / Math.max(sources.length, 1)) * 2 * Math.PI - Math.PI / 2;
+              const ringRadius = R * (s.reliability >= 80 ? 0.35 : s.reliability >= 50 ? 0.62 : 0.9);
+              const bx = cx + ringRadius * Math.cos(angle);
+              const by = cy + ringRadius * Math.sin(angle);
+              const c = tierColor(s.reliability);
+              return (
+                <g key={i}>
+                  <circle cx={bx} cy={by} r="6" fill={c} opacity="0.25" />
+                  <circle cx={bx} cy={by} r="3" fill={c} />
+                </g>
+              );
+            })}
+            <circle cx={cx} cy={cy} r="4" fill={t.accent} />
             <text x={cx} y={cy + 8} textAnchor="middle" fill={t.text} fontSize="32" fontWeight="900">{probability}</text>
             <text x={cx} y={cy + 28} textAnchor="middle" fill={t.dim} fontSize="10">PROBABILITY</text>
           </svg>
+          <div className="text-[9px] font-mono mt-1 opacity-70" style={{ color: t.dim }}>{sources.length} مصدر مرصود</div>
         </div>
         <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
           <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المصادر · موثوقية</div>
           {sources.length === 0 ? (
-            <div className="text-[12px] mt-2" style={{ color: t.dim }}>أضف المصادر في الإعدادات</div>
+            <div className="flex-1 flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
+              <Icon name="pulse" size={28} color={t.dim} />
+              <div className="text-[12px]">في انتظار رصد المصادر</div>
+            </div>
           ) : (
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-              {sources.map((s, i) => (
-                <div key={i} className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[12px] font-bold" style={{ color: t.text }}>{s.name}</span>
-                    <span className="text-[12px] font-mono font-black" style={{ color: t.accent }}>{s.reliability}%</span>
+              {sources.map((s, i) => {
+                const c = tierColor(s.reliability);
+                return (
+                  <div key={i} className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }} />
+                        <span className="text-[12px] font-bold truncate" style={{ color: t.text }}>{s.name}</span>
+                      </div>
+                      <span className="text-[12px] font-mono font-black flex-shrink-0" style={{ color: c }}>{s.reliability}%</span>
+                    </div>
+                    <ProgressBar t={t} value={s.reliability} color={c} />
                   </div>
-                  <ProgressBar t={t} value={s.reliability} />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -419,33 +570,67 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
   );
 };
 
-// ─── 3. Club Statement (X7 polish) ─────────────────────────────────────────
+// ─── 3. Club Statement (X13 polish — monogram, no emoji watermark) ────────
 
 const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const clubName = String(getField('clubName') || 'CLUB');
   const statementTitle = String(getField('statementTitle') || 'بيان رسمي');
   const statementBody = String(getField('statementBody') || '');
   const statementDate = String(getField('statementDate') || '');
+  // Build a 2-letter monogram from the club name for the corner stamp
+  const monogram = getInitials(clubName);
 
   return (
     <div className="w-full h-full p-6 flex items-center justify-center" dir="rtl">
-      <div className="w-full max-w-3xl rounded-2xl p-8 relative overflow-hidden" style={{ background: t.surface, border: `2px solid ${t.accent}` }}>
-        {/* Watermark stamp */}
-        <div className="absolute -top-8 -left-8 text-[140px] opacity-[0.05] select-none pointer-events-none" style={{ color: t.accent }}>📜</div>
-        <div className="flex items-center justify-between border-b pb-3 mb-5" style={{ borderColor: t.border }}>
-          <Pill t={t} label="بيان رسمي" pulse />
-          <div className="text-[10px] font-mono" style={{ color: t.dim }}>{statementDate}</div>
+      <div className="w-full max-w-4xl rounded-2xl relative overflow-hidden grid grid-cols-[160px_1fr]" style={{
+        background: t.surface,
+        border: `1px solid ${t.border}`,
+      }}>
+        {/* Top accent strip */}
+        <div className="absolute top-0 left-0 right-0 h-[3px]" style={{
+          background: `linear-gradient(to right, transparent, ${t.accent}, transparent)`,
+        }} />
+        {/* Left monogram column */}
+        <div className="flex flex-col items-center justify-center p-6 border-l" style={{
+          borderColor: t.border,
+          background: `linear-gradient(180deg, ${t.surfaceDeep} 0%, ${t.surface} 100%)`,
+        }}>
+          <div className="rounded-2xl flex items-center justify-center mb-3" style={{
+            width: 96, height: 96,
+            background: t.accentSoft,
+            border: `2px solid ${t.accent}80`,
+            color: t.accent,
+            fontSize: 36,
+            fontWeight: 900,
+          }}>
+            {monogram}
+          </div>
+          <Icon name="stamp" size={22} color={t.accent} />
+          <div className="text-[9px] font-black uppercase tracking-[0.3em] mt-1.5" style={{ color: t.dim }}>OFFICIAL</div>
         </div>
-        <div className="text-[10px] font-black uppercase tracking-[0.3em] mb-1" style={{ color: t.accent }}>OFFICIAL</div>
-        <div className="text-[26px] font-black mb-2" style={{ color: t.text }}>{clubName}</div>
-        <div className="text-[18px] font-bold mb-5" style={{ color: t.accent }}>{statementTitle}</div>
-        <div className="text-[15px] leading-loose whitespace-pre-line" style={{ color: t.sub }}>{statementBody || '— نص البيان —'}</div>
+        {/* Body */}
+        <div className="p-8">
+          <div className="flex items-center justify-between border-b pb-3 mb-5" style={{ borderColor: t.border }}>
+            <Pill t={t} label="بيان رسمي" pulse />
+            <div className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: t.dim }}>
+              <Icon name="clock" size={11} color={t.dim} />
+              {statementDate || '—'}
+            </div>
+          </div>
+          <div className="text-[26px] font-black mb-2 leading-tight" style={{ color: t.text }}>{clubName}</div>
+          <div className="text-[18px] font-bold mb-5" style={{ color: t.accent }}>{statementTitle}</div>
+          <div className="text-[15px] leading-loose whitespace-pre-line" style={{
+            color: t.sub,
+            direction: isRtl(statementBody) ? 'rtl' : 'ltr',
+            textAlign: isRtl(statementBody) ? 'right' : 'left',
+          }}>{statementBody || '— نص البيان —'}</div>
+        </div>
       </div>
     </div>
   );
 };
 
-// ─── 4. Deadline Hour (X7 polish) ──────────────────────────────────────────
+// ─── 4. Deadline Hour (X13 polish — glow active stage + timer panel) ─────
 
 const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
@@ -462,6 +647,8 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
     { id: 'announce', label: 'إعلان' },
   ];
   const idx = stages.findIndex(s => s.id === stage);
+  // Compute progress percent across the 5 stages.
+  const progressPct = idx >= 0 ? Math.round(((idx + 0.5) / stages.length) * 100) : 0;
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -473,48 +660,77 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
         accent={t.danger}
         pills={<Pill t={t} color={t.danger} label="LIVE" pulse />}
         rightSlot={
-          <div>
-            <div className="text-[10px]" style={{ color: t.dim }}>الوقت المتبقي</div>
-            <div className="font-mono font-black leading-none mt-1" style={{ color: t.danger, fontSize: '52px' }}>
-              {minutes}:{seconds}
+          <div className="rounded-xl px-4 py-2 inline-flex items-center gap-3" style={{
+            background: `${t.danger}10`,
+            border: `1px solid ${t.danger}50`,
+            boxShadow: `0 0 24px ${t.danger}30`,
+          }}>
+            <Icon name="clock" size={22} color={t.danger} />
+            <div>
+              <div className="text-[9px] uppercase tracking-wider" style={{ color: t.dim }}>الوقت المتبقي</div>
+              <div className="font-mono font-black leading-none mt-0.5" style={{ color: t.danger, fontSize: '46px' }}>
+                {minutes}:{seconds}
+              </div>
             </div>
           </div>
         }
       />
-      <div className="flex-1 rounded-xl p-5 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-        <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المرحلة الحالية</div>
+      <div className="flex-1 rounded-xl p-5 flex flex-col gap-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المرحلة الحالية</div>
+          <div className="text-[10px] font-mono" style={{ color: t.dim }}>{progressPct}% من المسار</div>
+        </div>
         <div className="flex items-stretch gap-2">
           {stages.map((s, i) => {
             const done = i < idx;
             const active = i === idx;
             return (
               <React.Fragment key={s.id}>
-                <div className="flex-1 rounded-lg p-3 text-center transition-all" style={{
-                  background: active ? t.accent : done ? t.success : t.surfaceDeep,
-                  color: active ? '#000' : done ? '#000' : t.dim,
+                <div className="flex-1 rounded-lg p-3 text-center transition-all relative" style={{
+                  background: active ? t.accent : done ? `${t.success}25` : t.surfaceDeep,
+                  color: active ? '#000' : done ? t.success : t.dim,
                   border: `1px solid ${active ? t.accent : done ? t.success : t.border}`,
+                  boxShadow: active ? `0 0 18px ${t.accent}60` : 'none',
                 }}>
-                  <div className="text-[10px] font-mono opacity-60">0{i + 1}</div>
+                  <div className="text-[10px] font-mono opacity-70">0{i + 1}</div>
                   <div className="text-[12px] font-black mt-1">{s.label}</div>
+                  {active && (
+                    <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full animate-pulse" style={{
+                      background: t.accent,
+                      boxShadow: `0 0 8px ${t.accent}`,
+                    }} />
+                  )}
                 </div>
                 {i < stages.length - 1 && (
-                  <div className="flex items-center text-[14px]" style={{ color: i < idx ? t.success : t.dim }}>›</div>
+                  <div className="flex items-center" style={{ color: i < idx ? t.success : t.dim }}>
+                    <Icon name="arrow" size={14} color={i < idx ? t.success : t.dim} />
+                  </div>
                 )}
               </React.Fragment>
             );
           })}
+        </div>
+        <div>
+          <ProgressBar t={t} value={progressPct} color={t.danger} height={5} />
         </div>
       </div>
     </div>
   );
 };
 
-// ─── 5. Source Confidence (X7 polish) ──────────────────────────────────────
+// ─── 5. Source Confidence (X13 polish — empty state, source-type icons) ──
 
 const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const sources = safeParse<{ name: string; tier: 'A' | 'B' | 'C'; status: string }[]>(String(getField('sources') || '[]'), []);
   const tierColor = (tier: string) => tier === 'A' ? t.success : tier === 'B' ? t.warning : t.danger;
   const tierLabels: Record<string, string> = { A: 'مستوى A — تأكيد', B: 'مستوى B — محتمل', C: 'مستوى C — شائعة' };
+  const tierIcons: Record<string, string> = { A: 'check', B: 'pulse', C: 'warning' };
+
+  // Aggregate counts so the header summarizes at a glance.
+  const counts = { A: 0, B: 0, C: 0 } as Record<'A' | 'B' | 'C', number>;
+  sources.forEach(s => { if (s.tier in counts) counts[s.tier]++; });
+  const total = sources.length;
+  const supportPct = total === 0 ? 0 : Math.round(((counts.A + counts.B * 0.5) / total) * 100);
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -522,24 +738,51 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
         t={t}
         eyebrow="SOURCE CONFIDENCE BOARD"
         title="لوحة ثقة المصادر"
-        subtitle="تصنيف بثلاث طبقات حسب الموثوقية"
+        subtitle={total === 0 ? 'بانتظار رصد المصادر' : `${total} مصدر · ${supportPct}% تأييد إجمالي`}
+        rightSlot={total > 0 ? (
+          <div className="flex items-center gap-3">
+            {(['A','B','C'] as const).map(tier => (
+              <div key={tier} className="text-center">
+                <div className="text-[20px] font-black font-mono leading-none" style={{ color: tierColor(tier) }}>{counts[tier]}</div>
+                <div className="text-[8px] font-bold uppercase mt-0.5" style={{ color: t.dim }}>tier {tier}</div>
+              </div>
+            ))}
+          </div>
+        ) : undefined}
       />
       <div className="flex-1 grid grid-cols-3 gap-3 min-h-0">
         {(['A', 'B', 'C'] as const).map(tier => {
           const matching = sources.filter(s => s.tier === tier);
           return (
-            <div key={tier} className="rounded-xl p-4 flex flex-col" style={{ background: t.surface, border: `2px solid ${tierColor(tier)}40` }}>
+            <div key={tier} className="rounded-xl p-4 flex flex-col" style={{
+              background: t.surface,
+              border: `2px solid ${tierColor(tier)}40`,
+            }}>
               <div className="flex items-center justify-between mb-3">
-                <div className="text-[12px] font-black uppercase" style={{ color: tierColor(tier) }}>{tierLabels[tier]}</div>
-                <span className="text-[20px] font-black" style={{ color: tierColor(tier) }}>{matching.length}</span>
+                <div className="flex items-center gap-2">
+                  <Icon name={tierIcons[tier]} size={14} color={tierColor(tier)} />
+                  <div className="text-[12px] font-black uppercase" style={{ color: tierColor(tier) }}>{tierLabels[tier]}</div>
+                </div>
+                <span className="text-[20px] font-black font-mono" style={{ color: tierColor(tier) }}>{matching.length}</span>
               </div>
               <div className="flex-1 space-y-2 overflow-y-auto">
                 {matching.length === 0 ? (
-                  <div className="text-[10px]" style={{ color: t.dim }}>—</div>
+                  <div className="h-full flex items-center justify-center text-center" style={{ color: t.dim }}>
+                    <span className="text-[10px] opacity-60">لا مصادر في هذه الطبقة</span>
+                  </div>
                 ) : (
                   matching.map((s, i) => (
-                    <div key={i} className="rounded-lg p-2" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-                      <div className="text-[11px] font-bold" style={{ color: t.text }}>{s.name}</div>
+                    <div key={i} className="rounded-lg p-2" style={{
+                      background: t.surfaceDeep,
+                      border: `1px solid ${tierColor(tier)}30`,
+                      borderRightWidth: 3,
+                      borderRightColor: tierColor(tier),
+                    }}>
+                      <div className="text-[11px] font-bold" style={{
+                        color: t.text,
+                        direction: isRtl(s.name) ? 'rtl' : 'ltr',
+                        textAlign: isRtl(s.name) ? 'right' : 'left',
+                      }}>{s.name}</div>
                       <div className="text-[9px] mt-0.5" style={{ color: t.sub }}>{s.status}</div>
                     </div>
                   ))
@@ -553,7 +796,7 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
   );
 };
 
-// ─── 6. Clause Reveal (X7 polish) ──────────────────────────────────────────
+// ─── 6. Clause Reveal (X13 polish — SVG icons, redacted feel) ────────────
 
 const ClauseRevealVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
@@ -565,20 +808,38 @@ const ClauseRevealVariant: React.FC<VariantProps> = ({ t, getField }) => {
     <div className="w-full h-full p-6 flex items-center justify-center" dir="rtl">
       <div className="w-full max-w-2xl rounded-2xl p-8 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
         <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(to right, transparent, ${t.warning}, transparent)` }} />
-        <div className="absolute -bottom-12 -right-12 text-[180px] opacity-[0.04] select-none pointer-events-none">📄</div>
+        {/* Subtle document watermark */}
+        <div className="absolute -bottom-6 -right-6 opacity-[0.05] pointer-events-none" style={{ color: t.warning }}>
+          <Icon name="doc" size={200} color={t.warning} />
+        </div>
         <div className="flex items-center gap-2 mb-3">
           <Pill t={t} color={t.warning} label="بند في العقد" pulse />
+          <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded" style={{
+            color: t.dim,
+            background: t.surfaceDeep,
+            border: `1px solid ${t.border}`,
+          }}>CLASSIFIED · CLAUSE</span>
         </div>
-        <div className="text-[26px] font-black" style={{ color: t.text }}>{playerName || 'اللاعب'}</div>
-        <div className="text-[16px] font-bold mt-3 mb-2" style={{ color: t.warning }}>{clauseTitle}</div>
-        <div className="text-[14px] leading-loose mb-5 whitespace-pre-line" style={{ color: t.sub }}>{clauseBody || '— نص البند —'}</div>
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar t={t} name={playerName} accent={t.warning} size={48} />
+          <div className="text-[26px] font-black leading-tight" style={{ color: t.text }}>{playerName || 'اللاعب'}</div>
+        </div>
+        <div className="text-[16px] font-bold mb-2 flex items-center gap-2" style={{ color: t.warning }}>
+          <Icon name="doc" size={16} color={t.warning} />
+          {clauseTitle}
+        </div>
+        <div className="text-[14px] leading-loose mb-5 whitespace-pre-line" style={{
+          color: t.sub,
+          direction: isRtl(clauseBody) ? 'rtl' : 'ltr',
+          textAlign: isRtl(clauseBody) ? 'right' : 'left',
+        }}>{clauseBody || '— نص البند —'}</div>
         {clauseValue && (
           <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: `${t.warning}15`, border: `2px solid ${t.warning}` }}>
             <div>
               <div className="text-[10px] uppercase tracking-wider" style={{ color: t.dim }}>القيمة المحدّدة</div>
               <div className="text-[28px] font-black mt-1" style={{ color: t.warning }}>{clauseValue}</div>
             </div>
-            <div className="text-[40px]">💼</div>
+            <Icon name="briefcase" size={36} color={t.warning} />
           </div>
         )}
       </div>
@@ -586,16 +847,17 @@ const ClauseRevealVariant: React.FC<VariantProps> = ({ t, getField }) => {
   );
 };
 
-// ─── 7. Medical Tracker (X7 polish) ────────────────────────────────────────
+// ─── 7. Medical Tracker (X13 polish — SVG icons + stepper connectors) ────
 
 const MedicalTrackerVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
+  const playerImage = String(getField('playerImage') || '');
   const currentStage = String(getField('medicalStage') || 'travel');
   const stages = [
-    { id: 'travel', label: 'وصول', icon: '✈️', subtitle: 'السفر إلى الوجهة' },
-    { id: 'medical', label: 'فحص طبي', icon: '🏥', subtitle: 'الكشف الطبي الكامل' },
-    { id: 'signing', label: 'توقيع', icon: '✍️', subtitle: 'مراسم التوقيع' },
-    { id: 'announce', label: 'إعلان', icon: '📢', subtitle: 'الإعلان الرسمي' },
+    { id: 'travel',   label: 'وصول',     icon: 'plane',     subtitle: 'السفر إلى الوجهة' },
+    { id: 'medical',  label: 'فحص طبي',  icon: 'hospital',  subtitle: 'الكشف الطبي الكامل' },
+    { id: 'signing',  label: 'توقيع',    icon: 'signature', subtitle: 'مراسم التوقيع' },
+    { id: 'announce', label: 'إعلان',    icon: 'megaphone', subtitle: 'الإعلان الرسمي' },
   ];
   const idx = stages.findIndex(s => s.id === currentStage);
 
@@ -608,33 +870,56 @@ const MedicalTrackerVariant: React.FC<VariantProps> = ({ t, getField }) => {
         subtitle="رحلة اللاعب من الوصول إلى الإعلان الرسمي"
         accent={t.success}
         pills={<Pill t={t} color={t.success} label={stages[idx]?.label || '—'} pulse />}
+        rightSlot={playerName ? <Avatar t={t} name={playerName} image={playerImage} accent={t.success} size={44} /> : undefined}
       />
-      <div className="flex-1 grid grid-cols-4 gap-3 min-h-0">
-        {stages.map((s, i) => {
-          const done = i < idx;
-          const active = i === idx;
-          return (
-            <div key={s.id} className="rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all" style={{
-              background: active ? `${t.accent}15` : t.surface,
-              border: `2px solid ${active ? t.accent : done ? t.success : t.border}`,
-            }}>
-              <div className="text-[44px] mb-2" style={{ filter: !done && !active ? 'grayscale(100%) opacity(0.4)' : 'none' }}>{s.icon}</div>
-              <div className="text-[14px] font-black" style={{ color: t.text }}>{s.label}</div>
-              <div className="text-[10px] mt-1 opacity-70" style={{ color: t.sub }}>{s.subtitle}</div>
-              <div className="mt-2 text-[10px] font-mono font-bold" style={{
-                color: done ? t.success : active ? t.accent : t.dim,
+      {/* Connector line behind the cards */}
+      <div className="flex-1 relative">
+        <div className="absolute top-1/2 left-4 right-4 h-[2px] -translate-y-1/2" style={{
+          background: `linear-gradient(to left, ${t.success}, ${t.accent}, ${t.border})`,
+          opacity: 0.35,
+        }} />
+        <div className="relative grid grid-cols-4 gap-3 h-full">
+          {stages.map((s, i) => {
+            const done = i < idx;
+            const active = i === idx;
+            const dim = !done && !active;
+            const color = done ? t.success : active ? t.accent : t.dim;
+            return (
+              <div key={s.id} className="rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all relative" style={{
+                background: active ? `${t.accent}15` : t.surface,
+                border: `2px solid ${color}`,
+                boxShadow: active ? `0 0 24px ${t.accent}50` : 'none',
+                opacity: dim ? 0.55 : 1,
               }}>
-                {done ? '✓ مكتمل' : active ? '● الآن' : '— لاحقًا'}
+                {/* Stage number badge */}
+                <div className="absolute -top-2 right-4 px-2 py-0.5 rounded-full text-[9px] font-mono font-black" style={{
+                  background: t.surfaceDeep,
+                  color,
+                  border: `1px solid ${color}`,
+                }}>0{i + 1}</div>
+                <div className="rounded-full p-3 mb-2" style={{
+                  background: `${color}15`,
+                  border: `1px solid ${color}40`,
+                }}>
+                  <Icon name={s.icon} size={32} color={color} />
+                </div>
+                <div className="text-[14px] font-black" style={{ color: t.text }}>{s.label}</div>
+                <div className="text-[10px] mt-1 opacity-70" style={{ color: t.sub }}>{s.subtitle}</div>
+                <div className="mt-2 flex items-center gap-1 text-[10px] font-mono font-bold" style={{ color }}>
+                  {done && <><Icon name="check" size={11} color={color} />مكتمل</>}
+                  {active && <><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />الآن</>}
+                  {dim && '— لاحقًا'}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 };
 
-// ─── 8. Hijack Alert (X7 polish) ───────────────────────────────────────────
+// ─── 8. Hijack Alert (X13 polish — risk gauge VS divider) ────────────────
 
 const HijackAlertVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
@@ -643,6 +928,12 @@ const HijackAlertVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const risk = Math.max(0, Math.min(100, Number(getField('riskLevel') ?? 50)));
   const riskColor = risk >= 70 ? t.danger : risk >= 40 ? t.warning : t.success;
   const riskLabel = risk >= 70 ? 'مرتفع جدًا' : risk >= 40 ? 'متوسط' : 'منخفض';
+
+  // SVG risk gauge — half circle with needle.
+  const gaugeRadius = 44;
+  const needleAngle = (risk / 100) * Math.PI - Math.PI; // -180° (left) to 0° (right)
+  const needleX = 56 + gaugeRadius * Math.cos(needleAngle);
+  const needleY = 56 + gaugeRadius * Math.sin(needleAngle);
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -654,41 +945,68 @@ const HijackAlertVariant: React.FC<VariantProps> = ({ t, getField }) => {
         accent={t.danger}
         pills={<Pill t={t} color={t.danger} label="ALERT" pulse />}
         rightSlot={
-          <div>
-            <div className="text-[10px]" style={{ color: t.dim }}>مستوى الخطر</div>
-            <div className="text-[36px] font-mono font-black leading-none mt-0.5" style={{ color: riskColor }}>{risk}%</div>
-            <div className="text-[10px] mt-0.5" style={{ color: riskColor }}>{riskLabel}</div>
+          <div className="flex items-center gap-2">
+            <Icon name="warning" size={20} color={riskColor} />
+            <div>
+              <div className="text-[10px]" style={{ color: t.dim }}>مستوى الخطر</div>
+              <div className="text-[28px] font-mono font-black leading-none mt-0.5" style={{ color: riskColor }}>{risk}%</div>
+              <div className="text-[10px] mt-0.5" style={{ color: riskColor }}>{riskLabel}</div>
+            </div>
           </div>
         }
       />
-      <div className="flex-1 grid grid-cols-[1fr_auto_1fr] gap-4 items-stretch min-h-0">
+      <div className="flex-1 grid grid-cols-[1fr_140px_1fr] gap-3 items-stretch min-h-0">
         <div className="rounded-xl p-5 flex flex-col justify-center" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
           <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>النادي الأصلي</div>
-          <div className="text-[28px] font-black" style={{ color: t.text }}>{originalClub || '—'}</div>
-          <div className="text-[10px] mt-2" style={{ color: t.success }}>● في مفاوضات متقدمة</div>
+          <div className="flex items-center gap-3">
+            <Avatar t={t} name={originalClub} accent={t.success} size={48} />
+            <div className="text-[24px] font-black truncate" style={{ color: t.text }}>{originalClub || '—'}</div>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-[10px]" style={{ color: t.success }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: t.success }} />
+            في مفاوضات متقدمة
+          </div>
         </div>
-        <div className="flex flex-col items-center justify-center px-3">
-          <div className="text-[40px]" style={{ color: t.danger, textShadow: `0 0 20px ${t.danger}` }}>⚡</div>
-          <div className="text-[11px] font-black mt-1" style={{ color: t.danger }}>VS</div>
+        {/* Risk gauge in the center */}
+        <div className="flex flex-col items-center justify-center px-2">
+          <svg width="112" height="72" viewBox="0 0 112 72">
+            {/* Three-tier arc background */}
+            <path d={`M 12 56 A ${gaugeRadius} ${gaugeRadius} 0 0 1 39 18`} stroke={t.success} strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.6" />
+            <path d={`M 39 18 A ${gaugeRadius} ${gaugeRadius} 0 0 1 73 18`} stroke={t.warning} strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.6" />
+            <path d={`M 73 18 A ${gaugeRadius} ${gaugeRadius} 0 0 1 100 56`} stroke={t.danger} strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.6" />
+            {/* Needle */}
+            <line x1="56" y1="56" x2={needleX} y2={needleY} stroke={riskColor} strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="56" cy="56" r="4" fill={riskColor} />
+          </svg>
+          <div className="text-[10px] font-black uppercase tracking-wider mt-1" style={{ color: t.danger }}>VS</div>
         </div>
         <div className="rounded-xl p-5 flex flex-col justify-center" style={{ background: `${t.danger}15`, border: `2px solid ${t.danger}` }}>
           <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: t.danger }}>النادي الخاطف</div>
-          <div className="text-[28px] font-black" style={{ color: t.danger }}>{hijackClub || '—'}</div>
+          <div className="flex items-center gap-3">
+            <Avatar t={t} name={hijackClub} accent={t.danger} size={48} />
+            <div className="text-[24px] font-black truncate" style={{ color: t.danger }}>{hijackClub || '—'}</div>
+          </div>
           <div className="mt-3"><ProgressBar t={t} value={risk} color={t.danger} height={6} /></div>
+          <div className="text-[9px] font-mono mt-1.5 text-left" style={{ color: t.dim }}>تقدم الاختراق</div>
         </div>
       </div>
     </div>
   );
 };
 
-// ─── 9. Personal Terms (X7 polish) ─────────────────────────────────────────
+// ─── 9. Personal Terms (X13 polish — hero salary + completion bar) ───────
 
 const PersonalTermsVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
+  const playerImage = String(getField('playerImage') || '');
   const salary = String(getField('salary') || '');
   const years = String(getField('contractYears') || '');
   const agentFee = String(getField('agentFee') || '');
   const status = String(getField('termsStatus') || 'مفاوضات');
+
+  // Estimate negotiation completeness from what is filled.
+  const filled = [salary, years, agentFee].filter(Boolean).length;
+  const completionPct = Math.round((filled / 3) * 100);
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -697,27 +1015,65 @@ const PersonalTermsVariant: React.FC<VariantProps> = ({ t, getField }) => {
         eyebrow="PERSONAL TERMS · مكتب الشروط الشخصية"
         title={playerName || '—'}
         subtitle={status}
-        pills={<Pill t={t} label="مفاوضات" pulse />}
+        pills={<Pill t={t} label={`${completionPct}% مكتمل`} />}
+        rightSlot={playerName ? <Avatar t={t} name={playerName} image={playerImage} accent={t.accent} size={44} /> : undefined}
       />
-      <div className="flex-1 grid grid-cols-3 gap-3 min-h-0">
-        <FieldCard t={t} label="الراتب السنوي" value={salary || '—'} accent={t.accent} large />
+      <div className="flex-1 grid grid-cols-[1.4fr_1fr_1fr] gap-3 min-h-0">
+        {/* Hero salary card */}
+        <div className="rounded-xl p-5 flex flex-col justify-between relative overflow-hidden" style={{
+          background: `linear-gradient(135deg, ${t.surface} 0%, ${t.accentSoft} 100%)`,
+          border: `1px solid ${t.accent}50`,
+        }}>
+          <div className="absolute -bottom-6 -right-6 opacity-10 pointer-events-none">
+            <Icon name="briefcase" size={140} color={t.accent} />
+          </div>
+          <div className="flex items-center gap-2 relative">
+            <Icon name="briefcase" size={14} color={t.accent} />
+            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.dim }}>الراتب السنوي</div>
+          </div>
+          <div className="text-[44px] font-black leading-none relative" style={{ color: t.accent }}>{salary || '—'}</div>
+          <div className="text-[10px] font-mono opacity-70 relative" style={{ color: t.sub }}>net per season</div>
+        </div>
         <FieldCard t={t} label="سنوات العقد" value={years ? `${years} سنوات` : '—'} accent={t.success} large />
         <FieldCard t={t} label="عمولة الوكيل" value={agentFee || '—'} accent={t.warning} large />
       </div>
-      <div className="rounded-xl p-3 text-center" style={{ background: t.surfaceDeep, border: `1px dashed ${t.border}` }}>
-        <span className="text-[10px] font-mono" style={{ color: t.dim }}>
-          ● بيانات غير قابلة للتأكيد رسميًا — تستند إلى مصادر مقربة
-        </span>
+      <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.sub }}>تقدم المفاوضات</span>
+          <span className="text-[10px] font-mono font-black" style={{ color: t.accent }}>{completionPct}%</span>
+        </div>
+        <ProgressBar t={t} value={completionPct} height={5} />
+        <div className="flex items-center gap-1.5 mt-2 text-[9px] font-mono" style={{ color: t.dim }}>
+          <Icon name="warning" size={10} color={t.dim} />
+          بيانات غير قابلة للتأكيد رسميًا — تستند إلى مصادر مقربة
+        </div>
       </div>
     </div>
   );
 };
 
-// ─── 10. Here We Go Build-Up (X7 polish) ───────────────────────────────────
+// ─── 10. Here We Go Build-Up (X13 polish — color-coded stages) ────────────
+
+// Map stage keywords (Arabic + English) to colors and icons.
+const stageHints = (label: string, t: UnifiedTheme): { color: string; icon: string; weight: number } => {
+  const s = label.toLowerCase();
+  if (/شائعة|rumor|rumour/.test(s))            return { color: t.dim,     icon: 'pulse',     weight: 0 };
+  if (/محادث|talk|negoti/.test(s))             return { color: t.warning, icon: 'phone',     weight: 1 };
+  if (/متقدم|advanced|اقترب/.test(s))          return { color: t.accent,  icon: 'pulse',     weight: 2 };
+  if (/اتفاق|agree|deal/.test(s))              return { color: t.accent2, icon: 'check',     weight: 3 };
+  if (/طبي|medical/.test(s))                   return { color: t.success, icon: 'hospital',  weight: 4 };
+  if (/توقيع|sign|sealed/.test(s))             return { color: t.success, icon: 'signature', weight: 5 };
+  if (/إعلان|announce|here we go/.test(s))     return { color: t.success, icon: 'megaphone', weight: 6 };
+  return { color: t.sub, icon: 'sparkle', weight: 0 };
+};
 
 const HereWeGoBuildUpVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
+  const playerImage = String(getField('playerImage') || '');
   const timeline = safeParse<{ stage: string; date: string; note?: string }[]>(String(getField('timelineEntries') || '[]'), []);
+  // Active stage is the entry with the highest weight.
+  const activeIdx = timeline.length === 0 ? -1 : timeline.reduce((max, e, i, arr) =>
+    stageHints(e.stage, t).weight >= stageHints(arr[max].stage, t).weight ? i : max, 0);
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -727,32 +1083,57 @@ const HereWeGoBuildUpVariant: React.FC<VariantProps> = ({ t, getField }) => {
         title={playerName || 'تمهيد قبل الحسم'}
         subtitle="رحلة الصفقة من الشائعة إلى الإعلان"
         pills={<Pill t={t} label={`${timeline.length} مراحل`} />}
+        rightSlot={playerName ? <Avatar t={t} name={playerName} image={playerImage} accent={t.accent} size={44} /> : undefined}
       />
       <div className="flex-1 rounded-xl p-5 overflow-y-auto" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
         {timeline.length === 0 ? (
-          <div className="text-center text-[12px]" style={{ color: t.dim }}>أضف نقاط الجدول الزمني في الإعدادات</div>
+          <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
+            <Icon name="sparkle" size={28} color={t.dim} />
+            <div className="text-[12px]">في انتظار أحداث الصفقة</div>
+          </div>
         ) : (
           <div className="relative pr-3">
-            {/* Vertical line */}
-            <div className="absolute right-3 top-1 bottom-1 w-[2px]" style={{ background: t.accent, opacity: 0.3 }} />
+            {/* Vertical timeline line, gradient */}
+            <div className="absolute right-3 top-2 bottom-2 w-[3px] rounded-full" style={{
+              background: `linear-gradient(to bottom, ${t.dim}, ${t.accent}, ${t.success})`,
+              opacity: 0.55,
+            }} />
             <div className="space-y-3">
               {timeline.map((entry, i) => {
-                const isLast = i === timeline.length - 1;
+                const isActive = i === activeIdx;
+                const hint = stageHints(entry.stage, t);
                 return (
                   <div key={i} className="flex gap-3 items-start relative">
-                    <div className="rounded-full w-3 h-3 mt-1.5 z-10" style={{
-                      background: isLast ? t.success : t.accent,
-                      boxShadow: `0 0 0 4px ${t.bg.includes('rgba') ? '#0c1224' : '#0f172a'}`,
-                    }} />
+                    <div className="rounded-full mt-1 z-10 flex items-center justify-center" style={{
+                      width: 14, height: 14,
+                      background: hint.color,
+                      boxShadow: isActive ? `0 0 0 4px ${hint.color}30, 0 0 12px ${hint.color}` : `0 0 0 4px ${t.surfaceDeep}`,
+                    }}>
+                      {isActive && (
+                        <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#fff' }} />
+                      )}
+                    </div>
                     <div className="flex-1 rounded-lg p-3" style={{
-                      background: isLast ? `${t.success}15` : t.surfaceDeep,
-                      border: `1px solid ${isLast ? t.success : t.border}`,
+                      background: isActive ? `${hint.color}15` : t.surfaceDeep,
+                      border: `1px solid ${isActive ? hint.color : t.border}`,
+                      borderRightWidth: 3,
+                      borderRightColor: hint.color,
                     }}>
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[14px] font-black" style={{ color: isLast ? t.success : t.text }}>{entry.stage}</span>
+                        <div className="flex items-center gap-2">
+                          <Icon name={hint.icon} size={13} color={hint.color} />
+                          <span className="text-[14px] font-black" style={{ color: isActive ? hint.color : t.text }}>{entry.stage}</span>
+                          {isActive && <Pill t={t} color={hint.color} label="الآن" small pulse />}
+                        </div>
                         <span className="text-[10px] font-mono" style={{ color: t.dim }}>{entry.date}</span>
                       </div>
-                      {entry.note && <div className="text-[11px]" style={{ color: t.sub }}>{entry.note}</div>}
+                      {entry.note && (
+                        <div className="text-[11px]" style={{
+                          color: t.sub,
+                          direction: isRtl(entry.note) ? 'rtl' : 'ltr',
+                          textAlign: isRtl(entry.note) ? 'right' : 'left',
+                        }}>{entry.note}</div>
+                      )}
                     </div>
                   </div>
                 );
