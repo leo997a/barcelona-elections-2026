@@ -484,6 +484,364 @@ const VariantBody: React.FC<{
   );
 };
 
+const PremiumGlassCard: React.FC<{
+  accent: string;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}> = ({ accent, className = '', style, children }) => (
+  <div
+    className={`relative overflow-hidden border ${className}`}
+    style={{
+      borderColor: `${accent}55`,
+      background: 'linear-gradient(135deg, rgba(255,255,255,.105), rgba(255,255,255,.035)), rgba(3,6,12,.54)',
+      boxShadow: '0 18px 52px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.12)',
+      ...style,
+    }}
+  >
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+    {children}
+  </div>
+);
+
+const PremiumMetric: React.FC<{ label: string; value: string; accent: string; compact?: boolean }> = ({ label, value, accent, compact }) => (
+  <PremiumGlassCard accent={accent} className={compact ? 'px-3 py-2.5' : 'px-4 py-3'}>
+    <div className="text-[10px] font-black text-white/46">{label}</div>
+    <div className={`mt-1 font-['Barlow_Condensed'] font-black uppercase leading-none ${compact ? 'text-[28px]' : 'text-[38px]'}`} style={{ color: accent }}>
+      {value}
+    </div>
+    <div className="mt-3 h-1 overflow-hidden bg-white/10">
+      <div className="h-full w-2/3" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
+    </div>
+  </PremiumGlassCard>
+);
+
+const PremiumConfidenceSeal: React.FC<{ confidence: number; accent: string; label?: string }> = ({ confidence, accent, label = 'درجة الثقة' }) => (
+  <div className="relative flex h-[190px] w-[190px] shrink-0 items-center justify-center border" style={{ borderColor: `${accent}66`, background: 'rgba(0,0,0,.34)' }}>
+    <div className="absolute inset-5 border" style={{ borderColor: `${accent}33` }} />
+    <div className="absolute left-0 right-0 top-1/2 h-px" style={{ background: `${accent}55` }} />
+    <div className="absolute bottom-0 top-0 left-1/2 w-px" style={{ background: `${accent}33` }} />
+    <div className="relative text-center">
+      <div className="font-['Barlow_Condensed'] text-[76px] font-black leading-none" style={{ color: accent }}>{confidence}%</div>
+      <div className="mt-1 text-[11px] font-black text-white/48">{label}</div>
+    </div>
+  </div>
+);
+
+const PremiumWaveform: React.FC<{ accent: string; dense?: boolean }> = ({ accent, dense }) => (
+  <div className={`flex items-end ${dense ? 'h-28 gap-1' : 'h-20 gap-1.5'}`}>
+    {Array.from({ length: dense ? 52 : 34 }).map((_, i) => (
+      <span
+        key={i}
+        className="w-1.5 rounded-full"
+        style={{
+          height: `${18 + ((i * 19) % 76)}%`,
+          background: i % 6 === 0 ? '#fff' : i % 4 === 0 ? `${accent}99` : accent,
+          animation: `mediaWave ${0.52 + (i % 7) * 0.055}s ease-in-out ${i * 0.018}s infinite alternate`,
+        }}
+      />
+    ))}
+  </div>
+);
+
+const PremiumItemsList: React.FC<{ items: StoryItem[]; accent: string; numbered?: boolean }> = ({ items, accent, numbered }) => (
+  <div className="space-y-3">
+    {items.slice(0, 4).map((item, index) => (
+      <div
+        key={`${item.label}-${index}`}
+        className="relative flex items-start gap-3 overflow-hidden border px-3 py-2.5"
+        style={{
+          borderColor: `${accent}33`,
+          background: 'linear-gradient(90deg, rgba(255,255,255,.09), rgba(0,0,0,.18))',
+        }}
+      >
+        <div className="absolute inset-y-0 right-0 w-1" style={{ background: accent }} />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center border text-[11px] font-black" style={{ borderColor: `${accent}55`, color: accent }}>
+          {numbered ? String(index + 1).padStart(2, '0') : '•'}
+        </div>
+        <div className="min-w-0">
+          <div className="text-[11px] font-black text-white/48">{item.label}</div>
+          <div className="mt-0.5 text-[15px] font-bold leading-snug text-white">{item.value}</div>
+          {item.note && <div className="mt-1 text-[11px] font-semibold text-white/48">{item.note}</div>}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const PremiumRouteSpine: React.FC<{ fromClub: string; toClub: string; accent: string; secondary: string }> = ({ fromClub, toClub, accent, secondary }) => (
+  <div className="grid grid-cols-[1fr_180px_1fr] items-center gap-4">
+    <PremiumGlassCard accent={accent} className="px-4 py-4 text-center">
+      <div className="text-[10px] font-black text-white/42">نقطة البداية</div>
+      <div className="mt-1 font-['Barlow_Condensed'] text-4xl font-black uppercase text-white">{fromClub}</div>
+    </PremiumGlassCard>
+    <div className="relative h-14">
+      <div className="absolute inset-x-0 top-1/2 h-px" style={{ background: `linear-gradient(90deg, ${accent}, ${secondary})` }} />
+      <div className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center border bg-black/60 text-xl font-black" style={{ borderColor: `${secondary}88`, color: secondary }}>
+        ←
+      </div>
+    </div>
+    <PremiumGlassCard accent={secondary} className="px-4 py-4 text-center">
+      <div className="text-[10px] font-black text-white/42">الوجهة</div>
+      <div className="mt-1 font-['Barlow_Condensed'] text-4xl font-black uppercase text-white">{toClub}</div>
+    </PremiumGlassCard>
+  </div>
+);
+
+const PremiumVariantBody: React.FC<{
+  preset: VariantPreset;
+  player: string;
+  fromClub: string;
+  toClub: string;
+  value: string;
+  confidence: number;
+  status: string;
+  timer: string;
+  items: StoryItem[];
+}> = ({ preset, player, fromClub, toClub, value, confidence, status, timer, items }) => {
+  const c = preset.accent;
+  const route = `${fromClub || 'النادي الأول'} ← ${toClub || 'النادي الثاني'}`;
+
+  if (preset.layout === 'map') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[1fr_390px] gap-7">
+        <PremiumGlassCard accent={c} className="relative h-[340px] p-7">
+          <div className="absolute inset-6 opacity-35" style={{ backgroundImage: `linear-gradient(${c}24 1px, transparent 1px), linear-gradient(90deg, ${preset.secondary}20 1px, transparent 1px)`, backgroundSize: '54px 54px' }} />
+          {[
+            ['12%', '62%', c, 'مصدر أول'],
+            ['42%', '34%', preset.secondary, 'اتصال النادي'],
+            ['72%', '52%', c, 'عرض مشروط'],
+            ['86%', '24%', preset.secondary, 'قرار نهائي'],
+          ].map(([left, top, color, label], index) => (
+            <div key={index} className="absolute" style={{ left, top }}>
+              <div className="h-4 w-4 border bg-black" style={{ borderColor: color as string, boxShadow: `0 0 24px ${color}` }} />
+              <div className="mt-2 whitespace-nowrap text-[10px] font-black text-white/58">{label}</div>
+            </div>
+          ))}
+          <div className="absolute left-[14%] right-[14%] top-[48%] h-px -rotate-6" style={{ background: `linear-gradient(90deg, ${c}, ${preset.secondary})` }} />
+          <div className="absolute bottom-7 right-7 left-7">
+            <PremiumRouteSpine fromClub={fromClub} toClub={toClub} accent={c} secondary={preset.secondary} />
+          </div>
+          <div className="absolute left-7 top-7 text-left">
+            <div className="text-[11px] font-black text-white/42">مؤشر الحسم</div>
+            <div className="font-['Barlow_Condensed'] text-7xl font-black leading-none" style={{ color: c }}>{confidence}%</div>
+          </div>
+        </PremiumGlassCard>
+        <PremiumItemsList items={items} accent={c} numbered />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'scanner') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[470px_1fr] gap-8">
+        <div className="relative overflow-hidden border p-8" style={{ borderColor: `${c}88`, background: 'linear-gradient(135deg, rgba(255,255,255,.94), rgba(231,224,207,.86))', color: '#111827' }}>
+          <div className="absolute inset-x-0 top-1/2 h-1 animate-[scanLine_2.2s_linear_infinite]" style={{ background: c, boxShadow: `0 0 26px ${c}` }} />
+          <div className="flex items-center justify-between">
+            <div className="text-[12px] font-black text-black/45">ملف قانوني مشفّر</div>
+            <div className="border px-3 py-1 text-[10px] font-black" style={{ borderColor: `${c}99`, color: '#111827' }}>قيد الفحص</div>
+          </div>
+          <div className="mt-7 font-['Barlow_Condensed'] text-7xl font-black uppercase leading-none">{player}</div>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="border border-black/15 p-3">
+              <div className="text-[10px] font-black text-black/45">قيمة البند</div>
+              <div className="mt-1 text-xl font-black">{value}</div>
+            </div>
+            <div className="border border-black/15 p-3">
+              <div className="text-[10px] font-black text-black/45">الحالة</div>
+              <div className="mt-1 text-xl font-black">{status}</div>
+            </div>
+          </div>
+          <div className="mt-6 space-y-2">
+            {[confidence, Math.max(18, confidence - 22), Math.min(96, confidence + 11)].map((width, index) => (
+              <div key={index} className="h-2 bg-black/12">
+                <div className="h-full" style={{ width: `${width}%`, background: index === 1 ? '#111827' : c }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <PremiumItemsList items={items} accent={c} />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'airport') {
+    const rows = [
+      ['الآن', fromClub, toClub, status],
+      ['التالي', player, value, `${confidence}%`],
+      ['الأخير', 'فحص طبي', 'توقيع', timer],
+    ];
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[1fr_260px] gap-6">
+        <PremiumGlassCard accent={c} className="p-5">
+          <div className="mb-4 flex items-center justify-between border-b pb-3" style={{ borderColor: 'rgba(255,255,255,.12)' }}>
+            <div className="font-['Barlow_Condensed'] text-4xl font-black text-white">بيان المسار الخاص</div>
+            <div className="text-[12px] font-black" style={{ color: c }}>{timer}</div>
+          </div>
+          <div className="grid grid-cols-[130px_1fr_1fr_170px] gap-3 text-[11px] font-black text-white/42">
+            <div>الوقت</div><div>من</div><div>إلى</div><div>الحالة</div>
+          </div>
+          {rows.map((row, index) => (
+            <div key={index} className="mt-3 grid grid-cols-[130px_1fr_1fr_170px] gap-3 border px-3 py-3 font-['JetBrains_Mono'] text-[20px] font-black uppercase text-white" style={{ borderColor: 'rgba(255,255,255,.11)', background: index === 0 ? `${c}14` : 'rgba(0,0,0,.26)' }}>
+              {row.map((cell, i) => <div key={i} style={{ color: i === 3 ? c : undefined }}>{cell}</div>)}
+            </div>
+          ))}
+        </PremiumGlassCard>
+        <PremiumConfidenceSeal confidence={confidence} accent={c} label="جاهزية الوصول" />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'voice') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[420px_1fr] items-end gap-8">
+        <PremiumGlassCard accent={c} className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] font-black text-white/42">اتصال مشفّر</div>
+            <div className="h-2 w-2 animate-pulse" style={{ background: c }} />
+          </div>
+          <div className="mt-4 font-['Barlow_Condensed'] text-6xl font-black uppercase text-white">{status}</div>
+          <div className="mt-6"><PremiumWaveform accent={c} dense /></div>
+          <div className="mt-5 grid grid-cols-2 gap-2 text-[12px] font-bold text-white/58">
+            <div className="border p-2" style={{ borderColor: `${c}33` }}>المصدر: {fromClub}</div>
+            <div className="border p-2" style={{ borderColor: `${c}33` }}>الوجهة: {toClub}</div>
+          </div>
+        </PremiumGlassCard>
+        <div className="grid grid-cols-3 gap-3">
+          <PremiumMetric label="اللاعب" value={player} accent={c} />
+          <PremiumMetric label="قيمة الملف" value={value} accent={preset.secondary} />
+          <PremiumMetric label="الثقة" value={`${confidence}%`} accent={c} />
+        </div>
+      </div>
+    );
+  }
+
+  if (preset.layout === 'dossier') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[1fr_380px] gap-6">
+        <PremiumGlassCard accent={c} className="relative min-h-[300px] p-6">
+          <div className="absolute inset-6 opacity-30" style={{ backgroundImage: `linear-gradient(135deg, transparent 0 48%, ${c}55 49% 51%, transparent 52% 100%)`, backgroundSize: '120px 120px' }} />
+          <div className="relative grid grid-cols-2 gap-4">
+            <PremiumMetric label="الهدف" value={player} accent={c} />
+            <PremiumMetric label="المسار" value={route} accent={preset.secondary} />
+            <PremiumMetric label="القيمة" value={value} accent={c} />
+            <PremiumMetric label="الإشارة" value={status} accent={preset.secondary} />
+          </div>
+          <div className="relative mt-5 border px-4 py-3 text-[13px] font-bold text-white/70" style={{ borderColor: `${c}44` }}>
+            لوحة تحقيق مخصصة للروايات المعقدة: منافس جديد، وكيل يتحرك، أو عرض يدخل من الباب الخلفي.
+          </div>
+        </PremiumGlassCard>
+        <PremiumItemsList items={items} accent={c} numbered />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'social') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[360px_1fr] gap-7">
+        <PremiumGlassCard accent={c} className="p-5">
+          <div className="text-[11px] font-black text-white/42">نبض الجمهور</div>
+          <div className="mt-2 font-['Barlow_Condensed'] text-7xl font-black leading-none" style={{ color: c }}>#{Math.max(1, Math.round(confidence / 10))}</div>
+          <div className="mt-4 space-y-2">
+            {['تفاعل مرتفع', 'مصدر يحتاج تحقق', 'موجة قابلة للتهدئة'].map((label, index) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="h-2 flex-1 bg-white/10"><div className="h-full" style={{ width: `${Math.max(24, confidence - index * 18)}%`, background: index === 1 ? preset.secondary : c }} /></div>
+                <div className="w-28 text-[11px] font-black text-white/50">{label}</div>
+              </div>
+            ))}
+          </div>
+        </PremiumGlassCard>
+        <div className="grid grid-cols-2 gap-3">
+          <PremiumMetric label="اللاعب" value={player} accent={c} compact />
+          <PremiumMetric label="الملف" value={value} accent={preset.secondary} compact />
+          <div className="col-span-2">
+            <PremiumItemsList items={items} accent={c} numbered />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (preset.layout === 'medical') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[330px_1fr] gap-8">
+        <PremiumGlassCard accent={c} className="p-6 text-center">
+          <div className="mx-auto grid h-48 w-48 place-items-center border" style={{ borderColor: `${c}66`, background: `${c}10` }}>
+            <div>
+              <div className="font-['Barlow_Condensed'] text-7xl font-black" style={{ color: c }}>{confidence}%</div>
+              <div className="text-[11px] font-black text-white/50">مؤشر الجاهزية</div>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2 text-[10px] font-black text-white/52">
+            <div className="border py-2" style={{ borderColor: `${c}33` }}>صورة</div>
+            <div className="border py-2" style={{ borderColor: `${c}33` }}>فحص</div>
+            <div className="border py-2" style={{ borderColor: `${c}33` }}>توقيع</div>
+          </div>
+        </PremiumGlassCard>
+        <PremiumItemsList items={items} accent={c} numbered />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'vault') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[1fr_300px] gap-6">
+        <PremiumGlassCard accent={c} className="p-6">
+          <div className="grid grid-cols-3 gap-3">
+            <PremiumMetric label="التقييم" value={value} accent={c} />
+            <PremiumMetric label="المشتري" value={toClub} accent={preset.secondary} />
+            <PremiumMetric label="البائع" value={fromClub} accent={c} />
+          </div>
+          <div className="mt-5 grid grid-cols-4 gap-2">
+            {[confidence, 72, 54, 38].map((height, index) => (
+              <div key={index} className="flex h-24 items-end bg-white/8">
+                <div className="w-full" style={{ height: `${height}%`, background: index % 2 ? preset.secondary : c }} />
+              </div>
+            ))}
+          </div>
+        </PremiumGlassCard>
+        <PremiumConfidenceSeal confidence={confidence} accent={c} label="فتح الخزنة" />
+      </div>
+    );
+  }
+
+  if (preset.layout === 'warroom') {
+    return (
+      <div className="relative z-10 mt-auto grid grid-cols-[280px_1fr] gap-6">
+        <PremiumGlassCard accent={c} className="p-5 text-center">
+          <div className="text-[11px] font-black text-white/42">ساعة الإغلاق</div>
+          <div className="mt-2 font-['Barlow_Condensed'] text-7xl font-black leading-none" style={{ color: c }}>{timer}</div>
+          <div className="mt-3 text-[15px] font-bold uppercase text-white/62">{status}</div>
+          <div className="mt-5 h-2 bg-white/10"><div className="h-full" style={{ width: `${confidence}%`, background: c }} /></div>
+        </PremiumGlassCard>
+        <div className="grid grid-cols-[1fr_360px] gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <PremiumMetric label="اللاعب" value={player} accent={c} compact />
+            <PremiumMetric label="المسار" value={route} accent={preset.secondary} compact />
+            <PremiumMetric label="القيمة" value={value} accent={c} compact />
+            <PremiumMetric label="الثقة" value={`${confidence}%`} accent={preset.secondary} compact />
+          </div>
+          <PremiumItemsList items={items} accent={c} numbered />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative z-10 mt-auto grid grid-cols-[1fr_360px] gap-6">
+      <div className="space-y-5">
+        <PremiumRouteSpine fromClub={fromClub} toClub={toClub} accent={c} secondary={preset.secondary} />
+        <div className="grid grid-cols-3 gap-3">
+          <PremiumMetric label="اللاعب" value={player} accent={c} />
+          <PremiumMetric label="القيمة" value={value} accent={preset.secondary} />
+          <PremiumMetric label="الثقة" value={`${confidence}%`} accent={c} />
+        </div>
+      </div>
+      <PremiumItemsList items={items} accent={c} />
+    </div>
+  );
+};
+
 export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
   config,
   getField,
@@ -554,7 +912,7 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
         />
         <div className="relative z-10 flex h-full w-full flex-col p-9" style={{ transform: `scale(${textScale})`, transformOrigin: 'center center' }}>
           <Header preset={preset} headline={headline} subline={subline} source={source} panelOpacity={panelOpacity} />
-          <VariantBody
+          <PremiumVariantBody
             preset={preset}
             player={player}
             fromClub={fromClub}
