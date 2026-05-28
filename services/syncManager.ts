@@ -756,6 +756,18 @@ class SyncManager {
     return `${window.location.origin}${window.location.pathname}?${this.buildOutputShellQuery()}#/output/${PROGRAM_OUTPUT_ID}`;
   }
 
+  public buildEditUrl(overlayId: string) {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('obs');
+    params.delete('rgev');
+    params.delete(OUTPUT_SYNC_PARAM);
+    params.delete('d');
+
+    const query = params.toString();
+    const search = query ? `?${query}` : '';
+    return `${window.location.origin}/Library${search}#/edit/${encodeURIComponent(overlayId)}`;
+  }
+
   public async prepareOutputUrl(overlayId: string, snapshot?: OverlayConfig) {
     if (snapshot) {
       await this.publishOverlaySnapshot(snapshot, false);

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv } from 'lucide-react';
+import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2 } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
@@ -163,7 +163,8 @@ const MyCard: React.FC<{
   onToggleFavorite: (e: React.MouseEvent) => void;
   onCopyToken: (e: React.MouseEvent) => void;
   onCopyObsUrl: (e: React.MouseEvent) => void;
-}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl }) => {
+  onCopyEditUrl: (e: React.MouseEvent) => void;
+}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl }) => {
   const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
 
   return (
@@ -199,6 +200,11 @@ const MyCard: React.FC<{
           <button onClick={onCopyToken}
             className="flex items-center justify-center gap-1 bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 border border-yellow-600/20 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-colors">
             <Key className="w-3 h-3" />
+          </button>
+          <button onClick={onCopyEditUrl}
+            className="flex items-center justify-center gap-1 bg-cyan-600/10 text-cyan-300 hover:bg-cyan-600/20 border border-cyan-600/20 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-colors"
+            title="نسخ رابط تعديل هذا القالب">
+            <Link2 className="w-3 h-3" />
           </button>
           <button onClick={e => { e.stopPropagation(); onSelect(); }}
             className="flex-1 flex items-center justify-center gap-1 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-600/20 py-1.5 rounded-lg text-[10px] font-bold transition-colors">
@@ -311,6 +317,20 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       btn.style.background = 'rgba(34,197,94,0.2)';
       setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
     } catch { alert('خطأ في نسخ الرابط'); }
+  };
+
+  /** Copy a stable edit URL for this user's local overlay instance. */
+  const handleCopyEditUrl = (overlay: OverlayConfig, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const url = syncManager.buildEditUrl(overlay.id);
+      navigator.clipboard.writeText(url);
+      const btn = e.currentTarget as HTMLElement;
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓';
+      btn.style.background = 'rgba(34,211,238,0.18)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1800);
+    } catch { alert('خطأ في نسخ رابط التعديل'); }
   };
 
   /** Copy one OBS URL that follows every live/visible overlay in the studio. */
@@ -516,6 +536,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                     onToggleFavorite={e => { e.stopPropagation(); onToggleFavorite(overlay.id); }}
                     onCopyToken={e => handleCopyToken(overlay, e)}
                     onCopyObsUrl={e => handleCopyObsUrl(overlay, e)}
+                    onCopyEditUrl={e => handleCopyEditUrl(overlay, e)}
                   />
                 ))}
               </div>

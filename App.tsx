@@ -299,6 +299,29 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   );
 };
 
+const EDIT_HASH_PREFIX = '#/edit/';
+
+const extractEditOverlayId = (hashPath: string) => {
+  if (!hashPath.startsWith(EDIT_HASH_PREFIX)) return null;
+  const raw = hashPath.slice(EDIT_HASH_PREFIX.length).split('?')[0];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
+const buildCleanAppSearch = () => {
+  const params = new URLSearchParams(window.location.search);
+  params.delete('obs');
+  params.delete('rgev');
+  params.delete('sync');
+  params.delete('d');
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
+
 
 const App: React.FC = () => {
   const [overlays, setOverlays] = useState<OverlayConfig[]>([]);
@@ -355,7 +378,10 @@ const App: React.FC = () => {
   // Handle Hash Routing (Output Window) + URL popstate
   useEffect(() => {
     const handleHashChange = () => setHashPath(window.location.hash);
-    const handlePopState = () => setRouteState(pathnameToRoute(window.location.pathname));
+    const handlePopState = () => {
+      setRouteState(pathnameToRoute(window.location.pathname));
+      setHashPath(window.location.hash);
+    };
     window.addEventListener('hashchange', handleHashChange);
     window.addEventListener('popstate', handlePopState);
     return () => {
@@ -369,13 +395,49 @@ const App: React.FC = () => {
     const unsubscribe = syncManager.subscribe(setOverlays);
     return unsubscribe;
   }, []);
+
+  const openEditorById = (id: string, replace = false) => {
+    const editUrl = `/Library${buildCleanAppSearch()}${EDIT_HASH_PREFIX}${encodeURIComponent(id)}`;
+    setRouteState('library');
+    setSelectedOverlayId(id);
+    if (replace) {
+      window.history.replaceState({ route: 'library', overlayId: id }, '', editUrl);
+    } else {
+      window.history.pushState({ route: 'library', overlayId: id }, '', editUrl);
+    }
+    setHashPath(window.location.hash);
+  };
+
+  const closeEditor = () => {
+    setSelectedOverlayId(null);
+    if (hashPath.startsWith(EDIT_HASH_PREFIX)) {
+      window.history.pushState({ route: 'library' }, '', `/Library${buildCleanAppSearch()}`);
+      setRouteState('library');
+      setHashPath(window.location.hash);
+    }
+  };
+
+  useEffect(() => {
+    const editOverlayId = extractEditOverlayId(hashPath);
+    if (!editOverlayId) {
+      if (selectedOverlayId) setSelectedOverlayId(null);
+      return;
+    }
+
+    setRouteState('library');
+    const exists = overlays.some(overlay => overlay.id === editOverlayId);
+    if (exists && selectedOverlayId !== editOverlayId) {
+      setSelectedOverlayId(editOverlayId);
+    } else if (!exists && selectedOverlayId) {
+      setSelectedOverlayId(null);
+    }
+  }, [hashPath, overlays, selectedOverlayId]);
   
   // Actions delegated to SyncManager
   const handleCreateOverlay = (templateId: string) => {
     const nextOverlay = createOverlayFromTemplate(templateId, overlays);
     syncManager.addOverlay(nextOverlay);
-    setSelectedOverlayId(nextOverlay.id);
-    setRoute('library');
+    openEditorById(nextOverlay.id);
   };
 
   const handleDeleteOverlay = (id: string) => {
@@ -472,7 +534,7 @@ const App: React.FC = () => {
         <div className="w-full h-full">
            <Editor 
              overlay={selectedOverlay} 
-             onBack={() => setSelectedOverlayId(null)}
+             onBack={closeEditor}
            />
         </div>
       ) : (
@@ -494,7 +556,7 @@ const App: React.FC = () => {
                {route === 'library' && (
                  <Library 
                    overlays={overlays} 
-                   onSelect={setSelectedOverlayId}
+                   onSelect={openEditorById}
                    onDelete={handleDeleteOverlay}
                    onCreate={handleCreateOverlay}
                    onNavigateOperator={() => setRoute('operator')}
