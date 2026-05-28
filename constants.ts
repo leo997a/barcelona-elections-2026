@@ -2738,6 +2738,14 @@ interface MercatoTemplateInput {
   description: string;
   audioSceneId: string;       // matches utils/templateAudioScenes id
   dataFields: OverlayField[]; // template-specific data fields
+  /**
+   * Phase X11/X12 — opt-in SFX-OFF default for templates whose subject
+   * (real human conversations, private calls, intimate chat) is hurt by
+   * synthesized SFX. The user can re-enable SFX from AudioSettingsPanel.
+   * If undefined, withBroadcastControls injects the global default
+   * (sfxEnabled: true).
+   */
+  sfxEnabledDefault?: boolean;
 }
 
 const createMercatoTemplate = (input: MercatoTemplateInput): OverlayConfig => ({
@@ -2755,6 +2763,13 @@ const createMercatoTemplate = (input: MercatoTemplateInput): OverlayConfig => ({
   fields: [
     { id: 'mercatoVariant', label: 'نوع القالب', type: 'hidden', value: input.variant },
     { id: 'audioSceneId', label: 'مشهد صوتي افتراضي', type: 'hidden', value: input.audioSceneId },
+    // Phase X11/X12 — when sfxEnabledDefault is set, inject the field
+    // BEFORE withBroadcastControls (which uses dedupeFields keep-first).
+    // This wins over the default true and lets the call template ship
+    // with SFX OFF. The user can re-enable from AudioSettingsPanel.
+    ...(input.sfxEnabledDefault === false
+      ? [{ id: 'sfxEnabled', label: 'تفعيل المؤثرات', type: 'boolean' as const, value: false }]
+      : []),
     { id: 'visualTheme', label: 'نمط التصميم', type: 'select', value: 'TACTICAL_DARK', options: [
       { value: 'TACTICAL_DARK', label: '⚫ Tactical Dark' },
       { value: 'CLEAN_BROADCAST', label: '🔷 Clean Broadcast' },
@@ -2777,6 +2792,11 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
     templateAccent: '#22d3ee',
     description: 'مكالمة وكيل بواجهة بث احترافية: transcript حي + سياق صفقة + لوحة مصدر خاص. مشهد صوتي: مكالمة/دردشة خاصة بأصوات أصلية.',
     audioSceneId: 'mercato_private_chat_call',
+    // Phase X11/X12 — call template ships with SFX OFF by default. Synth
+    // call/chat tones felt amateurish in manual QA. The voice path stays
+    // available for production-quality audio. User can re-enable from
+    // AudioSettingsPanel → SFX section if they prefer the cues.
+    sfxEnabledDefault: false,
     dataFields: [
       { id: 'callerName', label: 'اسم الوكيل', type: 'text', value: 'AGENT — JORGE MENDES' },
       { id: 'callerRole', label: 'الجهة', type: 'text', value: 'GESTIFUTE' },

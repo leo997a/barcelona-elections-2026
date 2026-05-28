@@ -25,6 +25,80 @@ import { listVoicesForTemplate, resolveVoiceUrl, NO_VOICE_OPTION } from '../util
 import { listAudioScenes, getAudioScene, sceneToFieldUpdates, sceneToFieldUpdatesWithVoice } from '../utils/templateAudioScenes';
 import { playCue } from '../services/audioEngine';
 
+/**
+ * Phase X11/X12 — SFX style presets surfaced as labeled buttons in the
+ * SFX section. Each preset writes a fixed combination of soundInStyle +
+ * soundOutStyle + audioUpdateCue + sfxEnabled + (optionally) audioSceneId.
+ *
+ * Goal: users pick a vibe by name instead of fishing through 60+ raw cue
+ * keys. The 5 presets cover the actual matchday/mercato audio needs:
+ *
+ *   1. silent       — SFX OFF entirely (the safest default)
+ *   2. ultra_subtle — barely audible polite cues (LOWER_THIRD_WIPE / SOFT_FADE / SOFT_CHAT_TICK)
+ *   3. call         — gentle agent-call vibe (SOFT_CALL_RING_LIGHT / SOFT_CALL_END / SOFT_CHAT_INCOMING)
+ *   4. chat         — chat tick vibe (SOFT_NOTIFICATION_PULSE / SOFT_FADE / SOFT_CHAT_TICK)
+ *   5. breaking     — clean breaking news (BREAKING_RISER / SOFT_FADE / DATA_TICK)
+ *
+ * Using existing cue keys only — no new audio files, no new cue synth.
+ */
+type SfxStylePreset = {
+  id: 'silent' | 'ultra_subtle' | 'call' | 'chat' | 'breaking';
+  labelAr: string;
+  descriptionAr: string;
+  sfxEnabled: boolean;
+  soundInStyle: string;
+  soundOutStyle: string;
+  audioUpdateCue: string;
+};
+
+const SFX_STYLE_PRESETS: ReadonlyArray<SfxStylePreset> = [
+  {
+    id: 'silent',
+    labelAr: 'بدون مؤثرات',
+    descriptionAr: 'يطفئ كل المؤثرات. الصوت الحقيقي يدوي فقط.',
+    sfxEnabled: false,
+    soundInStyle: 'HARD_CUT',
+    soundOutStyle: 'HARD_CUT',
+    audioUpdateCue: 'HARD_CUT',
+  },
+  {
+    id: 'ultra_subtle',
+    labelAr: 'ناعم جدًا',
+    descriptionAr: 'دخول ناعم + خروج fade + tick خفيف للتحديث.',
+    sfxEnabled: true,
+    soundInStyle: 'LOWER_THIRD_WIPE',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'SOFT_CHAT_TICK',
+  },
+  {
+    id: 'call',
+    labelAr: 'مكالمة خفيفة',
+    descriptionAr: 'نغمة اتصال خفيفة + إنهاء + رسالة واردة.',
+    sfxEnabled: true,
+    soundInStyle: 'SOFT_CALL_RING_LIGHT',
+    soundOutStyle: 'SOFT_CALL_END',
+    audioUpdateCue: 'SOFT_CHAT_INCOMING',
+  },
+  {
+    id: 'chat',
+    labelAr: 'دردشة خفيفة',
+    descriptionAr: 'إشعار خفيف + fade خروج + tick رسالة.',
+    sfxEnabled: true,
+    soundInStyle: 'SOFT_NOTIFICATION_PULSE',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'SOFT_CHAT_TICK',
+  },
+  {
+    id: 'breaking',
+    labelAr: 'خبر عاجل نظيف',
+    descriptionAr: 'افتتاحية خبر بدون مبالغة في الـ bass.',
+    sfxEnabled: true,
+    soundInStyle: 'BREAKING_RISER',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'DATA_TICK',
+  },
+];
+
 interface Props {
   overlay: OverlayConfig;
   onUpdate: (fieldId: string, value: string | number | boolean) => void;
@@ -89,6 +163,34 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
     } catch { /* silent */ }
   };
 
+  // Phase X11/X12 — apply an SFX style preset. Writes 4 fields atomically.
+  // Does NOT touch master soundEnabled or voice settings.
+  const applySfxPreset = (preset: SfxStylePreset) => {
+    applyUpdates({
+      sfxEnabled: preset.sfxEnabled,
+      soundInStyle: preset.soundInStyle,
+      soundOutStyle: preset.soundOutStyle,
+      audioUpdateCue: preset.audioUpdateCue,
+    });
+  };
+
+  // Detect which SFX preset (if any) currently matches the overlay state.
+  // Used to highlight the active preset button.
+  const audioUpdateCue = fieldVal<string>(overlay, 'audioUpdateCue', '');
+  const activeSfxPresetId: SfxStylePreset['id'] | null = (() => {
+    if (!sfxEnabled) return 'silent';
+    for (const p of SFX_STYLE_PRESETS) {
+      if (p.id === 'silent') continue;
+      if (
+        p.sfxEnabled === sfxEnabled &&
+        p.soundInStyle === soundInStyle &&
+        p.soundOutStyle === soundOutStyle &&
+        p.audioUpdateCue === audioUpdateCue
+      ) return p.id;
+    }
+    return null;
+  })();
+
   const previewIn = () => {
     if (!soundEnabled || !sfxEnabled) return;
     const cue = soundInStyle === 'DEFAULT' ? 'LOWER_THIRD_WIPE' : soundInStyle;
@@ -104,7 +206,6 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
   // Phase-A-Hotfix-1: Test UPDATE — exercises the same cue path used by
   // runtime TRANSITION events. Reads audioUpdateCue first (set by scene
   // apply), falls back to the resolved profile updateCue.
-  const audioUpdateCue = fieldVal<string>(overlay, 'audioUpdateCue', '');
   const previewUpdate = () => {
     if (!soundEnabled || !sfxEnabled) return;
     // Mirror OverlayRenderer.resolveSynthCue('TRANSITION') exactly.
@@ -265,6 +366,36 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
 
         {sfxEnabled && soundEnabled && (
           <div className="space-y-2">
+            {/* Phase X11 — SFX style presets (named vibes instead of raw cue keys) */}
+            <div>
+              <div className={`${labelSize} text-slate-400 mb-1`}>نمط المؤثرات</div>
+              <div className="grid grid-cols-2 gap-1">
+                {SFX_STYLE_PRESETS.map(p => {
+                  const active = activeSfxPresetId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => applySfxPreset(p)}
+                      title={p.descriptionAr}
+                      className={[
+                        'rounded text-[10px] font-bold py-1.5 px-2 transition-colors',
+                        active
+                          ? 'bg-blue-700 text-white border border-blue-500'
+                          : 'bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500',
+                      ].join(' ')}
+                    >
+                      {p.labelAr}
+                    </button>
+                  );
+                })}
+              </div>
+              {activeSfxPresetId === null && sfxEnabled && (
+                <div className="text-[9px] text-slate-500 mt-1">
+                  مخصص: in={soundInStyle}, out={soundOutStyle}
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 onClick={previewIn}

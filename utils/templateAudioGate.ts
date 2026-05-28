@@ -102,3 +102,41 @@ export function resolveTemplateVolume(overlay: OverlayConfig, eventType: AudioEv
   if (typeof vol === 'number' && vol >= 0) return vol;
   return profile.volume;
 }
+
+/**
+ * Phase X11 — single source-of-truth for "this field is owned by
+ * AudioSettingsPanel, do NOT render it as a raw field elsewhere".
+ *
+ * The Editor's sound tab used to mount AudioSettingsPanel AND then iterate
+ * over every audio field, rendering each one as a raw input. Result: a
+ * clean panel followed by 13 duplicate raw inputs. This helper centralizes
+ * the list so any callsite that walks template fields can skip them.
+ */
+const MANAGED_AUDIO_FIELDS: ReadonlySet<string> = new Set([
+  'soundEnabled',
+  'soundVolume',
+  'sfxEnabled',
+  'sfxVolume',
+  'voiceEnabled',
+  'voiceLibraryId',
+  'voiceDirectUrl',
+  'voiceTrigger',
+  'voiceVolume',
+  'directVoiceUrl',
+  'duckSfx',
+  'audioSceneId',
+  'audioUpdateCue',
+  'audioProfileId',
+  'soundInStyle',
+  'soundOutStyle',
+  'soundCue',
+  'soundStyle',
+]);
+
+export function isManagedAudioField(fieldId: string): boolean {
+  return MANAGED_AUDIO_FIELDS.has(fieldId);
+}
+
+export function listManagedAudioFields(): readonly string[] {
+  return Array.from(MANAGED_AUDIO_FIELDS);
+}

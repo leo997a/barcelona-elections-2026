@@ -19,6 +19,8 @@ import type { OverlayType } from '../types';
 
 export type AudioSceneId =
   | 'premium_silent'
+  | 'silent_professional'
+  | 'ultra_subtle'
   | 'premium_subtle'
   | 'mercato_call_room'
   | 'mercato_chat_whisper'
@@ -85,6 +87,39 @@ export const TEMPLATE_AUDIO_SCENES: Record<AudioSceneId, AudioScene> = {
     exitCue: 'HARD_CUT',
     updateCue: 'HARD_CUT',
     volumeMultiplier: 0,
+    voiceRecommended: false,
+    defaultVoiceTrigger: 'manual_only',
+    recommendedFor: [],
+  },
+  // Phase X11/X12 — alias of premium_silent with explicit Arabic labeling
+  // for the SFX style picker. Same effect: zero SFX, voice manual-only.
+  silent_professional: {
+    id: 'silent_professional',
+    labelAr: 'بدون مؤثرات (صامت احترافي)',
+    labelEn: 'Silent Professional',
+    descriptionAr: 'يلغي كل المؤثرات افتراضيًا. الصوت الحقيقي يدوي فقط. الخيار الأنظف لبث رياضي محترم.',
+    defaultSfxProfile: 'silent',
+    enterCue: 'HARD_CUT',
+    exitCue: 'HARD_CUT',
+    updateCue: 'HARD_CUT',
+    volumeMultiplier: 0,
+    voiceRecommended: false,
+    defaultVoiceTrigger: 'manual_only',
+    recommendedFor: [],
+  },
+  // Phase X11/X12 — even softer than premium_subtle. Volume capped at 0.30
+  // so the polite cues from audioEngine (~0.20-0.22 gain) become barely
+  // audible above OBS audio yet still confirm transitions to the operator.
+  ultra_subtle: {
+    id: 'ultra_subtle',
+    labelAr: 'ناعم جدًا',
+    labelEn: 'Ultra Subtle',
+    descriptionAr: 'دخول/خروج/تحديث بأخفض مستوى مسموع. tick خفيف للتحديث، fade للخروج، wipe ناعم للدخول.',
+    defaultSfxProfile: 'premium_subtle',
+    enterCue: 'LOWER_THIRD_WIPE',
+    exitCue: 'SOFT_FADE',
+    updateCue: 'SOFT_CHAT_TICK',
+    volumeMultiplier: 0.30,
     voiceRecommended: false,
     defaultVoiceTrigger: 'manual_only',
     recommendedFor: [],

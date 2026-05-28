@@ -23,6 +23,7 @@ import PlayerIntelV2EditorFrame from '../components/player-intel-v2/PlayerIntelV
 import PlayerIntelV2DockResizer from '../components/player-intel-v2/PlayerIntelV2DockResizer';
 import TemplateControlBar from '../components/TemplateControlBar';
 import AudioSettingsPanel from '../components/AudioSettingsPanel';
+import { isManagedAudioField } from '../utils/templateAudioGate';
 import DiagnosticStrip from '../components/DiagnosticStrip';
 import {
   filterAvailableMetrics,
@@ -3354,7 +3355,17 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       else if (activeTab === 'images') { if (!isImageField) return null; }
                       else if (activeTab === 'style') { if (!isAppearanceField) return null; }
                       else if (activeTab === 'position') { if (!isPositionField) return null; }
-                      else if (activeTab === 'sound') { if (!isSoundField) return null; }
+                      else if (activeTab === 'sound') {
+                          // Phase X11: when AudioSettingsPanel handles a field,
+                          // do NOT render it as a raw input below the panel.
+                          // (Earlier behavior duplicated 13 fields under the
+                          // clean panel — sfxEnabled / voiceEnabled / voiceLibraryId
+                          // / voiceTrigger / soundInStyle / soundOutStyle / etc.)
+                          // Keep useTTS + ttsText as raw fields since they are
+                          // owned by individual templates, not the panel.
+                          if (!isSoundField) return null;
+                          if (isManagedAudioField(field.id)) return null;
+                      }
                   }
 
                  // Render standard fields...
