@@ -28,6 +28,7 @@ export enum OverlayType {
   MERCATO_DEADLINE_DAY = 'MERCATO_DEADLINE_DAY',
   MERCATO_X_RAY = 'MERCATO_X_RAY',
   PLAYER_INTEL_V2 = 'PLAYER_INTEL_V2',
+  MERCATO_MEDIA_STORY = 'MERCATO_MEDIA_STORY',
   // AUDIO-PACKS-X5 / MERCATO-TEMPLATES-X6 — 10 new mercato variants
   // (rendered by a single MercatoUnifiedRenderer that branches on the
   // mercatoVariant field; all share the broadcast control + audio infra).

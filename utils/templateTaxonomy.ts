@@ -47,6 +47,7 @@ export const SUBCATEGORIES: Record<string, SubcategoryDef> = {
   'mercato.official':        { key: 'mercato.official',        parent: 'mercato', labelAr: 'رسمي ووثائق' },
   'mercato.deadline':        { key: 'mercato.deadline',        parent: 'mercato', labelAr: 'الحسم والموعد' },
   'mercato.medical_final':   { key: 'mercato.medical_final',   parent: 'mercato', labelAr: 'الفحص والخطوات الأخيرة' },
+  'mercato.media_story':     { key: 'mercato.media_story',     parent: 'mercato', labelAr: 'ميديا وموسيقى' },
   // Match subgroups
   'match.scoreboards':       { key: 'match.scoreboards',       parent: 'match', labelAr: 'سكور بورد' },
   'match.stats':             { key: 'match.stats',             parent: 'match', labelAr: 'إحصائيات المباراة' },
@@ -78,6 +79,7 @@ export const SUBCATEGORIES: Record<string, SubcategoryDef> = {
 export const TYPE_TO_TAXONOMY: Partial<Record<OverlayType, { category: CategoryKey; subcategory: string; priority: number }>> = {
   // Mercato — new unified family
   [OverlayType.MERCATO_UNIFIED]:        { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 10 },
+  [OverlayType.MERCATO_MEDIA_STORY]:    { category: 'mercato', subcategory: 'mercato.media_story',     priority: 5 },
   // Mercato — original innovative pack
   [OverlayType.MERCATO_AGENT_CALL]:     { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 20 },
   [OverlayType.MERCATO_DEAL_TIMELINE]:  { category: 'mercato', subcategory: 'mercato.deal_analysis',  priority: 30 },
@@ -125,6 +127,16 @@ const TEMPLATE_TO_TAXONOMY: Record<string, { category: CategoryKey; subcategory:
   'template-mercato-x6-medical-tracker':   { category: 'mercato', subcategory: 'mercato.medical_final',  priority: 10 },
   'template-mercato-x6-hijack-alert':      { category: 'mercato', subcategory: 'mercato.breaking',       priority: 10 },
   'template-mercato-x6-here-we-go-buildup': { category: 'mercato', subcategory: 'mercato.breaking',      priority: 11 },
+  'template-mercato-media-glass-briefing':      { category: 'mercato', subcategory: 'mercato.media_story', priority: 1 },
+  'template-mercato-media-neon-map':            { category: 'mercato', subcategory: 'mercato.media_story', priority: 2 },
+  'template-mercato-media-contract-scanner':    { category: 'mercato', subcategory: 'mercato.media_story', priority: 3 },
+  'template-mercato-media-airport-tracker':     { category: 'mercato', subcategory: 'mercato.media_story', priority: 4 },
+  'template-mercato-media-agent-voice-room':    { category: 'mercato', subcategory: 'mercato.media_story', priority: 5 },
+  'template-mercato-media-deal-heist-board':    { category: 'mercato', subcategory: 'mercato.media_story', priority: 6 },
+  'template-mercato-media-social-storm':        { category: 'mercato', subcategory: 'mercato.media_story', priority: 7 },
+  'template-mercato-media-medical-greenlight':  { category: 'mercato', subcategory: 'mercato.media_story', priority: 8 },
+  'template-mercato-media-club-vault':          { category: 'mercato', subcategory: 'mercato.media_story', priority: 9 },
+  'template-mercato-media-deadline-war-room':   { category: 'mercato', subcategory: 'mercato.media_story', priority: 10 },
 };
 
 export interface TaxonomyEntry {

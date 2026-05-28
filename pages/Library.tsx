@@ -50,6 +50,7 @@ const ACCENT: Record<string, string> = {
   [OverlayType.MERCATO_DEADLINE_DAY]: '#fbbf24',
   [OverlayType.MERCATO_X_RAY]: '#a855f7',
   [OverlayType.MERCATO_UNIFIED]: '#22d3ee',
+  [OverlayType.MERCATO_MEDIA_STORY]: '#22d3ee',
   [OverlayType.PLAYER_INTEL_V2]: '#7c5cff',
 };
 

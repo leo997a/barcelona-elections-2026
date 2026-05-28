@@ -59,6 +59,42 @@ export const VOICE_LIBRARY: VoiceLibraryEntry[] = [
     category: 'mercato',
     recommendedFor: ['BREAKING_HERE_WE_GO', 'TRANSFER_NEWS', 'MERCATO_DEAL_TIMELINE'],
   },
+  {
+    id: 'mercato_things_happening_now',
+    labelAr: 'الأمور تحدث الآن',
+    labelEn: 'Things are happening now',
+    url: '/audio/voice-packs/mercato/things-happening-now.wav',
+    category: 'mercato',
+    durationMs: 1800,
+    recommendedFor: ['TRANSFER_NEWS', 'MERCATO_UNIFIED', 'MERCATO_MEDIA_STORY', 'MERCATO_DEADLINE_DAY'],
+  },
+  {
+    id: 'mercato_transfer_approaching',
+    labelAr: 'الانتقال يقترب',
+    labelEn: 'Transfer approaching',
+    url: '/audio/voice-packs/mercato/transfer-approaching.wav',
+    category: 'mercato',
+    durationMs: 1500,
+    recommendedFor: ['TRANSFER_NEWS', 'MERCATO_UNIFIED', 'MERCATO_MEDIA_STORY', 'MERCATO_DEAL_TIMELINE'],
+  },
+  {
+    id: 'mercato_heating_now',
+    labelAr: 'الميركاتو يشتعل الآن',
+    labelEn: 'Mercato heating now',
+    url: '/audio/voice-packs/mercato/mercato-heating-now.wav',
+    category: 'mercato',
+    durationMs: 1900,
+    recommendedFor: ['TRANSFER_NEWS', 'MERCATO_UNIFIED', 'MERCATO_MEDIA_STORY', 'MERCATO_DEADLINE_DAY'],
+  },
+  {
+    id: 'mercato_deal_percentages_current',
+    labelAr: 'النسب الحالية للصفقات',
+    labelEn: 'Current deal percentages',
+    url: '/audio/voice-packs/mercato/deal-percentages-current.wav',
+    category: 'mercato',
+    durationMs: 1700,
+    recommendedFor: ['TRANSFER_NEWS', 'MERCATO_UNIFIED', 'MERCATO_MEDIA_STORY', 'MERCATO_X_RAY'],
+  },
 ];
 
 export const NO_VOICE_OPTION = { id: 'none', labelAr: '— بدون صوت —', labelEn: 'No voice', url: '', category: 'generic' as const };

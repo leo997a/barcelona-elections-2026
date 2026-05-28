@@ -89,6 +89,7 @@ export const TEMPLATE_AUDIO_PROFILES: Partial<Record<OverlayType, AudioProfile>>
   [OverlayType.MERCATO_X_RAY]:        { id: 'mercato_x_ray', enabled: true, volume: 0.6, inCue: 'TARGET_SCAN',  outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
   [OverlayType.PLAYER_INTEL_V2]:      { id: 'player_intel_v2', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
   [OverlayType.MERCATO_UNIFIED]:      { id: 'mercato_unified', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'SOFT_CHAT_TICK' },
+  [OverlayType.MERCATO_MEDIA_STORY]:  { id: 'mercato_media_story', enabled: true, volume: 0.5, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'LIVE_UPDATE_PING' },
 };
 
 /**

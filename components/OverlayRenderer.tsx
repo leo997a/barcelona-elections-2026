@@ -38,6 +38,7 @@ import {
   MercatoXRayRenderer,
 } from './renderers/MercatoInnovativeRenderers';
 import MercatoUnifiedRenderer from './renderers/MercatoUnifiedRenderer';
+import MercatoMediaStoryRenderer from './renderers/MercatoMediaStoryRenderer';
 import { PlayerIntelV2Renderer } from './renderers/PlayerIntelV2Renderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'tv-stadium-sweep',
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -103,6 +105,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'tv-stadium-sweep-out',
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep-out',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep-out',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -135,6 +138,7 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'STADIUM_SWEEP',
   [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP',
   [OverlayType.MERCATO_UNIFIED]: 'STADIUM_SWEEP',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'GLASS_SWEEP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -167,6 +171,7 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.BARCA_PREMIUM]: 'STADIUM_SWEEP_OUT',
   [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP_OUT',
   [OverlayType.MERCATO_UNIFIED]: 'STADIUM_SWEEP_OUT',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'GLASS_SWEEP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -220,6 +225,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_X_RAY]: 'TARGET_SCAN',
   [OverlayType.PLAYER_INTEL_V2]: 'LOWER_THIRD_WIPE',
   [OverlayType.MERCATO_UNIFIED]: 'LOWER_THIRD_WIPE',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'LOWER_THIRD_WIPE',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -252,6 +258,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_X_RAY]: 'SOFT_FADE',
   [OverlayType.PLAYER_INTEL_V2]: 'SOFT_FADE',
   [OverlayType.MERCATO_UNIFIED]: 'SOFT_FADE',
+  [OverlayType.MERCATO_MEDIA_STORY]: 'SOFT_FADE',
 };
 
 const CSS = `
@@ -559,6 +566,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.MERCATO_DEADLINE_DAY && <MercatoDeadlineDayRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_X_RAY && <MercatoXRayRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_UNIFIED && <MercatoUnifiedRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_MEDIA_STORY && <MercatoMediaStoryRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.PLAYER_INTEL_V2 && <PlayerIntelV2Renderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
