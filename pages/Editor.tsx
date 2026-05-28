@@ -73,7 +73,10 @@ const CURRENCY_OPTIONS = [
 ];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
+const MAX_LOCAL_MEDIA_UPLOAD_BYTES = 12 * 1024 * 1024;
 const CLOUD_MATCH_API_URL = '/api/reo-match?action=match';
+const MEDIA_UPLOAD_FIELD_IDS = new Set(['mediaUrl', 'mediaAltUrl']);
+const MEDIA_TAB_FIELD_IDS = new Set(['mediaUrl', 'mediaAltUrl', 'mediaMode', 'mediaFit', 'mediaMuted']);
 
 const MATCH_STAT_PRESET_QUICK = [
   { value: 'SMART', label: 'Smart' },
@@ -485,6 +488,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const matchStatsJsonInputRef = useRef<HTMLInputElement>(null);
   const [activeImageFieldId, setActiveImageFieldId] = useState<string | null>(null);
+  const [fileInputAccept, setFileInputAccept] = useState('image/*');
   const [isExtractingViewers, setIsExtractingViewers] = useState(false);
   const [isGeneratingViewerBadges, setIsGeneratingViewerBadges] = useState(false);
   const [viewerAiError, setViewerAiError] = useState<string | null>(null);
@@ -1566,6 +1570,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // --- IMAGES ---
   const triggerFileUpload = (fieldId: string) => {
     setActiveImageFieldId(fieldId);
+    setFileInputAccept(MEDIA_UPLOAD_FIELD_IDS.has(fieldId) ? 'image/*,video/*' : 'image/*');
     fileInputRef.current?.click();
   };
 
@@ -1603,12 +1608,49 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeImageFieldId) {
-        const base64String = await resizeImageForLiveState(file).catch(() => readFileAsDataUrl(file));
         const field = draftOverlay.fields.find(f => f.id === activeImageFieldId);
+        const isMediaUpload = MEDIA_UPLOAD_FIELD_IDS.has(activeImageFieldId);
+        const isImageUpload = file.type.startsWith('image/');
+        const isVideoUpload = file.type.startsWith('video/');
+
+        if (isMediaUpload && !isImageUpload && !isVideoUpload) {
+            window.alert('الملف غير مدعوم. استخدم صورة أو فيديو فقط.');
+            setActiveImageFieldId(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        if (!isMediaUpload && !isImageUpload) {
+            window.alert('هذا الحقل مخصص للصور فقط.');
+            setActiveImageFieldId(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        if (isMediaUpload && file.size > MAX_LOCAL_MEDIA_UPLOAD_BYTES) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            window.alert(`حجم الملف ${sizeMb}MB. الحد الآمن للرفع المحلي داخل القالب هو 12MB حتى لا تتعطل المزامنة مع OBS.`);
+            setActiveImageFieldId(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        const base64String = isImageUpload
+          ? await resizeImageForLiveState(file).catch(() => readFileAsDataUrl(file))
+          : await readFileAsDataUrl(file);
         
         if (field?.type === 'image-list') {
             const currentImages = Array.isArray(field.value) ? field.value : [];
             handleDraftFieldChange(activeImageFieldId, [...currentImages, base64String]);
+        } else if (isMediaUpload) {
+            const updates: Record<string, any> = {
+                [activeImageFieldId]: base64String,
+            };
+            if (activeImageFieldId === 'mediaUrl') {
+                updates.mediaMode = isVideoUpload ? 'video' : 'image';
+                if (isVideoUpload) updates.mediaMuted = true;
+            }
+            handleDraftFieldChanges(updates);
         } else {
             handleDraftFieldChange(activeImageFieldId, base64String);
         }
@@ -3214,7 +3256,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           )}
 
           {/* ALWAYS for non-ELECTION: Images tab (if has image fields) — hidden in Player Stats easy mode */}
-          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list') && (
+          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.type === 'image' || f.type === 'image-list' || MEDIA_TAB_FIELD_IDS.has(f.id)) && (
             <button onClick={() => setActiveTab('images')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'images' ? 'text-amber-400 border-amber-500 bg-amber-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صور</button>
           )}
 
@@ -3330,6 +3372,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       const SOUND_FIELDS = [
                         'soundEnabled', 'soundVolume',
                         'useTTS', 'ttsText',
+                        'musicEnabled', 'musicTrackUrl', 'musicVolume',
                         'soundInStyle', 'soundOutStyle',
                         // AUDIO-X4 universal voice/sfx fields
                         'sfxEnabled', 'voiceEnabled', 'voiceLibraryId',
@@ -3337,11 +3380,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // Phase A4 — scene fields surface as audio settings
                         'audioSceneId', 'audioUpdateCue',
                       ];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);
-                      const isImageField = field.type === 'image' || field.type === 'image-list';
+                      const isImageField = field.type === 'image' || field.type === 'image-list' || MEDIA_TAB_FIELD_IDS.has(field.id);
                       if (draftOverlay.type === OverlayType.FOOTBALL_PACKAGE) {
                         const isFootballMain = ['title', 'subtitle', 'teamName', 'competition'].includes(field.id);
                         const isFootballLineup = ['formation', 'playersCount', 'pitchNumbers'].includes(field.id) || /^player\d+(Name|Number)$/.test(field.id);
@@ -3390,6 +3433,41 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             </div>
                          </div>
                      );
+                 }
+                 if (field.type === 'text' && MEDIA_UPLOAD_FIELD_IDS.has(field.id)) {
+                     const rawValue = field.value.toString();
+                     const hasLocalImage = rawValue.startsWith('data:image');
+                     const hasLocalVideo = rawValue.startsWith('data:video');
+                     return (
+                         <div key={field.id} className="space-y-1">
+                             <label className="text-xs text-gray-400 block">{field.label}</label>
+                             <div className="flex items-center gap-2">
+                                 <input
+                                   type="text"
+                                   value={rawValue}
+                                   onChange={(e) => handleDraftFieldChange(field.id, e.target.value)}
+                                   className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500"
+                                   placeholder="رابط مباشر أو ارفع ملفًا محليًا"
+                                 />
+                                 <button
+                                   onClick={() => triggerFileUpload(field.id)}
+                                   className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors"
+                                   title="رفع صورة أو فيديو محلي لهذا القالب"
+                                 >
+                                     <ImageIcon className="h-4 w-4" />
+                                     رفع
+                                 </button>
+                             </div>
+                             {(hasLocalImage || hasLocalVideo) && (
+                                 <div className="text-[10px] font-bold text-green-400">
+                                     ملف محلي محفوظ داخل القالب: {hasLocalVideo ? 'فيديو' : 'صورة'}
+                                 </div>
+                             )}
+                             <div className="text-[10px] text-gray-500">
+                                 الحد الآمن للملف المحلي 12MB. للفيديوهات الطويلة استخدم رابطًا مباشرًا أو ملفًا عامًا داخل public.
+                             </div>
+                         </div>
+                     )
                  }
                  if (field.type === 'text' || field.type === 'number') {
                      return (
@@ -3445,12 +3523,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                              <label className="text-xs text-gray-400 block">{field.label}</label>
                              <div className="flex items-center gap-2">
                                  <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:border-blue-500" placeholder=" ..." />
-                                 <button onClick={() => triggerFileUpload(field.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="   ">
-                                     
+                                 <button onClick={() => triggerFileUpload(field.id)} className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition-colors" title="رفع صورة محلية">
+                                     <ImageIcon className="h-4 w-4" />
+                                     رفع
                                  </button>
                              </div>
                              {field.value && field.value.toString().startsWith('data:image') && (
-                                 <div className="mt-2 text-[10px] text-green-400"></div>
+                                 <div className="mt-2 text-[10px] text-green-400">صورة محلية محفوظة داخل القالب</div>
                              )}
                          </div>
                      )
@@ -3480,7 +3559,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                    className="aspect-video bg-gray-800/50 border-2 border-dashed border-gray-700 hover:border-blue-500/50 hover:bg-blue-900/10 rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-400 transition-all"
                                  >
                                      <Plus className="w-5 h-5" />
-                                     <span className="text-[10px]"></span>
+                                     <span className="text-[10px]">رفع صورة</span>
                                  </button>
                              </div>
                              <div className="flex gap-2 mt-2">
@@ -3504,7 +3583,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  }
                  return null;
                })}
-               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept={fileInputAccept} className="hidden" />
              </>
           )}
 

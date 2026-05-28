@@ -12,6 +12,12 @@ type VariantPreset = {
   layout: 'briefing' | 'map' | 'scanner' | 'airport' | 'voice' | 'dossier' | 'social' | 'medical' | 'vault' | 'warroom';
 };
 
+type MediaThemePreset = {
+  accent: string;
+  secondary: string;
+  bg: string;
+};
+
 type StoryItem = {
   label: string;
   value: string;
@@ -21,7 +27,7 @@ type StoryItem = {
 const VARIANTS: Record<string, VariantPreset> = {
   glass_briefing: {
     id: 'glass_briefing',
-    eyebrow: 'REO GLASS BRIEFING',
+    eyebrow: 'غرفة زجاجية',
     accent: '#22d3ee',
     secondary: '#7c5cff',
     bg: 'linear-gradient(135deg, #06131f 0%, #101624 45%, #05080f 100%)',
@@ -29,7 +35,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   neon_negotiation_map: {
     id: 'neon_negotiation_map',
-    eyebrow: 'NEGOTIATION MAP',
+    eyebrow: 'خريطة المفاوضات',
     accent: '#21f6aa',
     secondary: '#38bdf8',
     bg: 'radial-gradient(circle at 25% 35%, #063b34 0%, #081421 45%, #05070d 100%)',
@@ -37,7 +43,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   contract_scanner: {
     id: 'contract_scanner',
-    eyebrow: 'CONTRACT SCANNER',
+    eyebrow: 'ماسح العقود',
     accent: '#fbbf24',
     secondary: '#fb7185',
     bg: 'linear-gradient(135deg, #1f1605 0%, #100b07 50%, #050505 100%)',
@@ -45,7 +51,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   airport_tracker: {
     id: 'airport_tracker',
-    eyebrow: 'TRANSFER FLIGHT BOARD',
+    eyebrow: 'لوحة الوصول',
     accent: '#60a5fa',
     secondary: '#f97316',
     bg: 'linear-gradient(135deg, #07111f 0%, #071827 48%, #03060c 100%)',
@@ -53,7 +59,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   agent_voice_room: {
     id: 'agent_voice_room',
-    eyebrow: 'SOURCE VOICE ROOM',
+    eyebrow: 'غرفة صوت المصدر',
     accent: '#ef4444',
     secondary: '#f59e0b',
     bg: 'radial-gradient(circle at 70% 30%, #351111 0%, #111827 50%, #050508 100%)',
@@ -61,7 +67,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   deal_heist_board: {
     id: 'deal_heist_board',
-    eyebrow: 'DEAL HEIST BOARD',
+    eyebrow: 'لوحة خطف الصفقة',
     accent: '#f43f5e',
     secondary: '#22c55e',
     bg: 'linear-gradient(135deg, #190811 0%, #111827 52%, #040406 100%)',
@@ -69,7 +75,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   social_storm: {
     id: 'social_storm',
-    eyebrow: 'SOCIAL STORM',
+    eyebrow: 'عاصفة السوشيال',
     accent: '#ec4899',
     secondary: '#22d3ee',
     bg: 'radial-gradient(circle at 50% 15%, #2a0f2d 0%, #101827 55%, #05060b 100%)',
@@ -77,7 +83,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   medical_greenlight: {
     id: 'medical_greenlight',
-    eyebrow: 'MEDICAL GREENLIGHT',
+    eyebrow: 'الضوء الطبي الأخضر',
     accent: '#22c55e',
     secondary: '#a3e635',
     bg: 'radial-gradient(circle at 35% 45%, #052e16 0%, #07131f 50%, #030506 100%)',
@@ -85,7 +91,7 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   club_vault: {
     id: 'club_vault',
-    eyebrow: 'CLUB VAULT',
+    eyebrow: 'خزنة النادي',
     accent: '#c8aa63',
     secondary: '#38bdf8',
     bg: 'linear-gradient(135deg, #15110a 0%, #101827 54%, #030405 100%)',
@@ -93,11 +99,49 @@ const VARIANTS: Record<string, VariantPreset> = {
   },
   deadline_war_room: {
     id: 'deadline_war_room',
-    eyebrow: 'DEADLINE WAR ROOM',
+    eyebrow: 'غرفة اليوم الأخير',
     accent: '#fb923c',
     secondary: '#ef4444',
     bg: 'radial-gradient(circle at 70% 30%, #3b1605 0%, #111827 50%, #050505 100%)',
     layout: 'warroom',
+  },
+};
+
+const MEDIA_THEMES: Record<string, MediaThemePreset> = {
+  studio_cyan: {
+    accent: '#22d3ee',
+    secondary: '#7c5cff',
+    bg: 'linear-gradient(135deg, #06131f 0%, #101624 45%, #05080f 100%)',
+  },
+  royal_gold: {
+    accent: '#d4af37',
+    secondary: '#38bdf8',
+    bg: 'linear-gradient(135deg, #171108 0%, #111827 55%, #040405 100%)',
+  },
+  deadline_orange: {
+    accent: '#fb923c',
+    secondary: '#ef4444',
+    bg: 'radial-gradient(circle at 72% 28%, #3b1605 0%, #111827 52%, #050505 100%)',
+  },
+  medical_green: {
+    accent: '#22c55e',
+    secondary: '#a3e635',
+    bg: 'radial-gradient(circle at 35% 45%, #052e16 0%, #07131f 50%, #030506 100%)',
+  },
+  source_red: {
+    accent: '#ef4444',
+    secondary: '#f59e0b',
+    bg: 'radial-gradient(circle at 70% 30%, #351111 0%, #111827 50%, #050508 100%)',
+  },
+  violet_social: {
+    accent: '#ec4899',
+    secondary: '#22d3ee',
+    bg: 'radial-gradient(circle at 50% 15%, #2a0f2d 0%, #101827 55%, #05060b 100%)',
+  },
+  midnight_blue: {
+    accent: '#60a5fa',
+    secondary: '#21f6aa',
+    bg: 'linear-gradient(135deg, #07111f 0%, #071827 48%, #03060c 100%)',
   },
 };
 
@@ -122,6 +166,8 @@ const normalizeDirectUrl = (raw: string): string => {
 const detectMediaKind = (url: string, mode: string): MediaKind => {
   if (!url) return 'none';
   if (mode === 'image' || mode === 'video') return mode;
+  if (/^data:image\//i.test(url)) return 'image';
+  if (/^data:video\//i.test(url)) return 'video';
   if (/\.(png|jpe?g|webp|gif|avif|svg)(\?|#|$)/i.test(url)) return 'image';
   if (/\.(mp4|webm|ogg|ogv|mov|m4v|m3u8)(\?|#|$)/i.test(url)) return 'video';
   return 'video';
@@ -148,7 +194,7 @@ const parseStoryItems = (raw: string): StoryItem[] => {
     .split(/[;\n]+/)
     .map((line, index) => {
       const [label, value, note] = line.split('|').map(part => part.trim());
-      return { label: label || `Item ${index + 1}`, value: value || label || '', note };
+      return { label: label || `نقطة ${index + 1}`, value: value || label || '', note };
     })
     .filter(item => item.value);
 };
@@ -185,10 +231,15 @@ const MediaStage: React.FC<{
   fit: string;
   muted: boolean;
   accent: string;
-}> = ({ url, altUrl, mode, fit, muted, accent }) => {
+  overlayOpacity: number;
+  blurPx: number;
+  brightness: number;
+}> = ({ url, altUrl, mode, fit, muted, accent, overlayOpacity, blurPx, brightness }) => {
   const src = normalizeDirectUrl(url || altUrl || DEFAULT_MEDIA);
   const kind = detectMediaKind(src, mode);
   const objectFit = fit === 'contain' ? 'contain' : 'cover';
+  const mediaFilter = `brightness(${brightness})${blurPx > 0 ? ` blur(${blurPx}px)` : ''}`;
+  const mediaTransform = blurPx > 0 ? 'scale(1.03)' : undefined;
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
@@ -198,7 +249,7 @@ const MediaStage: React.FC<{
           src={src}
           alt=""
           className="absolute inset-0 w-full h-full"
-          style={{ objectFit, objectPosition: 'center' }}
+          style={{ objectFit, objectPosition: 'center', filter: mediaFilter, transform: mediaTransform }}
           referrerPolicy="no-referrer"
           onError={event => { event.currentTarget.style.display = 'none'; }}
         />
@@ -207,7 +258,7 @@ const MediaStage: React.FC<{
           key={src}
           src={src}
           className="absolute inset-0 w-full h-full"
-          style={{ objectFit, objectPosition: 'center' }}
+          style={{ objectFit, objectPosition: 'center', filter: mediaFilter, transform: mediaTransform }}
           muted={muted}
           autoPlay
           playsInline
@@ -216,7 +267,7 @@ const MediaStage: React.FC<{
         />
       )}
       <div className="absolute inset-0" style={{
-        background: `linear-gradient(90deg, rgba(0,0,0,.92), rgba(0,0,0,.52), rgba(0,0,0,.16)), radial-gradient(circle at 72% 30%, ${accent}44, transparent 42%)`,
+        background: `linear-gradient(90deg, rgba(0,0,0,${overlayOpacity}), rgba(0,0,0,${Math.max(0.28, overlayOpacity - 0.34)}), rgba(0,0,0,.16)), radial-gradient(circle at 72% 30%, ${accent}44, transparent 42%)`,
       }} />
       <div className="absolute inset-0 opacity-[0.13]" style={{
         backgroundImage: `linear-gradient(${accent}22 1px, transparent 1px), linear-gradient(90deg, ${accent}22 1px, transparent 1px)`,
@@ -226,17 +277,17 @@ const MediaStage: React.FC<{
   );
 };
 
-const Header: React.FC<{ preset: VariantPreset; headline: string; subline: string; source: string }> = ({ preset, headline, subline, source }) => (
+const Header: React.FC<{ preset: VariantPreset; headline: string; subline: string; source: string; panelOpacity: number }> = ({ preset, headline, subline, source, panelOpacity }) => (
   <div className="relative z-10 flex items-start justify-between gap-8">
     <div className="min-w-0">
-      <div className="text-[11px] font-black uppercase tracking-[0.42em]" style={{ color: preset.accent }}>{preset.eyebrow}</div>
+      <div className="text-[13px] font-black" style={{ color: preset.accent }}>{preset.eyebrow}</div>
       <div className="mt-2 font-['Barlow_Condensed'] text-[72px] font-black uppercase leading-[0.86] text-white drop-shadow-[0_10px_24px_rgba(0,0,0,.55)]">
         {headline}
       </div>
       <div className="mt-3 max-w-3xl text-[19px] font-bold leading-snug text-white/72">{subline}</div>
     </div>
-    <div className="shrink-0 border px-4 py-3 text-right" style={{ borderColor: `${preset.accent}66`, background: 'rgba(5,8,13,.62)' }}>
-      <div className="text-[10px] font-black uppercase tracking-[0.26em] text-white/42">source</div>
+    <div className="shrink-0 border px-4 py-3 text-right" style={{ borderColor: `${preset.accent}66`, background: `rgba(5,8,13,${panelOpacity})` }}>
+      <div className="text-[10px] font-black text-white/42">المصدر</div>
       <div className="mt-1 max-w-[260px] text-[15px] font-black uppercase text-white">{source}</div>
     </div>
   </div>
@@ -270,7 +321,7 @@ const ItemsList: React.FC<{ items: StoryItem[]; accent: string; numbered?: boole
     {items.slice(0, 5).map((item, index) => (
       <div key={`${item.label}-${index}`} className="flex items-start gap-3 border px-3 py-2.5" style={{ borderColor: 'rgba(255,255,255,.12)', background: 'rgba(0,0,0,.28)' }}>
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black" style={{ background: `${accent}26`, color: accent }}>
-          {numbered ? index + 1 : '>'}
+          {numbered ? index + 1 : '•'}
         </div>
         <div className="min-w-0">
           <div className="text-[11px] font-black uppercase tracking-[0.18em] text-white/48">{item.label}</div>
@@ -294,7 +345,7 @@ const VariantBody: React.FC<{
   items: StoryItem[];
 }> = ({ preset, player, fromClub, toClub, value, confidence, status, timer, items }) => {
   const c = preset.accent;
-  const route = `${fromClub || 'Club A'} -> ${toClub || 'Club B'}`;
+  const route = `${fromClub || 'النادي الأول'} ← ${toClub || 'النادي الثاني'}`;
 
   if (preset.layout === 'map') {
     return (
@@ -305,7 +356,7 @@ const VariantBody: React.FC<{
           <div className="absolute left-[15%] right-[15%] top-[40%] h-px rotate-[-8deg]" style={{ background: `linear-gradient(90deg, ${c}, ${preset.secondary})` }} />
           <div className="absolute bottom-6 left-8 font-['Barlow_Condensed'] text-5xl font-black uppercase text-white">{route}</div>
           <div className="absolute right-8 top-8 text-right">
-            <div className="text-[11px] font-black uppercase tracking-[0.32em] text-white/42">probability</div>
+            <div className="text-[11px] font-black text-white/42">نسبة الحسم</div>
             <div className="font-['Barlow_Condensed'] text-7xl font-black" style={{ color: c }}>{confidence}%</div>
           </div>
         </div>
@@ -319,7 +370,7 @@ const VariantBody: React.FC<{
       <div className="relative z-10 mt-auto grid grid-cols-[440px_1fr] gap-8">
         <div className="relative overflow-hidden border p-8" style={{ borderColor: `${c}77`, background: 'rgba(255,255,255,.88)', color: '#111827' }}>
           <div className="absolute inset-x-0 top-1/2 h-1 animate-[scanLine_2.2s_linear_infinite]" style={{ background: c, boxShadow: `0 0 26px ${c}` }} />
-          <div className="text-[11px] font-black uppercase tracking-[0.28em] text-black/42">private clause</div>
+          <div className="text-[11px] font-black text-black/42">بند خاص</div>
           <div className="mt-6 font-['Barlow_Condensed'] text-6xl font-black uppercase leading-none">{player}</div>
           <div className="mt-5 h-px bg-black/20" />
           <div className="mt-5 text-[18px] font-black uppercase">{value}</div>
@@ -334,9 +385,9 @@ const VariantBody: React.FC<{
     return (
       <div className="relative z-10 mt-auto border p-5" style={{ borderColor: `${c}66`, background: 'rgba(3,8,14,.76)' }}>
         <div className="grid grid-cols-[160px_1fr_1fr_180px] gap-3 border-b pb-3 text-[11px] font-black uppercase tracking-[0.22em] text-white/42" style={{ borderColor: 'rgba(255,255,255,.12)' }}>
-          <div>time</div><div>from</div><div>to</div><div>status</div>
+          <div>الوقت</div><div>من</div><div>إلى</div><div>الحالة</div>
         </div>
-        {[['NOW', fromClub, toClub, status], ['NEXT', player, value, `${confidence}%`], ['FINAL', 'medical', 'signature', timer]].map((row, index) => (
+        {[['الآن', fromClub, toClub, status], ['التالي', player, value, `${confidence}%`], ['الأخير', 'فحص طبي', 'توقيع', timer]].map((row, index) => (
           <div key={index} className="grid grid-cols-[160px_1fr_1fr_180px] gap-3 py-4 font-['JetBrains_Mono'] text-[22px] font-black uppercase text-white" style={{ borderBottom: '1px solid rgba(255,255,255,.10)' }}>
             {row.map((cell, i) => <div key={i} style={{ color: i === 3 ? c : undefined }}>{cell}</div>)}
           </div>
@@ -349,14 +400,14 @@ const VariantBody: React.FC<{
     return (
       <div className="relative z-10 mt-auto grid grid-cols-[360px_1fr] items-end gap-10">
         <div className="border p-6" style={{ borderColor: `${c}66`, background: 'rgba(0,0,0,.55)' }}>
-          <div className="text-[11px] font-black uppercase tracking-[0.3em] text-white/42">recording line</div>
+          <div className="text-[11px] font-black text-white/42">خط التسجيل</div>
           <div className="mt-4 font-['Barlow_Condensed'] text-5xl font-black uppercase text-white">{status}</div>
           <div className="mt-6"><Waveform accent={c} /></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Metric label="player" value={player} accent={c} />
-          <Metric label="deal" value={value} accent={preset.secondary} />
-          <Metric label="confidence" value={`${confidence}%`} accent={c} />
+          <Metric label="اللاعب" value={player} accent={c} />
+          <Metric label="الصفقة" value={value} accent={preset.secondary} />
+          <Metric label="الثقة" value={`${confidence}%`} accent={c} />
         </div>
       </div>
     );
@@ -366,10 +417,10 @@ const VariantBody: React.FC<{
     return (
       <div className="relative z-10 mt-auto grid grid-cols-[1fr_380px] gap-6">
         <div className="grid grid-cols-2 gap-3">
-          <Metric label="target" value={player} accent={c} />
-          <Metric label="route" value={route} accent={preset.secondary} />
-          <Metric label="fee" value={value} accent={c} />
-          <Metric label="signal" value={status} accent={preset.secondary} />
+          <Metric label="الهدف" value={player} accent={c} />
+          <Metric label="المسار" value={route} accent={preset.secondary} />
+          <Metric label="القيمة" value={value} accent={c} />
+          <Metric label="الإشارة" value={status} accent={preset.secondary} />
         </div>
         <ItemsList items={items} accent={c} numbered={preset.layout === 'social'} />
       </div>
@@ -383,7 +434,7 @@ const VariantBody: React.FC<{
           <div className="absolute inset-8 rounded-full border" style={{ borderColor: `${c}55` }} />
           <div className="text-center">
             <div className="font-['Barlow_Condensed'] text-7xl font-black" style={{ color: c }}>{confidence}%</div>
-            <div className="text-[11px] font-black uppercase tracking-[0.28em] text-white/50">greenlight</div>
+            <div className="text-[11px] font-black text-white/50">جاهزية</div>
           </div>
         </div>
         <ItemsList items={items} accent={c} numbered />
@@ -395,12 +446,12 @@ const VariantBody: React.FC<{
     return (
       <div className="relative z-10 mt-auto grid grid-cols-[1fr_320px] gap-6">
         <div className="grid grid-cols-3 gap-3">
-          <Metric label="valuation" value={value} accent={c} />
-          <Metric label="buyer" value={toClub} accent={preset.secondary} />
-          <Metric label="seller" value={fromClub} accent={c} />
+          <Metric label="التقييم" value={value} accent={c} />
+          <Metric label="المشتري" value={toClub} accent={preset.secondary} />
+          <Metric label="البائع" value={fromClub} accent={c} />
         </div>
         <div className="border p-5 text-center" style={{ borderColor: `${c}66`, background: 'rgba(0,0,0,.48)' }}>
-          <div className="text-[11px] font-black uppercase tracking-[0.24em] text-white/42">vault unlock</div>
+          <div className="text-[11px] font-black text-white/42">فتح الخزنة</div>
           <div className="mt-4 font-['Barlow_Condensed'] text-7xl font-black" style={{ color: c }}>{confidence}%</div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full" style={{ width: `${confidence}%`, background: c }} /></div>
         </div>
@@ -412,7 +463,7 @@ const VariantBody: React.FC<{
     return (
       <div className="relative z-10 mt-auto grid grid-cols-[300px_1fr] gap-6">
         <div className="border p-5 text-center" style={{ borderColor: `${c}77`, background: 'rgba(0,0,0,.58)' }}>
-          <div className="text-[11px] font-black uppercase tracking-[0.28em] text-white/42">clock</div>
+          <div className="text-[11px] font-black text-white/42">الساعة</div>
           <div className="mt-2 font-['Barlow_Condensed'] text-7xl font-black leading-none" style={{ color: c }}>{timer}</div>
           <div className="mt-3 text-[15px] font-bold uppercase text-white/62">{status}</div>
         </div>
@@ -424,9 +475,9 @@ const VariantBody: React.FC<{
   return (
     <div className="relative z-10 mt-auto grid grid-cols-[1fr_360px] gap-6">
       <div className="grid grid-cols-3 gap-3">
-        <Metric label="player" value={player} accent={c} />
-        <Metric label="route" value={route} accent={preset.secondary} />
-        <Metric label="confidence" value={`${confidence}%`} accent={c} />
+        <Metric label="اللاعب" value={player} accent={c} />
+        <Metric label="المسار" value={route} accent={preset.secondary} />
+        <Metric label="الثقة" value={`${confidence}%`} accent={c} />
       </div>
       <ItemsList items={items} accent={c} />
     </div>
@@ -441,15 +492,22 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
   isEditor,
 }) => {
   const variant = getString(getField, 'mercatoMediaVariant', 'glass_briefing');
-  const preset = VARIANTS[variant] || VARIANTS.glass_briefing;
-  const headline = getString(getField, 'headline', 'MERCATO LIVE');
-  const subline = getString(getField, 'subline', 'A cinematic market story with real media and music bed.');
-  const source = getString(getField, 'sourceLabel', 'REO MERCATO DESK');
-  const player = getString(getField, 'playerName', 'Target Player');
-  const fromClub = getString(getField, 'fromClub', 'Selling Club');
-  const toClub = getString(getField, 'toClub', 'Buying Club');
-  const value = getString(getField, 'dealValue', 'EUR 58M');
-  const status = getString(getField, 'dealStatus', 'LIVE NEGOTIATION');
+  const basePreset = VARIANTS[variant] || VARIANTS.glass_briefing;
+  const mediaTheme = getString(getField, 'mediaTheme', '');
+  const theme = MEDIA_THEMES[mediaTheme] || {
+    accent: basePreset.accent,
+    secondary: basePreset.secondary,
+    bg: basePreset.bg,
+  };
+  const preset = { ...basePreset, accent: theme.accent, secondary: theme.secondary, bg: theme.bg };
+  const headline = getString(getField, 'headline', 'الميركاتو مباشر');
+  const subline = getString(getField, 'subline', 'قصة سوق انتقالات سينمائية بميديا حقيقية وموسيقى مناسبة للبث.');
+  const source = getString(getField, 'sourceLabel', 'مكتب الميركاتو');
+  const player = getString(getField, 'playerName', 'لاعب مستهدف');
+  const fromClub = getString(getField, 'fromClub', 'النادي البائع');
+  const toClub = getString(getField, 'toClub', 'النادي المهتم');
+  const value = getString(getField, 'dealValue', 'قيمة قيد التفاوض');
+  const status = getString(getField, 'dealStatus', 'تفاوض مباشر');
   const timer = getString(getField, 'timerLabel', '00:14:26');
   const confidence = Math.max(0, Math.min(100, getNumber(getField, 'confidencePct', 76)));
   const mediaUrl = getString(getField, 'mediaUrl', '');
@@ -457,6 +515,11 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
   const mediaMode = getString(getField, 'mediaMode', 'auto');
   const mediaFit = getString(getField, 'mediaFit', 'cover');
   const mediaMuted = getField('mediaMuted') !== false;
+  const mediaOverlayOpacity = Math.max(0.2, Math.min(0.92, getNumber(getField, 'mediaOverlayOpacity', 0.62)));
+  const mediaBlurPx = Math.max(0, Math.min(14, getNumber(getField, 'mediaBlurPx', 0)));
+  const mediaBrightness = Math.max(0.45, Math.min(1.35, getNumber(getField, 'mediaBrightness', 0.86)));
+  const panelOpacity = Math.max(0.25, Math.min(0.92, getNumber(getField, 'panelOpacity', 0.58)));
+  const textScale = Math.max(0.82, Math.min(1.16, getNumber(getField, 'textScale', 1)));
   const soundEnabled = getField('soundEnabled') !== false;
   const musicEnabled = getField('musicEnabled') !== false;
   const musicTrackUrl = normalizeDirectUrl(getString(getField, 'musicTrackUrl', ''));
@@ -466,9 +529,9 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
   useMusicBed(config.isVisible, isEditor, soundEnabled, musicEnabled, musicTrackUrl, musicVolume);
 
   const items = storyItems.length > 0 ? storyItems : [
-    { label: 'Source', value: 'Two independent confirmations' },
-    { label: 'Next step', value: 'Medical and final paperwork' },
-    { label: 'Risk', value: 'A rival club is monitoring the file' },
+    { label: 'المصدر', value: 'أدخل مصدرًا موثوقًا أو اتركها كنقطة مراجعة' },
+    { label: 'الخطوة التالية', value: 'الفحص الطبي أو الأوراق النهائية حسب القصة' },
+    { label: 'الخطر', value: 'تأكد من عدم نشر معلومة غير مؤكدة' },
   ];
 
   return (
@@ -477,7 +540,7 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
         @keyframes mediaWave { from { transform: scaleY(.28); opacity: .55; } to { transform: scaleY(1); opacity: 1; } }
         @keyframes scanLine { 0% { transform: translateY(-180px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(180px); opacity: 0; } }
       `}</style>
-      <div style={{ ...contentWrapperStyle, background: preset.bg, fontFamily: 'Tajawal, Barlow Condensed, sans-serif' }} className="relative overflow-hidden">
+      <div style={{ ...contentWrapperStyle, background: preset.bg, fontFamily: 'Tajawal, Barlow Condensed, sans-serif', direction: 'rtl' }} className="relative overflow-hidden">
         <MediaStage
           url={mediaUrl}
           altUrl={mediaAltUrl}
@@ -485,9 +548,12 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
           fit={mediaFit}
           muted={mediaMuted}
           accent={preset.accent}
+          overlayOpacity={mediaOverlayOpacity}
+          blurPx={mediaBlurPx}
+          brightness={mediaBrightness}
         />
-        <div className="relative z-10 flex h-full w-full flex-col p-9">
-          <Header preset={preset} headline={headline} subline={subline} source={source} />
+        <div className="relative z-10 flex h-full w-full flex-col p-9" style={{ transform: `scale(${textScale})`, transformOrigin: 'center center' }}>
+          <Header preset={preset} headline={headline} subline={subline} source={source} panelOpacity={panelOpacity} />
           <VariantBody
             preset={preset}
             player={player}
@@ -502,7 +568,7 @@ export const MercatoMediaStoryRenderer: React.FC<RendererProps> = ({
         </div>
         <div className="absolute bottom-5 left-9 z-20 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-white/38">
           <span className="h-2 w-2 rounded-full" style={{ background: musicEnabled ? preset.accent : 'rgba(255,255,255,.24)' }} />
-          {musicEnabled ? 'real music bed' : 'music off'}
+          {musicEnabled ? 'موسيقى حقيقية' : 'الموسيقى متوقفة'}
         </div>
       </div>
     </div>

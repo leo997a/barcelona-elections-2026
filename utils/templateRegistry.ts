@@ -158,9 +158,9 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     description: 'حزمة Mercato V2 — 10 variants (مكالمة وكيل، رادار صفقة، بيان رسمي، ساعة الحسم، ثقة المصادر، كشف بند، فحص طبي، إنذار خطف، شروط شخصية، تمهيد قبل الحسم).',
   },
   [OverlayType.MERCATO_MEDIA_STORY]: {
-    icon: 'MEDIA',
+    icon: 'ميديا',
     accent: '#22d3ee',
-    description: 'Mercato Media Story — قوالب ميركاتو عصرية تدعم صورة أو فيديو برابط مباشر مع موسيقى حقيقية منخفضة ومناسبة للبث.',
+    description: 'قوالب ميركاتو ميديا عصرية تدعم صورة أو فيديو محلي أو رابط مباشر مع موسيقى حقيقية منخفضة ومناسبة للبث.',
   },
 };
 
