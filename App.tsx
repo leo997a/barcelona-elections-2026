@@ -307,6 +307,7 @@ const App: React.FC = () => {
   });
   const [license, setLicense] = useState<LicenseState | null>(() => licenseService.getStored());
   const [licenseKey, setLicenseKey] = useState('');
+  const [licenseEmail, setLicenseEmail] = useState('');
   const [licenseError, setLicenseError] = useState('');
   const [licenseLoading, setLicenseLoading] = useState(false);
 
@@ -316,6 +317,7 @@ const App: React.FC = () => {
     setLicenseLoading(true);
     try {
       const state = await licenseService.activate(licenseKey.trim());
+      localStorage.setItem('rge_license_email', licenseEmail.trim());
       setLicense(state);
     } catch (err) {
       setLicenseError(err instanceof Error ? err.message : 'فشل التحقق من المفتاح.');
@@ -365,28 +367,7 @@ const App: React.FC = () => {
   };
 
   // ── License Gate inner state ──────────────────────────────────────────────
-  const [showGenPanel, setShowGenPanel] = React.useState(false);
-  const [genSecret, setGenSecret] = React.useState('');
-  const [genRole, setGenRole] = React.useState('ADMIN');
-  const [genDays, setGenDays] = React.useState(0);
-  const [genResult, setGenResult] = React.useState('');
-  const [genErr, setGenErr] = React.useState('');
-  const [genLoading2, setGenLoading2] = React.useState(false);
 
-  const handleGenerate = async () => {
-    setGenErr(''); setGenResult(''); setGenLoading2(true);
-    try {
-      const res = await fetch('/api/license', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate', adminSecret: genSecret, role: genRole, studioId: 'reo-main', daysValid: genDays }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'فشل التوليد');
-      setGenResult(data.key);
-      setLicenseKey(data.key); // auto-fill in activate box
-    } catch(e) { setGenErr(e instanceof Error ? e.message : 'خطأ'); }
-    finally { setGenLoading2(false); }
-  };
 
   // ----------------------------------------------------
   // RENDER: Output View (Browser Source) — NO AUTH REQUIRED + LIVE SYNC
@@ -436,75 +417,27 @@ const App: React.FC = () => {
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
                 dir="ltr"
               />
+              <input
+                type="email"
+                value={licenseEmail}
+                onChange={e => setLicenseEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center"
+                dir="ltr"
+              />
               {licenseError && (
                 <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-2">
                   <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <p className="text-red-300 text-xs">{licenseError}</p>
                 </div>
               )}
-              <button type="submit" disabled={licenseLoading || !licenseKey.trim()}
+              <button type="submit" disabled={licenseLoading || !licenseKey.trim() || !licenseEmail.trim()}
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30">
                 {licenseLoading ? 'جاري التحقق...' : '🔐 دخول الاستوديو'}
               </button>
             </form>
           </div>
 
-          {/* ── ADMIN GENERATOR (collapsible) ── */}
-          <div className="bg-gray-900 border border-yellow-900/40 rounded-2xl overflow-hidden shadow-xl">
-            <button
-              onClick={() => setShowGenPanel(p => !p)}
-              className="w-full flex items-center justify-between px-6 py-4 text-yellow-400 hover:bg-yellow-900/10 transition-colors"
-            >
-              <span className="text-sm font-bold flex items-center gap-2">
-                <span>⚡</span> أنا المسؤول — أريد توليد مفتاح
-              </span>
-              <span className="text-gray-500 text-xs">{showGenPanel ? '▲ إخفاء' : '▼ فتح'}</span>
-            </button>
-
-            {showGenPanel && (
-              <div className="px-6 pb-6 border-t border-yellow-900/30 pt-4 space-y-3">
-                <p className="text-gray-500 text-xs">أدخل كلمة سر المسؤول من Vercel (LICENSE_ADMIN_SECRET) لتوليد مفتاح جديد</p>
-
-                <input type="password" value={genSecret} onChange={e => setGenSecret(e.target.value)}
-                  placeholder="LICENSE_ADMIN_SECRET"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-yellow-500"
-                  dir="ltr" />
-
-                <div className="grid grid-cols-2 gap-2">
-                  {(['ADMIN','EDITOR','OPERATOR','VIEWER'] as const).map(r => (
-                    <button key={r} onClick={() => setGenRole(r)}
-                      className={`py-2 rounded-lg text-xs font-bold border transition-all ${genRole === r ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/40' : 'text-gray-600 border-gray-800'}`}>
-                      {r === 'ADMIN' ? '👑 مسؤول' : r === 'EDITOR' ? '✏️ محرر' : r === 'OPERATOR' ? '▶️ مشغل' : '👁 مشاهد'}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <label className="text-xs text-gray-500 whitespace-nowrap">صلاحية (يوم):</label>
-                  <input type="number" value={genDays} onChange={e => setGenDays(Number(e.target.value))} min={0}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-yellow-500" />
-                  <span className="text-gray-600 text-xs">0 = لا تنتهي</span>
-                </div>
-
-                <button onClick={handleGenerate} disabled={!genSecret || genLoading2}
-                  className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-black font-black py-2.5 rounded-lg text-sm transition-colors">
-                  {genLoading2 ? '⏳ جاري التوليد...' : '⚡ توليد المفتاح'}
-                </button>
-
-                {genErr && <p className="text-red-400 text-xs bg-red-900/20 p-2 rounded-lg text-center">{genErr}</p>}
-
-                {genResult && (
-                  <div className="bg-green-900/20 border border-green-700/40 rounded-xl p-4 text-center">
-                    <p className="text-green-400 text-[10px] font-bold uppercase tracking-wider mb-2">✅ تم التوليد — سيُملأ تلقائياً ↑</p>
-                    <div className="font-mono text-white font-black tracking-widest text-sm break-all bg-black/40 rounded-lg p-3">
-                      {genResult}
-                    </div>
-                    <p className="text-gray-500 text-[10px] mt-2">اضغط "دخول الاستوديو" أعلاه الآن</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     );

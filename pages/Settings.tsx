@@ -189,22 +189,6 @@ const Settings: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'فشل توليد المفتاح');
       setGeneratedKey(data.key);
-      // Auto-save the generated key locally so it persists
-      try {
-        const activated = await licenseService.activate(data.key);
-        setCurrentLicense(activated);
-      } catch {
-        // If activation fails (e.g. no server), save directly to localStorage as fallback
-        const fallbackState = {
-          valid: true,
-          role: data.role || genRole,
-          studioId: data.studioId || genStudioId,
-          key: data.key,
-          exp: data.exp || 0,
-        };
-        localStorage.setItem('rge_license_v1', JSON.stringify(fallbackState));
-        setCurrentLicense(fallbackState);
-      }
     } catch (e) {
       setGenError(e instanceof Error ? e.message : 'خطأ غير متوقع');
     } finally {
@@ -389,20 +373,17 @@ const Settings: React.FC = () => {
 
               {generatedKey && (
                 <div className="mt-2 p-4 bg-green-900/20 border border-green-700/40 rounded-xl">
-                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">✅ المفتاح جاهز ومحفوظ تلقائياً</p>
+                  <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">✅ المفتاح جاهز — لم يتم تفعيله على هذا الجهاز</p>
                   <div className="font-mono text-lg text-white font-black tracking-widest text-center bg-black/40 rounded-lg py-3 px-2 break-all">
                     {generatedKey}
                   </div>
                   <div className="flex gap-2 mt-2">
                     <button onClick={() => navigator.clipboard.writeText(generatedKey)}
-                      className="flex-1 text-xs text-green-400 border border-green-700/40 rounded-lg py-1.5 hover:bg-green-900/20 transition-colors">
+                      className="w-full text-xs text-green-400 border border-green-700/40 rounded-lg py-1.5 hover:bg-green-900/20 transition-colors">
                       نسخ المفتاح
                     </button>
-                    <button onClick={() => window.location.reload()}
-                      className="flex-1 text-xs text-blue-400 border border-blue-700/40 rounded-lg py-1.5 hover:bg-blue-900/20 transition-colors">
-                      إعادة تحميل بالمفتاح الجديد
-                    </button>
                   </div>
+                  <p className="mt-2 text-[10px] text-gray-500">سيبقى ترخيص المسؤول الحالي كما هو. استخدم المفتاح الجديد على جهاز أو مستخدم آخر.</p>
                 </div>
               )}
             </div>
