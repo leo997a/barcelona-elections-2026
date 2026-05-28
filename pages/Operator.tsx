@@ -27,8 +27,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
       templateId: selectedOverlay.templateId || selectedOverlay.id,
     };
   }, [selectedOverlay]);
-  const toggleVisibility = (overlay: OverlayConfig) => {
-    syncManager.updateLiveField(overlay.id, 'isVisible', !overlay.isVisible);
+  const setVisibility = (overlay: OverlayConfig, isVisible: boolean) => {
+    syncManager.updateLiveField(overlay.id, 'isVisible', isVisible);
   };
 
   const updateField = (overlay: OverlayConfig, fieldId: string, value: any) => {
@@ -92,17 +92,14 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    toggleVisibility(overlay);
-                  }}
-                  className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
-                    overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
+                <span
+                  className={`w-8 h-8 rounded flex items-center justify-center ${
+                    overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
                   }`}
+                  title={overlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
                 >
                   {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </button>
+                </span>
               </div>
             </button>
           ))}
@@ -128,17 +125,30 @@ const Operator: React.FC<OperatorProps> = ({ overlays }) => {
         </div>
 
         <div className="flex-1 p-8 overflow-y-auto">
-          <div className="mb-8 flex justify-center">
+          <div className="mb-8 grid grid-cols-2 gap-4 max-w-3xl mx-auto">
             <button
-              onClick={() => toggleVisibility(selectedOverlay)}
-              className={`w-full max-w-md py-6 rounded-2xl text-2xl font-bold shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-4 ${
+              onClick={() => setVisibility(selectedOverlay, true)}
+              disabled={selectedOverlay.isVisible}
+              className={`py-6 rounded-2xl text-2xl font-bold shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-4 ${
                 selectedOverlay.isVisible
-                  ? 'bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 border-4 border-red-900'
+                  ? 'bg-emerald-950/40 text-emerald-700 border-4 border-emerald-950/60 cursor-not-allowed'
                   : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-500 hover:to-emerald-500 border-4 border-green-800'
               }`}
             >
-              {selectedOverlay.isVisible ? <Square className="fill-current w-8 h-8" /> : <Play className="fill-current w-8 h-8" />}
-              <span>{selectedOverlay.isVisible ? 'إنهاء الظهور (TAKE OUT)' : 'إظهار على البث (TAKE IN)'}</span>
+              <Play className="fill-current w-8 h-8" />
+              <span>TAKE IN</span>
+            </button>
+            <button
+              onClick={() => setVisibility(selectedOverlay, false)}
+              disabled={!selectedOverlay.isVisible}
+              className={`py-6 rounded-2xl text-2xl font-bold shadow-2xl transition-all transform active:scale-95 flex items-center justify-center gap-4 ${
+                !selectedOverlay.isVisible
+                  ? 'bg-red-950/30 text-red-800 border-4 border-red-950/50 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 border-4 border-red-900'
+              }`}
+            >
+              <Square className="fill-current w-8 h-8" />
+              <span>TAKE OUT</span>
             </button>
           </div>
 

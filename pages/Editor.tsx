@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Eye, EyeOff, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square , AlertCircle, Info } from 'lucide-react';
+import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square , AlertCircle, Info } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -1095,10 +1095,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       } finally {
           setIsFetchingPlayerStats(false);
       }
-  };
-
-  const toggleLiveVisibility = () => {
-      syncManager.updateLiveField(liveOverlay.id, 'isVisible', !liveOverlay.isVisible);
   };
 
   const updateLiveControl = (fieldId: string, value: any) => {
@@ -3924,10 +3920,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
                  {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">ON AIR</span>}
-                 <button onClick={toggleLiveVisibility} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black transition-all ${liveOverlay.isVisible ? 'bg-red-600 text-white shadow-lg shadow-red-900/40' : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'}`}>
-                     {liveOverlay.isVisible ? <><Eye className="w-3.5 h-3.5" /></> : <><EyeOff className="w-3.5 h-3.5" /></>}
-                 </button>
-                 <div className="h-4 w-px bg-white/10" />
                  <TemplateControlBar overlay={liveOverlay} compact />
              </div>
              <div className="flex items-center gap-2">

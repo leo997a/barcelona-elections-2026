@@ -114,6 +114,19 @@ export const TYPE_TO_TAXONOMY: Partial<Record<OverlayType, { category: CategoryK
   [OverlayType.UCL_DRAW]:               { category: 'utilities', subcategory: 'utilities.misc',      priority: 10 },
 };
 
+const TEMPLATE_TO_TAXONOMY: Record<string, { category: CategoryKey; subcategory: string; priority: number }> = {
+  'template-mercato-x6-agent-call':        { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 10 },
+  'template-mercato-x6-source-confidence': { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 11 },
+  'template-mercato-x6-deal-radar':        { category: 'mercato', subcategory: 'mercato.deal_analysis',  priority: 10 },
+  'template-mercato-x6-clause-reveal':     { category: 'mercato', subcategory: 'mercato.deal_analysis',  priority: 11 },
+  'template-mercato-x6-personal-terms':    { category: 'mercato', subcategory: 'mercato.deal_analysis',  priority: 12 },
+  'template-mercato-x6-club-statement':    { category: 'mercato', subcategory: 'mercato.official',       priority: 10 },
+  'template-mercato-x6-deadline-hour':     { category: 'mercato', subcategory: 'mercato.deadline',       priority: 10 },
+  'template-mercato-x6-medical-tracker':   { category: 'mercato', subcategory: 'mercato.medical_final',  priority: 10 },
+  'template-mercato-x6-hijack-alert':      { category: 'mercato', subcategory: 'mercato.breaking',       priority: 10 },
+  'template-mercato-x6-here-we-go-buildup': { category: 'mercato', subcategory: 'mercato.breaking',      priority: 11 },
+};
+
 export interface TaxonomyEntry {
   category: CategoryKey;
   subcategory: string;
@@ -122,6 +135,9 @@ export interface TaxonomyEntry {
 }
 
 export function getTaxonomy(type: OverlayType, templateId?: string): TaxonomyEntry {
+  if (templateId && TEMPLATE_TO_TAXONOMY[templateId]) {
+    return { ...TEMPLATE_TO_TAXONOMY[templateId], isLegacy: false };
+  }
   const direct = TYPE_TO_TAXONOMY[type];
   if (direct) return { ...direct, isLegacy: false };
   return { category: 'legacy', subcategory: 'legacy.classic', priority: 999, isLegacy: true };

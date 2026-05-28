@@ -48,6 +48,8 @@ const ACCENT: Record<string, string> = {
   [OverlayType.MERCATO_BUDGET_TRACKER]: '#3b82f6',
   [OverlayType.MERCATO_DEADLINE_DAY]: '#fbbf24',
   [OverlayType.MERCATO_X_RAY]: '#a855f7',
+  [OverlayType.MERCATO_UNIFIED]: '#22d3ee',
+  [OverlayType.PLAYER_INTEL_V2]: '#7c5cff',
 };
 
 // Phase A5 — TYPE_FILTERS removed; replaced by dynamic subcategory sidebar
@@ -59,7 +61,7 @@ const ACCENT: Record<string, string> = {
 const PreviewThumb: React.FC<{ overlay: OverlayConfig; height?: number }> = ({ overlay, height = 160 }) => {
   const [hovered, setHovered] = useState(false);
   const previewCfg = useMemo(() => ({ ...overlay, isVisible: true }), [overlay]);
-  const accent = ACCENT[overlay.type] || '#888';
+  const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
   const placeholder = overlay.templateIcon || String(overlay.type).slice(0, 3);
   const W = 1920;
   const scale = (height * (16 / 9)) / W; // maintain 16:9
@@ -119,7 +121,7 @@ const CatalogCard: React.FC<{
   onAdd: () => void;
 }> = ({ template, isFavorite, onToggleFavorite, onAdd }) => {
   const meta = getTemplateMeta(template);
-  const accent = ACCENT[template.type] || '#888';
+  const accent = template.templateAccent || ACCENT[template.type] || '#888';
 
   return (
     <div className="group relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800/80 hover:border-blue-500/40 transition-all duration-300 shadow-lg hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col">
@@ -162,7 +164,7 @@ const MyCard: React.FC<{
   onCopyToken: (e: React.MouseEvent) => void;
   onCopyObsUrl: (e: React.MouseEvent) => void;
 }> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl }) => {
-  const accent = ACCENT[overlay.type] || '#888';
+  const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
 
   return (
     <div onClick={onSelect}
@@ -228,14 +230,16 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
 
   const allTemplates = useMemo(() => getVisibleTemplates(), []);
 
-  const categoryFilter = (type: OverlayType): boolean => {
+  const taxonomyFor = (overlay: OverlayConfig) => getTaxonomy(overlay.type, overlay.templateId || overlay.id);
+
+  const categoryFilter = (overlay: OverlayConfig): boolean => {
     if (activeCategory === 'ALL') return true;
-    return getTaxonomy(type).category === activeCategory;
+    return taxonomyFor(overlay).category === activeCategory;
   };
 
-  const subcategoryFilter = (type: OverlayType): boolean => {
+  const subcategoryFilter = (overlay: OverlayConfig): boolean => {
     if (activeSubcategory === 'ALL') return true;
-    return getTaxonomy(type).subcategory === activeSubcategory;
+    return taxonomyFor(overlay).subcategory === activeSubcategory;
   };
 
   const subcategoriesForActive = useMemo(() => {
@@ -246,14 +250,14 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
   // Catalog filtering
   const catalogList = useMemo(() => {
     let list = [...allTemplates];
-    list = list.filter(t => categoryFilter(t.type));
-    list = list.filter(t => subcategoryFilter(t.type));
+    list = list.filter(t => categoryFilter(t));
+    list = list.filter(t => subcategoryFilter(t));
     if (activeType !== 'ALL') list = list.filter(t => t.type === activeType);
     if (searchQ.trim()) list = list.filter(t => t.name.toLowerCase().includes(searchQ.toLowerCase()) || t.type.toLowerCase().includes(searchQ.toLowerCase()));
     // Sort by taxonomy priority within category, then by name
     list.sort((a, b) => {
-      const ta = getTaxonomy(a.type);
-      const tb = getTaxonomy(b.type);
+      const ta = taxonomyFor(a);
+      const tb = taxonomyFor(b);
       if (ta.priority !== tb.priority) return ta.priority - tb.priority;
       return a.name.localeCompare(b.name, 'ar');
     });
@@ -263,8 +267,8 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
   // My overlays filtering
   const myList = useMemo(() => {
     let list = [...overlays];
-    list = list.filter(o => categoryFilter(o.type));
-    list = list.filter(o => subcategoryFilter(o.type));
+    list = list.filter(o => categoryFilter(o));
+    list = list.filter(o => subcategoryFilter(o));
     if (showFavOnly) list = list.filter(o => favoriteIds.includes(o.id));
     if (activeType !== 'ALL') list = list.filter(o => o.type === activeType);
     if (searchQ.trim()) list = list.filter(o => o.name.toLowerCase().includes(searchQ.toLowerCase()) || o.type.toLowerCase().includes(searchQ.toLowerCase()));
