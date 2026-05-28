@@ -37,6 +37,7 @@ const DEFAULT_STATE_ACCESS_KEY = 'public-live-output';
 const DEFAULT_CONTROL_ACCESS_KEY = 'studio-live-control';
 const OBS_OUTPUT_URL_VERSION = 'obs-live-v3';
 const LEGACY_FIREBASE_SYNC_KEY = 'rge_enable_legacy_firebase_sync';
+export const PROGRAM_OUTPUT_ID = '__program_output__';
 
 interface ViewerSyncBundle {
   provider: 'firebase';
@@ -486,6 +487,19 @@ class SyncManager {
     });
   }
 
+  private publishProgramSnapshot(keepalive = false) {
+    const body = JSON.stringify({
+      state: this.currentState,
+      clientVersion: this.nextLiveClientVersion(),
+    });
+    return fetch(`/api/live?id=${encodeURIComponent(PROGRAM_OUTPUT_ID)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: keepalive && body.length < 60_000,
+    });
+  }
+
   private flushPendingLiveApi() {
     const snapshots = [...this.pendingLiveSnapshots.values()];
     this.pendingLiveSnapshots.clear();
@@ -494,6 +508,7 @@ class SyncManager {
     for (const overlay of snapshots) {
       this.publishOverlaySnapshot(overlay, false).catch(() => { /* silent */ });
     }
+    this.publishProgramSnapshot(false).catch(() => { /* silent */ });
   }
 
   private pushToLiveApi(specificOverlayId?: string, explicitOverlay?: OverlayConfig) {
@@ -737,12 +752,21 @@ class SyncManager {
     return baseUrl;
   }
 
+  public buildProgramOutputUrl() {
+    return `${window.location.origin}${window.location.pathname}?${this.buildOutputShellQuery()}#/output/${PROGRAM_OUTPUT_ID}`;
+  }
+
   public async prepareOutputUrl(overlayId: string, snapshot?: OverlayConfig) {
     if (snapshot) {
       await this.publishOverlaySnapshot(snapshot, false);
     }
 
     return this.buildOutputUrl(overlayId);
+  }
+
+  public async prepareProgramOutputUrl() {
+    await this.publishProgramSnapshot(false);
+    return this.buildProgramOutputUrl();
   }
 
   public getViewerBundle(): ViewerSyncBundle | null {

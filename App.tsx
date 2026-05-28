@@ -12,7 +12,7 @@ import BroadcastControl from './pages/BroadcastControl';
 import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
 import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
-import { syncManager } from './services/syncManager';
+import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
 
@@ -46,16 +46,17 @@ const AudioUnlockOverlay = () => {
 // لا polling، لا تأخر، لا كراشات — الاتصال يبقى مفتوحاً دائماً
 const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   const id = hashPath.split('/output/')[1]?.split('?')[0];
+  const isProgramOutput = id === PROGRAM_OUTPUT_ID;
   const embeddedOverlay = React.useMemo(
     () => syncManager.extractEmbeddedOverlay(hashPath) ?? null,
     [hashPath]
   );
 
   // آخر حالة معروفة — لا تُمسح أبداً حتى عند انقطاع الاتصال
-  const lastGoodState = React.useRef<OverlayConfig | null>(
+  const lastGoodState = React.useRef<OverlayConfig | OverlayConfig[] | null>(
     embeddedOverlay
   );
-  const [overlay, setOverlay] = useState<OverlayConfig | null>(embeddedOverlay);
+  const [outputState, setOutputState] = useState<OverlayConfig | OverlayConfig[] | null>(embeddedOverlay);
   const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
 
   useEffect(() => {
@@ -79,7 +80,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   useEffect(() => {
     if (embeddedOverlay) {
       lastGoodState.current = embeddedOverlay;
-      setOverlay(embeddedOverlay);
+      setOutputState(embeddedOverlay);
       setConnStatus('fallback');
       return;
     }
@@ -150,14 +151,14 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     // version=0 means the update came from a non-versioned fallback. Apply it
     // only when the payload changed so OBS does not repaint for no reason.
     // version>0 means SSE/polling — only apply if newer than the last applied version.
-    const applyState = (newOverlay: OverlayConfig, version = 0) => {
+    const applyState = (newState: OverlayConfig | OverlayConfig[], version = 0) => {
       if (version > 0 && version < lastAppliedVersion) return;
-      const fingerprint = JSON.stringify(newOverlay);
+      const fingerprint = JSON.stringify(newState);
       if (fingerprint === lastAppliedFingerprint) return;
       if (version > 0) lastAppliedVersion = version;
       lastAppliedFingerprint = fingerprint;
-      lastGoodState.current = newOverlay;
-      setOverlay(newOverlay);
+      lastGoodState.current = newState;
+      setOutputState(newState);
     };
 
     const fetchLiveState = async () => {
@@ -165,8 +166,12 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       try {
         const r = await fetchNoCache(liveUrl({ full: '1' }));
         if (!r.ok) return false;
-        const data = await r.json() as { state?: OverlayConfig; version?: number };
-        if (data?.state?.id === id) {
+        const data = await r.json() as { state?: OverlayConfig | OverlayConfig[]; version?: number };
+        if (isProgramOutput && Array.isArray(data?.state)) {
+          applyState(data.state, Number(data.version || 0));
+          return true;
+        }
+        if (!Array.isArray(data?.state) && data?.state?.id === id) {
           applyState(data.state, Number(data.version || 0));
           return true;
         }
@@ -230,8 +235,10 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
         es.onmessage = (event) => {
           if (!event.data || event.data.startsWith(':')) return; // heartbeat
           try {
-            const parsed = JSON.parse(event.data) as OverlayConfig;
-            if (parsed?.id === id) {
+            const parsed = JSON.parse(event.data) as OverlayConfig | OverlayConfig[];
+            if (isProgramOutput && Array.isArray(parsed)) {
+              applyState(parsed, Number(event.lastEventId || 0));
+            } else if (!Array.isArray(parsed) && parsed?.id === id) {
               applyState(parsed, Number(event.lastEventId || 0));
             }
           } catch { /* ignore malformed */ }
@@ -261,10 +268,10 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       stopFallback();
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, [id, hashPath, embeddedOverlay]);
+  }, [id, hashPath, embeddedOverlay, isProgramOutput]);
 
   // عرض آخر حالة معروفة — لا يُعرض "Connecting..." إلا إذا لم يُستلم أي شيء قط
-  if (!overlay) return (
+  if (!outputState) return (
     <div className="flex flex-col items-center justify-center h-screen bg-transparent">
       <div className="bg-black/60 px-5 py-3 rounded-full backdrop-blur-md animate-pulse flex items-center gap-3">
         <CloudLightning className="w-4 h-4 text-blue-400" />
@@ -273,10 +280,21 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     </div>
   );
 
+  if (Array.isArray(outputState)) {
+    return (
+      <div className="w-screen h-screen overflow-hidden bg-transparent relative" onClick={unlockAudio}>
+        <AudioUnlockOverlay />
+        {outputState.map(item => (
+          <OverlayRenderer key={item.id} config={item} />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent relative" onClick={unlockAudio}>
       <AudioUnlockOverlay />
-      <OverlayRenderer config={overlay} />
+      <OverlayRenderer config={outputState} />
     </div>
   );
 };

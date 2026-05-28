@@ -313,6 +313,20 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
     } catch { alert('خطأ في نسخ الرابط'); }
   };
 
+  /** Copy one OBS URL that follows every live/visible overlay in the studio. */
+  const handleCopyProgramObsUrl = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const url = await syncManager.prepareProgramOutputUrl();
+      navigator.clipboard.writeText(url);
+      const btn = e.currentTarget as HTMLElement;
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Program copied';
+      btn.style.background = 'rgba(34,197,94,0.22)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
+    } catch { alert('خطأ في نسخ رابط OBS العام'); }
+  };
+
   const activeList = mainTab === 'catalog' ? catalogList : myList;
 
   return (
@@ -418,6 +432,15 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
             )}
 
             <span className="text-[11px] text-gray-600">{activeList.length} {mainTab === 'catalog' ? 'قالب' : 'من قوالبك'}</span>
+
+            {mainTab === 'mine' && (
+              <button
+                onClick={handleCopyProgramObsUrl}
+                className="flex items-center gap-1.5 bg-green-600/15 hover:bg-green-600/25 border border-green-500/35 text-green-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                title="نسخ رابط OBS عام يعرض كل القوالب الحية">
+                <Tv className="w-3.5 h-3.5" /> Program OBS
+              </button>
+            )}
 
             <button onClick={onNavigateOperator}
               className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
