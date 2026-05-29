@@ -748,16 +748,19 @@ const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const statementDate = String(getField('statementDate') || '');
   // Build a 2-letter monogram from the club name for the corner stamp
   const monogram = getInitials(clubName);
+  const bodyLength = statementBody.trim().split(/\s+/).filter(Boolean).length;
+  const documentCode = `${monogram || 'CL'}-${String(bodyLength || 0).padStart(3, '0')}`;
 
   return (
-    <div className="w-full h-full p-6 flex items-center justify-center" dir="rtl">
-      <div className="w-full max-w-4xl rounded-2xl relative overflow-hidden grid grid-cols-[160px_1fr]" style={{
-        background: t.surface,
+    <div className="w-full h-full p-5 flex items-center justify-center" dir="rtl">
+      <div className="w-full max-w-5xl h-full max-h-[520px] rounded-2xl relative overflow-hidden grid grid-cols-[210px_1fr]" style={{
+        background: `linear-gradient(135deg, ${t.surfaceDeep} 0%, ${t.surface} 58%, ${t.surfaceDeep} 100%)`,
         border: `1px solid ${t.border}`,
+        boxShadow: '0 22px 70px rgba(0,0,0,0.22)',
       }}>
         {/* Top accent strip */}
         <div className="absolute top-0 left-0 right-0 h-[3px]" style={{
-          background: `linear-gradient(to right, transparent, ${t.accent}, transparent)`,
+          background: `linear-gradient(to right, transparent, ${t.accent}, ${t.warning}, transparent)`,
         }} />
         {/* Left monogram column */}
         <div className="flex flex-col items-center justify-center p-6 border-l" style={{
@@ -765,20 +768,32 @@ const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
           background: `linear-gradient(180deg, ${t.surfaceDeep} 0%, ${t.surface} 100%)`,
         }}>
           <div className="rounded-2xl flex items-center justify-center mb-3" style={{
-            width: 96, height: 96,
-            background: t.accentSoft,
+            width: 118, height: 118,
+            background: `${t.accent}16`,
             border: `2px solid ${t.accent}80`,
             color: t.accent,
-            fontSize: 36,
+            fontSize: 42,
             fontWeight: 900,
+            boxShadow: `0 0 28px ${t.accent}20`,
           }}>
             {monogram}
           </div>
           <Icon name="stamp" size={22} color={t.accent} />
           <div className="text-[9px] font-black uppercase tracking-[0.3em] mt-1.5" style={{ color: t.dim }}>OFFICIAL</div>
+          <div className="mt-5 w-full rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>DOCUMENT ID</div>
+            <div className="mt-1 font-mono text-[18px] font-black" style={{ color: t.accent }}>{documentCode}</div>
+          </div>
+          <div className="mt-2 w-full rounded-xl p-3" style={{ background: `${t.warning}12`, border: `1px solid ${t.warning}45` }}>
+            <div className="flex items-center justify-center gap-2">
+              <Icon name="check" size={15} color={t.warning} />
+              <span className="text-[10px] font-black" style={{ color: t.warning }}>جاهز للنشر</span>
+            </div>
+            <div className="mt-1 text-center text-[9px]" style={{ color: t.dim }}>صياغة رسمية قابلة للبث</div>
+          </div>
         </div>
         {/* Body */}
-        <div className="p-8">
+        <div className="p-7 flex flex-col min-w-0">
           <div className="flex items-center justify-between border-b pb-3 mb-5" style={{ borderColor: t.border }}>
             <Pill t={t} label="بيان رسمي" pulse />
             <div className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: t.dim }}>
@@ -786,9 +801,12 @@ const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
               {statementDate || '—'}
             </div>
           </div>
-          <div className="text-[26px] font-black mb-2 leading-tight" style={{ color: t.text }}>{clubName}</div>
-          <div className="text-[18px] font-bold mb-5" style={{ color: t.accent }}>{statementTitle}</div>
-          <div className="text-[15px] leading-loose whitespace-pre-line" style={{
+          <div className="text-[30px] font-black mb-2 leading-tight" style={{ color: t.text }}>{clubName}</div>
+          <div className="text-[21px] font-black mb-5 leading-tight" style={{ color: t.accent }}>{statementTitle}</div>
+          <div className="flex-1 rounded-xl p-5 overflow-y-auto text-[15px] leading-loose whitespace-pre-line" style={{
+            background: `${t.surfaceDeep}cc`,
+            border: `1px solid ${t.border}`,
+            borderRight: `4px solid ${t.accent}`,
             color: t.sub,
             direction: isRtl(statementBody) ? 'rtl' : 'ltr',
             textAlign: isRtl(statementBody) ? 'right' : 'left',
@@ -804,8 +822,10 @@ const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
 const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
   const status = String(getField('dealStatus') || 'مفاوضات');
-  const minutes = String(getField('minutesLeft') || '00').padStart(2, '0');
-  const seconds = String(getField('secondsLeft') || '00').padStart(2, '0');
+  const rawMinutes = Number(getField('minutesLeft') || 0);
+  const rawSeconds = Number(getField('secondsLeft') || 0);
+  const minutes = String(Math.max(0, rawMinutes || 0)).padStart(2, '0');
+  const seconds = String(Math.max(0, rawSeconds || 0)).padStart(2, '0');
   const stage = String(getField('dealStage') || 'agreement');
 
   const stages = [
@@ -818,6 +838,11 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const idx = stages.findIndex(s => s.id === stage);
   // Compute progress percent across the 5 stages.
   const progressPct = idx >= 0 ? Math.round(((idx + 0.5) / stages.length) * 100) : 0;
+  const totalSeconds = Math.max(0, (rawMinutes || 0) * 60 + (rawSeconds || 0));
+  const urgencyColor = totalSeconds <= 300 ? t.danger : totalSeconds <= 900 ? t.warning : t.accent;
+  const urgencyLabel = totalSeconds <= 300 ? 'لحظة حسم' : totalSeconds <= 900 ? 'ضغط مرتفع' : 'نافذة مفتوحة';
+  const activeStageLabel = stages[idx]?.label || '—';
+  const nextStageLabel = idx >= 0 && idx < stages.length - 1 ? stages[idx + 1].label : 'الإعلان';
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -826,25 +851,47 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
         eyebrow="DEADLINE HOUR · ساعة الحسم"
         title={playerName || '—'}
         subtitle={status}
-        accent={t.danger}
-        pills={<Pill t={t} color={t.danger} label="LIVE" pulse />}
+        accent={urgencyColor}
+        pills={
+          <>
+            <Pill t={t} color={urgencyColor} label={urgencyLabel} pulse />
+            <Pill t={t} color={t.accent} label={activeStageLabel} small />
+          </>
+        }
         rightSlot={
           <div className="rounded-xl px-4 py-2 inline-flex items-center gap-3" style={{
-            background: `${t.danger}10`,
-            border: `1px solid ${t.danger}50`,
-            boxShadow: `0 0 24px ${t.danger}30`,
+            background: `${urgencyColor}10`,
+            border: `1px solid ${urgencyColor}50`,
+            boxShadow: `0 0 24px ${urgencyColor}30`,
           }}>
-            <Icon name="clock" size={22} color={t.danger} />
+            <Icon name="clock" size={22} color={urgencyColor} />
             <div>
               <div className="text-[9px] uppercase tracking-wider" style={{ color: t.dim }}>الوقت المتبقي</div>
-              <div className="font-mono font-black leading-none mt-0.5" style={{ color: t.danger, fontSize: '46px' }}>
+              <div className="font-mono font-black leading-none mt-0.5" style={{ color: urgencyColor, fontSize: '46px' }}>
                 {minutes}:{seconds}
               </div>
             </div>
           </div>
         }
       />
-      <div className="flex-1 rounded-xl p-5 flex flex-col gap-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+      <div className="grid grid-cols-[1fr_1.2fr_1fr] gap-3">
+        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>المرحلة الحالية</div>
+          <div className="mt-1 text-[24px] font-black" style={{ color: t.accent }}>{activeStageLabel}</div>
+        </div>
+        <div className="rounded-xl p-3 text-center" style={{ background: `${urgencyColor}12`, border: `1px solid ${urgencyColor}50` }}>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>قرار غرفة البث</div>
+          <div className="mt-1 text-[25px] font-black" style={{ color: urgencyColor }}>{urgencyLabel}</div>
+        </div>
+        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>الخطوة التالية</div>
+          <div className="mt-1 text-[24px] font-black" style={{ color: t.success }}>{nextStageLabel}</div>
+        </div>
+      </div>
+      <div className="flex-1 rounded-xl p-5 flex flex-col justify-center gap-4 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="absolute -bottom-14 -left-10 opacity-[0.045] pointer-events-none">
+          <Icon name="clock" size={260} color={urgencyColor} />
+        </div>
         <div className="flex items-center justify-between">
           <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المرحلة الحالية</div>
           <div className="text-[10px] font-mono" style={{ color: t.dim }}>{progressPct}% من المسار</div>
@@ -880,7 +927,17 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
           })}
         </div>
         <div>
-          <ProgressBar t={t} value={progressPct} color={t.danger} height={5} />
+          <ProgressBar t={t} value={progressPct} color={urgencyColor} height={5} />
+        </div>
+        <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{
+          background: `${urgencyColor}10`,
+          border: `1px solid ${urgencyColor}35`,
+        }}>
+          <div className="flex items-center gap-2">
+            <Icon name="pulse" size={14} color={urgencyColor} />
+            <span className="text-[11px] font-black" style={{ color: t.text }}>غرفة الحسم تراقب آخر تحديث قبل الإغلاق</span>
+          </div>
+          <span className="text-[10px] font-mono font-black" style={{ color: urgencyColor }}>DEADLINE SYNC</span>
         </div>
       </div>
     </div>
@@ -900,6 +957,9 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
   sources.forEach(s => { if (s.tier in counts) counts[s.tier]++; });
   const total = sources.length;
   const supportPct = total === 0 ? 0 : Math.round(((counts.A + counts.B * 0.5) / total) * 100);
+  const decisionColor = supportPct >= 75 ? t.success : supportPct >= 45 ? t.warning : t.danger;
+  const decisionLabel = supportPct >= 75 ? 'قابل للبث' : supportPct >= 45 ? 'انتظار مصدر ثان' : 'لا تبث الآن';
+  const strongestSource = sources.find(s => s.tier === 'A') || sources.find(s => s.tier === 'B') || sources[0];
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -908,6 +968,13 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
         eyebrow="SOURCE CONFIDENCE BOARD"
         title="لوحة ثقة المصادر"
         subtitle={total === 0 ? 'بانتظار رصد المصادر' : `${total} مصدر · ${supportPct}% تأييد إجمالي`}
+        accent={decisionColor}
+        pills={
+          <>
+            <Pill t={t} color={decisionColor} label={decisionLabel} pulse={supportPct >= 75} />
+            {strongestSource && <Pill t={t} color={tierColor(strongestSource.tier)} label={`أقوى مصدر: ${strongestSource.name}`} small />}
+          </>
+        }
         rightSlot={total > 0 ? (
           <div className="flex items-center gap-3">
             {(['A','B','C'] as const).map(tier => (
@@ -919,6 +986,23 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
         ) : undefined}
       />
+      <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-3">
+        <div className="rounded-xl p-4" style={{ background: `${decisionColor}10`, border: `1px solid ${decisionColor}45` }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>قرار غرفة الأخبار</div>
+              <div className="mt-1 text-[25px] font-black" style={{ color: decisionColor }}>{decisionLabel}</div>
+            </div>
+            <div className="text-left">
+              <div className="font-mono text-[34px] font-black leading-none" style={{ color: decisionColor }}>{supportPct}%</div>
+              <div className="text-[9px] mt-1" style={{ color: t.dim }}>confidence mix</div>
+            </div>
+          </div>
+          <div className="mt-3"><ProgressBar t={t} value={supportPct} color={decisionColor} height={6} /></div>
+        </div>
+        <FieldCard t={t} label="مصادر مؤكدة" value={String(counts.A)} accent={t.success} />
+        <FieldCard t={t} label="مصادر مراقبة" value={String(counts.B + counts.C)} accent={t.warning} />
+      </div>
       <div className="flex-1 grid grid-cols-3 gap-3 min-h-0">
         {(['A', 'B', 'C'] as const).map(tier => {
           const matching = sources.filter(s => s.tier === tier);
@@ -930,7 +1014,10 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Icon name={tierIcons[tier]} size={14} color={tierColor(tier)} />
-                  <div className="text-[12px] font-black uppercase" style={{ color: tierColor(tier) }}>{tierLabels[tier]}</div>
+                  <div>
+                    <div className="text-[12px] font-black uppercase" style={{ color: tierColor(tier) }}>{tierLabels[tier]}</div>
+                    <div className="text-[8px] font-mono mt-0.5" style={{ color: t.dim }}>{matching.length === 1 ? 'single source lane' : `${matching.length} sources lane`}</div>
+                  </div>
                 </div>
                 <span className="text-[20px] font-black font-mono" style={{ color: tierColor(tier) }}>{matching.length}</span>
               </div>
