@@ -5,6 +5,7 @@ import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
 import { resolveTemplateById } from '../utils/templateRegistry';
+import { getTaxonomy, listCategories, type CategoryKey } from '../utils/templateTaxonomy';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
@@ -21,6 +22,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const [programObsCopied, setProgramObsCopied] = useState(false);
   const [operatorSearch, setOperatorSearch] = useState('');
   const [showOnlyLive, setShowOnlyLive] = useState(false);
+  const [operatorCategory, setOperatorCategory] = useState<CategoryKey | 'ALL'>('ALL');
   const [draftName, setDraftName] = useState('');
   const [nameSavedPulse, setNameSavedPulse] = useState(false);
   const [singleProgramMode, setSingleProgramMode] = useState(() => {
@@ -34,9 +36,28 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const selectedOverlay = overlays.find(o => o.id === selectedId);
   const secureContext = syncManager.getSmartTokenContext();
   const liveOverlaysCount = overlays.filter(overlay => overlay.isVisible).length;
+  const operatorCategories = useMemo(() => listCategories(), []);
+  const getOverlayCategory = (overlay: OverlayConfig) =>
+    getTaxonomy(overlay.type, overlay.templateId || overlay.id).category;
+  const operatorCategoryCounts = useMemo(() => {
+    const counts: Record<CategoryKey, number> = {
+      mercato: 0,
+      match: 0,
+      player: 0,
+      newsroom: 0,
+      social_stream: 0,
+      utilities: 0,
+      legacy: 0,
+    };
+    overlays.forEach(overlay => {
+      counts[getOverlayCategory(overlay)] += 1;
+    });
+    return counts;
+  }, [overlays]);
   const filteredOverlays = useMemo(() => {
     const needle = operatorSearch.trim().toLowerCase();
     return overlays
+      .filter(overlay => operatorCategory === 'ALL' || getOverlayCategory(overlay) === operatorCategory)
       .filter(overlay => !showOnlyLive || overlay.isVisible)
       .filter(overlay => {
         if (!needle) return true;
@@ -51,7 +72,16 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
         if (left.isVisible !== right.isVisible) return left.isVisible ? -1 : 1;
         return (right.createdAt || 0) - (left.createdAt || 0);
       });
-  }, [operatorSearch, overlays, showOnlyLive]);
+  }, [operatorCategory, operatorSearch, overlays, showOnlyLive]);
+  const filteredOverlayGroups = useMemo(() => {
+    const grouped = operatorCategories
+      .map(category => ({
+        category,
+        overlays: filteredOverlays.filter(overlay => getOverlayCategory(overlay) === category.key),
+      }))
+      .filter(group => group.overlays.length > 0);
+    return operatorCategory === 'ALL' ? grouped : [];
+  }, [filteredOverlays, operatorCategories, operatorCategory]);
 
   useEffect(() => {
     if (overlays.length === 0) {
@@ -191,6 +221,69 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     ? 'وضع البرنامج الواحد مفعل: إدخال قالب جديد يخرج القوالب الأخرى ويبقي قالبًا واحدًا في رابط البرنامج'
     : 'وضع البرنامج المتعدد: رابط البرنامج يسمح بعرض أكثر من قالب حي في نفس الوقت';
 
+  const renderOperatorOverlayRow = (overlay: OverlayConfig) => (
+    <div
+      key={overlay.id}
+      role="button"
+      tabIndex={0}
+      onClick={() => setSelectedId(overlay.id)}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
+      }}
+      className={`w-full p-3 rounded-lg border text-right transition-all grid grid-cols-[1fr_auto] gap-3 group cursor-pointer ${
+        selectedId === overlay.id ? 'bg-blue-900/20 border-blue-500/50 shadow-lg shadow-blue-900/10' : 'bg-gray-900 border-gray-800 hover:border-gray-600'
+      }`}
+    >
+      <div className="min-w-0">
+        <div className="font-bold text-white mb-1 truncate">{overlay.name}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-[10px] text-gray-500 font-mono uppercase bg-gray-950 w-max px-1 rounded border border-gray-800">{overlay.type}</div>
+          {overlay.templateIcon && (
+            <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 rounded border border-white/10 px-1.5 py-0.5">
+              {overlay.templateIcon}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={event => {
+            event.stopPropagation();
+            takeInOverlay(overlay);
+            setSelectedId(overlay.id);
+          }}
+          disabled={!canTakeIn(overlay)}
+          className="h-8 w-8 rounded-lg border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
+          title="إدخال القالب"
+        >
+          <Play className="mx-auto h-3.5 w-3.5 fill-current" />
+        </button>
+        <button
+          type="button"
+          onClick={event => {
+            event.stopPropagation();
+            takeOutOverlay(overlay);
+            setSelectedId(overlay.id);
+          }}
+          disabled={!overlay.isVisible}
+          className="h-8 w-8 rounded-lg border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
+          title="إخراج القالب"
+        >
+          <Square className="mx-auto h-3.5 w-3.5 fill-current" />
+        </button>
+        <span
+          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
+          }`}
+          title={overlay.isVisible ? 'على الهواء' : 'خارج البث'}
+        >
+          {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-full bg-gray-950">
       <div className="w-96 bg-darker border-l border-gray-800 flex flex-col">
@@ -232,6 +325,44 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               إخراج الكل
             </button>
           </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-black text-gray-500">
+              <span>تصنيف القوالب</span>
+              <span>{filteredOverlays.length} ظاهر</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setOperatorCategory('ALL')}
+                className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-[10px] font-bold transition-colors ${
+                  operatorCategory === 'ALL'
+                    ? 'border-blue-500/40 bg-blue-600/15 text-blue-200'
+                    : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-gray-700 hover:text-white'
+                }`}
+              >
+                <span>كل الفئات</span>
+                <span className="font-mono">{overlays.length}</span>
+              </button>
+              {operatorCategories
+                .filter(category => operatorCategoryCounts[category.key] > 0)
+                .map(category => (
+                  <button
+                    key={category.key}
+                    type="button"
+                    onClick={() => setOperatorCategory(category.key)}
+                    className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-[10px] font-bold transition-colors ${
+                      operatorCategory === category.key
+                        ? 'text-white'
+                        : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-gray-700 hover:text-white'
+                    }`}
+                    style={operatorCategory === category.key ? { borderColor: `${category.accent}80`, background: `${category.accent}18`, color: category.accent } : undefined}
+                  >
+                    <span className="truncate">{category.labelAr}</span>
+                    <span className="font-mono">{operatorCategoryCounts[category.key]}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
           {filteredOverlays.length === 0 && (
@@ -240,68 +371,22 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
             </div>
           )}
 
-          {filteredOverlays.map(overlay => (
-            <div
-              key={overlay.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedId(overlay.id)}
-              onKeyDown={event => {
-                if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
-              }}
-              className={`w-full p-3 rounded-lg border text-right transition-all grid grid-cols-[1fr_auto] gap-3 group cursor-pointer ${
-                selectedId === overlay.id ? 'bg-blue-900/20 border-blue-500/50 shadow-lg shadow-blue-900/10' : 'bg-gray-900 border-gray-800 hover:border-gray-600'
-              }`}
-            >
-              <div className="min-w-0">
-                <div className="font-bold text-white mb-1 truncate">{overlay.name}</div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-[10px] text-gray-500 font-mono uppercase bg-gray-950 w-max px-1 rounded border border-gray-800">{overlay.type}</div>
-                  {overlay.templateIcon && (
-                    <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 rounded border border-white/10 px-1.5 py-0.5">
-                      {overlay.templateIcon}
-                    </div>
-                  )}
+          {operatorCategory === 'ALL' && filteredOverlayGroups.length > 0
+            ? filteredOverlayGroups.map(group => (
+                <div key={group.category.key} className="space-y-2">
+                  <div
+                    className="sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-gray-950/95 px-2.5 py-1.5 text-[10px] font-black backdrop-blur"
+                    style={{ borderColor: `${group.category.accent}40`, color: group.category.accent }}
+                  >
+                    <span className="truncate">{group.category.labelAr}</span>
+                    <span className="font-mono text-gray-400">{group.overlays.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {group.overlays.map(renderOperatorOverlayRow)}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={event => {
-                    event.stopPropagation();
-                    takeInOverlay(overlay);
-                    setSelectedId(overlay.id);
-                  }}
-                  disabled={!canTakeIn(overlay)}
-                  className="h-8 w-8 rounded-lg border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-                  title="إدخال القالب"
-                >
-                  <Play className="mx-auto h-3.5 w-3.5 fill-current" />
-                </button>
-                <button
-                  type="button"
-                  onClick={event => {
-                    event.stopPropagation();
-                    takeOutOverlay(overlay);
-                    setSelectedId(overlay.id);
-                  }}
-                  disabled={!overlay.isVisible}
-                  className="h-8 w-8 rounded-lg border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-                  title="إخراج القالب"
-                >
-                  <Square className="mx-auto h-3.5 w-3.5 fill-current" />
-                </button>
-                <span
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
-                  }`}
-                  title={overlay.isVisible ? 'على الهواء' : 'خارج البث'}
-                >
-                  {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </span>
-              </div>
-            </div>
-          ))}
+              ))
+            : filteredOverlays.map(renderOperatorOverlayRow)}
         </div>
       </div>
 
