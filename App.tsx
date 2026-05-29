@@ -566,6 +566,7 @@ const App: React.FC = () => {
                    overlays={overlays} 
                    onSelect={openEditorById}
                    onDelete={handleDeleteOverlay}
+                   onRename={(overlay) => syncManager.updateOverlay(overlay)}
                    onCreate={handleCreateOverlay}
                    onNavigateOperator={() => setRoute('operator')}
                    favoriteIds={favoriteIds}

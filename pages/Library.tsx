@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2, Check } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
@@ -12,6 +12,7 @@ interface LibraryProps {
   overlays: OverlayConfig[];
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onRename: (overlay: OverlayConfig) => void;
   onCreate: (templateId: string) => void;
   onNavigateOperator: () => void;
   favoriteIds: string[];
@@ -166,8 +167,39 @@ const MyCard: React.FC<{
   onCopyToken: (e: React.MouseEvent) => void;
   onCopyObsUrl: (e: React.MouseEvent) => void;
   onCopyEditUrl: (e: React.MouseEvent) => void;
-}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl }) => {
+  onRename: (nextName: string) => void;
+}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl, onRename }) => {
   const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [draftName, setDraftName] = useState(overlay.name);
+  const shortOverlayId = overlay.id.length > 34 ? `${overlay.id.slice(0, 24)}...${overlay.id.slice(-6)}` : overlay.id;
+
+  useEffect(() => {
+    setDraftName(overlay.name);
+  }, [overlay.id, overlay.name]);
+
+  const startRename = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setDraftName(overlay.name);
+    setIsRenaming(true);
+  };
+
+  const cancelRename = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setDraftName(overlay.name);
+    setIsRenaming(false);
+  };
+
+  const saveRename = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    const nextName = draftName.trim();
+    if (!nextName || nextName === overlay.name) {
+      cancelRename();
+      return;
+    }
+    onRename(nextName);
+    setIsRenaming(false);
+  };
 
   return (
     <div onClick={onSelect}
@@ -191,7 +223,51 @@ const MyCard: React.FC<{
 
       {/* Info */}
       <div className="p-3.5 flex-1 flex flex-col gap-2">
-        <h3 className="text-sm font-bold text-white truncate group-hover:text-blue-300 transition-colors">{overlay.name}</h3>
+        {isRenaming ? (
+          <div className="flex items-center gap-1.5" onClick={event => event.stopPropagation()}>
+            <input
+              autoFocus
+              value={draftName}
+              onChange={event => setDraftName(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') saveRename();
+                if (event.key === 'Escape') cancelRename();
+              }}
+              maxLength={72}
+              className="min-w-0 flex-1 rounded-lg border border-blue-500/40 bg-gray-950 px-2 py-1 text-xs font-bold text-white outline-none focus:border-blue-300"
+              aria-label="اسم القالب"
+            />
+            <button
+              type="button"
+              onClick={saveRename}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-green-500/30 bg-green-600/15 text-green-300 hover:bg-green-600/25"
+              title="حفظ الاسم">
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={cancelRename}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-400 hover:text-white"
+              title="إلغاء">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <h3 className="min-w-0 flex-1 text-sm font-bold text-white truncate group-hover:text-blue-300 transition-colors">{overlay.name}</h3>
+            <button
+              type="button"
+              onClick={startRename}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-gray-700 bg-gray-800/80 text-gray-500 hover:border-blue-500/40 hover:text-blue-300"
+              title="تعديل اسم القالب">
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-500" title={overlay.id}>
+          <Link2 className="w-3 h-3 shrink-0 text-cyan-400/70" />
+          <span className="truncate font-mono" dir="ltr">{shortOverlayId}</span>
+        </div>
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
           {/* ★ زر نسخ رابط OBS — الجديد */}
           <button onClick={onCopyObsUrl}
@@ -225,7 +301,7 @@ const MyCard: React.FC<{
 
 // ─── Main Library ─────────────────────────────────────────────────────────────
 
-const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite, missingEditOverlayId }) => {
+const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRename, onCreate, onNavigateOperator, favoriteIds, onToggleFavorite, missingEditOverlayId }) => {
   const [mainTab, setMainTab] = useState<MainTab>('catalog');
   const [activeCategory, setActiveCategory] = useState<CategoryKey | 'ALL'>('ALL');
   // Phase A5 — subcategory replaces the flat TYPE_FILTERS noise.
@@ -319,6 +395,12 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       btn.style.background = 'rgba(34,197,94,0.2)';
       setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
     } catch { alert('خطأ في نسخ الرابط'); }
+  };
+
+  const handleRenameOverlay = (overlay: OverlayConfig, nextName: string) => {
+    const trimmedName = nextName.trim();
+    if (!trimmedName || trimmedName === overlay.name) return;
+    onRename({ ...overlay, name: trimmedName });
   };
 
   /** Copy a stable edit URL for this user's local overlay instance. */
@@ -548,6 +630,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
                     onCopyToken={e => handleCopyToken(overlay, e)}
                     onCopyObsUrl={e => handleCopyObsUrl(overlay, e)}
                     onCopyEditUrl={e => handleCopyEditUrl(overlay, e)}
+                    onRename={nextName => handleRenameOverlay(overlay, nextName)}
                   />
                 ))}
               </div>
