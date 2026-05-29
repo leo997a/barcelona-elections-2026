@@ -91,8 +91,8 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
       // Options resolved at render time from utils/voiceLibrary.
       options: [
         { value: 'none', label: '— بدون صوت —' },
-        { value: 'mercato_here_we_go', label: 'Here we go' },
-        { value: 'mercato_agreement_close', label: 'Agreement close' },
+        { value: 'mercato_here_we_go', label: 'تأكيد الصفقة' },
+        { value: 'mercato_agreement_close', label: 'الاتفاق قريب' },
         { value: 'mercato_things_happening_now', label: 'الأمور تحدث الآن' },
         { value: 'mercato_transfer_approaching', label: 'الانتقال يقترب' },
         { value: 'mercato_heating_now', label: 'الميركاتو يشتعل الآن' },
@@ -440,13 +440,13 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-world-scorebug',
     templateId: 'template-football-world-scorebug',
-    name: 'كروي عالمي - Scorebug علوي',
+    name: 'كروي عالمي — شريط النتيجة العلوي',
     type: OverlayType.SCOREBOARD,
     isVisible: false,
     templateIcon: 'SBUG',
     templateAccent: '#00a86b',
     templateGroup: 'FOOTBALL_WORLD_FEED',
-    templateDescription: 'لوحة نتيجة علوية مدمجة مناسبة للبث المباشر، بتوقيت واضح واختصارات الفرق وشارة LIVE.',
+    templateDescription: 'لوحة نتيجة علوية مدمجة مناسبة للبث المباشر، بتوقيت واضح واختصارات الفرق وشارة مباشر.',
     theme: { primaryColor: '#00a86b', secondaryColor: '#101820', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -474,7 +474,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-premium-matchbar',
     templateId: 'template-football-premium-matchbar',
-    name: 'كروي عالمي - Match Bar فاخر',
+    name: 'كروي عالمي — شريط المباراة الفاخر',
     type: OverlayType.SCOREBOARD,
     isVisible: false,
     templateIcon: 'MBAR',
@@ -508,7 +508,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-var-alert',
     templateId: 'template-football-var-alert',
-    name: 'كروي عالمي - تنبيه VAR',
+    name: 'كروي عالمي — تنبيه حكم الفيديو',
     type: OverlayType.EXCLUSIVE_ALERT,
     isVisible: false,
     templateIcon: 'VAR',
@@ -539,7 +539,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     templateIcon: 'LOW3',
     templateAccent: '#22d3ee',
     templateGroup: 'FOOTBALL_WORLD_FEED',
-    templateDescription: 'Lower Third زجاجي لمحلل أو مراسل أو لاعب، مناسب للظهور السريع أثناء المباراة.',
+    templateDescription: 'شريط تعريفي زجاجي لمحلل أو مراسل أو لاعب، مناسب للظهور السريع أثناء المباراة.',
     theme: { primaryColor: '#14b8a6', secondaryColor: '#18181b', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -559,7 +559,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-match-ticker',
     templateId: 'template-football-match-ticker',
-    name: 'كروي عالمي - Match Ticker',
+    name: 'كروي عالمي — شريط أخبار المباراة',
     type: OverlayType.TICKER,
     isVisible: false,
     templateIcon: 'TICK',
@@ -585,7 +585,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-smart-match-stats',
     templateId: 'template-football-smart-match-stats',
-    name: 'استوديو التحليلات الذكي (Match Stats)',
+    name: 'استوديو التحليلات الذكي — إحصائيات المباراة',
     type: OverlayType.MATCH_STATS,
     isVisible: false,
     templateIcon: '📊',
@@ -596,9 +596,9 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     slots: {},
     fields: [
       { id: 'dataMode', label: 'مصدر بيانات المباراة', type: 'select', value: 'CLOUD_BRIDGE', options: [
-        { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
-        { value: 'BRIDGE', label: 'Local Bridge - localhost:3005' },
-        { value: 'PASTE_JSON', label: 'JSON يدوي / ملف extractor' },
+        { value: 'CLOUD_BRIDGE', label: 'جسر REO السحابي — Google Cloud' },
+        { value: 'BRIDGE', label: 'جسر محلي — localhost:3005' },
+        { value: 'PASTE_JSON', label: 'JSON يدوي / ملف الاستخراج' },
         { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
       ] },
       { id: 'manualJson', label: 'JSON المباراة المستورد', type: 'textarea', value: '' },
@@ -628,12 +628,12 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
         { value: 'LEFT', label: 'يسار الشاشة' },
       ] },
       { id: 'visualStyle', label: 'نمط تصميم القالب', type: 'select', value: 'DUAL_RAIL', options: [
-        { value: 'DUAL_RAIL', label: 'Dual Rail' },
-        { value: 'TACTICAL_SPLIT', label: 'Tactical Split' },
-        { value: 'DATA_TOWER', label: 'Data Tower' },
-        { value: 'COMPACT_BROADCAST', label: 'Compact Broadcast' },
-        { value: 'GLASS_STUDIO', label: 'Glass Studio' },
-        { value: 'NEON_TOUCHLINE', label: 'Neon Touchline' },
+        { value: 'DUAL_RAIL', label: 'سكتان مزدوجتان' },
+        { value: 'TACTICAL_SPLIT', label: 'تقسيم تكتيكي' },
+        { value: 'DATA_TOWER', label: 'برج البيانات' },
+        { value: 'COMPACT_BROADCAST', label: 'بث مدمج' },
+        { value: 'GLASS_STUDIO', label: 'استوديو زجاجي' },
+        { value: 'NEON_TOUCHLINE', label: 'خط تماس نيون' },
       ] },
       { id: 'playerMetricPreset', label: 'تركيز لوحة اللاعبين', type: 'select', value: 'SMART', options: [
         { value: 'SMART', label: 'ذكي بدون تكرار' },
@@ -650,8 +650,8 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'enablePanelTransitions', label: 'تفعيل انتقالات اللوحات', type: 'boolean', value: false },
       { id: 'broadcastMotion', label: 'حركة خفيفة داخل القالب', type: 'boolean', value: true },
       { id: 'broadcastQuality', label: 'دقة العرض للبث', type: 'select', value: 'ULTRA', options: [
-        { value: 'ULTRA', label: 'Ultra Broadcast' },
-        { value: 'STANDARD', label: 'Standard' },
+        { value: 'ULTRA', label: 'بث فائق' },
+        { value: 'STANDARD', label: 'قياسي' },
       ] },
       { id: 'matchPanelScale', label: 'مقياس لوحة المباراة', type: 'range', value: 1, min: 0.65, max: 1.6, step: 0.05 },
       { id: 'playerPanelScale', label: 'مقياس لوحة اللاعبين', type: 'range', value: 1, min: 0.65, max: 1.6, step: 0.05 },
@@ -681,7 +681,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-football-player-stats-lab',
     templateId: 'template-football-player-stats-lab',
-    name: 'Player Stats Lab - بطاقة إحصائيات لاعب',
+    name: 'مختبر إحصائيات اللاعب — بطاقة لاعب',
     type: OverlayType.PLAYER_STATS,
     isVisible: false,
     templateIcon: 'PLYR',
@@ -855,30 +855,30 @@ const createFootballProjectionTemplate = ({
   slots: {},
   fields: [
     ...commonFields,
-    { id: 'designStyle', label: 'Projection style', type: 'select', value: designStyle, options: ['TITLE_STING', 'COMPOSITION_INTRO', 'LINEUP_BOARD', 'COMPACT_SCOREBUG', 'TUNNEL_REVEAL'] },
-    { id: 'themePreset', label: 'Projection theme', type: 'select', value: themePreset, options: ['PROJECTION_BLUE', 'PROJECTION_RED', 'PROJECTION_MONO', 'ELITE_SILVER', 'MATCH_NIGHT'] },
-    { id: 'watermarkText', label: 'Watermark loop', type: 'text', value: watermarkText },
-    { id: 'title', label: 'Main title', type: 'text', value: title },
-    { id: 'subtitle', label: 'Subtitle', type: 'text', value: subtitle },
-    { id: 'teamName', label: 'Team name', type: 'text', value: teamName },
-    { id: 'competition', label: 'Competition label', type: 'text', value: competition },
-    { id: 'teamLogo', label: 'Team logo', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=050712&color=ffffff&size=512&bold=true` },
-    { id: 'formation', label: 'Formation', type: 'text', value: formation },
-    { id: 'playersCount', label: 'Players shown', type: 'range', value: playersCount, min: 1, max: 8, step: 1 },
-    { id: 'pitchNumbers', label: 'Pitch numbers CSV', type: 'text', value: pitchNumbers },
-    { id: 'brandMark', label: 'Scorebug brand mark', type: 'text', value: brandMark },
-    { id: 'time', label: 'Match time', type: 'text', value: time },
-    { id: 'homeScore', label: 'Home score', type: 'number', value: homeScore },
-    { id: 'awayScore', label: 'Away score', type: 'number', value: awayScore },
-    { id: 'homeLogo', label: 'Home logo', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=0057ff&color=ffffff&size=256&bold=true` },
-    { id: 'awayLogo', label: 'Away logo', type: 'image', value: 'https://ui-avatars.com/api/?name=OPP&background=a50044&color=ffffff&size=256&bold=true' },
-    { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
-    { id: 'positionY', label: 'Vertical offset (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
-    { id: 'positionX', label: 'Horizontal offset (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
+    { id: 'designStyle', label: 'نمط البروجكشن', type: 'select', value: designStyle, options: ['TITLE_STING', 'COMPOSITION_INTRO', 'LINEUP_BOARD', 'COMPACT_SCOREBUG', 'TUNNEL_REVEAL'] },
+    { id: 'themePreset', label: 'ثيم البروجكشن', type: 'select', value: themePreset, options: ['PROJECTION_BLUE', 'PROJECTION_RED', 'PROJECTION_MONO', 'ELITE_SILVER', 'MATCH_NIGHT'] },
+    { id: 'watermarkText', label: 'نص الخلفية المتكرر', type: 'text', value: watermarkText },
+    { id: 'title', label: 'العنوان الرئيسي', type: 'text', value: title },
+    { id: 'subtitle', label: 'العنوان الفرعي', type: 'text', value: subtitle },
+    { id: 'teamName', label: 'اسم الفريق', type: 'text', value: teamName },
+    { id: 'competition', label: 'اسم البطولة', type: 'text', value: competition },
+    { id: 'teamLogo', label: 'شعار الفريق', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=050712&color=ffffff&size=512&bold=true` },
+    { id: 'formation', label: 'الخطة', type: 'text', value: formation },
+    { id: 'playersCount', label: 'عدد اللاعبين الظاهرين', type: 'range', value: playersCount, min: 1, max: 8, step: 1 },
+    { id: 'pitchNumbers', label: 'أرقام مراكز الملعب CSV', type: 'text', value: pitchNumbers },
+    { id: 'brandMark', label: 'علامة شريط النتيجة', type: 'text', value: brandMark },
+    { id: 'time', label: 'وقت المباراة', type: 'text', value: time },
+    { id: 'homeScore', label: 'نتيجة المضيف', type: 'number', value: homeScore },
+    { id: 'awayScore', label: 'نتيجة الضيف', type: 'number', value: awayScore },
+    { id: 'homeLogo', label: 'شعار المضيف', type: 'image', value: `https://ui-avatars.com/api/?name=${encodeURIComponent(teamName.slice(0, 3))}&background=0057ff&color=ffffff&size=256&bold=true` },
+    { id: 'awayLogo', label: 'شعار الضيف', type: 'image', value: 'https://ui-avatars.com/api/?name=OPP&background=a50044&color=ffffff&size=256&bold=true' },
+    { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+    { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -1000, max: 1000, step: 10 },
+    { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1500, max: 1500, step: 10 },
     ...projectionPlayerDefaults.flatMap(([number, playerName], index) => [
-      { id: `player${index + 1}Number`, label: `Player ${index + 1} number`, type: 'text' as const, value: number },
-      { id: `player${index + 1}Name`, label: `Player ${index + 1} name`, type: 'text' as const, value: playerName },
-      { id: `player${index + 1}Image`, label: `Player ${index + 1} image`, type: 'image' as const, value: '' },
+      { id: `player${index + 1}Number`, label: `رقم اللاعب ${index + 1}`, type: 'text' as const, value: number },
+      { id: `player${index + 1}Name`, label: `اسم اللاعب ${index + 1}`, type: 'text' as const, value: playerName },
+      { id: `player${index + 1}Image`, label: `صورة اللاعب ${index + 1}`, type: 'image' as const, value: '' },
     ]),
     ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', soundInStyle, 'LUXURY_OUT'),
   ],
@@ -887,8 +887,8 @@ const createFootballProjectionTemplate = ({
 const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
   createFootballProjectionTemplate({
     id: 'template-football-projection-title-sting',
-    name: 'Projection Football - Title Sting',
-    description: 'Full-screen match sting with oversized typography, moving grid lines, premium sweep motion, and top/bottom broadcast loops.',
+    name: 'بروجكشن فوتبول — ضربة العنوان',
+    description: 'افتتاحية مباراة كاملة الشاشة بطباعة ضخمة وخطوط شبكة متحركة وحركة دخول فاخرة وحلقات بث علوية وسفلية.',
     icon: 'PROJ',
     accent: '#0057ff',
     designStyle: 'TITLE_STING',
@@ -900,8 +900,8 @@ const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
   }),
   createFootballProjectionTemplate({
     id: 'template-football-projection-composition-intro',
-    name: 'Projection Football - Composition Intro',
-    description: 'Team composition opener inspired by arena projection packages with a central crest chamber and strong red/blue geometry.',
+    name: 'بروجكشن فوتبول — مقدمة التشكيل',
+    description: 'افتتاحية لتشكيلة الفريق مستوحاة من حزم إسقاط الملاعب، مع شعار مركزي وهندسة حمراء/زرقاء قوية.',
     icon: 'COMP',
     accent: '#ff4b3e',
     designStyle: 'COMPOSITION_INTRO',
@@ -914,8 +914,8 @@ const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
   }),
   createFootballProjectionTemplate({
     id: 'template-football-projection-lineup-board',
-    name: 'Projection Football - Lineup Board',
-    description: 'Integrated lineup board with player columns and tactical pitch, built for pre-match or halftime analysis packages.',
+    name: 'بروجكشن فوتبول — لوحة التشكيلة',
+    description: 'لوحة تشكيل متكاملة بأعمدة لاعبين وملعب تكتيكي، مناسبة لما قبل المباراة أو تحليل ما بين الشوطين.',
     icon: 'LINE',
     accent: '#c8aa63',
     designStyle: 'LINEUP_BOARD',
@@ -929,8 +929,8 @@ const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
   }),
   createFootballProjectionTemplate({
     id: 'template-football-projection-compact-scorebug',
-    name: 'Projection Football - Compact Scorebug',
-    description: 'Small premium scorebug for live match coverage, matching the projection package rather than the older generic scoreboard style.',
+    name: 'بروجكشن فوتبول — شريط نتيجة مدمج',
+    description: 'شريط نتيجة صغير وفاخر لتغطية المباريات المباشرة، متوافق مع هوية البروجكشن بدل أسلوب اللوحات العامة القديمة.',
     icon: 'SBUG',
     accent: '#0057ff',
     designStyle: 'COMPACT_SCOREBUG',
@@ -945,8 +945,8 @@ const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
   }),
   createFootballProjectionTemplate({
     id: 'template-football-projection-tunnel-reveal',
-    name: 'Projection Football - Tunnel Reveal',
-    description: 'Tunnel-style reveal for substitutions, extra time, player entrances, or tactical reset moments.',
+    name: 'بروجكشن فوتبول — كشف الممر',
+    description: 'ظهور بأسلوب ممر اللاعبين للتبديلات أو الوقت بدل الضائع أو دخول اللاعبين أو لحظات إعادة الضبط التكتيكي.',
     icon: 'TUNL',
     accent: '#0057ff',
     designStyle: 'TUNNEL_REVEAL',
@@ -961,7 +961,7 @@ const FOOTBALL_PROJECTION_TEMPLATES: OverlayConfig[] = [
 const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   {
     id: 'template-leaderboard-ribbon',
-    name: 'شريط الداعمين (Stream Ribbon)',
+    name: 'شريط الداعمين — شريط البث',
     type: OverlayType.LEADERBOARD,
     isVisible: true,
     theme: {
@@ -1082,7 +1082,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
   {
     id: 'template-smart-news-1',
-    name: 'التقرير الذكي (AI)',
+    name: 'التقرير الذكي — الذكاء الاصطناعي',
     type: OverlayType.SMART_NEWS,
     isVisible: true,
     theme: {
@@ -1115,7 +1115,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       // --- المؤثرات (NEW) ---
       { 
         id: 'transitionEffect', 
-        label: 'تأثير الانتقال (Transition)', 
+        label: 'تأثير الانتقال', 
         type: 'select', 
         value: 'CINEMATIC',
         options: ['CINEMATIC', 'PAGE_FLIP', 'NEWS_SLIDE', 'ZOOM_IMPACT', 'CUBE_ROTATE', 'GLITCH', 'STADIUM_SWEEP', 'TACTICAL_REVEAL', 'SCORE_FLASH']
@@ -1168,7 +1168,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       },
       { 
         id: 'contentPadding', 
-        label: 'هوامش المحتوى (Padding)', 
+        label: 'هوامش المحتوى', 
         type: 'range', 
         value: 48, 
         min: 0, 
@@ -1180,7 +1180,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       // --- التحكم الحر بالأبعاد والموقع (Free Transform) ---
       { 
         id: 'scale', 
-        label: 'حجم القالب (Zoom)', 
+        label: 'حجم القالب', 
         type: 'range', 
         value: 1.1, 
         min: 0.5, 
@@ -1255,8 +1255,8 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'homeLogo', label: 'شعار المضيف', type: 'image' as const, value: 'https://picsum.photos/200/200?random=1' },
       { id: 'awayLogo', label: 'شعار الضيف', type: 'image' as const, value: 'https://picsum.photos/200/200?random=2' },
       // Appearance
-      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'DARK'] },
-      { id: 'themePreset', label: 'الثيم (Colors)', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'UCL_BLUE', 'DARK_MATTER'] },
+      { id: 'designStyle', label: 'النمط', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'DARK'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'UCL_BLUE', 'DARK_MATTER'] },
       // Position
       { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.3, min: 0.5, max: 3.0, step: 0.1 },
       { id: 'positionY', label: 'الموقع العمودي (Y)', type: 'range' as const, value: 0, min: -1000, max: 1000, step: 10 },
@@ -1288,7 +1288,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
   {
     id: 'template-lower',
-    name: 'تعريف ضيف (Lower Third)',
+    name: 'تعريف ضيف — الشريط السفلي',
     type: OverlayType.LOWER_THIRD,
     isVisible: true,
     theme: {
@@ -1303,15 +1303,15 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'name', label: 'الاسم', type: 'text' as const, value: 'أحمد محمد' },
       { id: 'role', label: 'المنصب', type: 'text' as const, value: 'محلل رياضي' },
       // Appearance
-      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'MINIMAL'] },
-      { id: 'themePreset', label: 'الثيم (Colors)', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'DARK_MATTER'] },
+      { id: 'designStyle', label: 'النمط', type: 'select' as const, value: 'CLASSIC', options: ['CLASSIC', 'MODERN', 'MINIMAL'] },
+      { id: 'themePreset', label: 'الثيم', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'NIGHT_PURPLE', 'DARK_MATTER'] },
       // Position
       { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.2, min: 0.5, max: 3.0, step: 0.1 },
     ]
   },
   {
     id: 'template-exclusive-alert',
-    name: 'خبر حصري (Exclusive Alert)',
+    name: 'خبر حصري — تنبيه خاص',
     type: OverlayType.EXCLUSIVE_ALERT,
     isVisible: false,
     theme: {
@@ -1328,7 +1328,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'position', label: 'الموقع', type: 'select', value: 'RIGHT', options: ['RIGHT', 'LEFT'] },
       { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.5, min: 0.5, max: 3.0, step: 0.1 },
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 100, min: -1000, max: 1000, step: 10 },
-      { id: 'useTTS', label: 'تفعيل النطق الصوتي (TTS)', type: 'boolean', value: true },
+      { id: 'useTTS', label: 'تفعيل النطق الصوتي', type: 'boolean', value: true },
       { id: 'ttsText', label: 'نص النطق الصوتي', type: 'text', value: 'حصرياً مع ريو' },
       { id: 'themePreset', label: 'اللون', type: 'select', value: 'CLASSIC_RED', options: ['CLASSIC_RED', 'ROYAL_GOLD', 'TACTICAL_BLUE', 'PITCH_GREEN', 'NIGHT_PURPLE'] },
       { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
@@ -1337,7 +1337,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
   {
     id: 'template-guests',
-    name: 'ضيوف الحلقة (Guests)',
+    name: 'ضيوف الحلقة',
     type: OverlayType.GUESTS,
     isVisible: false,
     theme: {
@@ -1380,7 +1380,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
   {
     id: 'template-ucl-draw',
-    name: 'قرعة الأبطال (UCL Draw)',
+    name: 'قرعة الأبطال',
     type: OverlayType.UCL_DRAW,
     isVisible: false,
     theme: {
@@ -1531,7 +1531,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   },
   {
     id: 'template-social-media',
-    name: 'تغريدة / تعليق (Social Media)',
+    name: 'تغريدة / تعليق — شبكات التواصل',
     type: OverlayType.SOCIAL_MEDIA,
     isVisible: false,
     theme: {
@@ -1545,7 +1545,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       ...commonFields,
       { id: 'platform', label: 'المنصة', type: 'select', value: 'X (Twitter)', options: ['X (Twitter)', 'Instagram', 'Facebook', 'YouTube'] },
       { id: 'authorName', label: 'اسم الحساب', type: 'text', value: 'أحمد محمد' },
-      { id: 'authorHandle', label: 'المعرف (Handle)', type: 'text', value: '@ahmed_m' },
+      { id: 'authorHandle', label: 'المعرف', type: 'text', value: '@ahmed_m' },
       { id: 'authorImage', label: 'صورة الحساب', type: 'image', value: 'https://ui-avatars.com/api/?name=Ahmed&background=random' },
       { id: 'content', label: 'نص التعليق', type: 'textarea', value: 'مباراة رائعة وأداء ممتاز من الفريقين! #برشلونة' },
       { id: 'likes', label: 'الإعجابات', type: 'number', value: 1200 },
@@ -1583,7 +1583,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'stat2Value', label: 'الإحصائية 2 (القيمة)', type: 'text' as const, value: '15' },
       { id: 'stat3Label', label: 'الإحصائية 3 (الاسم)', type: 'text' as const, value: 'Rating' },
       { id: 'stat3Value', label: 'الإحصائية 3 (القيمة)', type: 'text' as const, value: '9.8' },
-      { id: 'designStyle', label: 'النمط (Design)', type: 'select' as const, value: 'MODERN', options: ['MODERN', 'DARK'] },
+      { id: 'designStyle', label: 'النمط', type: 'select' as const, value: 'MODERN', options: ['MODERN', 'DARK'] },
       { id: 'themePreset', label: 'الثيم', type: 'select' as const, value: 'TACTICAL_BLUE', options: ['TACTICAL_BLUE', 'CLASSIC_RED', 'PITCH_GREEN', 'ROYAL_GOLD', 'DARK_MATTER'] },
       { id: 'scale', label: 'حجم القالب', type: 'range' as const, value: 1.0, min: 0.5, max: 2.0, step: 0.1 },
       { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range' as const, value: 0, min: -1000, max: 1000, step: 10 },
@@ -1660,13 +1660,13 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   {
     id: 'template-h2h-stats',
     templateId: 'template-h2h-stats',
-    name: 'H2H مقارنة لاعبين',
+    name: 'مقارنة مباشرة بين لاعبين',
     type: OverlayType.H2H_STATS,
     isVisible: false,
     templateIcon: 'H2H',
     templateAccent: '#00E5FF',
     templateGroup: 'REO_BROADCAST',
-    templateDescription: 'مقارنة إحصائيات بين لاعبين — Sky Sports / NSL Style',
+    templateDescription: 'مقارنة إحصائيات بين لاعبين بأسلوب بث رياضي فاخر.',
     theme: { primaryColor: '#00E5FF', secondaryColor: '#0B132B', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -2087,13 +2087,13 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
   {
     id: 'template-barca-premium',
     templateId: 'template-barca-premium',
-    name: 'FCB حزمة برشلونة',
+    name: 'برشلونة — حزمة النادي',
     type: OverlayType.BARCA_PREMIUM,
     isVisible: false,
     templateIcon: 'FCB',
     templateAccent: '#EDBB00',
     templateGroup: 'REO_BROADCAST',
-    templateDescription: 'هوية برشلونة المحترفة — La Liga / EA Sports Style',
+    templateDescription: 'هوية برشلونة المحترفة بأسلوب دوري إسباني حديث.',
     theme: { primaryColor: '#EDBB00', secondaryColor: '#06001a', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -2117,7 +2117,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'stat2Value',  label: 'إحصائية 2 رقم',  type: 'text',  value: '38' },
       { id: 'stat3Label',  label: 'إحصائية 3 اسم',  type: 'text',  value: 'التمريرات' },
       { id: 'stat3Value',  label: 'إحصائية 3 رقم',  type: 'text',  value: '143' },
-      { id: 'showBadge',   label: 'إظهار شارة FCB',  type: 'boolean', value: true },
+      { id: 'showBadge',   label: 'إظهار شارة النادي',  type: 'boolean', value: true },
       { id: 'scale',       label: 'الحجم',  type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
       { id: 'positionY',   label: 'موضع Y', type: 'range', value: 0, min: -500, max: 500, step: 5 },
       { id: 'positionX',   label: 'موضع X', type: 'range', value: 0, min: -800, max: 800, step: 5 },
@@ -2618,13 +2618,13 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-mercato-x-ray',
     templateId: 'template-mercato-x-ray',
-    name: 'ميركاتو — X-Ray تحليل اللاعب',
+    name: 'ميركاتو — أشعة تحليل اللاعب',
     type: OverlayType.MERCATO_X_RAY,
     isVisible: false,
     templateIcon: '🔬',
     templateAccent: '#a855f7',
     templateGroup: 'MERCATO_PACKAGE',
-    templateDescription: 'تحليل بصري كامل للاعب — رادار chart + 6 قابليات بأشرطة + heat map للمناطق الأكثر نشاطاً + verdict نهائي.',
+    templateDescription: 'تحليل بصري كامل للاعب: رادار، ست قابليات بأشرطة، خريطة حرارة للمناطق الأكثر نشاطاً، وحكم نهائي.',
     theme: { primaryColor: '#a855f7', secondaryColor: '#08001a', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -2673,7 +2673,7 @@ const MERCATO_INNOVATIVE_TEMPLATES: OverlayConfig[] = [
 const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-player-intel-v2',
-    name: 'استخبارات اللاعب V2',
+    name: 'استخبارات اللاعب — الإصدار الثاني',
     type: OverlayType.PLAYER_INTEL_V2,
     templateId: 'template-player-intel-v2',
     templateDescription: 'قالب بث احترافي يدمج بيانات FotMob و FBref في بطاقة تحليل لاعب متقدمة.',
@@ -2691,7 +2691,7 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
       { id: 'samplePlayerB', label: 'اللاعب الثاني', type: 'select', value: 'robert-lewandowski', options: [
         { label: '— يُحمَّل من المكتبة —', value: 'robert-lewandowski' },
       ]},
-      { id: 'cardType', label: 'نوع البطاقة (Preset)', type: 'select', value: 'attacker_card', options: [
+      { id: 'cardType', label: 'نوع البطاقة', type: 'select', value: 'attacker_card', options: [
         { label: 'بطاقة هجومية', value: 'attacker_card' },
         { label: 'صانع لعب', value: 'playmaker_card' },
         { label: 'جناح', value: 'winger_card' },
