@@ -315,23 +315,39 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const dealValue = String(getField('dealValue') || '');
   const confidencePct = Math.max(0, Math.min(100, Number(getField('confidencePct') ?? 85)));
   const lines = safeParse<ChatLine[]>(String(getField('chatLines') || '[]'), []);
+  const reporterLineCount = lines.filter(line => line.side !== 'agent').length;
+  const agentLineCount = lines.filter(line => line.side === 'agent').length;
+  const lastSignal = lines.length > 0 ? String(lines[lines.length - 1]?.text || '') : '';
+  const negotiationStage =
+    confidencePct >= 94 ? 'إغلاق وشيك' :
+    confidencePct >= 82 ? 'حسم متقدم' :
+    confidencePct >= 64 ? 'تفاوض نشط' :
+    'رصد أولي';
+  const negotiationColor =
+    confidencePct >= 94 ? t.success :
+    confidencePct >= 82 ? t.accent :
+    confidencePct >= 64 ? t.warning :
+    t.dim;
 
   const isLive = callStatus === 'live';
   const isPrivate = callStatus === 'private_source';
   const statusPill =
     callStatus === 'recorded'
-      ? <Pill t={t} color={t.warning} label="RECORDED" small />
+      ? <Pill t={t} color={t.warning} label="مسجلة" small />
       : isPrivate
-      ? <Pill t={t} color={t.accent2} label="PRIVATE SOURCE" small />
-      : <Pill t={t} color={t.danger} label="LIVE" pulse small />;
+      ? <Pill t={t} color={t.accent2} label="مصدر خاص" small />
+      : <Pill t={t} color={t.danger} label="مباشرة" pulse small />;
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
       {/* Top bar: caller identity + status + duration */}
-      <div className="rounded-xl px-5 py-3 flex items-center justify-between" style={{
-        background: `linear-gradient(135deg, ${t.surface} 0%, ${t.surfaceDeep} 100%)`,
+      <div className="rounded-xl px-5 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-4 relative overflow-hidden" style={{
+        background: `linear-gradient(135deg, ${t.surfaceDeep} 0%, ${t.surface} 55%, ${t.surfaceDeep} 100%)`,
         border: `1px solid ${t.border}`,
       }}>
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{
+          background: `linear-gradient(to right, transparent, ${isLive ? t.danger : t.accent}, ${negotiationColor}, transparent)`,
+        }} />
         <div className="flex items-center gap-3">
           <div className="relative">
             <Avatar t={t} name={callerName} accent={t.accent} size={52} />
@@ -354,6 +370,18 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             {callerRole && <div className="text-[11px]" style={{ color: t.sub }}>{callerRole}</div>}
           </div>
         </div>
+        <div className="text-center">
+          <div className="text-[9px] font-black uppercase tracking-[0.35em]" style={{ color: t.dim }}>MERCATO CALL ROOM</div>
+          <div className="mt-1 text-[28px] font-black leading-none" style={{ color: t.text }}>غرفة اتصال الصفقة</div>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{
+            background: `${negotiationColor}14`,
+            border: `1px solid ${negotiationColor}55`,
+            color: negotiationColor,
+          }}>
+            <Icon name="pulse" size={13} color={negotiationColor} />
+            <span className="text-[10px] font-black">{negotiationStage}</span>
+          </div>
+        </div>
         <div className="text-right">
           <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.accent }}>المراسل</div>
           <div className="text-[14px] font-bold mt-0.5" style={{ color: t.text }}>REO MERCATO DESK</div>
@@ -365,10 +393,21 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-[260px_1fr_220px] gap-3 min-h-0">
+      <div className="flex-1 grid grid-cols-[280px_1fr_250px] gap-3 min-h-0">
         {/* Left: Deal context */}
-        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent2 }}>صفقة</div>
+        <div className="rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden" style={{
+          background: `linear-gradient(180deg, ${t.surface} 0%, ${t.surfaceDeep} 100%)`,
+          border: `1px solid ${t.border}`,
+        }}>
+          <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full opacity-20 blur-2xl" style={{ background: t.accent2 }} />
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent2 }}>ملف الصفقة</div>
+            <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{
+              background: `${negotiationColor}16`,
+              color: negotiationColor,
+              border: `1px solid ${negotiationColor}45`,
+            }}>{confidencePct}%</span>
+          </div>
           <div className="flex items-center gap-3">
             <Avatar t={t} name={playerName} image={playerImage} accent={t.accent2} size={64} />
             <div className="min-w-0 flex-1">
@@ -393,13 +432,29 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             <div className="text-[9px] uppercase tracking-wider" style={{ color: t.dim }}>القيمة</div>
             <div className="text-[20px] font-black leading-none mt-0.5" style={{ color: t.accent }}>{dealValue || '—'}</div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>REPORTER</div>
+              <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent }}>{reporterLineCount}</div>
+            </div>
+            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>AGENT</div>
+              <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent2 }}>{agentLineCount}</div>
+            </div>
+          </div>
         </div>
 
         {/* Center: Transcript */}
         <div className="rounded-xl flex flex-col overflow-hidden" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
           <div className="px-4 py-2 border-b flex items-center justify-between" style={{ borderColor: t.border, background: t.surface }}>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>TRANSCRIPT</div>
-            <div className="text-[9px] font-mono" style={{ color: t.dim }}>{lines.length} رسالة</div>
+            <div className="flex items-center gap-2">
+              <Icon name="lock" size={13} color={t.accent} />
+              <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>قناة مشفرة · transcript</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isLive && <Waveform color={t.danger} bars={8} height={12} />}
+              <div className="text-[9px] font-mono" style={{ color: t.dim }}>{lines.length} رسالة</div>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {lines.length === 0 ? (
@@ -437,7 +492,14 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
 
         {/* Right: Source / dynamic stages from chat length */}
         <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>المصدر</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>المصدر</div>
+            <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{
+              background: `${isPrivate ? t.accent2 : t.warning}14`,
+              color: isPrivate ? t.accent2 : t.warning,
+              border: `1px solid ${isPrivate ? t.accent2 : t.warning}45`,
+            }}>{isPrivate ? 'مغلق' : 'متابعة'}</span>
+          </div>
           <div className="rounded-lg p-3 text-center" style={{
             background: t.surfaceDeep,
             border: `1px dashed ${isPrivate ? t.accent2 : t.border}`,
@@ -446,6 +508,16 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             <div className="text-[11px] font-bold" style={{ color: t.text }}>{isPrivate ? 'مصدر خاص مغلق' : 'مصدر مغلق'}</div>
             <div className="text-[9px] mt-1" style={{ color: t.dim }}>المعلومة من داخل غرفة المفاوضات</div>
           </div>
+          {lastSignal && (
+            <div className="rounded-lg p-3" style={{ background: `${t.accent}10`, border: `1px solid ${t.accent}40` }}>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>آخر إشارة</div>
+              <div className="mt-1 text-[11px] leading-relaxed line-clamp-3" style={{
+                color: t.text,
+                direction: isRtl(lastSignal) ? 'rtl' : 'ltr',
+                textAlign: isRtl(lastSignal) ? 'right' : 'left',
+              }}>{lastSignal}</div>
+            </div>
+          )}
           <div className="rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
             <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>تقدم الصفقة</div>
             <div className="space-y-1.5">
