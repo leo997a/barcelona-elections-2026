@@ -2734,9 +2734,9 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
   },
 ];
 
-// ─── MERCATO-TEMPLATES-X6 — 10 new mercato variants via factory ─────────────
+// ─── MERCATO-TEMPLATES-X6/X7 — unified mercato variants via factory ─────────
 //
-// All 10 templates share:
+// All templates share:
 //   - OverlayType.MERCATO_UNIFIED (one renderer branches on mercatoVariant)
 //   - inherited broadcast controls (transitions + audio + voice via
 //     withBroadcastControls)
@@ -2797,6 +2797,14 @@ const createMercatoTemplate = (input: MercatoTemplateInput): OverlayConfig => ({
   ],
 });
 
+const mercatoTodayLabel = (): string => {
+  try {
+    return new Intl.DateTimeFormat('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  } catch {
+    return '29 مايو 2026';
+  }
+};
+
 const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
   // 1. Agent Call #2
   createMercatoTemplate({
@@ -2855,6 +2863,61 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
         { name: 'David Ornstein', reliability: 90 },
         { name: 'Local outlet', reliability: 60 },
       ], null, 2) },
+    ],
+  }),
+  // 3. Probability Shift Matrix
+  createMercatoTemplate({
+    id: 'template-mercato-x7-probability-shift-matrix',
+    variant: 'probability_shift',
+    name: 'ميركاتو — مصفوفة تحوّل نسب الصفقات',
+    templateIcon: '٪',
+    templateAccent: '#64ff6a',
+    description: 'قالب عصري يعرض النسب القديمة ثم يتحول بزر واحد إلى نسب اليوم مع حركة ومؤثر تحديث صوتي.',
+    audioSceneId: 'analysis_lab',
+    dataFields: [
+      { id: 'probabilityShiftMode', label: 'حالة عرض النسب', type: 'hidden', value: 'old' },
+      { id: 'audioUpdateCue', label: 'مؤثر تحديث النسب', type: 'hidden', value: 'DATA_TICK' },
+      { id: 'soundInStyle', label: 'مؤثر دخول النسب', type: 'hidden', value: 'DATA_RUSH' },
+      { id: 'soundOutStyle', label: 'مؤثر خروج النسب', type: 'hidden', value: 'SOFT_FADE' },
+      { id: 'voiceLibraryId', label: 'صوت النسب', type: 'hidden', value: 'mercato_deal_percentages_current' },
+      { id: 'matrixLayout', label: 'شكل المصفوفة', type: 'select', value: 'split_board', options: [
+        { value: 'split_board', label: 'لوحة سينمائية مقسومة' },
+        { value: 'trading_floor', label: 'غرفة سوق الصفقات' },
+        { value: 'hologram_grid', label: 'هولوجرام الهدف الرئيسي' },
+      ] },
+      { id: 'matrixTitle', label: 'عنوان القالب', type: 'text', value: 'مصفوفة نسب الصفقات' },
+      { id: 'matrixSubtitle', label: 'وصف قصير', type: 'text', value: 'النموذج القديم يتحول إلى تحديث اليوم' },
+      { id: 'updateDate', label: 'تاريخ تحديث النسب', type: 'text', value: mercatoTodayLabel() },
+      { id: 'featuredDealIndex', label: 'الصفقة الرئيسية', type: 'select', value: '1', options: [
+        { value: '1', label: 'الصفقة 1' },
+        { value: '2', label: 'الصفقة 2' },
+        { value: '3', label: 'الصفقة 3' },
+        { value: '4', label: 'الصفقة 4' },
+      ] },
+      { id: 'deal1Player', label: 'صفقة 1 — اللاعب', type: 'text', value: 'الهدف الأول' },
+      { id: 'deal1From', label: 'صفقة 1 — من نادي', type: 'text', value: 'النادي الحالي' },
+      { id: 'deal1To', label: 'صفقة 1 — إلى نادي', type: 'text', value: 'Barcelona' },
+      { id: 'deal1OldPct', label: 'صفقة 1 — النسبة القديمة', type: 'range', value: 40, min: 0, max: 100, step: 1 },
+      { id: 'deal1NewPct', label: 'صفقة 1 — نسبة اليوم', type: 'range', value: 78, min: 0, max: 100, step: 1 },
+      { id: 'deal1Image', label: 'صفقة 1 — صورة اللاعب', type: 'image', value: '' },
+      { id: 'deal2Player', label: 'صفقة 2 — اللاعب', type: 'text', value: 'الهدف الثاني' },
+      { id: 'deal2From', label: 'صفقة 2 — من نادي', type: 'text', value: 'النادي الحالي' },
+      { id: 'deal2To', label: 'صفقة 2 — إلى نادي', type: 'text', value: 'Barcelona' },
+      { id: 'deal2OldPct', label: 'صفقة 2 — النسبة القديمة', type: 'range', value: 58, min: 0, max: 100, step: 1 },
+      { id: 'deal2NewPct', label: 'صفقة 2 — نسبة اليوم', type: 'range', value: 85, min: 0, max: 100, step: 1 },
+      { id: 'deal2Image', label: 'صفقة 2 — صورة اللاعب', type: 'image', value: '' },
+      { id: 'deal3Player', label: 'صفقة 3 — اللاعب', type: 'text', value: 'الهدف الثالث' },
+      { id: 'deal3From', label: 'صفقة 3 — من نادي', type: 'text', value: 'النادي الحالي' },
+      { id: 'deal3To', label: 'صفقة 3 — إلى نادي', type: 'text', value: 'Barcelona' },
+      { id: 'deal3OldPct', label: 'صفقة 3 — النسبة القديمة', type: 'range', value: 60, min: 0, max: 100, step: 1 },
+      { id: 'deal3NewPct', label: 'صفقة 3 — نسبة اليوم', type: 'range', value: 64, min: 0, max: 100, step: 1 },
+      { id: 'deal3Image', label: 'صفقة 3 — صورة اللاعب', type: 'image', value: '' },
+      { id: 'deal4Player', label: 'صفقة 4 — اللاعب', type: 'text', value: 'الهدف الرابع' },
+      { id: 'deal4From', label: 'صفقة 4 — من نادي', type: 'text', value: 'النادي الحالي' },
+      { id: 'deal4To', label: 'صفقة 4 — إلى نادي', type: 'text', value: 'Barcelona' },
+      { id: 'deal4OldPct', label: 'صفقة 4 — النسبة القديمة', type: 'range', value: 50, min: 0, max: 100, step: 1 },
+      { id: 'deal4NewPct', label: 'صفقة 4 — نسبة اليوم', type: 'range', value: 42, min: 0, max: 100, step: 1 },
+      { id: 'deal4Image', label: 'صفقة 4 — صورة اللاعب', type: 'image', value: '' },
     ],
   }),
   // 3. Club Statement

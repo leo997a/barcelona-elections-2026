@@ -264,6 +264,12 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
     String(getField('confidencePct') || ''),   // agent_call
     String(getField('timelineEntries') || ''), // here_we_go_buildup
     String(getField('sources') || ''),         // deal_radar / source_confidence
+    String(getField('probabilityShiftMode') || ''), // probability_shift
+    String(getField('updateDate') || ''),            // probability_shift
+    String(getField('deal1NewPct') || ''),           // probability_shift
+    String(getField('deal2NewPct') || ''),           // probability_shift
+    String(getField('deal3NewPct') || ''),           // probability_shift
+    String(getField('deal4NewPct') || ''),           // probability_shift
   ].join('|');
 
   useEffect(() => {
@@ -284,6 +290,7 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
           {variant === 'club_statement' && <ClubStatementVariant t={t} getField={getField} />}
           {variant === 'deadline_hour' && <DeadlineHourVariant t={t} getField={getField} />}
           {variant === 'source_confidence' && <SourceConfidenceVariant t={t} getField={getField} />}
+          {variant === 'probability_shift' && <ProbabilityShiftVariant t={t} getField={getField} />}
           {variant === 'clause_reveal' && <ClauseRevealVariant t={t} getField={getField} />}
           {variant === 'medical_tracker' && <MedicalTrackerVariant t={t} getField={getField} />}
           {variant === 'hijack_alert' && <HijackAlertVariant t={t} getField={getField} />}
@@ -1047,6 +1054,237 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+// ─── 6. Probability Shift Matrix (old → today update, motion + update cue) ───
+
+interface ProbabilityShiftDeal {
+  idx: number;
+  player: string;
+  fromClub: string;
+  toClub: string;
+  image: string;
+  oldPct: number;
+  newPct: number;
+}
+
+const clampPercent = (value: unknown, fallback = 0): number => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+};
+
+const probabilityColor = (pct: number, t: UnifiedTheme): string => {
+  if (pct >= 80) return '#64ff6a';
+  if (pct >= 62) return t.accent;
+  if (pct >= 45) return t.warning;
+  return '#ff5c8a';
+};
+
+const probabilityLabel = (pct: number): string => {
+  if (pct >= 80) return 'ساخنة جدًا';
+  if (pct >= 62) return 'متقدمة';
+  if (pct >= 45) return 'سباق مفتوح';
+  return 'إشارة منخفضة';
+};
+
+const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
+  const title = String(getField('matrixTitle') || 'مصفوفة نسب الصفقات');
+  const subtitle = String(getField('matrixSubtitle') || 'نموذج احتمالات ميركاتو');
+  const mode = String(getField('probabilityShiftMode') || 'old');
+  const layout = String(getField('matrixLayout') || 'split_board');
+  const updateDate = String(getField('updateDate') || '');
+  const featuredDealIndex = Math.max(1, Math.min(4, Number(getField('featuredDealIndex') || 1)));
+  const showNew = mode === 'new';
+
+  const deals: ProbabilityShiftDeal[] = [1, 2, 3, 4].map(idx => ({
+    idx,
+    player: String(getField(`deal${idx}Player`) || `هدف ${idx}`),
+    fromClub: String(getField(`deal${idx}From`) || ''),
+    toClub: String(getField(`deal${idx}To`) || 'Barcelona'),
+    image: String(getField(`deal${idx}Image`) || ''),
+    oldPct: clampPercent(getField(`deal${idx}OldPct`), 40),
+    newPct: clampPercent(getField(`deal${idx}NewPct`), 55),
+  }));
+
+  const visibleDeals = deals.filter(deal => deal.player.trim());
+  const featured = visibleDeals.find(deal => deal.idx === featuredDealIndex) || visibleDeals[0] || deals[0];
+  const activePct = (deal: ProbabilityShiftDeal) => showNew ? deal.newPct : deal.oldPct;
+  const delta = (deal: ProbabilityShiftDeal) => deal.newPct - deal.oldPct;
+  const hotCount = visibleDeals.filter(deal => deal.newPct >= 75).length;
+  const watchCount = visibleDeals.filter(deal => deal.newPct >= 50 && deal.newPct < 75).length;
+  const lowCount = visibleDeals.length - hotCount - watchCount;
+  const avgOld = visibleDeals.length ? Math.round(visibleDeals.reduce((sum, deal) => sum + deal.oldPct, 0) / visibleDeals.length) : 0;
+  const avgNew = visibleDeals.length ? Math.round(visibleDeals.reduce((sum, deal) => sum + deal.newPct, 0) / visibleDeals.length) : 0;
+  const modeColor = showNew ? probabilityColor(featured.newPct, t) : '#ff5c8a';
+
+  const ClubRoute: React.FC<{ from?: string; to?: string; align?: 'start' | 'center' }> = ({ from, to, align = 'start' }) => (
+    <div
+      className={`mt-0.5 flex min-w-0 items-center gap-1 text-[10px] ${align === 'center' ? 'justify-center' : 'justify-start'}`}
+      style={{ color: t.sub }}
+      dir="rtl"
+    >
+      <span className="truncate" dir="ltr">{from || 'النادي الحالي'}</span>
+      <span className="shrink-0">إلى</span>
+      <span className="truncate" dir="ltr">{to || 'Barcelona'}</span>
+    </div>
+  );
+
+  const DealRow: React.FC<{ deal: ProbabilityShiftDeal; compact?: boolean }> = ({ deal, compact = false }) => {
+    const pct = activePct(deal);
+    const color = probabilityColor(pct, t);
+    const change = delta(deal);
+    return (
+      <div className="rounded-xl p-3 relative overflow-hidden transition-all duration-700" style={{
+        background: deal.idx === featured.idx ? `${color}13` : t.surface,
+        border: `1px solid ${deal.idx === featured.idx ? `${color}75` : t.border}`,
+      }}>
+        <div className="flex items-center gap-3">
+          <Avatar t={t} name={deal.player} image={deal.image} accent={color} size={compact ? 42 : 52} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="truncate font-black leading-tight" style={{ color: t.text, fontSize: compact ? 14 : 18 }}>{deal.player}</div>
+              <div className="font-mono font-black" style={{ color, fontSize: compact ? 20 : 28 }}>{pct}%</div>
+            </div>
+            <ClubRoute from={deal.fromClub} to={deal.toClub} />
+            <div className="mt-2 relative h-2 rounded-full overflow-hidden" style={{ background: `${color}16` }}>
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+              {showNew && (
+                <span className="absolute top-0 h-full w-[2px]" style={{ right: `${100 - deal.oldPct}%`, background: '#fff', opacity: 0.65 }} />
+              )}
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[9px] font-black" style={{ color }}>{probabilityLabel(pct)}</span>
+              <span className="text-[9px] font-mono font-black" style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>
+                {showNew ? `${change >= 0 ? '+' : ''}${change}%` : `قديم ${deal.oldPct}%`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const HeaderBar = () => (
+    <div className="rounded-xl px-5 py-3 flex items-center justify-between relative overflow-hidden" style={{
+      background: `linear-gradient(135deg, ${t.surfaceDeep} 0%, ${t.surface} 100%)`,
+      border: `1px solid ${t.border}`,
+    }}>
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(to right, transparent, ${modeColor}, ${t.accent2}, transparent)` }} />
+      <div>
+        <div className="text-[9px] font-black uppercase tracking-[0.35em]" style={{ color: showNew ? t.success : '#ff5c8a' }}>
+          {showNew ? 'تحديث اليوم / REO SHOW' : 'النموذج القديم للنسب'}
+        </div>
+        <div className="mt-1 text-[28px] font-black leading-none" style={{ color: t.text }}>{title}</div>
+        <div className="mt-1 text-[11px]" style={{ color: t.sub }}>{subtitle}</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="rounded-xl px-3 py-2 text-center" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>النموذج القديم</div>
+          <div className="mt-1 font-mono text-[24px] font-black" style={{ color: '#ff5c8a' }}>{avgOld}%</div>
+        </div>
+        <div className="rounded-xl px-3 py-2 text-center" style={{ background: `${modeColor}12`, border: `1px solid ${modeColor}55` }}>
+          <div className="text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>{showNew ? 'نسب اليوم' : 'جاهز للتحديث'}</div>
+          <div className="mt-1 font-mono text-[24px] font-black" style={{ color: modeColor }}>{showNew ? `${avgNew}%` : 'LIVE'}</div>
+        </div>
+        <Pill t={t} color={modeColor} label={showNew ? `تحديث ${updateDate || 'اليوم'}` : 'يعرض القديم'} pulse={showNew} />
+      </div>
+    </div>
+  );
+
+  if (layout === 'hologram_grid') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <HeaderBar />
+        <div className="flex-1 grid grid-cols-[1fr_420px_1fr] gap-3 min-h-0">
+          <div className="space-y-3">
+            {visibleDeals.slice(0, 2).map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
+          </div>
+          <div className="rounded-2xl relative overflow-hidden flex flex-col items-center justify-center text-center" style={{
+            background: `radial-gradient(circle at center, ${modeColor}22 0%, ${t.surfaceDeep} 58%, ${t.surface} 100%)`,
+            border: `1px solid ${modeColor}65`,
+          }}>
+            <div className="absolute inset-8 rounded-full border opacity-25" style={{ borderColor: modeColor }} />
+            <div className="absolute inset-16 rounded-full border opacity-20" style={{ borderColor: t.accent2 }} />
+            <Avatar t={t} name={featured.player} image={featured.image} accent={modeColor} size={118} />
+            <div className="mt-5 text-[30px] font-black" style={{ color: t.text }}>{featured.player}</div>
+            <ClubRoute from={featured.fromClub} to={featured.toClub} align="center" />
+            <div className="mt-5 font-mono text-[76px] font-black leading-none transition-all duration-700" style={{ color: modeColor }}>
+              {activePct(featured)}%
+            </div>
+            <div className="mt-2 text-[12px] font-black" style={{ color: modeColor }}>{probabilityLabel(activePct(featured))}</div>
+          </div>
+          <div className="space-y-3">
+            {visibleDeals.slice(2, 4).map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === 'trading_floor') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <HeaderBar />
+        <div className="grid grid-cols-3 gap-3">
+          <FieldCard t={t} label="أهداف ساخنة" value={String(hotCount)} accent="#64ff6a" />
+          <FieldCard t={t} label="قائمة مراقبة" value={String(watchCount)} accent={t.warning} />
+          <FieldCard t={t} label="إشارة منخفضة" value={String(lowCount)} accent="#ff5c8a" />
+        </div>
+        <div className="flex-1 rounded-xl p-4 grid grid-rows-4 gap-2 min-h-0" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          {visibleDeals.map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+      <HeaderBar />
+      <div className="flex-1 grid grid-cols-[1.05fr_1fr_360px] gap-3 min-h-0">
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          <div className="flex items-center justify-between">
+          <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>مصفوفة الاحتمال</div>
+            <div className="font-mono text-[10px]" style={{ color: t.dim }}>0-100</div>
+          </div>
+          {visibleDeals.map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
+        </div>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: t.accent }}>حركة السوق</div>
+          {visibleDeals.map(deal => {
+            const change = delta(deal);
+            const color = change >= 0 ? t.success : '#ff5c8a';
+            return (
+              <div key={deal.idx} className="rounded-lg px-3 py-2 flex items-center justify-between" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+                <div className="min-w-0">
+                  <div className="truncate text-[14px] font-black" style={{ color: t.text }}>{deal.player}</div>
+                  <div className="text-[9px]" style={{ color: t.dim }}>{deal.oldPct}% إلى {deal.newPct}%</div>
+                </div>
+                <div className="font-mono text-[24px] font-black" style={{ color }}>{change >= 0 ? '+' : ''}{change}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="rounded-xl p-4 flex flex-col relative overflow-hidden" style={{
+          background: `linear-gradient(180deg, ${modeColor}14 0%, ${t.surfaceDeep} 70%)`,
+          border: `1px solid ${modeColor}55`,
+        }}>
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(to right, transparent, ${modeColor}, transparent)` }} />
+          <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>هدف التركيز</div>
+          <div className="mt-4 flex justify-center">
+            <Avatar t={t} name={featured.player} image={featured.image} accent={modeColor} size={118} />
+          </div>
+          <div className="mt-5 text-center text-[28px] font-black leading-tight" style={{ color: t.text }}>{featured.player}</div>
+          <ClubRoute from={featured.fromClub} to={featured.toClub} align="center" />
+          <div className="mt-auto text-center">
+            <div className="font-mono text-[70px] font-black leading-none" style={{ color: modeColor }}>{activePct(featured)}%</div>
+            <div className="mt-2 text-[11px] font-black" style={{ color: modeColor }}>{probabilityLabel(activePct(featured))}</div>
+            {showNew && <div className="mt-2 text-[10px] font-mono" style={{ color: delta(featured) >= 0 ? t.success : '#ff5c8a' }}>{delta(featured) >= 0 ? '+' : ''}{delta(featured)}% منذ النموذج القديم</div>}
+          </div>
+        </div>
       </div>
     </div>
   );

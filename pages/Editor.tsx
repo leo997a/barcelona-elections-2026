@@ -707,6 +707,24 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
+  const mercadoVariant = String(getDraftValue('mercatoVariant') || '');
+  const isProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED && mercadoVariant === 'probability_shift';
+  const probabilityShiftMode = String(getDraftValue('probabilityShiftMode') || 'old');
+
+  const formatProbabilityShiftToday = () => {
+    try {
+      return new Intl.DateTimeFormat('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    } catch {
+      return '29 مايو 2026';
+    }
+  };
+
+  const setProbabilityShiftMode = (mode: 'old' | 'new') => {
+    handleDraftFieldChanges({
+      probabilityShiftMode: mode,
+      ...(mode === 'new' ? { updateDate: formatProbabilityShiftToday() } : {}),
+    });
+  };
 
   // Phase E.1: hide bottom tabs in Player Stats easy mode
   const isPlayerStatsEasyMode = draftOverlay.type === OverlayType.PLAYER_STATS && String(getDraftValue('playerStatsLabUiMode') || 'easy') === 'easy';
@@ -3323,6 +3341,54 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           {/* FIELDS TAB */}
           {['fields', 'candidates', 'time', 'content', 'camera', 'style', 'turnout', 'images', 'position', 'sound', 'football-main', 'football-lineup', 'football-score'].includes(activeTab) && (
              <>
+               {activeTab === 'fields' && isProbabilityShiftTemplate && (
+                 <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 space-y-3">
+                   <div className="flex items-start justify-between gap-3">
+                     <div>
+                       <div className="flex items-center gap-2 text-emerald-300">
+                         <Zap className="h-4 w-4" />
+                         <h3 className="text-sm font-black">تحكم تحوّل النسب</h3>
+                       </div>
+                       <p className="mt-1 text-[11px] leading-5 text-emerald-100/70">
+                         بدّل القالب بين نموذج النسب القديم ونسب اليوم. عند التحديث وهو ظاهر في OBS سيعمل انتقال بصري ومؤثر UPDATE حسب إعدادات الصوت.
+                       </p>
+                     </div>
+                     <span className="rounded-full border border-emerald-400/30 px-2 py-1 text-[10px] font-mono font-black text-emerald-200">
+                       {probabilityShiftMode === 'new' ? 'TODAY' : 'OLD'}
+                     </span>
+                   </div>
+                   <div className="grid grid-cols-2 gap-2">
+                     <button
+                       type="button"
+                       onClick={() => setProbabilityShiftMode('old')}
+                       className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-black transition-colors ${
+                         probabilityShiftMode === 'old'
+                           ? 'border-rose-400/60 bg-rose-500/20 text-rose-100'
+                           : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-rose-400/35 hover:text-white'
+                       }`}
+                     >
+                       <Rewind className="h-4 w-4" />
+                       عرض النسب القديمة
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setProbabilityShiftMode('new')}
+                       className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-black transition-colors ${
+                         probabilityShiftMode === 'new'
+                           ? 'border-emerald-300/70 bg-emerald-400/25 text-emerald-50'
+                           : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-400/40 hover:text-white'
+                       }`}
+                     >
+                       <FastForward className="h-4 w-4" />
+                       تحديث لنسب اليوم
+                     </button>
+                   </div>
+                   <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-100/60">
+                     <Calendar className="h-3.5 w-3.5" />
+                     تاريخ التحديث الحالي: {String(getDraftValue('updateDate') || 'غير محدد')}
+                   </div>
+                 </div>
+               )}
                {draftOverlay.fields.map((field) => {
                  if (field.type === 'hidden' || field.id === 'currentPage') return null;
                  
@@ -3380,7 +3446,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // Phase A4 — scene fields surface as audio settings
                         'audioSceneId', 'audioUpdateCue',
                       ];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);

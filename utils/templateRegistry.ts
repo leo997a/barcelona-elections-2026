@@ -155,7 +155,7 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
   [OverlayType.MERCATO_UNIFIED]: {
     icon: '📦',
     accent: '#22d3ee',
-    description: 'حزمة Mercato V2 — 10 variants (مكالمة وكيل، رادار صفقة، بيان رسمي، ساعة الحسم، ثقة المصادر، كشف بند، فحص طبي، إنذار خطف، شروط شخصية، تمهيد قبل الحسم).',
+    description: 'حزمة Mercato V2 — 11 variants (مكالمة وكيل، رادار صفقة، مصفوفة تحوّل النسب، بيان رسمي، ساعة الحسم، ثقة المصادر، كشف بند، فحص طبي، إنذار خطف، شروط شخصية، تمهيد قبل الحسم).',
   },
   [OverlayType.MERCATO_MEDIA_STORY]: {
     icon: 'ميديا',
