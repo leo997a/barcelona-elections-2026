@@ -4009,26 +4009,26 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </button>
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
-                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">ON AIR</span>}
+                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
                  <TemplateControlBar overlay={liveOverlay} compact />
              </div>
              <div className="flex items-center gap-2">
-                 <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>Chroma</button>
+                 <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>كروما</button>
                  <button
                     onClick={copyEditLink}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 rounded-lg text-xs font-bold border border-cyan-500/30 transition-colors"
                     title="نسخ رابط تعديل هذا القالب">
                      <Copy className="w-3.5 h-3.5" />
-                     <span>{editLinkCopied ? 'Copied' : 'Edit Link'}</span>
+                     <span>{editLinkCopied ? 'تم النسخ' : 'رابط التعديل'}</span>
                  </button>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
                     const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);
                     if (popup) popup.location.href = url;
                     else window.open(url, '_blank', 'width=1280,height=720');
-                 }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors">
+                 }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors" title="فتح رابط القالب">
                      <Monitor className="w-3.5 h-3.5" />
-                     <span></span>
+                     <span>فتح الرابط</span>
                  </button>
              </div>
          </div>

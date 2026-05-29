@@ -177,10 +177,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = canTakeIn(selectedOverlay);
-  const programModeLabel = singleProgramMode ? 'SINGLE' : 'MULTI';
+  const programModeLabel = singleProgramMode ? 'فردي' : 'متعدد';
   const programModeTitle = singleProgramMode
-    ? 'Single Program مفعل: TAKE IN يخرج القوالب الأخرى ويبقي قالبًا واحدًا في Program OBS'
-    : 'Multi Program: رابط Program OBS يسمح بعرض أكثر من قالب حي في نفس الوقت';
+    ? 'وضع البرنامج الواحد مفعل: إدخال قالب جديد يخرج القوالب الأخرى ويبقي قالبًا واحدًا في رابط البرنامج'
+    : 'وضع البرنامج المتعدد: رابط البرنامج يسمح بعرض أكثر من قالب حي في نفس الوقت';
 
   return (
     <div className="flex h-full bg-gray-950">
@@ -191,7 +191,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
             <span>قائمة التشغيل</span>
           </h2>
           <div className="rounded-lg border border-gray-800 bg-gray-950 px-2 py-1 text-[10px] font-black text-gray-400">
-            {liveOverlaysCount}/{overlays.length} LIVE
+            {liveOverlaysCount}/{overlays.length} مباشر
           </div>
           <div className="relative">
             <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
@@ -212,7 +212,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
               }`}
             >
               <ListFilter className="h-3.5 w-3.5" />
-              LIVE فقط
+              المباشر فقط
             </button>
             <button
               onClick={takeOutAllVisible}
@@ -265,7 +265,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
                   }}
                   disabled={!canTakeIn(overlay)}
                   className="h-8 w-8 rounded-lg border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-                  title="TAKE IN"
+                  title="إدخال القالب"
                 >
                   <Play className="mx-auto h-3.5 w-3.5 fill-current" />
                 </button>
@@ -278,7 +278,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
                   }}
                   disabled={!overlay.isVisible}
                   className="h-8 w-8 rounded-lg border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-                  title="TAKE OUT"
+                  title="إخراج القالب"
                 >
                   <Square className="mx-auto h-3.5 w-3.5 fill-current" />
                 </button>
@@ -286,7 +286,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
                   className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
                   }`}
-                  title={overlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
+                  title={overlay.isVisible ? 'على الهواء' : 'خارج البث'}
                 >
                   {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </span>
@@ -301,7 +301,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
           <div className="min-w-0 flex items-center gap-4">
             <h1 className="min-w-0 max-w-[26rem] truncate text-xl font-bold text-white">{selectedOverlay.name}</h1>
             <span className={`px-2 py-0.5 rounded text-xs font-mono ${selectedOverlay.isVisible ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
-              {selectedOverlay.isVisible ? 'LIVE ON AIR' : 'OFF AIR'}
+              {selectedOverlay.isVisible ? 'على الهواء' : 'خارج البث'}
             </span>
             <span
               className={`px-2 py-0.5 rounded text-xs font-mono border flex items-center gap-1.5 ${
@@ -333,25 +333,25 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
                   ? 'bg-cyan-600/20 text-cyan-200 border-cyan-500/40'
                   : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-white'
               }`}
-              title="عند التفعيل، TAKE IN يخرج القوالب الأخرى قبل إدخال القالب الحالي">
+              title="عند التفعيل، إدخال قالب جديد يخرج القوالب الأخرى قبل إدخال القالب الحالي">
               <span className={`h-3.5 w-6 rounded-full p-0.5 transition-colors ${singleProgramMode ? 'bg-cyan-500' : 'bg-gray-600'}`}>
                 <span className={`block h-2.5 w-2.5 rounded-full bg-white transition-transform ${singleProgramMode ? '-translate-x-3' : ''}`} />
               </span>
-              Single Program
+              برنامج واحد
             </button>
             <button
               onClick={copyProgramObsUrl}
               className="text-xs flex items-center gap-2 text-green-300 hover:text-white bg-green-600/15 hover:bg-green-600/25 px-3 py-1.5 rounded-lg border border-green-500/35"
-              title="نسخ رابط OBS عام يعرض كل القوالب الحية">
+              title="نسخ رابط البرنامج العام الذي يعرض كل القوالب الحية">
               {programObsCopied ? <Check className="w-3 h-3" /> : <Tv className="w-3 h-3" />}
-              {programObsCopied ? 'Copied' : 'Program OBS'}
+              {programObsCopied ? 'تم النسخ' : 'رابط البرنامج'}
             </button>
             <button
               onClick={() => setShowStreamDeckModal(true)}
               className="text-xs flex items-center gap-2 text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-700"
             >
               <Wifi className="w-3 h-3" />
-              Stream Deck Info
+              معلومات Stream Deck
             </button>
           </div>
         </div>
@@ -425,7 +425,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
               }`}
             >
               <Play className="fill-current w-8 h-8" />
-              <span>TAKE IN</span>
+              <span>إدخال</span>
             </button>
             <button
               onClick={() => takeOutOverlay(selectedOverlay)}
@@ -437,7 +437,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
               }`}
             >
               <Square className="fill-current w-8 h-8" />
-              <span>TAKE OUT</span>
+              <span>إخراج</span>
             </button>
           </div>
 

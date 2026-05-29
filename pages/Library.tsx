@@ -343,7 +343,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
       navigator.clipboard.writeText(url);
       const btn = e.currentTarget as HTMLElement;
       const orig = btn.innerHTML;
-      btn.innerHTML = '✓ Program copied';
+      btn.innerHTML = '✓ تم نسخ رابط البرنامج';
       btn.style.background = 'rgba(34,197,94,0.22)';
       setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
     } catch { alert('خطأ في نسخ رابط OBS العام'); }
@@ -459,8 +459,8 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onCreat
               <button
                 onClick={handleCopyProgramObsUrl}
                 className="flex items-center gap-1.5 bg-green-600/15 hover:bg-green-600/25 border border-green-500/35 text-green-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-                title="نسخ رابط OBS عام يعرض كل القوالب الحية">
-                <Tv className="w-3.5 h-3.5" /> Program OBS
+                title="نسخ رابط البرنامج العام الذي يعرض كل القوالب الحية">
+                <Tv className="w-3.5 h-3.5" /> رابط البرنامج
               </button>
             )}
 

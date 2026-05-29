@@ -53,7 +53,7 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${activeCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-gray-600'}`}></div>
-                  <span className="text-white font-medium">ON AIR</span>
+                  <span className="text-white font-medium">على الهواء</span>
                 </div>
                 <span className="font-mono text-xl font-bold text-white">{activeCount}</span>
               </div>
@@ -61,14 +61,14 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Monitor className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-300">Outputs</span>
+                  <span className="text-gray-300">المخارج</span>
                 </div>
                 <span className="font-mono text-white">{overlays.length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Zap className="w-4 h-4 text-yellow-500" />
-                  <span className="text-gray-300">Latency</span>
+                  <span className="text-gray-300">الاستجابة</span>
                 </div>
                 <span className="font-mono text-green-400">~12ms</span>
               </div>
@@ -79,11 +79,11 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
 
       <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
         <Layers className="w-5 h-5 text-blue-500" />
-        <span>قوالب سريعة (Quick Launch)</span>
+        <span>قوالب سريعة</span>
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
         <QuickLaunchCard
-          title="Live Match Stats"
+          title="إحصائيات المباراة المباشرة"
           desc="شريط جانبي مباشر من WhoScored مع إحصائيات متقدمة"
           color="from-cyan-500 to-blue-700"
           icon="DATA"
@@ -91,7 +91,7 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
         />
         <QuickLaunchCard
           title="لوحة الداعمين"
-          desc="عرض قائمة الداعمين (Top Donors)"
+          desc="عرض قائمة أبرز الداعمين"
           color="from-yellow-600 to-orange-600"
           icon="BAR"
           onClick={() => onCreate('template-leaderboard-ribbon')}
@@ -118,14 +118,14 @@ const Home: React.FC<HomeProps> = ({ overlays, onNavigate, onCreate }) => {
           onClick={() => onCreate('template-news')}
         />
         <QuickLaunchCard
-          title="Lower Third"
+          title="الشريط السفلي"
           desc="تعريف الضيوف والمذيعين"
           color="from-green-600 to-emerald-600"
           icon="LT"
           onClick={() => onCreate('template-lower')}
         />
         <QuickLaunchCard
-          title="Barcelona 2026"
+          title="برشلونة 2026"
           desc="شريط نتائج حديث لانتخابات برشلونة 2026"
           color="from-rose-700 to-blue-700"
           icon="BCN"

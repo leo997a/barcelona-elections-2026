@@ -326,15 +326,15 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       select.innerHTML = '';
 
       var general = document.createElement('optgroup');
-      general.label = 'General Controls';
+      general.label = 'أوامر عامة';
       select.appendChild(general);
-      addOption(general, 'set_on', 'Set ON AIR');
-      addOption(general, 'set_off', 'Set OFF AIR');
-      addOption(general, 'toggle', 'Toggle Visibility (legacy)');
+      addOption(general, 'set_on', 'إدخال للبث');
+      addOption(general, 'set_off', 'إخراج من البث');
+      addOption(general, 'toggle', 'تبديل الظهور (قديم)');
 
       if (type === 'SCOREBOARD') {
         var score = document.createElement('optgroup');
-        score.label = 'Scoreboard Controls';
+        score.label = 'أوامر لوحة النتيجة';
         select.appendChild(score);
         addOption(score, 'score_home_plus', 'Home Score +1');
         addOption(score, 'score_away_plus', 'Away Score +1');
