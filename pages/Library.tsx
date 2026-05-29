@@ -196,8 +196,8 @@ const MyCard: React.FC<{
           {/* ★ زر نسخ رابط OBS — الجديد */}
           <button onClick={onCopyObsUrl}
             className="flex-1 flex items-center justify-center gap-1 bg-green-600/10 text-green-400 hover:bg-green-600/25 border border-green-600/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
-            title="نسخ رابط OBS / Browser Source">
-            <Tv className="w-3 h-3" /> OBS URL
+            title="نسخ رابط القالب الخاص للمستخدم في OBS">
+            <Tv className="w-3 h-3" /> رابط القالب
           </button>
           <button onClick={onCopyToken}
             className="flex items-center justify-center gap-1 bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 border border-yellow-600/20 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-colors">

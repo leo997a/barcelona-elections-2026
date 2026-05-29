@@ -235,19 +235,44 @@ export const resolveTemplateById = (templateId: string): OverlayConfig => {
 
 export const createOverlayFromTemplate = (
   templateId: string,
-  existingOverlays: OverlayConfig[]
+  existingOverlays: OverlayConfig[],
+  ownerStudioId = 'local-studio'
 ): OverlayConfig => {
   const template = cloneOverlay(resolveTemplateById(templateId));
   const baseTemplateId = template.templateId || template.id;
   const sameTemplateCount =
     existingOverlays.filter(overlay => (overlay.templateId || overlay.id) === baseTemplateId).length + 1;
+  const ownerSlug = slugForInstanceId(ownerStudioId, 'local-studio');
+  const templateSlug = slugForInstanceId(baseTemplateId, 'template');
+  const instanceSuffix = randomInstanceSuffix();
 
   return {
     ...template,
-    id: `instance-${Date.now()}`,
+    id: `instance-${ownerSlug}-${templateSlug}-${Date.now().toString(36)}-${instanceSuffix}`,
     templateId: baseTemplateId,
+    ownerStudioId,
     name: sameTemplateCount > 1 ? `${template.name} #${sameTemplateCount}` : template.name,
     isVisible: false,
     createdAt: Date.now(),
   };
+};
+
+const slugForInstanceId = (value: string, fallback: string) => {
+  const slug = String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+
+  return slug || fallback;
+};
+
+const randomInstanceSuffix = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(4);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  return Math.random().toString(36).slice(2, 10);
 };

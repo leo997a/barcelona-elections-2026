@@ -439,7 +439,7 @@ const App: React.FC = () => {
   
   // Actions delegated to SyncManager
   const handleCreateOverlay = (templateId: string) => {
-    const nextOverlay = createOverlayFromTemplate(templateId, overlays);
+    const nextOverlay = createOverlayFromTemplate(templateId, overlays, syncManager.getStudioId());
     syncManager.addOverlay(nextOverlay);
     openEditorById(nextOverlay.id);
   };
