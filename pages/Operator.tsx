@@ -8,13 +8,14 @@ import { resolveTemplateById } from '../utils/templateRegistry';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
+  focusedOverlayId?: string | null;
   onUpdate: (updated: OverlayConfig) => void;
 }
 
 const ELECTION_SOUNDS = ['RESULTS_STING', 'QUOTE_SWEEP', 'VERSUS_IMPACT', 'SIDEBAR_CHIME', 'DATA_PULSE', 'COUNTDOWN_TICK', 'BREAKING_WHOOSH', 'SOFT_FADE'];
 const SINGLE_PROGRAM_MODE_KEY = 'rge_operator_single_program_mode';
 
-const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
+const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdate }) => {
   const [selectedId, setSelectedId] = useState<string | null>(overlays.length > 0 ? overlays[0].id : null);
   const [showStreamDeckModal, setShowStreamDeckModal] = useState(false);
   const [programObsCopied, setProgramObsCopied] = useState(false);
@@ -61,6 +62,14 @@ const Operator: React.FC<OperatorProps> = ({ overlays, onUpdate }) => {
       setSelectedId(overlays[0].id);
     }
   }, [overlays, selectedId]);
+
+  useEffect(() => {
+    if (!focusedOverlayId) return;
+    if (selectedId === focusedOverlayId) return;
+    if (overlays.some(overlay => overlay.id === focusedOverlayId)) {
+      setSelectedId(focusedOverlayId);
+    }
+  }, [focusedOverlayId, overlays, selectedId]);
 
   useEffect(() => {
     if (selectedOverlay) setDraftName(selectedOverlay.name);

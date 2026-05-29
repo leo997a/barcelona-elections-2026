@@ -336,7 +336,9 @@ const App: React.FC = () => {
     return 'home';
   };
   const [route, setRouteState] = useState<string>(() => pathnameToRoute(window.location.pathname));
+  const [operatorFocusId, setOperatorFocusId] = useState<string | null>(null);
   const setRoute = (page: string) => {
+    setOperatorFocusId(null);
     setRouteState(page);
     const urlPath = page === 'home' ? '/' : `/${page.charAt(0).toUpperCase() + page.slice(1)}`;
     window.history.pushState({ route: page }, '', urlPath);
@@ -380,7 +382,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleHashChange = () => setHashPath(window.location.hash);
     const handlePopState = () => {
+      const historyState = window.history.state as { route?: string; overlayId?: string } | null;
       setRouteState(pathnameToRoute(window.location.pathname));
+      setOperatorFocusId(historyState?.route === 'operator' && typeof historyState.overlayId === 'string' ? historyState.overlayId : null);
       setHashPath(window.location.hash);
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -410,6 +414,13 @@ const App: React.FC = () => {
       window.history.pushState({ route: 'library', overlayId: id }, '', editUrl);
     }
     setHashPath(window.location.hash);
+  };
+
+  const openOperatorById = (id?: string) => {
+    setSelectedOverlayId(null);
+    setOperatorFocusId(id || null);
+    setRouteState('operator');
+    window.history.pushState({ route: 'operator', overlayId: id || null }, '', `/Operator${buildCleanAppSearch()}`);
   };
 
   const closeEditor = () => {
@@ -568,7 +579,7 @@ const App: React.FC = () => {
                    onDelete={handleDeleteOverlay}
                    onRename={(overlay) => syncManager.updateOverlay(overlay)}
                    onCreate={handleCreateOverlay}
-                   onNavigateOperator={() => setRoute('operator')}
+                   onNavigateOperator={openOperatorById}
                    favoriteIds={favoriteIds}
                    onToggleFavorite={handleToggleFavorite}
                    missingEditOverlayId={missingEditOverlayId}
@@ -578,6 +589,7 @@ const App: React.FC = () => {
                {route === 'operator' && (
                    <Operator 
                      overlays={overlays}
+                     focusedOverlayId={operatorFocusId}
                      onUpdate={(o) => syncManager.updateOverlay(o)}
                    />
                )}

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2, Check } from 'lucide-react';
+import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2, Check, SlidersHorizontal } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { encodeBase64UrlUtf8 } from '../utils/base64';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
@@ -14,7 +14,7 @@ interface LibraryProps {
   onDelete: (id: string) => void;
   onRename: (overlay: OverlayConfig) => void;
   onCreate: (templateId: string) => void;
-  onNavigateOperator: () => void;
+  onNavigateOperator: (overlayId?: string) => void;
   favoriteIds: string[];
   onToggleFavorite: (id: string) => void;
   missingEditOverlayId?: string | null;
@@ -168,11 +168,13 @@ const MyCard: React.FC<{
   onCopyObsUrl: (e: React.MouseEvent) => void;
   onCopyEditUrl: (e: React.MouseEvent) => void;
   onRename: (nextName: string) => void;
-}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl, onRename }) => {
+  onOpenOperator: (e: React.MouseEvent) => void;
+}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl, onRename, onOpenOperator }) => {
   const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftName, setDraftName] = useState(overlay.name);
   const shortOverlayId = overlay.id.length > 34 ? `${overlay.id.slice(0, 24)}...${overlay.id.slice(-6)}` : overlay.id;
+  const statusLabel = overlay.isVisible ? 'على الهواء' : 'خارج البث';
 
   useEffect(() => {
     setDraftName(overlay.name);
@@ -209,9 +211,9 @@ const MyCard: React.FC<{
 
       {/* LIVE badge */}
       <div className="absolute top-2.5 left-2.5 z-20">
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 ${overlay.isVisible ? 'bg-red-600 text-white animate-pulse' : 'bg-black/60 text-gray-500 border border-gray-700'}`}>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 ${overlay.isVisible ? 'bg-red-600 text-white animate-pulse' : 'bg-black/60 text-gray-400 border border-gray-700'}`}>
           {overlay.isVisible && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
-          {overlay.isVisible ? 'LIVE' : 'OFF'}
+          {statusLabel}
         </span>
       </div>
 
@@ -268,13 +270,19 @@ const MyCard: React.FC<{
           <Link2 className="w-3 h-3 shrink-0 text-cyan-400/70" />
           <span className="truncate font-mono" dir="ltr">{shortOverlayId}</span>
         </div>
-        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
-          {/* ★ زر نسخ رابط OBS — الجديد */}
+        <div className="grid grid-cols-2 gap-1.5">
           <button onClick={onCopyObsUrl}
-            className="flex-1 flex items-center justify-center gap-1 bg-green-600/10 text-green-400 hover:bg-green-600/25 border border-green-600/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            className="flex items-center justify-center gap-1 bg-green-600/10 text-green-400 hover:bg-green-600/25 border border-green-600/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
             title="نسخ رابط القالب الخاص للمستخدم في OBS">
             <Tv className="w-3 h-3" /> رابط القالب
           </button>
+          <button onClick={onOpenOperator}
+            className="flex items-center justify-center gap-1 bg-indigo-600/10 text-indigo-300 hover:bg-indigo-600/25 border border-indigo-500/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            title="فتح غرفة التحكم على هذا القالب">
+            <SlidersHorizontal className="w-3 h-3" /> غرفة التحكم
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
           <button onClick={onCopyToken}
             className="flex items-center justify-center gap-1 bg-yellow-600/10 text-yellow-400 hover:bg-yellow-600/20 border border-yellow-600/20 py-1.5 px-2 rounded-lg text-[10px] font-bold transition-colors">
             <Key className="w-3 h-3" />
@@ -285,11 +293,13 @@ const MyCard: React.FC<{
             <Link2 className="w-3 h-3" />
           </button>
           <button onClick={e => { e.stopPropagation(); onSelect(); }}
-            className="flex-1 flex items-center justify-center gap-1 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-600/20 py-1.5 rounded-lg text-[10px] font-bold transition-colors">
-            <Edit3 className="w-3 h-3" /> تعديل
+            className="flex items-center justify-center gap-1 bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-600/20 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            title="فتح محرر القالب">
+            <Edit3 className="w-3 h-3" />
           </button>
           <button onClick={onDelete}
-            className="w-8 flex items-center justify-center bg-red-600/10 text-red-400 hover:bg-red-600/20 border border-red-600/20 rounded-lg transition-colors">
+            className="flex items-center justify-center bg-red-600/10 text-red-400 hover:bg-red-600/20 border border-red-600/20 rounded-lg transition-colors"
+            title="حذف القالب">
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
@@ -546,9 +556,9 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRenam
               </button>
             )}
 
-            <button onClick={onNavigateOperator}
+            <button onClick={() => onNavigateOperator()}
               className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-              <Play className="w-3.5 h-3.5 text-green-500" /> الأوبريتور
+              <Play className="w-3.5 h-3.5 text-green-500" /> غرفة التحكم
             </button>
 
             {mainTab === 'mine' && (
@@ -631,6 +641,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRenam
                     onCopyObsUrl={e => handleCopyObsUrl(overlay, e)}
                     onCopyEditUrl={e => handleCopyEditUrl(overlay, e)}
                     onRename={nextName => handleRenameOverlay(overlay, nextName)}
+                    onOpenOperator={e => { e.stopPropagation(); onNavigateOperator(overlay.id); }}
                   />
                 ))}
               </div>
