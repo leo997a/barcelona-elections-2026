@@ -483,74 +483,143 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const playerName = String(getField('playerName') || '');
   const probability = Math.max(0, Math.min(100, Number(getField('probability') ?? 65)));
   const sources = safeParse<{ name: string; reliability: number }[]>(String(getField('sources') || '[]'), []);
-  const cx = 110, cy = 110, R = 90;
+  const normalizedSources = sources.map(source => ({
+    ...source,
+    reliability: Math.max(0, Math.min(100, Number(source.reliability) || 0)),
+  }));
+  const sortedSources = [...normalizedSources].sort((left, right) => right.reliability - left.reliability);
+  const eliteSources = normalizedSources.filter(source => source.reliability >= 80).length;
+  const averageReliability = normalizedSources.length === 0
+    ? 0
+    : Math.round(normalizedSources.reduce((sum, source) => sum + source.reliability, 0) / normalizedSources.length);
+  const marketSignal = normalizedSources.length === 0
+    ? probability
+    : Math.round((probability * 0.62) + (averageReliability * 0.38));
+  const verdict =
+    marketSignal >= 84 ? 'جاهز للإعلان' :
+    marketSignal >= 68 ? 'مرحلة الحسم' :
+    marketSignal >= 46 ? 'تفاوض نشط' :
+    'مراقبة هادئة';
+  const verdictColor =
+    marketSignal >= 84 ? t.success :
+    marketSignal >= 68 ? t.accent :
+    marketSignal >= 46 ? t.warning :
+    t.dim;
+  const cx = 120, cy = 120, R = 96;
   const sweepRad = (probability / 100) * 2 * Math.PI;
 
   // X13 — color a source pill by reliability tier (green ≥80 / amber ≥50 / red below).
   const tierColor = (rel: number) => rel >= 80 ? t.success : rel >= 50 ? t.warning : t.danger;
+  const tierLabel = (rel: number) => rel >= 80 ? 'مصدر ذهبي' : rel >= 50 ? 'مصدر مراقب' : 'إشارة ضعيفة';
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
       <Header
         t={t}
-        eyebrow="DEAL RADAR"
+        eyebrow="DEAL RADAR · غرفة قرار السوق"
         title={playerName || 'رادار صفقة'}
-        subtitle="احتمالية إتمام الصفقة + موثوقية المصادر"
-        pills={<Pill t={t} label={`${probability}% احتمالية`} pulse />}
+        subtitle="مؤشر حسم الصفقة مبني على الاحتمالية وقوة المصادر المرصودة"
+        pills={
+          <>
+            <Pill t={t} label={`${probability}% احتمالية`} pulse />
+            <Pill t={t} color={t.success} label={`${eliteSources} مصادر ذهبية`} small />
+            <Pill t={t} color={verdictColor} label={verdict} small />
+          </>
+        }
+        rightSlot={
+          <div className="rounded-xl px-4 py-2 min-w-[150px]" style={{
+            background: `${verdictColor}12`,
+            border: `1px solid ${verdictColor}55`,
+          }}>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>MARKET SIGNAL</div>
+            <div className="mt-1 flex items-end justify-end gap-1">
+              <span className="font-mono text-[42px] font-black leading-none" style={{ color: verdictColor }}>{marketSignal}</span>
+              <span className="pb-1 text-[12px] font-black" style={{ color: t.sub }}>%</span>
+            </div>
+          </div>
+        }
       />
-      <div className="flex-1 grid grid-cols-[280px_1fr] gap-3 min-h-0">
-        <div className="rounded-xl flex flex-col items-center justify-center p-3 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          {/* Subtle scanning glow */}
+      <div className="flex-1 grid grid-cols-[300px_1fr_240px] gap-3 min-h-0">
+        <div className="rounded-xl flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{
+          background: `linear-gradient(180deg, ${t.surface} 0%, ${t.surfaceDeep} 100%)`,
+          border: `1px solid ${t.border}`,
+        }}>
           <div className="absolute inset-0 pointer-events-none" style={{
-            background: `radial-gradient(circle at 50% 50%, ${t.accent}10 0%, transparent 60%)`,
+            background: `radial-gradient(circle at 50% 45%, ${t.accent}16 0%, transparent 58%)`,
           }} />
-          <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10">
-            {/* Concentric grid */}
-            {[1, 0.66, 0.33].map((m, i) => (
-              <circle key={i} cx={cx} cy={cy} r={R * m} fill="none" stroke={t.border} strokeWidth="1" />
+          <svg width="240" height="240" viewBox="0 0 240 240" className="relative z-10">
+            <defs>
+              <radialGradient id="dealRadarGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor={t.accent} stopOpacity="0.22" />
+                <stop offset="70%" stopColor={t.accent} stopOpacity="0.04" />
+                <stop offset="100%" stopColor={t.accent} stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <circle cx={cx} cy={cy} r={R + 12} fill="url(#dealRadarGlow)" />
+            {[1, 0.72, 0.46, 0.2].map((m, i) => (
+              <circle key={i} cx={cx} cy={cy} r={R * m} fill="none" stroke={i === 0 ? `${t.accent}80` : t.border} strokeWidth={i === 0 ? 1.5 : 1} />
             ))}
-            {/* Cross */}
-            <line x1={cx} y1={cy - R - 6} x2={cx} y2={cy + R + 6} stroke={t.border} strokeWidth="1" />
-            <line x1={cx - R - 6} y1={cy} x2={cx + R + 6} y2={cy} stroke={t.border} strokeWidth="1" />
-            {/* Sweep */}
+            {[0, 45, 90, 135].map((deg) => {
+              const rad = (deg * Math.PI) / 180;
+              return (
+                <line
+                  key={deg}
+                  x1={cx - (R + 8) * Math.cos(rad)}
+                  y1={cy - (R + 8) * Math.sin(rad)}
+                  x2={cx + (R + 8) * Math.cos(rad)}
+                  y2={cy + (R + 8) * Math.sin(rad)}
+                  stroke={t.border}
+                  strokeWidth="1"
+                />
+              );
+            })}
             <path
               d={`M ${cx} ${cy} L ${cx + R * Math.cos(-Math.PI / 2)} ${cy + R * Math.sin(-Math.PI / 2)} A ${R} ${R} 0 ${probability > 50 ? 1 : 0} 1 ${cx + R * Math.cos(-Math.PI / 2 + sweepRad)} ${cy + R * Math.sin(-Math.PI / 2 + sweepRad)} Z`}
-              fill={t.accent}
-              opacity={0.25}
+              fill={verdictColor}
+              opacity={0.26}
             />
-            {/* Source blips — placed by tier on concentric rings */}
-            {sources.slice(0, 8).map((s, i) => {
-              const angle = (i / Math.max(sources.length, 1)) * 2 * Math.PI - Math.PI / 2;
-              const ringRadius = R * (s.reliability >= 80 ? 0.35 : s.reliability >= 50 ? 0.62 : 0.9);
+            {normalizedSources.slice(0, 10).map((s, i) => {
+              const angle = (i / Math.max(normalizedSources.length, 1)) * 2 * Math.PI - Math.PI / 2;
+              const ringRadius = R * (s.reliability >= 80 ? 0.34 : s.reliability >= 50 ? 0.62 : 0.9);
               const bx = cx + ringRadius * Math.cos(angle);
               const by = cy + ringRadius * Math.sin(angle);
               const c = tierColor(s.reliability);
               return (
                 <g key={i}>
-                  <circle cx={bx} cy={by} r="6" fill={c} opacity="0.25" />
-                  <circle cx={bx} cy={by} r="3" fill={c} />
+                  <circle cx={bx} cy={by} r="9" fill={c} opacity="0.16" />
+                  <circle cx={bx} cy={by} r="4" fill={c} />
+                  <text x={bx} y={by - 12} textAnchor="middle" fill={c} fontSize="7" fontWeight="900">{s.reliability}</text>
                 </g>
               );
             })}
-            <circle cx={cx} cy={cy} r="4" fill={t.accent} />
-            <text x={cx} y={cy + 8} textAnchor="middle" fill={t.text} fontSize="32" fontWeight="900">{probability}</text>
-            <text x={cx} y={cy + 28} textAnchor="middle" fill={t.dim} fontSize="10">PROBABILITY</text>
+            <circle cx={cx} cy={cy} r="34" fill={t.surfaceDeep} stroke={verdictColor} strokeWidth="2" />
+            <text x={cx} y={cy + 5} textAnchor="middle" fill={verdictColor} fontSize="34" fontWeight="900">{probability}</text>
+            <text x={cx} y={cy + 24} textAnchor="middle" fill={t.dim} fontSize="9" fontWeight="800">DEAL %</text>
           </svg>
-          <div className="text-[9px] font-mono mt-1 opacity-70" style={{ color: t.dim }}>{sources.length} مصدر مرصود</div>
+          <div className="mt-1 text-center">
+            <div className="text-[10px] font-black" style={{ color: verdictColor }}>{verdict}</div>
+            <div className="text-[9px] font-mono mt-0.5 opacity-70" style={{ color: t.dim }}>{normalizedSources.length} مصدر مرصود · متوسط {averageReliability}%</div>
+          </div>
         </div>
         <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-          <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المصادر · موثوقية</div>
-          {sources.length === 0 ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المصادر · موثوقية</div>
+            <div className="text-[10px] font-mono" style={{ color: t.dim }}>TOP {Math.min(sortedSources.length, 6)}</div>
+          </div>
+          {normalizedSources.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
               <Icon name="pulse" size={28} color={t.dim} />
               <div className="text-[12px]">في انتظار رصد المصادر</div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-              {sources.map((s, i) => {
+            <div className={`flex-1 flex flex-col gap-2 overflow-y-auto ${sortedSources.length <= 6 ? 'justify-center' : ''}`}>
+              {sortedSources.map((s, i) => {
                 const c = tierColor(s.reliability);
                 return (
-                  <div key={i} className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+                  <div key={i} className="rounded-lg p-2.5" style={{
+                    background: i === 0 ? `${c}10` : t.surfaceDeep,
+                    border: `1px solid ${i === 0 ? `${c}55` : t.border}`,
+                  }}>
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }} />
@@ -558,12 +627,40 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
                       </div>
                       <span className="text-[12px] font-mono font-black flex-shrink-0" style={{ color: c }}>{s.reliability}%</span>
                     </div>
+                    <div className="mb-1 text-[9px] font-bold" style={{ color: c }}>{tierLabel(s.reliability)}</div>
                     <ProgressBar t={t} value={s.reliability} color={c} />
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+          <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: verdictColor }}>قرار البث</div>
+          <div className="rounded-xl p-4 text-center" style={{ background: `${verdictColor}10`, border: `1px solid ${verdictColor}55` }}>
+            <div className="flex justify-center mb-2"><Icon name={marketSignal >= 84 ? 'check' : marketSignal >= 46 ? 'pulse' : 'warning'} size={28} color={verdictColor} /></div>
+            <div className="text-[20px] font-black leading-tight" style={{ color: verdictColor }}>{verdict}</div>
+            <div className="mt-1 text-[10px] leading-relaxed" style={{ color: t.sub }}>
+              {marketSignal >= 84
+                ? 'جاهز لشريط عاجل أو إعلان رسمي.'
+                : marketSignal >= 68
+                ? 'ضعه في أعلى جدول المتابعة.'
+                : marketSignal >= 46
+                ? 'يحتاج مصدرًا ذهبيًا إضافيًا.'
+                : 'اتركه في المراقبة دون تضخيم.'}
+            </div>
+          </div>
+          <FieldCard t={t} label="متوسط المصادر" value={`${averageReliability}%`} accent={t.accent} />
+          <FieldCard t={t} label="مصادر ذهبية" value={`${eliteSources}`} accent={t.success} />
+          <div className="mt-auto rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>TOP SOURCE</div>
+            <div className="mt-1 truncate text-[13px] font-black" style={{ color: t.text }}>
+              {sortedSources[0]?.name || 'لا يوجد مصدر'}
+            </div>
+            <div className="mt-1 text-[10px] font-mono" style={{ color: sortedSources[0] ? tierColor(sortedSources[0].reliability) : t.dim }}>
+              {sortedSources[0] ? `${sortedSources[0].reliability}%` : '--'}
+            </div>
+          </div>
         </div>
       </div>
     </div>
