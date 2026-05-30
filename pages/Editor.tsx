@@ -56,32 +56,81 @@ interface EditorProps {
 
 // Extensive List of Currencies for Arab & Global usage
 const CURRENCY_OPTIONS = [
-    { code: 'SAR', label: 'Saudi Riyal (SAR)' },
-    { code: 'AED', label: 'UAE Dirham (AED)' },
-    { code: 'KWD', label: 'Kuwaiti Dinar (KWD)' },
-    { code: 'QAR', label: 'Qatari Riyal (QAR)' },
-    { code: 'EGP', label: 'Egyptian Pound (EGP)' },
-    { code: 'BHD', label: 'Bahraini Dinar (BHD)' },
-    { code: 'OMR', label: 'Omani Rial (OMR)' },
-    { code: 'JOD', label: 'Jordanian Dinar (JOD)' },
-    { code: 'USD', label: 'US Dollar (USD)' },
-    { code: 'EUR', label: 'Euro (EUR)' },
-    { code: 'GBP', label: 'British Pound (GBP)' },
-    { code: 'JPY', label: 'Japanese Yen (JPY)' },
-    { code: 'CAD', label: 'Canadian Dollar (CAD)' },
-    { code: 'AUD', label: 'Australian Dollar (AUD)' },
-    { code: 'MAD', label: 'Moroccan Dirham (MAD)' },
-    { code: 'DZD', label: 'Algerian Dinar (DZD)' },
-    { code: 'TND', label: 'Tunisian Dinar (TND)' },
-    { code: 'TRY', label: 'Turkish Lira (TRY)' },
-    { code: 'BRL', label: 'Brazilian Real (BRL)' },
-    { code: 'MXN', label: 'Mexican Peso (MXN)' },
-    { code: 'INR', label: 'Indian Rupee (INR)' },
-    { code: 'IDR', label: 'Indonesian Rupiah (IDR)' },
-    { code: 'MYR', label: 'Malaysian Ringgit (MYR)' },
-    { code: 'SGD', label: 'Singapore Dollar (SGD)' },
-    { code: 'CNY', label: 'Chinese Yuan (CNY)' },
-    { code: 'KRW', label: 'Korean Won (KRW)' },
+    { code: 'SAR', label: '🇸🇦 Saudi Riyal (SAR)' },
+    { code: 'AED', label: '🇦🇪 UAE Dirham (AED)' },
+    { code: 'KWD', label: '🇰🇼 Kuwaiti Dinar (KWD)' },
+    { code: 'QAR', label: '🇶🇦 Qatari Riyal (QAR)' },
+    { code: 'BHD', label: '🇧🇭 Bahraini Dinar (BHD)' },
+    { code: 'OMR', label: '🇴🇲 Omani Rial (OMR)' },
+    { code: 'YER', label: '🇾🇪 Yemeni Rial (YER)' },
+    { code: 'IQD', label: '🇮🇶 Iraqi Dinar (IQD)' },
+    { code: 'JOD', label: '🇯🇴 Jordanian Dinar (JOD)' },
+    { code: 'LBP', label: '🇱🇧 Lebanese Pound (LBP)' },
+    { code: 'SYP', label: '🇸🇾 Syrian Pound (SYP)' },
+    { code: 'ILS', label: '🇵🇸 Palestine / Shekel (ILS)' },
+    { code: 'EGP', label: '🇪🇬 Egyptian Pound (EGP)' },
+    { code: 'SDG', label: '🇸🇩 Sudanese Pound (SDG)' },
+    { code: 'LYD', label: '🇱🇾 Libyan Dinar (LYD)' },
+    { code: 'TND', label: '🇹🇳 Tunisian Dinar (TND)' },
+    { code: 'DZD', label: '🇩🇿 Algerian Dinar (DZD)' },
+    { code: 'MAD', label: '🇲🇦 Moroccan Dirham (MAD)' },
+    { code: 'MRU', label: '🇲🇷 Mauritanian Ouguiya (MRU)' },
+    { code: 'SOS', label: '🇸🇴 Somali Shilling (SOS)' },
+    { code: 'DJF', label: '🇩🇯 Djiboutian Franc (DJF)' },
+    { code: 'KMF', label: '🇰🇲 Comorian Franc (KMF)' },
+    { code: 'USD', label: '🇺🇸 US Dollar (USD)' },
+    { code: 'EUR', label: '🇪🇺 Euro (EUR)' },
+    { code: 'GBP', label: '🇬🇧 British Pound (GBP)' },
+    { code: 'CHF', label: '🇨🇭 Swiss Franc (CHF)' },
+    { code: 'CAD', label: '🇨🇦 Canadian Dollar (CAD)' },
+    { code: 'AUD', label: '🇦🇺 Australian Dollar (AUD)' },
+    { code: 'NZD', label: '🇳🇿 New Zealand Dollar (NZD)' },
+    { code: 'JPY', label: '🇯🇵 Japanese Yen (JPY)' },
+    { code: 'CNY', label: '🇨🇳 Chinese Yuan (CNY)' },
+    { code: 'HKD', label: '🇭🇰 Hong Kong Dollar (HKD)' },
+    { code: 'SGD', label: '🇸🇬 Singapore Dollar (SGD)' },
+    { code: 'KRW', label: '🇰🇷 Korean Won (KRW)' },
+    { code: 'INR', label: '🇮🇳 Indian Rupee (INR)' },
+    { code: 'PKR', label: '🇵🇰 Pakistani Rupee (PKR)' },
+    { code: 'BDT', label: '🇧🇩 Bangladeshi Taka (BDT)' },
+    { code: 'IDR', label: '🇮🇩 Indonesian Rupiah (IDR)' },
+    { code: 'MYR', label: '🇲🇾 Malaysian Ringgit (MYR)' },
+    { code: 'PHP', label: '🇵🇭 Philippine Peso (PHP)' },
+    { code: 'THB', label: '🇹🇭 Thai Baht (THB)' },
+    { code: 'VND', label: '🇻🇳 Vietnamese Dong (VND)' },
+    { code: 'TRY', label: '🇹🇷 Turkish Lira (TRY)' },
+    { code: 'BRL', label: '🇧🇷 Brazilian Real (BRL)' },
+    { code: 'MXN', label: '🇲🇽 Mexican Peso (MXN)' },
+    { code: 'ARS', label: '🇦🇷 Argentine Peso (ARS)' },
+    { code: 'CLP', label: '🇨🇱 Chilean Peso (CLP)' },
+    { code: 'COP', label: '🇨🇴 Colombian Peso (COP)' },
+    { code: 'ZAR', label: '🇿🇦 South African Rand (ZAR)' },
+    { code: 'NGN', label: '🇳🇬 Nigerian Naira (NGN)' },
+    { code: 'KES', label: '🇰🇪 Kenyan Shilling (KES)' },
+    { code: 'GHS', label: '🇬🇭 Ghanaian Cedi (GHS)' },
+    { code: 'ETB', label: '🇪🇹 Ethiopian Birr (ETB)' },
+    { code: 'TZS', label: '🇹🇿 Tanzanian Shilling (TZS)' },
+    { code: 'RUB', label: '🇷🇺 Russian Ruble (RUB)' },
+    { code: 'UAH', label: '🇺🇦 Ukrainian Hryvnia (UAH)' },
+    { code: 'SEK', label: '🇸🇪 Swedish Krona (SEK)' },
+    { code: 'NOK', label: '🇳🇴 Norwegian Krone (NOK)' },
+    { code: 'DKK', label: '🇩🇰 Danish Krone (DKK)' },
+    { code: 'PLN', label: '🇵🇱 Polish Zloty (PLN)' },
+    { code: 'CZK', label: '🇨🇿 Czech Koruna (CZK)' },
+    { code: 'HUF', label: '🇭🇺 Hungarian Forint (HUF)' },
+    { code: 'RON', label: '🇷🇴 Romanian Leu (RON)' },
+    { code: 'AZN', label: '🇦🇿 Azerbaijani Manat (AZN)' },
+    { code: 'GEL', label: '🇬🇪 Georgian Lari (GEL)' },
+    { code: 'KZT', label: '🇰🇿 Kazakhstani Tenge (KZT)' },
+    { code: 'UZS', label: '🇺🇿 Uzbekistani Som (UZS)' },
+    { code: 'KGS', label: '🇰🇬 Kyrgyzstani Som (KGS)' },
+    { code: 'AMD', label: '🇦🇲 Armenian Dram (AMD)' },
+    { code: 'AFN', label: '🇦🇫 Afghan Afghani (AFN)' },
+    { code: 'ALL', label: '🇦🇱 Albanian Lek (ALL)' },
+    { code: 'BAM', label: '🇧🇦 Bosnia Mark (BAM)' },
+    { code: 'MDL', label: '🇲🇩 Moldovan Leu (MDL)' },
+    { code: 'XAF', label: '🌍 Central African CFA Franc (XAF)' },
+    { code: 'XOF', label: '🌍 West African CFA Franc (XOF)' },
 ];
 
 const SPONSOR_QUICK_AMOUNTS = [5, 10, 25, 50, 100, 250, 500, 1000, 5000, 10000];
@@ -603,6 +652,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [editSponsorData, setEditSponsorData] = useState({ name: '', avatar: '' });
   const [sponsorBackupMessage, setSponsorBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isRefreshingSponsorUsd, setIsRefreshingSponsorUsd] = useState(false);
+  const [isFetchingSponsorRates, setIsFetchingSponsorRates] = useState(false);
 
   // --- SMART SYNC ---
   useEffect(() => {
@@ -1567,6 +1617,27 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setSponsorBackupMessage({ type: 'error', text: 'تعذر تحديث تحويل الدولار.' });
       } finally {
           setIsRefreshingSponsorUsd(false);
+      }
+  };
+
+  const handleFetchLatestSponsorRates = async () => {
+      setIsFetchingSponsorRates(true);
+      setSponsorBackupMessage(null);
+      try {
+          const rates = await currencyService.refreshRates();
+          if (!rates?.rates) {
+              setSponsorBackupMessage({ type: 'error', text: 'تعذر جلب أحدث أسعار الصرف؛ بقيت الأسعار الاحتياطية كما هي.' });
+              return;
+          }
+
+          const recalculated = await Promise.all(parseSponsors().map(recalculateSponsorUsd));
+          recalculated.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
+          handleDraftFieldChange('sponsorsData', JSON.stringify(recalculated));
+          setSponsorBackupMessage({ type: 'success', text: `تم جلب أسعار ${rates.date || 'اليوم'} وإعادة احتساب الدولار لكل الداعمين.` });
+      } catch {
+          setSponsorBackupMessage({ type: 'error', text: 'تعذر تحديث أسعار الصرف المباشرة.' });
+      } finally {
+          setIsFetchingSponsorRates(false);
       }
   };
 
@@ -4004,12 +4075,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                               );
                           })()}
 
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-4 gap-2">
                               <button onClick={handleExportSponsorsBackup} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-emerald-400/50">
                                   <Download className="w-4 h-4" /> تصدير نسخة
                               </button>
                               <button onClick={() => sponsorBackupInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-blue-400/50">
                                   <Upload className="w-4 h-4" /> استيراد نسخة
+                              </button>
+                              <button onClick={handleFetchLatestSponsorRates} disabled={isFetchingSponsorRates} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-cyan-400/50 disabled:opacity-50">
+                                  <RefreshCw className={`w-4 h-4 ${isFetchingSponsorRates ? 'animate-spin' : ''}`} /> {isFetchingSponsorRates ? 'جلب...' : 'أحدث الأسعار'}
                               </button>
                               <button onClick={handleRefreshSponsorUsd} disabled={isRefreshingSponsorUsd} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-amber-400/50 disabled:opacity-50">
                                   <DollarSign className="w-4 h-4" /> {isRefreshingSponsorUsd ? 'تحويل...' : 'تحديث USD'}
@@ -4046,7 +4120,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                       className="bg-gray-950 border border-gray-700 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                                   >
                                       {CURRENCY_OPTIONS.map(curr => (
-                                          <option key={curr.code} value={curr.code}>{curr.code}</option>
+                                          <option key={curr.code} value={curr.code}>{curr.label}</option>
                                       ))}
                                   </select>
                               </div>

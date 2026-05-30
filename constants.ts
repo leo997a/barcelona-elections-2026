@@ -976,6 +976,21 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       // --- Data ---
       { id: 'headline', label: 'عنوان القائمة', type: 'text', value: 'TOP SUPPORTERS' },
       { id: 'sponsorsData', label: 'بيانات الداعمين', type: 'hidden', value: '[]' },
+      { id: 'sponsorKicker', label: 'النص العلوي الصغير', type: 'text', value: 'REO SUPPORT WALL' },
+      { id: 'sponsorPageLabel', label: 'تسمية الصفحة', type: 'text', value: 'الصفحة' },
+      { id: 'sponsorTotalLabel', label: 'تسمية الإجمالي', type: 'text', value: 'الإجمالي' },
+      { id: 'sponsorLiveLabel', label: 'تسمية حالة البث المباشر', type: 'text', value: 'LIVE' },
+      { id: 'sponsorSupportersLabel', label: 'تسمية الداعمين', type: 'text', value: 'الداعمين' },
+      { id: 'sponsorDonationsLabel', label: 'تسمية الدفعات', type: 'text', value: 'الدفعات' },
+      { id: 'sponsorGoalLabel', label: 'تسمية هدف الدعم', type: 'text', value: 'هدف الدعم' },
+      { id: 'sponsorEmptyLabel', label: 'رسالة عدم وجود داعمين', type: 'text', value: 'بانتظار بيانات الداعمين' },
+      { id: 'sponsorTopLabel', label: 'تسمية أعلى داعم', type: 'text', value: 'أعلى داعم الآن' },
+      { id: 'sponsorLatestDonationLabel', label: 'تسمية آخر دفعة', type: 'text', value: 'آخر دفعة' },
+      { id: 'sponsorShareLabel', label: 'تسمية نسبة المساهمة', type: 'text', value: 'نسبة من إجمالي الدعم' },
+      { id: 'sponsorRankOneLabel', label: 'تسمية المركز الأول', type: 'text', value: 'الأول' },
+      { id: 'sponsorRankTwoLabel', label: 'تسمية المركز الثاني', type: 'text', value: 'الثاني' },
+      { id: 'sponsorRankThreeLabel', label: 'تسمية المركز الثالث', type: 'text', value: 'الثالث' },
+      { id: 'sponsorRankDefaultLabel', label: 'تسمية باقي المراكز', type: 'text', value: 'داعم' },
       
       // --- Layout & Dimensions (4K NATIVE DEFAULTS) ---
       { 
@@ -1050,10 +1065,13 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'showAmounts', label: 'إظهار المبالغ', type: 'boolean', value: true },
       { id: 'showRanks', label: 'إظهار الترتيب (أرقام)', type: 'boolean', value: true },
       { id: 'showSponsorStats', label: 'إظهار إجمالي الدعم', type: 'boolean', value: true },
-      { id: 'showGoalProgress', label: 'إظهار هدف الدعم', type: 'boolean', value: true },
-      { id: 'fundraisingGoalUsd', label: 'هدف الدعم بالدولار', type: 'number', value: 10000 },
+      { id: 'showGoalProgress', label: 'إظهار هدف الدعم', type: 'boolean', value: false },
+      { id: 'fundraisingGoalUsd', label: 'هدف الدعم بالدولار', type: 'number', value: 0 },
       { id: 'sponsorDisplayMode', label: 'شكل شريط الداعمين', type: 'select', value: 'elite_wall', options: [
         { value: 'elite_wall', label: 'جدار فاخر' },
+        { value: 'split_podium', label: 'منصة بطل + قائمة' },
+        { value: 'ticker_strip', label: 'شريط تيكر عريض' },
+        { value: 'glass_cards', label: 'بطاقات زجاجية' },
         { value: 'compact_stack', label: 'قائمة مدمجة' },
       ] },
 

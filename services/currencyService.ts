@@ -13,31 +13,80 @@ const FETCH_TIMEOUT_MS = 2500;
 // responsive during a broadcast.
 const FALLBACK_USD_RATES: Record<string, number> = {
     USD: 1,
-    SAR: 3.75,
     AED: 3.67,
-    QAR: 3.64,
-    KWD: 0.31,
+    AFN: 70,
+    ALL: 92,
+    AMD: 388,
+    ARS: 880,
+    AUD: 1.51,
+    AZN: 1.7,
+    BAM: 1.8,
+    BDT: 117,
     BHD: 0.38,
-    OMR: 0.38,
-    JOD: 0.71,
+    BRL: 5.2,
+    CAD: 1.36,
+    CHF: 0.9,
+    CLP: 930,
+    CNY: 7.25,
+    COP: 3900,
+    CZK: 23,
+    DKK: 6.85,
+    DJF: 178,
+    DZD: 134,
     EGP: 47.5,
     EUR: 0.92,
+    ETB: 57,
     GBP: 0.79,
+    GEL: 2.7,
+    GHS: 14.5,
+    HKD: 7.82,
+    HUF: 360,
+    IDR: 16200,
+    ILS: 3.7,
+    INR: 83.5,
+    IQD: 1310,
+    JOD: 0.71,
     JPY: 157,
-    CAD: 1.36,
-    AUD: 1.51,
+    KES: 130,
+    KGS: 89,
+    KMF: 452,
+    KRW: 1380,
+    KWD: 0.31,
+    KZT: 445,
+    LBP: 89500,
+    LYD: 4.85,
     MAD: 9.95,
-    DZD: 134,
+    MDL: 17.7,
+    MRU: 39.5,
+    MXN: 17,
+    MYR: 4.7,
+    NGN: 1500,
+    NOK: 10.6,
+    NZD: 1.64,
+    OMR: 0.38,
+    PHP: 58,
+    PKR: 278,
+    PLN: 3.95,
+    QAR: 3.64,
+    RON: 4.58,
+    RUB: 91,
+    SAR: 3.75,
+    SDG: 600,
+    SEK: 10.5,
+    SGD: 1.35,
+    SOS: 571,
+    SYP: 13000,
+    THB: 36.5,
     TND: 3.1,
     TRY: 32.2,
-    BRL: 5.2,
-    MXN: 17,
-    INR: 83.5,
-    IDR: 16200,
-    MYR: 4.7,
-    SGD: 1.35,
-    CNY: 7.25,
-    KRW: 1380,
+    TZS: 2600,
+    UAH: 40,
+    UZS: 12600,
+    VND: 25400,
+    XAF: 604,
+    XOF: 604,
+    YER: 250,
+    ZAR: 18.3,
 };
 
 const convertWithRate = (amount: number, rate: number): number =>
@@ -57,10 +106,7 @@ export const currencyService = {
         return null;
     },
 
-    async getRates(): Promise<ExchangeRates | null> {
-        const cachedRates = this.getCachedRates();
-        if (cachedRates) return cachedRates;
-
+    async fetchFreshRates(): Promise<ExchangeRates | null> {
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -82,6 +128,16 @@ export const currencyService = {
         } finally {
             window.clearTimeout(timeout);
         }
+    },
+
+    async getRates(): Promise<ExchangeRates | null> {
+        const cachedRates = this.getCachedRates();
+        if (cachedRates) return cachedRates;
+        return this.fetchFreshRates();
+    },
+
+    async refreshRates(): Promise<ExchangeRates | null> {
+        return this.fetchFreshRates();
     },
 
     async convertToUSD(amount: number, currency: string): Promise<number> {
