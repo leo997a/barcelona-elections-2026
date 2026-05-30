@@ -1049,6 +1049,13 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
       { id: 'showAvatars', label: 'إظهار الصور الرمزية', type: 'boolean', value: true },
       { id: 'showAmounts', label: 'إظهار المبالغ', type: 'boolean', value: true },
       { id: 'showRanks', label: 'إظهار الترتيب (أرقام)', type: 'boolean', value: true },
+      { id: 'showSponsorStats', label: 'إظهار إجمالي الدعم', type: 'boolean', value: true },
+      { id: 'showGoalProgress', label: 'إظهار هدف الدعم', type: 'boolean', value: true },
+      { id: 'fundraisingGoalUsd', label: 'هدف الدعم بالدولار', type: 'number', value: 10000 },
+      { id: 'sponsorDisplayMode', label: 'شكل شريط الداعمين', type: 'select', value: 'elite_wall', options: [
+        { value: 'elite_wall', label: 'جدار فاخر' },
+        { value: 'compact_stack', label: 'قائمة مدمجة' },
+      ] },
 
       // --- Positioning ---
       { 

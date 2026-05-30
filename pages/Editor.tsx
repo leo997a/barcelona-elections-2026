@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square , AlertCircle, Info } from 'lucide-react';
+import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -70,7 +70,21 @@ const CURRENCY_OPTIONS = [
     { code: 'JPY', label: 'Japanese Yen (JPY)' },
     { code: 'CAD', label: 'Canadian Dollar (CAD)' },
     { code: 'AUD', label: 'Australian Dollar (AUD)' },
+    { code: 'MAD', label: 'Moroccan Dirham (MAD)' },
+    { code: 'DZD', label: 'Algerian Dinar (DZD)' },
+    { code: 'TND', label: 'Tunisian Dinar (TND)' },
+    { code: 'TRY', label: 'Turkish Lira (TRY)' },
+    { code: 'BRL', label: 'Brazilian Real (BRL)' },
+    { code: 'MXN', label: 'Mexican Peso (MXN)' },
+    { code: 'INR', label: 'Indian Rupee (INR)' },
+    { code: 'IDR', label: 'Indonesian Rupiah (IDR)' },
+    { code: 'MYR', label: 'Malaysian Ringgit (MYR)' },
+    { code: 'SGD', label: 'Singapore Dollar (SGD)' },
+    { code: 'CNY', label: 'Chinese Yuan (CNY)' },
+    { code: 'KRW', label: 'Korean Won (KRW)' },
 ];
+
+const SPONSOR_QUICK_AMOUNTS = [5, 10, 25, 50, 100, 250, 500, 1000, 5000, 10000];
 
 const MAX_MATCH_STATS_JSON_LENGTH = 4_500_000;
 const MAX_LOCAL_MEDIA_UPLOAD_BYTES = 12 * 1024 * 1024;
@@ -485,6 +499,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [previewChroma, setPreviewChroma] = useState(false);
   const [editLinkCopied, setEditLinkCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sponsorBackupInputRef = useRef<HTMLInputElement>(null);
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const matchStatsJsonInputRef = useRef<HTMLInputElement>(null);
   const [activeImageFieldId, setActiveImageFieldId] = useState<string | null>(null);
@@ -586,6 +601,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [editSponsorData, setEditSponsorData] = useState({ name: '', avatar: '' });
+  const [sponsorBackupMessage, setSponsorBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isRefreshingSponsorUsd, setIsRefreshingSponsorUsd] = useState(false);
 
   // --- SMART SYNC ---
   useEffect(() => {
@@ -1470,6 +1487,127 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       setPasswordError(null);
   };
 
+  const parseSponsors = (): Sponsor[] => {
+      try {
+          const parsed = JSON.parse(String(getDraftValue('sponsorsData') || '[]'));
+          return Array.isArray(parsed) ? parsed : [];
+      } catch {
+          return [];
+      }
+  };
+
+  const recalculateSponsorUsd = async (sponsor: Sponsor): Promise<Sponsor> => {
+      const history = Array.isArray(sponsor.history) ? sponsor.history : [];
+      if (history.length > 0) {
+          const nextHistory = await Promise.all(history.map(async entry => ({
+              ...entry,
+              currency: entry.currency || sponsor.currency || 'USD',
+              usdAmount: await currencyService.convertToUSD(Number(entry.amount || 0), entry.currency || sponsor.currency || 'USD'),
+          })));
+          return {
+              ...sponsor,
+              history: nextHistory,
+              amount: nextHistory.reduce((sum, entry) => sum + Number(entry.amount || 0), 0),
+              usdAmount: nextHistory.reduce((sum, entry) => sum + Number(entry.usdAmount || 0), 0),
+          };
+      }
+
+      return {
+          ...sponsor,
+          amount: Number(sponsor.amount || 0),
+          currency: sponsor.currency || 'USD',
+          usdAmount: await currencyService.convertToUSD(Number(sponsor.amount || 0), sponsor.currency || 'USD'),
+          history: [],
+      };
+  };
+
+  const normalizeImportedSponsors = async (raw: unknown): Promise<Sponsor[]> => {
+      const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as { sponsors?: unknown[] })?.sponsors)
+              ? (raw as { sponsors: unknown[] }).sponsors
+              : [];
+
+      const sponsors: Sponsor[] = list
+          .map<Sponsor | null>((item, index) => {
+              const value = item as Partial<Sponsor>;
+              const name = String(value.name || '').trim();
+              if (!name) return null;
+              return {
+                  id: String(value.id || `imported-${Date.now()}-${index}`),
+                  name,
+                  amount: Number(value.amount || 0),
+                  currency: String(value.currency || 'USD').toUpperCase(),
+                  usdAmount: Number(value.usdAmount || 0),
+                  avatar: value.avatar || '',
+                  history: Array.isArray(value.history) ? value.history.map((entry, entryIndex) => ({
+                      id: String(entry.id || `imported-donation-${Date.now()}-${index}-${entryIndex}`),
+                      amount: Number(entry.amount || 0),
+                      currency: String(entry.currency || value.currency || 'USD').toUpperCase(),
+                      usdAmount: Number(entry.usdAmount || 0),
+                      timestamp: Number(entry.timestamp || Date.now()),
+                  })) : [],
+              } satisfies Sponsor;
+          })
+          .filter((item): item is Sponsor => item !== null);
+
+      const recalculated = await Promise.all(sponsors.map(recalculateSponsorUsd));
+      return recalculated.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
+  };
+
+  const handleRefreshSponsorUsd = async () => {
+      setIsRefreshingSponsorUsd(true);
+      setSponsorBackupMessage(null);
+      try {
+          const recalculated = await Promise.all(parseSponsors().map(recalculateSponsorUsd));
+          recalculated.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
+          handleDraftFieldChange('sponsorsData', JSON.stringify(recalculated));
+          setSponsorBackupMessage({ type: 'success', text: 'تم تحديث التحويل إلى الدولار لكل الداعمين.' });
+      } catch {
+          setSponsorBackupMessage({ type: 'error', text: 'تعذر تحديث تحويل الدولار.' });
+      } finally {
+          setIsRefreshingSponsorUsd(false);
+      }
+  };
+
+  const handleExportSponsorsBackup = () => {
+      const sponsors = parseSponsors();
+      const payload = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          overlayId: draftOverlay.id,
+          overlayName: draftOverlay.name,
+          headline: String(getDraftValue('headline') || ''),
+          sponsors,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `reo-sponsors-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setSponsorBackupMessage({ type: 'success', text: `تم تصدير نسخة احتياطية تضم ${sponsors.length} داعم.` });
+  };
+
+  const handleSponsorBackupFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+
+      try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const importedSponsors = await normalizeImportedSponsors(parsed);
+          handleDraftFieldChange('sponsorsData', JSON.stringify(importedSponsors));
+          setSponsorBackupMessage({ type: 'success', text: `تم استيراد ${importedSponsors.length} داعم وإعادة ترتيبهم بالدولار.` });
+      } catch {
+          setSponsorBackupMessage({ type: 'error', text: 'ملف النسخة الاحتياطية غير صالح أو لا يحتوي على داعمين.' });
+      }
+  };
+
   const handleAddSponsor = async () => {
       if (!newSponsor.name || !newSponsor.amount) return;
       setIsAddingSponsor(true);
@@ -1495,30 +1633,24 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           history: [donation]
       };
 
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      let currentSponsors: Sponsor[] = [];
-      try { currentSponsors = JSON.parse(currentSponsorsStr); } catch (e) {}
-
-      let updatedSponsors = [sponsorToAdd, ...currentSponsors];
-      updatedSponsors.sort((a, b) => b.usdAmount - a.usdAmount);
+      let updatedSponsors = [sponsorToAdd, ...parseSponsors()];
+      updatedSponsors.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
 
       handleDraftFieldChange('sponsorsData', JSON.stringify(updatedSponsors));
       setNewSponsor({ name: '', amount: '', currency: 'SAR', avatar: '' });
+      setSponsorBackupMessage({ type: 'success', text: `تمت إضافة ${sponsorToAdd.name} وتحويل المبلغ إلى $${usdAmount.toLocaleString()}.` });
       setIsAddingSponsor(false);
   };
 
   const handleDeleteSponsor = (id: string) => {
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      const currentSponsors: Sponsor[] = JSON.parse(currentSponsorsStr);
-      const updated = currentSponsors.filter(s => s.id !== id);
+      const updated = parseSponsors().filter(s => s.id !== id);
       handleDraftFieldChange('sponsorsData', JSON.stringify(updated));
   };
 
   const handleAutoSort = () => {
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      let currentSponsors: Sponsor[] = JSON.parse(currentSponsorsStr);
+      let currentSponsors = parseSponsors();
       // Sort High to Low (using the calculated usdAmount)
-      currentSponsors.sort((a, b) => b.usdAmount - a.usdAmount);
+      currentSponsors.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
       handleDraftFieldChange('sponsorsData', JSON.stringify(currentSponsors));
   };
 
@@ -1529,8 +1661,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       setIsToppingUp(true);
       const additionalAmount = parseFloat(finalAmountStr);
 
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      const currentSponsors: Sponsor[] = JSON.parse(currentSponsorsStr);
+      const currentSponsors = parseSponsors();
       const sponsorIndex = currentSponsors.findIndex(s => s.id === id);
       
       if (sponsorIndex !== -1) {
@@ -1556,7 +1687,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               history: newHistory
           };
           
-          updated.sort((a, b) => b.usdAmount - a.usdAmount);
+          updated.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
           
           handleDraftFieldChange('sponsorsData', JSON.stringify(updated));
           setTopUpSponsorId(null);
@@ -1566,9 +1697,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   const handleUpdateSponsorInfo = (id: string) => {
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      const currentSponsors: Sponsor[] = JSON.parse(currentSponsorsStr);
-      const updated = currentSponsors.map(s => 
+      const updated = parseSponsors().map(s =>
           s.id === id ? { ...s, name: editSponsorData.name, avatar: editSponsorData.avatar } : s
       );
       handleDraftFieldChange('sponsorsData', JSON.stringify(updated));
@@ -1576,8 +1705,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   const handleDeleteDonation = (sponsorId: string, donationId: string) => {
-      const currentSponsorsStr = String(getDraftValue('sponsorsData') || '[]');
-      const currentSponsors: Sponsor[] = JSON.parse(currentSponsorsStr);
+      const currentSponsors = parseSponsors();
       const sponsorIndex = currentSponsors.findIndex(s => s.id === sponsorId);
       
       if (sponsorIndex !== -1) {
@@ -1601,7 +1729,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               history: newHistory
           };
           
-          updated.sort((a, b) => b.usdAmount - a.usdAmount);
+          updated.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
           handleDraftFieldChange('sponsorsData', JSON.stringify(updated));
       }
   };
@@ -3515,7 +3643,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // Phase A4 — scene fields surface as audio settings
                         'audioSceneId', 'audioUpdateCue',
                       ];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'sponsorDisplayMode', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'showSponsorStats', 'showGoalProgress', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);
@@ -3840,167 +3968,224 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                           </form>
                       </div>
                   ) : (
-                      <div className="space-y-6 animate-fade-in-up">
-                          <div className="flex items-center justify-between">
-                              <h3 className="text-sm font-bold text-green-400 flex items-center gap-2">
-                                  <Unlock className="w-4 h-4" />  
-                              </h3>
-                              <button onClick={handleAdminLogout} className="text-xs text-gray-500 hover:text-white"></button>
+                      <div className="space-y-5 animate-fade-in-up" dir="rtl">
+                          <input ref={sponsorBackupInputRef} type="file" accept="application/json,.json" onChange={handleSponsorBackupFile} className="hidden" />
+                          <div className="flex items-center justify-between gap-3">
+                              <div>
+                                  <h3 className="text-sm font-black text-green-300 flex items-center gap-2">
+                                      <Unlock className="w-4 h-4" /> غرفة داعمي البث
+                                  </h3>
+                                  <p className="mt-1 text-[11px] text-gray-500">إدارة المبالغ، التحويل السريع للدولار، والنسخ الاحتياطية.</p>
+                              </div>
+                              <button onClick={handleAdminLogout} className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:text-white">قفل</button>
                           </div>
 
-                          {/* Add Form */}
-                          <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 space-y-3">
-                              <h4 className="text-xs font-bold text-white mb-2"></h4>
-                              
-                              <div className="flex gap-2">
-                                 <input 
-                                    type="text" placeholder=" "
-                                    value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})}
-                                    className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                                  />
-                              </div>
+                          {(() => {
+                              const sponsors = parseSponsors();
+                              const totalUsd = sponsors.reduce((sum, item) => sum + Number(item.usdAmount || 0), 0);
+                              const donationCount = sponsors.reduce((sum, item) => sum + (item.history?.length || 0), 0);
+                              const topSponsor = sponsors[0];
+                              return (
+                                  <div className="grid grid-cols-3 gap-2">
+                                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                                          <div className="text-[10px] font-bold text-emerald-200/70">إجمالي الدولار</div>
+                                          <div className="mt-1 font-mono text-lg font-black text-emerald-300">${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                                      </div>
+                                      <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-3">
+                                          <div className="text-[10px] font-bold text-blue-200/70">عدد الداعمين</div>
+                                          <div className="mt-1 font-mono text-lg font-black text-blue-300">{sponsors.length}</div>
+                                      </div>
+                                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+                                          <div className="text-[10px] font-bold text-amber-200/70">التبرعات</div>
+                                          <div className="mt-1 font-mono text-lg font-black text-amber-300">{donationCount}</div>
+                                          {topSponsor && <div className="mt-1 truncate text-[10px] text-amber-100/70">الأول: {topSponsor.name}</div>}
+                                      </div>
+                                  </div>
+                              );
+                          })()}
 
-                              <div className="flex gap-2">
-                                  <input 
-                                    type="number" placeholder=""
-                                    value={newSponsor.amount} onChange={e => setNewSponsor({...newSponsor, amount: e.target.value})}
-                                    className="flex-1 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                                  />
-                                  <select 
-                                    value={newSponsor.currency} onChange={e => setNewSponsor({...newSponsor, currency: e.target.value})}
-                                    className="w-32 bg-gray-900 border border-gray-600 rounded p-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                                  >
-                                      {CURRENCY_OPTIONS.map(curr => (
-                                          <option key={curr.code} value={curr.code}>{curr.label}</option>
-                                      ))}
-                                      <option value="OTH">USD</option>
-                                  </select>
-                              </div>
-
-                              {/* LIVE USD PREVIEW */}
-                              <div className="flex items-center justify-between px-2 text-[10px] text-gray-400 font-mono bg-black/20 rounded py-1 border border-white/5">
-                                  <span></span>
-                                  <span className="text-green-400 font-bold">
-                                      {previewUSD !== null ? `$${previewUSD.toLocaleString()}` : '...'}
-                                  </span>
-                              </div>
-
-                              <div className="relative">
-                                  <input 
-                                    type="text" placeholder="  ()"
-                                    value={newSponsor.avatar} onChange={e => setNewSponsor({...newSponsor, avatar: e.target.value})}
-                                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-500 pl-8"
-                                  />
-                                  <ImageIcon className="absolute top-2.5 left-2 w-4 h-4 text-gray-600" />
-                              </div>
-
-                              <button 
-                                onClick={handleAddSponsor}
-                                disabled={isAddingSponsor}
-                                className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded flex items-center justify-center gap-2 font-bold transition-all transform active:scale-95"
-                              >
-                                  {isAddingSponsor ? '...' : <><Plus className="w-4 h-4" /></>}
+                          <div className="grid grid-cols-3 gap-2">
+                              <button onClick={handleExportSponsorsBackup} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-emerald-400/50">
+                                  <Download className="w-4 h-4" /> تصدير نسخة
+                              </button>
+                              <button onClick={() => sponsorBackupInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-blue-400/50">
+                                  <Upload className="w-4 h-4" /> استيراد نسخة
+                              </button>
+                              <button onClick={handleRefreshSponsorUsd} disabled={isRefreshingSponsorUsd} className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-amber-400/50 disabled:opacity-50">
+                                  <DollarSign className="w-4 h-4" /> {isRefreshingSponsorUsd ? 'تحويل...' : 'تحديث USD'}
                               </button>
                           </div>
 
-                          {/* List */}
+                          {sponsorBackupMessage && (
+                              <div className={`rounded-xl border px-3 py-2 text-xs font-bold ${sponsorBackupMessage.type === 'success' ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200' : 'border-red-500/25 bg-red-500/10 text-red-200'}`}>
+                                  {sponsorBackupMessage.text}
+                              </div>
+                          )}
+
+                          <div className="rounded-2xl border border-gray-700 bg-gray-900/70 p-4 space-y-3">
+                              <h4 className="text-xs font-black text-white">إضافة داعم جديد</h4>
+                              <input
+                                  type="text"
+                                  placeholder="اسم الداعم"
+                                  value={newSponsor.name}
+                                  onChange={e => setNewSponsor({ ...newSponsor, name: e.target.value })}
+                                  className="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                              />
+                              <div className="grid grid-cols-[1fr_150px] gap-2">
+                                  <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="المبلغ"
+                                      value={newSponsor.amount}
+                                      onChange={e => setNewSponsor({ ...newSponsor, amount: e.target.value })}
+                                      className="bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                                  />
+                                  <select
+                                      value={newSponsor.currency}
+                                      onChange={e => setNewSponsor({ ...newSponsor, currency: e.target.value })}
+                                      className="bg-gray-950 border border-gray-700 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                                  >
+                                      {CURRENCY_OPTIONS.map(curr => (
+                                          <option key={curr.code} value={curr.code}>{curr.code}</option>
+                                      ))}
+                                  </select>
+                              </div>
+                              <div className="grid grid-cols-5 gap-1">
+                                  {SPONSOR_QUICK_AMOUNTS.slice(0, 10).map(value => (
+                                      <button
+                                          key={value}
+                                          type="button"
+                                          onClick={() => setNewSponsor({ ...newSponsor, amount: String(value) })}
+                                          className="rounded-lg border border-gray-700 bg-black/30 py-1 text-[10px] font-mono text-gray-300 hover:border-emerald-500/50 hover:text-white"
+                                      >
+                                          {value}
+                                      </button>
+                                  ))}
+                              </div>
+                              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs">
+                                  <span className="text-gray-400">تحويل سريع إلى الدولار</span>
+                                  <span className="font-mono font-black text-emerald-300">
+                                      {previewUSD !== null ? `$${previewUSD.toLocaleString()}` : '$0'}
+                                  </span>
+                              </div>
+                              <div className="relative">
+                                  <input
+                                      type="text"
+                                      placeholder="رابط صورة الداعم اختياري"
+                                      value={newSponsor.avatar}
+                                      onChange={e => setNewSponsor({ ...newSponsor, avatar: e.target.value })}
+                                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 pl-8 text-xs text-gray-300 font-mono focus:outline-none focus:border-emerald-500"
+                                  />
+                                  <ImageIcon className="absolute top-2.5 left-2 w-4 h-4 text-gray-600" />
+                              </div>
+                              <button
+                                  onClick={handleAddSponsor}
+                                  disabled={isAddingSponsor || !newSponsor.name || !newSponsor.amount}
+                                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 text-white py-2.5 rounded-xl flex items-center justify-center gap-2 font-black transition-all active:scale-95"
+                              >
+                                  {isAddingSponsor ? 'جاري الإضافة...' : <><Plus className="w-4 h-4" /> إضافة الداعم</>}
+                              </button>
+                          </div>
+
                           <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                  <h4 className="text-xs font-bold text-gray-400"></h4>
-                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="  ">
-                                      <ArrowDownUp className="w-3 h-3" /> 
+                                  <h4 className="text-xs font-black text-gray-300">قائمة الداعمين</h4>
+                                  <button onClick={handleAutoSort} className="text-xs flex items-center gap-1 text-blue-400 hover:text-white" title="ترتيب حسب الدولار">
+                                      <ArrowDownUp className="w-3 h-3" /> ترتيب
                                   </button>
                               </div>
-                              <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
+                              <div className="max-h-80 overflow-y-auto space-y-2 custom-scrollbar">
                                   {(() => {
-                                      const sponsors: Sponsor[] = JSON.parse(String(getDraftValue('sponsorsData') || '[]'));
+                                      const sponsors = parseSponsors();
                                       return sponsors.length === 0 ? (
-                                          <p className="text-xs text-gray-500 text-center py-4"></p>
+                                          <p className="text-xs text-gray-500 text-center py-6 border border-dashed border-gray-800 rounded-2xl">لا يوجد داعمون بعد.</p>
                                       ) : (
                                           sponsors.map((s, idx) => (
                                               <React.Fragment key={s.id}>
-                                              <div className="bg-black/40 p-2 rounded flex items-center justify-between group">
+                                              <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex items-center justify-between group">
                                                   <div className="flex items-center gap-2 overflow-hidden">
-                                                      <span className="text-[10px] w-5 h-5 bg-gray-800 text-gray-400 flex items-center justify-center rounded-full shrink-0">{idx + 1}</span>
-                                                      <img src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}`} className="w-6 h-6 rounded-full" alt="" />
-                                                      <div className="text-sm text-white truncate max-w-[80px]">{s.name}</div>
+                                                      <span className="text-[10px] w-6 h-6 bg-gray-800 text-gray-300 flex items-center justify-center rounded-full shrink-0">{idx + 1}</span>
+                                                      <img src={s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}`} className="w-8 h-8 rounded-full object-cover" alt="" />
+                                                      <div className="min-w-0">
+                                                          <div className="text-sm text-white font-bold truncate max-w-[130px]">{s.name}</div>
+                                                          <div className="text-[9px] text-gray-500">{s.history?.length || 0} دفعة</div>
+                                                      </div>
                                                   </div>
                                                   <div className="flex items-center gap-3">
                                                       <div className="text-right">
-                                                          {/* Editor List shows original currency + USD hint */}
-                                                          <div className="text-xs text-green-400 font-mono font-bold">
-                                                              ${s.usdAmount.toLocaleString()}
+                                                          <div className="text-sm text-emerald-300 font-mono font-black">
+                                                              ${Number(s.usdAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                           </div>
                                                           <div className="text-[9px] text-gray-600">
-                                                              ({s.amount} {s.currency})
+                                                              {Number(s.amount || 0).toLocaleString()} {s.currency}
                                                           </div>
                                                       </div>
                                                       <div className="flex items-center gap-1">
-                                                          <button 
-                                                            onClick={() => {
-                                                                setEditingSponsorId(s.id);
-                                                                setEditSponsorData({ name: s.name, avatar: s.avatar || '' });
-                                                            }}
-                                                            className="p-1 text-gray-500 hover:text-blue-400"
-                                                            title=" "
+                                                          <button
+                                                              onClick={() => {
+                                                                  setEditingSponsorId(s.id);
+                                                                  setEditSponsorData({ name: s.name, avatar: s.avatar || '' });
+                                                              }}
+                                                              className="p-1 text-gray-500 hover:text-blue-400"
+                                                              title="تعديل"
                                                           >
                                                               <Edit3 className="w-4 h-4" />
                                                           </button>
-                                                          <button 
-                                                            onClick={() => setViewingHistoryId(viewingHistoryId === s.id ? null : s.id)}
-                                                            className={`p-1 rounded transition-colors ${viewingHistoryId === s.id ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-purple-400'}`}
-                                                            title=" "
+                                                          <button
+                                                              onClick={() => setViewingHistoryId(viewingHistoryId === s.id ? null : s.id)}
+                                                              className={`p-1 rounded transition-colors ${viewingHistoryId === s.id ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-purple-400'}`}
+                                                              title="السجل"
                                                           >
                                                               <History className="w-4 h-4" />
                                                           </button>
-                                                          <button 
-                                                            onClick={() => setTopUpSponsorId(topUpSponsorId === s.id ? null : s.id)} 
-                                                            className={`p-1 rounded transition-colors ${topUpSponsorId === s.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-blue-400'}`}
-                                                            title="  ( )"
+                                                          <button
+                                                              onClick={() => setTopUpSponsorId(topUpSponsorId === s.id ? null : s.id)}
+                                                              className={`p-1 rounded transition-colors ${topUpSponsorId === s.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-blue-400'}`}
+                                                              title="إضافة مبلغ"
                                                           >
                                                               <Plus className="w-4 h-4" />
                                                           </button>
-                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="">
+                                                          <button onClick={() => handleDeleteSponsor(s.id)} className="p-1 text-gray-600 hover:text-red-500" title="حذف">
                                                               <Trash2 className="w-4 h-4" />
                                                           </button>
                                                       </div>
                                                   </div>
                                               </div>
-                                              
-                                              {/* EDIT INFO UI */}
+
                                               {editingSponsorId === s.id && (
-                                                  <div className="bg-gray-800 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
+                                                  <div className="bg-gray-800 border border-blue-500/30 rounded-xl p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">s.name</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">تعديل {s.name}</span>
                                                           <button onClick={() => setEditingSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
-                                                      <input 
-                                                        type="text" value={editSponsorData.name} 
-                                                        onChange={e => setEditSponsorData({...editSponsorData, name: e.target.value})}
-                                                        className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
-                                                        placeholder=""
+                                                      <input
+                                                          type="text"
+                                                          value={editSponsorData.name}
+                                                          onChange={e => setEditSponsorData({ ...editSponsorData, name: e.target.value })}
+                                                          className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
+                                                          placeholder="اسم الداعم"
                                                       />
-                                                      <input 
-                                                        type="text" value={editSponsorData.avatar} 
-                                                        onChange={e => setEditSponsorData({...editSponsorData, avatar: e.target.value})}
-                                                        className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-400"
-                                                        placeholder=" "
+                                                      <input
+                                                          type="text"
+                                                          value={editSponsorData.avatar}
+                                                          onChange={e => setEditSponsorData({ ...editSponsorData, avatar: e.target.value })}
+                                                          className="w-full bg-black/40 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-400 font-mono focus:outline-none focus:border-blue-400"
+                                                          placeholder="رابط الصورة"
                                                       />
-                                                      <button 
-                                                        onClick={() => handleUpdateSponsorInfo(s.id)}
-                                                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1.5 rounded text-xs font-bold"
+                                                      <button
+                                                          onClick={() => handleUpdateSponsorInfo(s.id)}
+                                                          className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1.5 rounded text-xs font-bold"
                                                       >
-                                                           
+                                                          حفظ التعديل
                                                       </button>
                                                   </div>
                                               )}
 
-                                              {/* HISTORY VIEW UI */}
                                               {viewingHistoryId === s.id && (
-                                                  <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-2">
+                                                  <div className="bg-purple-900/10 border border-purple-500/30 rounded-xl p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-2">
                                                       <div className="flex items-center justify-between mb-1 border-b border-purple-500/20 pb-1">
                                                           <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
-                                                              <History className="w-3 h-3" />   {s.name}
+                                                              <History className="w-3 h-3" /> سجل {s.name}
                                                           </span>
                                                           <button onClick={() => setViewingHistoryId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
@@ -4009,16 +4194,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                               <div key={entry.id} className="flex items-center justify-between bg-black/30 p-1.5 rounded border border-white/5 group/history">
                                                                   <div className="flex flex-col">
                                                                       <span className="text-[11px] text-green-400 font-bold font-mono">
-                                                                          {entry.amount} {entry.currency}
+                                                                          {entry.amount} {entry.currency} / ${Number(entry.usdAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                                       </span>
                                                                       <span className="text-[8px] text-gray-500 flex items-center gap-1">
                                                                           <Calendar className="w-2 h-2" />
                                                                           {new Date(entry.timestamp).toLocaleDateString('ar-SA')} - {new Date(entry.timestamp).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                                                                       </span>
                                                                   </div>
-                                                                  <button 
-                                                                    onClick={() => handleDeleteDonation(s.id, entry.id)}
-                                                                    className="opacity-0 group-hover/history:opacity-100 text-gray-600 hover:text-red-500 transition-opacity"
+                                                                  <button
+                                                                      onClick={() => handleDeleteDonation(s.id, entry.id)}
+                                                                      className="opacity-0 group-hover/history:opacity-100 text-gray-600 hover:text-red-500 transition-opacity"
                                                                   >
                                                                       <Trash2 className="w-3 h-3" />
                                                                   </button>
@@ -4027,40 +4212,36 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                       </div>
                                                   </div>
                                               )}
-                                              
-                                              {/* TOP UP UI (GENIUS INLINE MODE) */}
+
                                               {topUpSponsorId === s.id && (
-                                                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
+                                                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-3 mt-1 mb-2 animate-cinematic-blur-in space-y-3">
                                                       <div className="flex items-center justify-between mb-1">
-                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">s.name</span>
+                                                          <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">إضافة مبلغ إلى {s.name}</span>
                                                           <button onClick={() => setTopUpSponsorId(null)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                                       </div>
-                                                      
                                                       <div className="flex gap-2">
-                                                          <input 
-                                                            autoFocus
-                                                            type="number" 
-                                                            placeholder=" ..." 
-                                                            value={topUpAmount}
-                                                            onChange={e => setTopUpAmount(e.target.value)}
-                                                            className="flex-1 bg-black/40 border border-blue-500/50 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
+                                                          <input
+                                                              autoFocus
+                                                              type="number"
+                                                              placeholder="مبلغ إضافي"
+                                                              value={topUpAmount}
+                                                              onChange={e => setTopUpAmount(e.target.value)}
+                                                              className="flex-1 bg-black/40 border border-blue-500/50 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-blue-400"
                                                           />
-                                                          <button 
-                                                            onClick={() => handleTopUp(s.id)}
-                                                            disabled={isToppingUp || !topUpAmount}
-                                                            className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50"
+                                                          <button
+                                                              onClick={() => handleTopUp(s.id)}
+                                                              disabled={isToppingUp || !topUpAmount}
+                                                              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold disabled:opacity-50"
                                                           >
-                                                              {isToppingUp ? '...' : ''}
+                                                              {isToppingUp ? '...' : 'إضافة'}
                                                           </button>
                                                       </div>
-
-                                                      {/* Quick Actions */}
-                                                      <div className="grid grid-cols-4 gap-1">
-                                                          {[5, 10, 50, 100].map(val => (
-                                                              <button 
-                                                                key={val}
-                                                                onClick={() => handleTopUp(s.id, val)}
-                                                                className="bg-gray-800 hover:bg-blue-600 text-[10px] py-1 rounded border border-gray-700 hover:border-blue-400 transition-all font-bold"
+                                                      <div className="grid grid-cols-5 gap-1">
+                                                          {SPONSOR_QUICK_AMOUNTS.map(val => (
+                                                              <button
+                                                                  key={val}
+                                                                  onClick={() => handleTopUp(s.id, val)}
+                                                                  className="bg-gray-800 hover:bg-blue-600 text-[10px] py-1 rounded border border-gray-700 hover:border-blue-400 transition-all font-bold"
                                                               >
                                                                   +{val}
                                                               </button>
