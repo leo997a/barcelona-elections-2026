@@ -322,14 +322,49 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const dealValue = String(getField('dealValue') || '');
   const confidencePct = Math.max(0, Math.min(100, Number(getField('confidencePct') ?? 85)));
   const lines = safeParse<ChatLine[]>(String(getField('chatLines') || '[]'), []);
+  const labels = {
+    liveStatus: String(getField('callStatusLiveLabel') || 'مباشرة'),
+    recordedStatus: String(getField('callStatusRecordedLabel') || 'مسجلة'),
+    privateStatus: String(getField('callStatusPrivateLabel') || 'مصدر خاص'),
+    closingStage: String(getField('callStageClosingLabel') || 'إغلاق وشيك'),
+    advancedStage: String(getField('callStageAdvancedLabel') || 'حسم متقدم'),
+    activeStage: String(getField('callStageActiveLabel') || 'تفاوض نشط'),
+    earlyStage: String(getField('callStageEarlyLabel') || 'رصد أولي'),
+    roomEyebrow: String(getField('callRoomEyebrow') || 'MERCATO CALL ROOM'),
+    roomTitle: String(getField('callRoomTitle') || 'غرفة اتصال الصفقة'),
+    reporterLabel: String(getField('callReporterLabel') || 'المراسل'),
+    reporterName: String(getField('callReporterName') || 'REO MERCATO DESK'),
+    confidenceLabel: String(getField('callConfidenceLabel') || 'ثقة'),
+    dealFileLabel: String(getField('callDealFileLabel') || 'ملف الصفقة'),
+    fromLabel: String(getField('callFromLabel') || 'من'),
+    toLabel: String(getField('callToLabel') || 'إلى'),
+    valueLabel: String(getField('callValueLabel') || 'القيمة'),
+    reporterMetricLabel: String(getField('callReporterMetricLabel') || 'REPORTER'),
+    agentMetricLabel: String(getField('callAgentMetricLabel') || 'AGENT'),
+    transcriptLabel: String(getField('callTranscriptLabel') || 'قناة مشفرة · transcript'),
+    messageCountLabel: String(getField('callMessageCountLabel') || 'رسالة'),
+    emptyCallLabel: String(getField('callEmptyLabel') || 'في انتظار بدء المكالمة'),
+    sourceLabel: String(getField('callSourceLabel') || 'المصدر'),
+    sourceClosedBadge: String(getField('callSourceClosedBadge') || 'مغلق'),
+    sourceFollowBadge: String(getField('callSourceFollowBadge') || 'متابعة'),
+    sourcePrivateTitle: String(getField('callSourcePrivateTitle') || 'مصدر خاص مغلق'),
+    sourceClosedTitle: String(getField('callSourceClosedTitle') || 'مصدر مغلق'),
+    sourceInfo: String(getField('callSourceInfo') || 'المعلومة من داخل غرفة المفاوضات'),
+    lastSignalLabel: String(getField('callLastSignalLabel') || 'آخر إشارة'),
+    progressLabel: String(getField('callProgressLabel') || 'تقدم الصفقة'),
+    progressStage1: String(getField('callProgressStage1Label') || 'اتفاق المبدأ'),
+    progressStage2: String(getField('callProgressStage2Label') || 'الفحص الطبي'),
+    progressStage3: String(getField('callProgressStage3Label') || 'الإعلان الرسمي'),
+    footerLabel: String(getField('callFooterLabel') || 'REO MERCATO INTEL'),
+  };
   const reporterLineCount = lines.filter(line => line.side !== 'agent').length;
   const agentLineCount = lines.filter(line => line.side === 'agent').length;
   const lastSignal = lines.length > 0 ? String(lines[lines.length - 1]?.text || '') : '';
   const negotiationStage =
-    confidencePct >= 94 ? 'إغلاق وشيك' :
-    confidencePct >= 82 ? 'حسم متقدم' :
-    confidencePct >= 64 ? 'تفاوض نشط' :
-    'رصد أولي';
+    confidencePct >= 94 ? labels.closingStage :
+    confidencePct >= 82 ? labels.advancedStage :
+    confidencePct >= 64 ? labels.activeStage :
+    labels.earlyStage;
   const negotiationColor =
     confidencePct >= 94 ? t.success :
     confidencePct >= 82 ? t.accent :
@@ -340,10 +375,10 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const isPrivate = callStatus === 'private_source';
   const statusPill =
     callStatus === 'recorded'
-      ? <Pill t={t} color={t.warning} label="مسجلة" small />
+      ? <Pill t={t} color={t.warning} label={labels.recordedStatus} small />
       : isPrivate
-      ? <Pill t={t} color={t.accent2} label="مصدر خاص" small />
-      : <Pill t={t} color={t.danger} label="مباشرة" pulse small />;
+      ? <Pill t={t} color={t.accent2} label={labels.privateStatus} small />
+      : <Pill t={t} color={t.danger} label={labels.liveStatus} pulse small />;
 
   return (
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
@@ -378,8 +413,8 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
         </div>
         <div className="text-center">
-          <div className="text-[9px] font-black uppercase tracking-[0.35em]" style={{ color: t.dim }}>MERCATO CALL ROOM</div>
-          <div className="mt-1 text-[28px] font-black leading-none" style={{ color: t.text }}>غرفة اتصال الصفقة</div>
+          <div className="text-[9px] font-black uppercase tracking-[0.35em]" style={{ color: t.dim }}>{labels.roomEyebrow}</div>
+          <div className="mt-1 text-[28px] font-black leading-none" style={{ color: t.text }}>{labels.roomTitle}</div>
           <div className="mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1" style={{
             background: `${negotiationColor}14`,
             border: `1px solid ${negotiationColor}55`,
@@ -390,10 +425,10 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.accent }}>المراسل</div>
-          <div className="text-[14px] font-bold mt-0.5" style={{ color: t.text }}>REO MERCATO DESK</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.accent }}>{labels.reporterLabel}</div>
+          <div className="text-[14px] font-bold mt-0.5" style={{ color: t.text }}>{labels.reporterName}</div>
           <div className="flex items-center gap-1.5 mt-1.5 justify-end">
-            <span className="text-[9px] font-mono" style={{ color: t.dim }}>ثقة</span>
+            <span className="text-[9px] font-mono" style={{ color: t.dim }}>{labels.confidenceLabel}</span>
             <div className="w-20"><ProgressBar t={t} value={confidencePct} /></div>
             <span className="text-[10px] font-black font-mono" style={{ color: t.accent }}>{confidencePct}%</span>
           </div>
@@ -408,7 +443,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         }}>
           <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full opacity-20 blur-2xl" style={{ background: t.accent2 }} />
           <div className="flex items-center justify-between">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent2 }}>ملف الصفقة</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent2 }}>{labels.dealFileLabel}</div>
             <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{
               background: `${negotiationColor}16`,
               color: negotiationColor,
@@ -425,27 +460,27 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           {(clubFrom || clubTo) && (
             <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
               <div className="text-[10px] text-center flex-1">
-                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>من</div>
+                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>{labels.fromLabel}</div>
                 <div className="font-bold mt-0.5" style={{ color: t.text }}>{clubFrom || '—'}</div>
               </div>
               <div style={{ color: t.accent }}><Icon name="arrow" size={14} /></div>
               <div className="text-[10px] text-center flex-1">
-                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>إلى</div>
+                <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>{labels.toLabel}</div>
                 <div className="font-bold mt-0.5" style={{ color: t.text }}>{clubTo || '—'}</div>
               </div>
             </div>
           )}
           <div className="mt-auto rounded-lg px-3 py-2.5" style={{ background: t.accentSoft, border: `1px solid ${t.accent}40` }}>
-            <div className="text-[9px] uppercase tracking-wider" style={{ color: t.dim }}>القيمة</div>
+            <div className="text-[9px] uppercase tracking-wider" style={{ color: t.dim }}>{labels.valueLabel}</div>
             <div className="text-[20px] font-black leading-none mt-0.5" style={{ color: t.accent }}>{dealValue || '—'}</div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>REPORTER</div>
+              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>{labels.reporterMetricLabel}</div>
               <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent }}>{reporterLineCount}</div>
             </div>
             <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>AGENT</div>
+              <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>{labels.agentMetricLabel}</div>
               <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent2 }}>{agentLineCount}</div>
             </div>
           </div>
@@ -456,18 +491,18 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
           <div className="px-4 py-2 border-b flex items-center justify-between" style={{ borderColor: t.border, background: t.surface }}>
             <div className="flex items-center gap-2">
               <Icon name="lock" size={13} color={t.accent} />
-              <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>قناة مشفرة · transcript</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>{labels.transcriptLabel}</div>
             </div>
             <div className="flex items-center gap-2">
               {isLive && <Waveform color={t.danger} bars={8} height={12} />}
-              <div className="text-[9px] font-mono" style={{ color: t.dim }}>{lines.length} رسالة</div>
+              <div className="text-[9px] font-mono" style={{ color: t.dim }}>{lines.length} {labels.messageCountLabel}</div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {lines.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
                 <Icon name="phone" size={28} color={t.dim} />
-                <div className="text-[12px]">في انتظار بدء المكالمة</div>
+                <div className="text-[12px]">{labels.emptyCallLabel}</div>
               </div>
             ) : (
               lines.map((line, i) => {
@@ -483,7 +518,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
                       borderBottomRightRadius: isAgent ? undefined : '4px',
                     }}>
                       <div className="text-[8px] font-bold uppercase opacity-60 mb-0.5" style={{ color: isAgent ? t.sub : t.accent }}>
-                        {isAgent ? 'AGENT' : 'REPORTER'}
+                        {isAgent ? labels.agentMetricLabel : labels.reporterMetricLabel}
                       </div>
                       <div className="text-[13px] leading-relaxed" style={{
                         direction: lineRtl ? 'rtl' : 'ltr',
@@ -500,24 +535,24 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         {/* Right: Source / dynamic stages from chat length */}
         <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
           <div className="flex items-center justify-between gap-2">
-            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>المصدر</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>{labels.sourceLabel}</div>
             <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{
               background: `${isPrivate ? t.accent2 : t.warning}14`,
               color: isPrivate ? t.accent2 : t.warning,
               border: `1px solid ${isPrivate ? t.accent2 : t.warning}45`,
-            }}>{isPrivate ? 'مغلق' : 'متابعة'}</span>
+            }}>{isPrivate ? labels.sourceClosedBadge : labels.sourceFollowBadge}</span>
           </div>
           <div className="rounded-lg p-3 text-center" style={{
             background: t.surfaceDeep,
             border: `1px dashed ${isPrivate ? t.accent2 : t.border}`,
           }}>
             <div className="flex justify-center mb-1.5"><Icon name="lock" size={26} color={isPrivate ? t.accent2 : t.warning} /></div>
-            <div className="text-[11px] font-bold" style={{ color: t.text }}>{isPrivate ? 'مصدر خاص مغلق' : 'مصدر مغلق'}</div>
-            <div className="text-[9px] mt-1" style={{ color: t.dim }}>المعلومة من داخل غرفة المفاوضات</div>
+            <div className="text-[11px] font-bold" style={{ color: t.text }}>{isPrivate ? labels.sourcePrivateTitle : labels.sourceClosedTitle}</div>
+            <div className="text-[9px] mt-1" style={{ color: t.dim }}>{labels.sourceInfo}</div>
           </div>
           {lastSignal && (
             <div className="rounded-lg p-3" style={{ background: `${t.accent}10`, border: `1px solid ${t.accent}40` }}>
-              <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>آخر إشارة</div>
+              <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>{labels.lastSignalLabel}</div>
               <div className="mt-1 text-[11px] leading-relaxed line-clamp-3" style={{
                 color: t.text,
                 direction: isRtl(lastSignal) ? 'rtl' : 'ltr',
@@ -526,13 +561,13 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             </div>
           )}
           <div className="rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
-            <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>تقدم الصفقة</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>{labels.progressLabel}</div>
             <div className="space-y-1.5">
               {/* Stages now reflect confidencePct so the right panel feels alive */}
               {[
-                { label: 'اتفاق المبدأ', threshold: 40 },
-                { label: 'الفحص الطبي', threshold: 70 },
-                { label: 'الإعلان الرسمي', threshold: 95 },
+                { label: labels.progressStage1, threshold: 40 },
+                { label: labels.progressStage2, threshold: 70 },
+                { label: labels.progressStage3, threshold: 95 },
               ].map((stage, i) => {
                 const reached = confidencePct >= stage.threshold;
                 const active = confidencePct >= (i === 0 ? 0 : [40, 70][i - 1]) && confidencePct < stage.threshold;
@@ -548,7 +583,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             </div>
           </div>
           <div className="mt-auto text-[9px] font-mono text-center opacity-60" style={{ color: t.dim }}>
-            REO MERCATO INTEL
+            {labels.footerLabel}
           </div>
         </div>
       </div>
