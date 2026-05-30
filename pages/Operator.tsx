@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { OverlayConfig, OverlayType } from '../types';
-import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter } from 'lucide-react';
+import { OverlayConfig, OverlayField, OverlayType } from '../types';
+import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
+import OverlayRenderer from '../components/OverlayRenderer';
 import { resolveTemplateById } from '../utils/templateRegistry';
 import { getTaxonomy, listCategories, type CategoryKey } from '../utils/templateTaxonomy';
 
@@ -25,6 +26,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const [operatorCategory, setOperatorCategory] = useState<CategoryKey | 'ALL'>('ALL');
   const [draftName, setDraftName] = useState('');
   const [nameSavedPulse, setNameSavedPulse] = useState(false);
+  const [selectedObsCopied, setSelectedObsCopied] = useState(false);
+  const [selectedEditCopied, setSelectedEditCopied] = useState(false);
   const [singleProgramMode, setSingleProgramMode] = useState(() => {
     try {
       return localStorage.getItem(SINGLE_PROGRAM_MODE_KEY) === '1';
@@ -161,8 +164,194 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     }
   };
 
+  const copySelectedObsUrl = async () => {
+    if (!selectedOverlay) return;
+    try {
+      const url = await syncManager.prepareOutputUrl(selectedOverlay.id, selectedOverlay);
+      await navigator.clipboard.writeText(url);
+      setSelectedObsCopied(true);
+      setTimeout(() => setSelectedObsCopied(false), 2200);
+    } catch {
+      alert('تعذر نسخ رابط القالب');
+    }
+  };
+
+  const copySelectedEditUrl = async () => {
+    if (!selectedOverlay) return;
+    try {
+      await navigator.clipboard.writeText(syncManager.buildEditUrl(selectedOverlay.id));
+      setSelectedEditCopied(true);
+      setTimeout(() => setSelectedEditCopied(false), 2200);
+    } catch {
+      alert('تعذر نسخ رابط التعديل');
+    }
+  };
+
   const updateField = (overlay: OverlayConfig, fieldId: string, value: any) => {
     syncManager.updateLiveField(overlay.id, fieldId, value);
+  };
+
+  const renderSelectOption = (option: string | { label: string; value: string }) => {
+    const value = typeof option === 'string' ? option : option.value;
+    const label = typeof option === 'string' ? option : option.label;
+    return <option key={value} value={value}>{label}</option>;
+  };
+
+  const renderOperatorFieldControl = (overlay: OverlayConfig, field: OverlayField) => {
+    const baseInput = 'w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-blue-500';
+    const label = (
+      <label className="mb-1.5 block text-[11px] font-bold text-gray-400">
+        {field.label || field.id}
+      </label>
+    );
+    const value = field.value;
+
+    if (field.type === 'hidden') return null;
+
+    if (field.type === 'boolean') {
+      const checked = value === true;
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+          <button
+            type="button"
+            onClick={() => updateField(overlay, field.id, !checked)}
+            className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
+              checked
+                ? 'border-emerald-500/35 bg-emerald-600/15 text-emerald-200'
+                : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-600 hover:text-white'
+            }`}
+          >
+            <span className="truncate">{field.label || field.id}</span>
+            <span className={`h-5 w-9 rounded-full p-0.5 transition-colors ${checked ? 'bg-emerald-500' : 'bg-gray-700'}`}>
+              <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${checked ? '-translate-x-4' : ''}`} />
+            </span>
+          </button>
+        </div>
+      );
+    }
+
+    if (field.type === 'select' && field.options?.length) {
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+          {label}
+          <select
+            value={String(value ?? '')}
+            onChange={event => updateField(overlay, field.id, event.target.value)}
+            className={baseInput}
+          >
+            {field.options.map(renderSelectOption)}
+          </select>
+        </div>
+      );
+    }
+
+    if (field.type === 'range') {
+      const numericValue = Number(value ?? field.min ?? 0);
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="truncate text-[11px] font-bold text-gray-400">{field.label || field.id}</span>
+            <span className="rounded bg-gray-800 px-2 py-0.5 text-[10px] font-mono text-gray-300">{numericValue}</span>
+          </div>
+          <input
+            type="range"
+            min={field.min ?? 0}
+            max={field.max ?? 100}
+            step={field.step ?? 1}
+            value={numericValue}
+            onChange={event => updateField(overlay, field.id, Number(event.target.value))}
+            className="w-full accent-blue-500"
+          />
+        </div>
+      );
+    }
+
+    if (field.type === 'number') {
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+          {label}
+          <input
+            type="number"
+            min={field.min}
+            max={field.max}
+            step={field.step ?? 1}
+            value={Number(value ?? 0)}
+            onChange={event => updateField(overlay, field.id, Number(event.target.value))}
+            className={baseInput}
+          />
+        </div>
+      );
+    }
+
+    if (field.type === 'color') {
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+          {label}
+          <div className="flex gap-2">
+            <input
+              type="color"
+              value={String(value || '#ffffff')}
+              onChange={event => updateField(overlay, field.id, event.target.value)}
+              className="h-10 w-12 rounded-lg border border-gray-700 bg-gray-900 p-1"
+            />
+            <input
+              type="text"
+              value={String(value || '')}
+              onChange={event => updateField(overlay, field.id, event.target.value)}
+              className={baseInput}
+              dir="ltr"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (field.type === 'textarea') {
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3 md:col-span-2">
+          {label}
+          <textarea
+            rows={4}
+            value={String(value ?? '')}
+            onChange={event => updateField(overlay, field.id, event.target.value)}
+            className={`${baseInput} resize-y leading-6`}
+          />
+        </div>
+      );
+    }
+
+    if (field.type === 'image-list') {
+      const listValue = Array.isArray(value) ? value.join('\n') : String(value ?? '');
+      return (
+        <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3 md:col-span-2">
+          {label}
+          <textarea
+            rows={4}
+            value={listValue}
+            onChange={event => updateField(
+              overlay,
+              field.id,
+              event.target.value.split('\n').map(item => item.trim()).filter(Boolean),
+            )}
+            className={`${baseInput} resize-y font-mono text-xs leading-5`}
+            dir="ltr"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div key={field.id} className="rounded-xl border border-gray-800 bg-gray-950/70 p-3">
+        {label}
+        <input
+          type={field.type === 'image' ? 'url' : 'text'}
+          value={String(value ?? '')}
+          onChange={event => updateField(overlay, field.id, event.target.value)}
+          className={baseInput}
+          dir={field.type === 'image' ? 'ltr' : 'auto'}
+        />
+      </div>
+    );
   };
 
   const saveSelectedName = () => {
@@ -216,6 +405,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = canTakeIn(selectedOverlay);
+  const operatorFieldControls = selectedOverlay.fields.filter(field => field.type !== 'hidden');
+  const previewOverlay: OverlayConfig = { ...selectedOverlay, isVisible: true };
   const programModeLabel = singleProgramMode ? 'فردي' : 'متعدد';
   const programModeTitle = singleProgramMode
     ? 'وضع البرنامج الواحد مفعل: إدخال قالب جديد يخرج القوالب الأخرى ويبقي قالبًا واحدًا في رابط البرنامج'
@@ -418,7 +609,21 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               allowShowWhenLive={singleProgramMode && liveOverlaysCount > 1}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={copySelectedEditUrl}
+              className="text-xs flex items-center gap-2 text-cyan-300 hover:text-white bg-cyan-600/15 hover:bg-cyan-600/25 px-3 py-1.5 rounded-lg border border-cyan-500/35"
+              title="نسخ رابط تعديل القالب المحدد">
+              {selectedEditCopied ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+              {selectedEditCopied ? 'تم النسخ' : 'رابط التعديل'}
+            </button>
+            <button
+              onClick={copySelectedObsUrl}
+              className="text-xs flex items-center gap-2 text-blue-300 hover:text-white bg-blue-600/15 hover:bg-blue-600/25 px-3 py-1.5 rounded-lg border border-blue-500/35"
+              title="نسخ رابط OBS للقالب المحدد فقط">
+              {selectedObsCopied ? <Check className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+              {selectedObsCopied ? 'تم النسخ' : 'رابط القالب'}
+            </button>
             <button
               onClick={toggleSingleProgramMode}
               aria-pressed={singleProgramMode}
@@ -533,6 +738,48 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               <Square className="fill-current w-8 h-8" />
               <span>إخراج</span>
             </button>
+          </div>
+
+          <div className="mb-8 grid grid-cols-1 gap-4 max-w-5xl mx-auto xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Monitor className="h-4 w-4 text-blue-300" />
+                  معاينة القالب المحدد
+                </div>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                  selectedOverlay.isVisible
+                    ? 'border-red-500/35 bg-red-600/15 text-red-200'
+                    : 'border-gray-700 bg-gray-950 text-gray-500'
+                }`}>
+                  {selectedOverlay.isVisible ? 'ON AIR' : 'PREVIEW'}
+                </span>
+              </div>
+              <div className="relative aspect-video overflow-hidden rounded-lg border border-gray-800 bg-black/70">
+                <OverlayRenderer config={previewOverlay} isEditor />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <SlidersHorizontal className="h-4 w-4 text-emerald-300" />
+                  تحكم سريع بحقول القالب
+                </div>
+                <span className="rounded bg-gray-950 px-2 py-0.5 text-[10px] font-mono text-gray-400">
+                  {operatorFieldControls.length} حقل
+                </span>
+              </div>
+              {operatorFieldControls.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-800 bg-gray-950/60 p-5 text-center text-xs text-gray-500">
+                  لا توجد حقول قابلة للتحكم لهذا القالب.
+                </div>
+              ) : (
+                <div className="grid max-h-[34rem] grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2">
+                  {operatorFieldControls.map(field => renderOperatorFieldControl(selectedOverlay, field))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 max-w-5xl mx-auto">
