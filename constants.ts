@@ -2880,7 +2880,8 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
       { id: 'soundInStyle', label: 'مؤثر دخول النسب', type: 'hidden', value: 'DATA_RUSH' },
       { id: 'soundOutStyle', label: 'مؤثر خروج النسب', type: 'hidden', value: 'SOFT_FADE' },
       { id: 'voiceLibraryId', label: 'صوت النسب', type: 'hidden', value: 'mercato_deal_percentages_current' },
-      { id: 'matrixLayout', label: 'شكل المصفوفة', type: 'select', value: 'split_board', options: [
+      { id: 'matrixLayout', label: 'شكل المصفوفة', type: 'select', value: 'luxury_wall', options: [
+        { value: 'luxury_wall', label: 'جدار صفقات فاخر لكل لاعب' },
         { value: 'split_board', label: 'لوحة سينمائية مقسومة' },
         { value: 'trading_floor', label: 'غرفة سوق الصفقات' },
         { value: 'hologram_grid', label: 'هولوجرام الهدف الرئيسي' },

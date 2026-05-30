@@ -1120,6 +1120,7 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
   const avgOld = visibleDeals.length ? Math.round(visibleDeals.reduce((sum, deal) => sum + deal.oldPct, 0) / visibleDeals.length) : 0;
   const avgNew = visibleDeals.length ? Math.round(visibleDeals.reduce((sum, deal) => sum + deal.newPct, 0) / visibleDeals.length) : 0;
   const modeColor = showNew ? probabilityColor(featured.newPct, t) : '#ff5c8a';
+  const totalMovement = avgNew - avgOld;
 
   const ClubRoute: React.FC<{ from?: string; to?: string; align?: 'start' | 'center' }> = ({ from, to, align = 'start' }) => (
     <div
@@ -1133,15 +1134,49 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
     </div>
   );
 
+  const PercentPair: React.FC<{ deal: ProbabilityShiftDeal; compact?: boolean }> = ({ deal, compact = false }) => {
+    const change = delta(deal);
+    const activeColor = probabilityColor(activePct(deal), t);
+    if (compact) {
+      return (
+        <div className="flex items-center gap-1.5 text-[9px] font-mono font-black">
+          <span className="rounded px-1.5 py-0.5" style={{ color: '#ff5c8a', background: 'rgba(255,92,138,0.10)' }}>قديم {deal.oldPct}%</span>
+          <span className="rounded px-1.5 py-0.5" style={{ color: activeColor, background: `${activeColor}12` }}>اليوم {deal.newPct}%</span>
+          <span className="rounded px-1.5 py-0.5" style={{ color: change >= 0 ? t.success : '#ff5c8a', background: change >= 0 ? 'rgba(34,197,94,0.10)' : 'rgba(255,92,138,0.10)' }}>
+            {change >= 0 ? '+' : ''}{change}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div className={`grid grid-cols-3 ${compact ? 'gap-1' : 'gap-1.5'}`}>
+        <div className="rounded-md px-2 py-1.5" style={{ background: 'rgba(255,92,138,0.10)', border: '1px solid rgba(255,92,138,0.28)' }}>
+          <div className="text-[7px] font-black uppercase tracking-[0.14em]" style={{ color: t.dim }}>قديم</div>
+          <div className={`font-mono font-black ${compact ? 'text-[13px]' : 'text-[16px]'}`} style={{ color: '#ff5c8a' }}>{deal.oldPct}%</div>
+        </div>
+        <div className="rounded-md px-2 py-1.5" style={{ background: `${activeColor}12`, border: `1px solid ${activeColor}35` }}>
+          <div className="text-[7px] font-black uppercase tracking-[0.14em]" style={{ color: t.dim }}>اليوم</div>
+          <div className={`font-mono font-black ${compact ? 'text-[13px]' : 'text-[16px]'}`} style={{ color: activeColor }}>{deal.newPct}%</div>
+        </div>
+        <div className="rounded-md px-2 py-1.5" style={{ background: change >= 0 ? 'rgba(34,197,94,0.10)' : 'rgba(255,92,138,0.10)', border: `1px solid ${change >= 0 ? 'rgba(34,197,94,0.28)' : 'rgba(255,92,138,0.28)'}` }}>
+          <div className="text-[7px] font-black uppercase tracking-[0.14em]" style={{ color: t.dim }}>الحركة</div>
+          <div className={`font-mono font-black ${compact ? 'text-[13px]' : 'text-[16px]'}`} style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>{change >= 0 ? '+' : ''}{change}</div>
+        </div>
+      </div>
+    );
+  };
+
   const DealRow: React.FC<{ deal: ProbabilityShiftDeal; compact?: boolean }> = ({ deal, compact = false }) => {
     const pct = activePct(deal);
     const color = probabilityColor(pct, t);
     const change = delta(deal);
     return (
-      <div className="rounded-xl p-3 relative overflow-hidden transition-all duration-700" style={{
-        background: deal.idx === featured.idx ? `${color}13` : t.surface,
-        border: `1px solid ${deal.idx === featured.idx ? `${color}75` : t.border}`,
+      <div className="rounded-lg p-3 relative overflow-hidden transition-all duration-700" style={{
+        background: deal.idx === featured.idx ? `linear-gradient(135deg, ${color}16 0%, ${t.surface} 68%)` : t.surface,
+        border: `1px solid ${deal.idx === featured.idx ? `${color}80` : t.border}`,
+        boxShadow: deal.idx === featured.idx ? `0 0 0 1px ${color}14 inset` : 'none',
       }}>
+        <div className="absolute top-0 bottom-0 right-0 w-[3px]" style={{ background: color }} />
         <div className="flex items-center gap-3">
           <Avatar t={t} name={deal.player} image={deal.image} accent={color} size={compact ? 42 : 52} />
           <div className="min-w-0 flex-1">
@@ -1150,18 +1185,23 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
               <div className="font-mono font-black" style={{ color, fontSize: compact ? 20 : 28 }}>{pct}%</div>
             </div>
             <ClubRoute from={deal.fromClub} to={deal.toClub} />
+            <div className="mt-2">
+              <PercentPair deal={deal} compact={compact} />
+            </div>
             <div className="mt-2 relative h-2 rounded-full overflow-hidden" style={{ background: `${color}16` }}>
               <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
               {showNew && (
                 <span className="absolute top-0 h-full w-[2px]" style={{ right: `${100 - deal.oldPct}%`, background: '#fff', opacity: 0.65 }} />
               )}
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-[9px] font-black" style={{ color }}>{probabilityLabel(pct)}</span>
-              <span className="text-[9px] font-mono font-black" style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>
-                {showNew ? `${change >= 0 ? '+' : ''}${change}%` : `قديم ${deal.oldPct}%`}
-              </span>
-            </div>
+            {!compact && (
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[9px] font-black" style={{ color }}>{probabilityLabel(pct)}</span>
+                <span className="text-[9px] font-mono font-black" style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>
+                  {showNew ? `${change >= 0 ? '+' : ''}${change}%` : `قديم ${deal.oldPct}%`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1194,6 +1234,75 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
       </div>
     </div>
   );
+
+  if (layout === 'luxury_wall') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <HeaderBar />
+        <div className="flex-1 grid grid-cols-[420px_1fr] gap-3 min-h-0">
+          <div className="rounded-lg relative overflow-hidden p-5 flex flex-col" style={{
+            background: `linear-gradient(145deg, ${modeColor}18 0%, ${t.surfaceDeep} 42%, ${t.surface} 100%)`,
+            border: `1px solid ${modeColor}70`,
+            boxShadow: `0 0 0 1px ${modeColor}10 inset`,
+          }}>
+            <div className="absolute inset-0 opacity-[0.08]" style={{
+              backgroundImage: `linear-gradient(${modeColor} 1px, transparent 1px), linear-gradient(90deg, ${modeColor} 1px, transparent 1px)`,
+              backgroundSize: '42px 42px',
+            }} />
+            <div className="relative flex items-center justify-between">
+              <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>الصفقة الرئيسية</div>
+              <div className="rounded-md px-2 py-1 font-mono text-[11px] font-black" style={{ color: totalMovement >= 0 ? t.success : '#ff5c8a', background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+                {totalMovement >= 0 ? '+' : ''}{totalMovement}% متوسط الحركة
+              </div>
+            </div>
+            <div className="relative mt-7 flex justify-center">
+              <Avatar t={t} name={featured.player} image={featured.image} accent={modeColor} size={132} />
+            </div>
+            <div className="relative mt-5 text-center text-[34px] font-black leading-none" style={{ color: t.text }}>{featured.player}</div>
+            <div className="relative">
+              <ClubRoute from={featured.fromClub} to={featured.toClub} align="center" />
+            </div>
+            <div className="relative mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="rounded-lg p-3 text-center" style={{ background: 'rgba(255,92,138,0.10)', border: '1px solid rgba(255,92,138,0.28)' }}>
+                <div className="text-[9px] font-black" style={{ color: t.sub }}>النسبة القديمة</div>
+                <div className="mt-1 font-mono text-[42px] font-black leading-none" style={{ color: '#ff5c8a' }}>{featured.oldPct}%</div>
+              </div>
+              <div className="font-black text-[18px]" style={{ color: modeColor }}>إلى</div>
+              <div className="rounded-lg p-3 text-center" style={{ background: `${modeColor}12`, border: `1px solid ${modeColor}45` }}>
+                <div className="text-[9px] font-black" style={{ color: t.sub }}>نسبة اليوم</div>
+                <div className="mt-1 font-mono text-[42px] font-black leading-none" style={{ color: modeColor }}>{featured.newPct}%</div>
+              </div>
+            </div>
+            <div className="relative mt-5">
+              <div className="h-3 rounded-full overflow-hidden" style={{ background: `${modeColor}14` }}>
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${activePct(featured)}%`, background: `linear-gradient(to left, ${modeColor}, ${t.accent2})` }} />
+                <span className="absolute top-0 h-3 w-[2px]" style={{ right: `${100 - featured.oldPct}%`, background: '#fff', opacity: 0.75 }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] font-black">
+                <span style={{ color: t.dim }}>مؤشر خاص بهذا اللاعب</span>
+                <span style={{ color: modeColor }}>{probabilityLabel(activePct(featured))}</span>
+              </div>
+            </div>
+            <div className="relative mt-auto grid grid-cols-3 gap-2 border-t pt-3" style={{ borderColor: t.border }}>
+              {[
+                { label: 'ساخنة', value: hotCount, color: '#64ff6a' },
+                { label: 'مراقبة', value: watchCount, color: t.warning },
+                { label: 'منخفضة', value: lowCount, color: '#ff5c8a' },
+              ].map(item => (
+                <div key={item.label} className="text-center">
+                  <div className="text-[9px] font-black" style={{ color: t.dim }}>{item.label}</div>
+                  <div className="mt-1 font-mono text-[22px] font-black" style={{ color: item.color }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 min-h-0">
+            {visibleDeals.map(deal => <DealRow key={deal.idx} deal={deal} />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (layout === 'hologram_grid') {
     return (

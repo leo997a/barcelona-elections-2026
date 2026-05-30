@@ -726,6 +726,27 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     });
   };
 
+  const normalizeProbabilityPercent = (value: unknown) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+  };
+
+  const probabilityShiftDealControls = [1, 2, 3, 4].map(idx => {
+    const oldPct = normalizeProbabilityPercent(getDraftValue(`deal${idx}OldPct`));
+    const newPct = normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`));
+    return {
+      idx,
+      player: String(getDraftValue(`deal${idx}Player`) || `اللاعب ${idx}`),
+      oldPct,
+      newPct,
+      delta: newPct - oldPct,
+    };
+  });
+
+  const setProbabilityDealPercent = (idx: number, kind: 'OldPct' | 'NewPct', value: number) => {
+    handleDraftFieldChange(`deal${idx}${kind}`, normalizeProbabilityPercent(value));
+  };
+
   // Phase E.1: hide bottom tabs in Player Stats easy mode
   const isPlayerStatsEasyMode = draftOverlay.type === OverlayType.PLAYER_STATS && String(getDraftValue('playerStatsLabUiMode') || 'easy') === 'easy';
 
@@ -3383,16 +3404,64 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                        تحديث لنسب اليوم
                      </button>
                    </div>
-                   <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-100/60">
-                     <Calendar className="h-3.5 w-3.5" />
-                     تاريخ التحديث الحالي: {String(getDraftValue('updateDate') || 'غير محدد')}
-                   </div>
-                 </div>
-               )}
-               {draftOverlay.fields.map((field) => {
-                 if (field.type === 'hidden' || field.id === 'currentPage') return null;
-                 
-                 // Separate Font Size controls for Typography section
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-100/60">
+                      <Calendar className="h-3.5 w-3.5" />
+                      تاريخ التحديث الحالي: {String(getDraftValue('updateDate') || 'غير محدد')}
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {probabilityShiftDealControls.map(deal => (
+                        <div key={deal.idx} className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-[10px] font-black text-slate-500">نسبة خاصة للاعب {deal.idx}</div>
+                              <div className="truncate text-sm font-black text-white">{deal.player}</div>
+                            </div>
+                            <div className={`rounded-lg px-2 py-1 font-mono text-xs font-black ${deal.delta >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                              {deal.delta >= 0 ? '+' : ''}{deal.delta}%
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <label className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-rose-200/80">
+                                <span>النسبة القديمة</span>
+                                <span className="font-mono">{deal.oldPct}%</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={deal.oldPct}
+                                onChange={(e) => setProbabilityDealPercent(deal.idx, 'OldPct', Number(e.target.value))}
+                                className="w-full accent-rose-400"
+                              />
+                            </label>
+                            <label className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-emerald-200/80">
+                                <span>نسبة اليوم</span>
+                                <span className="font-mono">{deal.newPct}%</span>
+                              </div>
+                              <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={deal.newPct}
+                                onChange={(e) => setProbabilityDealPercent(deal.idx, 'NewPct', Number(e.target.value))}
+                                className="w-full accent-emerald-400"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {draftOverlay.fields.map((field) => {
+                  if (field.type === 'hidden' || field.id === 'currentPage') return null;
+                  if (isProbabilityShiftTemplate && /^deal[1-4](OldPct|NewPct)$/.test(field.id)) return null;
+
+                  // Separate Font Size controls for Typography section
                  if (['headerFontSize', 'nameFontSize', 'amountFontSize'].includes(field.id)) return null;
 
                   // SMART UNIVERSAL FIELD FILTERING
