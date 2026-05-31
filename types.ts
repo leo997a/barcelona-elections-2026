@@ -121,6 +121,7 @@ export interface DonationEntry {
   id: string;
   amount: number;
   currency: string;
+  countryCode?: string;
   usdAmount: number;
   timestamp: number;
 }
@@ -130,6 +131,7 @@ export interface Sponsor {
   name: string;
   amount: number;
   currency: string;
+  countryCode?: string;
   usdAmount: number; // Calculated field for sorting
   avatar?: string;
   history: DonationEntry[];

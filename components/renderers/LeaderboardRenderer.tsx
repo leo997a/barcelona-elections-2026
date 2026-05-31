@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RendererProps } from './SharedComponents';
 import { Sponsor } from '../../types';
+import { getCurrencyFlag, getCurrencyMeta } from '../../utils/currencyCatalog';
 
 const safeNumber = (value: unknown, fallback = 0): number => {
     const n = Number(value);
@@ -31,6 +32,9 @@ const rankToken = (rank: number, labels: { one: string; two: string; three: stri
     if (rank === 3) return { label: '03', tone: '#d97706', title: labels.three };
     return { label: String(rank).padStart(2, '0'), tone: '#38bdf8', title: labels.default };
 };
+
+const sponsorCountryLabel = (sponsor: Sponsor): string =>
+    getCurrencyMeta(sponsor.currency)?.countryAr || sponsor.currency;
 
 export const LeaderboardRenderer: React.FC<RendererProps> = ({
     config,
@@ -251,6 +255,7 @@ export const LeaderboardRenderer: React.FC<RendererProps> = ({
                                                 {labels.top}
                                             </div>
                                             <h3 className="mt-1 truncate font-black leading-none text-white" style={{ fontSize: `${Math.max(24, nameFontSize + 4)}px` }}>
+                                                <span className="ml-2 align-middle text-[0.72em] leading-none">{getCurrencyFlag(podiumSponsor.currency, podiumSponsor.countryCode)}</span>
                                                 {podiumSponsor.name}
                                             </h3>
                                             {showAmounts && (
@@ -259,7 +264,7 @@ export const LeaderboardRenderer: React.FC<RendererProps> = ({
                                                         {formatUsd(safeNumber(podiumSponsor.usdAmount))}
                                                     </span>
                                                     <span className="text-[10px] text-white/45">
-                                                        {safeNumber(podiumSponsor.amount).toLocaleString()} {podiumSponsor.currency}
+                                                        {sponsorCountryLabel(podiumSponsor)} - {safeNumber(podiumSponsor.amount).toLocaleString()} {podiumSponsor.currency}
                                                     </span>
                                                 </div>
                                             )}
@@ -309,14 +314,15 @@ export const LeaderboardRenderer: React.FC<RendererProps> = ({
                                                 <div className={`${glassMode ? 'flex flex-col gap-2' : 'flex items-start justify-between gap-3'}`}>
                                                     <div className="min-w-0">
                                                         <h3
-                                                            className="font-black truncate leading-tight text-white"
+                                                            className="flex items-center gap-2 font-black truncate leading-tight text-white"
                                                             style={{ fontSize: `${glassMode ? Math.max(17, nameFontSize - 6) : compact ? Math.max(16, nameFontSize - 6) : nameFontSize}px`, textRendering: 'geometricPrecision' }}
                                                         >
-                                                            {sponsor.name}
+                                                            <span className="shrink-0 text-[0.82em] leading-none">{getCurrencyFlag(sponsor.currency, sponsor.countryCode)}</span>
+                                                            <span className="truncate">{sponsor.name}</span>
                                                         </h3>
                                                         {lastDonation && (
                                                             <div className="mt-1 text-[9px] text-white/45">
-                                                                {labels.latestDonation}: {safeNumber(lastDonation.amount).toLocaleString()} {lastDonation.currency}
+                                                                {labels.latestDonation}: {getCurrencyFlag(lastDonation.currency, lastDonation.countryCode)} {safeNumber(lastDonation.amount).toLocaleString()} {lastDonation.currency}
                                                             </div>
                                                         )}
                                                     </div>
@@ -326,7 +332,7 @@ export const LeaderboardRenderer: React.FC<RendererProps> = ({
                                                                 {formatUsd(usd)}
                                                             </div>
                                                             <div className="mt-1 text-[9px] text-white/40">
-                                                                {safeNumber(sponsor.amount).toLocaleString()} {sponsor.currency}
+                                                                {sponsorCountryLabel(sponsor)} - {safeNumber(sponsor.amount).toLocaleString()} {sponsor.currency}
                                                             </div>
                                                         </div>
                                                     )}
@@ -355,7 +361,7 @@ export const LeaderboardRenderer: React.FC<RendererProps> = ({
                         <div className="relative mt-auto px-5 py-3 border-t border-white/10 bg-black/30">
                             <div className="flex items-center justify-between gap-3 text-[10px] font-bold text-white/45">
                                 <span>{labels.top}</span>
-                                <span className="truncate text-white/70">{topSponsor.name}</span>
+                                <span className="truncate text-white/70">{getCurrencyFlag(topSponsor.currency, topSponsor.countryCode)} {topSponsor.name}</span>
                                 <span className="font-mono" style={{ color: activeTheme.accent }}>{formatUsd(safeNumber(topSponsor.usdAmount))}</span>
                             </div>
                         </div>

@@ -16,6 +16,60 @@ interface OperatorProps {
 
 const ELECTION_SOUNDS = ['RESULTS_STING', 'QUOTE_SWEEP', 'VERSUS_IMPACT', 'SIDEBAR_CHIME', 'DATA_PULSE', 'COUNTDOWN_TICK', 'BREAKING_WHOOSH', 'SOFT_FADE'];
 const SINGLE_PROGRAM_MODE_KEY = 'rge_operator_single_program_mode';
+type OperatorFieldGroup = 'priority' | 'data' | 'appearance' | 'media' | 'audio';
+const OPERATOR_FIELD_GROUPS: Array<{ key: OperatorFieldGroup | 'ALL'; label: string }> = [
+  { key: 'priority', label: 'الأهم' },
+  { key: 'data', label: 'البيانات' },
+  { key: 'appearance', label: 'التنسيق' },
+  { key: 'media', label: 'الصور' },
+  { key: 'audio', label: 'الصوت' },
+  { key: 'ALL', label: 'الكل' },
+];
+const OPERATOR_PRIORITY_FIELDS = new Set([
+  'headline',
+  'title',
+  'subtitle',
+  'message',
+  'body',
+  'description',
+  'text',
+  'line1',
+  'line2',
+  'playerName',
+  'teamName',
+  'homeName',
+  'awayName',
+  'clubFrom',
+  'clubTo',
+  'dealValue',
+  'confidencePct',
+  'probabilityPct',
+  'name',
+  'role',
+  'homeScore',
+  'awayScore',
+  'currentPage',
+  'sponsorsData',
+  'sponsorDisplayMode',
+]);
+const OPERATOR_APPEARANCE_FIELD_HINTS = [
+  'theme',
+  'style',
+  'variant',
+  'layout',
+  'color',
+  'opacity',
+  'font',
+  'scale',
+  'position',
+  'width',
+  'height',
+  'display',
+  'motion',
+  'transition',
+];
+const OPERATOR_AUDIO_FIELD_HINTS = ['sound', 'audio', 'voice', 'sfx', 'duck'];
+const OPERATOR_MEDIA_FIELD_HINTS = ['image', 'avatar', 'logo', 'photo', 'media', 'video', 'url'];
 
 const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdate }) => {
   const [selectedId, setSelectedId] = useState<string | null>(overlays.length > 0 ? overlays[0].id : null);
@@ -24,6 +78,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const [operatorSearch, setOperatorSearch] = useState('');
   const [showOnlyLive, setShowOnlyLive] = useState(false);
   const [operatorCategory, setOperatorCategory] = useState<CategoryKey | 'ALL'>('ALL');
+  const [operatorFieldSearch, setOperatorFieldSearch] = useState('');
+  const [operatorFieldGroup, setOperatorFieldGroup] = useState<OperatorFieldGroup | 'ALL'>('priority');
   const [draftName, setDraftName] = useState('');
   const [nameSavedPulse, setNameSavedPulse] = useState(false);
   const [selectedObsCopied, setSelectedObsCopied] = useState(false);
@@ -108,6 +164,11 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     if (selectedOverlay) setDraftName(selectedOverlay.name);
   }, [selectedOverlay?.id, selectedOverlay?.name]);
 
+  useEffect(() => {
+    setOperatorFieldSearch('');
+    setOperatorFieldGroup('priority');
+  }, [selectedOverlay?.id]);
+
   const selectedMeta = useMemo(() => {
     if (!selectedOverlay) return null;
     return {
@@ -189,6 +250,15 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
 
   const updateField = (overlay: OverlayConfig, fieldId: string, value: any) => {
     syncManager.updateLiveField(overlay.id, fieldId, value);
+  };
+
+  const classifyOperatorField = (field: OverlayField): OperatorFieldGroup => {
+    const id = field.id.toLowerCase();
+    if (OPERATOR_PRIORITY_FIELDS.has(field.id)) return 'priority';
+    if (OPERATOR_AUDIO_FIELD_HINTS.some(hint => id.includes(hint))) return 'audio';
+    if (field.type === 'image' || field.type === 'image-list' || OPERATOR_MEDIA_FIELD_HINTS.some(hint => id.includes(hint))) return 'media';
+    if (field.type === 'color' || field.type === 'range' || OPERATOR_APPEARANCE_FIELD_HINTS.some(hint => id.includes(hint))) return 'appearance';
+    return 'data';
   };
 
   const renderSelectOption = (option: string | { label: string; value: string }) => {
@@ -405,7 +475,16 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = canTakeIn(selectedOverlay);
-  const operatorFieldControls = selectedOverlay.fields.filter(field => field.type !== 'hidden');
+  const operatorAllFieldControls = selectedOverlay.fields.filter(field => field.type !== 'hidden');
+  const operatorFieldNeedle = operatorFieldSearch.trim().toLowerCase();
+  const operatorFieldControls = operatorAllFieldControls
+    .filter(field => operatorFieldGroup === 'ALL' || classifyOperatorField(field) === operatorFieldGroup)
+    .filter(field => {
+      if (!operatorFieldNeedle) return true;
+      return [field.id, field.label, String(field.value || '')].some(value =>
+        String(value).toLowerCase().includes(operatorFieldNeedle),
+      );
+    });
   const previewOverlay: OverlayConfig = { ...selectedOverlay, isVisible: true };
   const programModeLabel = singleProgramMode ? 'فردي' : 'متعدد';
   const programModeTitle = singleProgramMode
@@ -767,8 +846,35 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
                   تحكم سريع بحقول القالب
                 </div>
                 <span className="rounded bg-gray-950 px-2 py-0.5 text-[10px] font-mono text-gray-400">
-                  {operatorFieldControls.length} حقل
+                  {operatorFieldControls.length}/{operatorAllFieldControls.length} حقل
                 </span>
+              </div>
+              <div className="mb-3 space-y-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+                  <input
+                    value={operatorFieldSearch}
+                    onChange={event => setOperatorFieldSearch(event.target.value)}
+                    className="h-9 w-full rounded-lg border border-gray-800 bg-gray-950 pr-9 pl-3 text-xs text-white outline-none transition-colors placeholder:text-gray-600 focus:border-blue-500"
+                    placeholder="بحث داخل حقول القالب..."
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {OPERATOR_FIELD_GROUPS.map(group => (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => setOperatorFieldGroup(group.key)}
+                      className={`rounded-lg border px-2 py-1.5 text-[10px] font-black transition-colors ${
+                        operatorFieldGroup === group.key
+                          ? 'border-emerald-400/45 bg-emerald-500/15 text-emerald-200'
+                          : 'border-gray-800 bg-gray-950 text-gray-500 hover:border-gray-700 hover:text-white'
+                      }`}
+                    >
+                      {group.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               {operatorFieldControls.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-800 bg-gray-950/60 p-5 text-center text-xs text-gray-500">

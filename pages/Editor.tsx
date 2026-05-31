@@ -9,6 +9,13 @@ import { syncManager } from '../services/syncManager';
 import { adminSessionService } from '../services/adminSession';
 import { normalizeElectionOverlay } from '../utils/election';
 import {
+  CURRENCY_GROUPED_OPTIONS,
+  currencyOptionLabel,
+  getCurrencyFlag,
+  getCurrencyMeta,
+  normalizeCurrencyCode,
+} from '../utils/currencyCatalog';
+import {
   CLUB_LOGO_CACHE_URLS,
   PLAYER_PORTRAIT_CACHE_URLS,
   PLAYER_RENDER_CACHE_URLS,
@@ -54,84 +61,7 @@ interface EditorProps {
   onBack: () => void;
 }
 
-// Extensive List of Currencies for Arab & Global usage
-const CURRENCY_OPTIONS = [
-    { code: 'SAR', label: '🇸🇦 Saudi Riyal (SAR)' },
-    { code: 'AED', label: '🇦🇪 UAE Dirham (AED)' },
-    { code: 'KWD', label: '🇰🇼 Kuwaiti Dinar (KWD)' },
-    { code: 'QAR', label: '🇶🇦 Qatari Riyal (QAR)' },
-    { code: 'BHD', label: '🇧🇭 Bahraini Dinar (BHD)' },
-    { code: 'OMR', label: '🇴🇲 Omani Rial (OMR)' },
-    { code: 'YER', label: '🇾🇪 Yemeni Rial (YER)' },
-    { code: 'IQD', label: '🇮🇶 Iraqi Dinar (IQD)' },
-    { code: 'JOD', label: '🇯🇴 Jordanian Dinar (JOD)' },
-    { code: 'LBP', label: '🇱🇧 Lebanese Pound (LBP)' },
-    { code: 'SYP', label: '🇸🇾 Syrian Pound (SYP)' },
-    { code: 'ILS', label: '🇵🇸 Palestine / Shekel (ILS)' },
-    { code: 'EGP', label: '🇪🇬 Egyptian Pound (EGP)' },
-    { code: 'SDG', label: '🇸🇩 Sudanese Pound (SDG)' },
-    { code: 'LYD', label: '🇱🇾 Libyan Dinar (LYD)' },
-    { code: 'TND', label: '🇹🇳 Tunisian Dinar (TND)' },
-    { code: 'DZD', label: '🇩🇿 Algerian Dinar (DZD)' },
-    { code: 'MAD', label: '🇲🇦 Moroccan Dirham (MAD)' },
-    { code: 'MRU', label: '🇲🇷 Mauritanian Ouguiya (MRU)' },
-    { code: 'SOS', label: '🇸🇴 Somali Shilling (SOS)' },
-    { code: 'DJF', label: '🇩🇯 Djiboutian Franc (DJF)' },
-    { code: 'KMF', label: '🇰🇲 Comorian Franc (KMF)' },
-    { code: 'USD', label: '🇺🇸 US Dollar (USD)' },
-    { code: 'EUR', label: '🇪🇺 Euro (EUR)' },
-    { code: 'GBP', label: '🇬🇧 British Pound (GBP)' },
-    { code: 'CHF', label: '🇨🇭 Swiss Franc (CHF)' },
-    { code: 'CAD', label: '🇨🇦 Canadian Dollar (CAD)' },
-    { code: 'AUD', label: '🇦🇺 Australian Dollar (AUD)' },
-    { code: 'NZD', label: '🇳🇿 New Zealand Dollar (NZD)' },
-    { code: 'JPY', label: '🇯🇵 Japanese Yen (JPY)' },
-    { code: 'CNY', label: '🇨🇳 Chinese Yuan (CNY)' },
-    { code: 'HKD', label: '🇭🇰 Hong Kong Dollar (HKD)' },
-    { code: 'SGD', label: '🇸🇬 Singapore Dollar (SGD)' },
-    { code: 'KRW', label: '🇰🇷 Korean Won (KRW)' },
-    { code: 'INR', label: '🇮🇳 Indian Rupee (INR)' },
-    { code: 'PKR', label: '🇵🇰 Pakistani Rupee (PKR)' },
-    { code: 'BDT', label: '🇧🇩 Bangladeshi Taka (BDT)' },
-    { code: 'IDR', label: '🇮🇩 Indonesian Rupiah (IDR)' },
-    { code: 'MYR', label: '🇲🇾 Malaysian Ringgit (MYR)' },
-    { code: 'PHP', label: '🇵🇭 Philippine Peso (PHP)' },
-    { code: 'THB', label: '🇹🇭 Thai Baht (THB)' },
-    { code: 'VND', label: '🇻🇳 Vietnamese Dong (VND)' },
-    { code: 'TRY', label: '🇹🇷 Turkish Lira (TRY)' },
-    { code: 'BRL', label: '🇧🇷 Brazilian Real (BRL)' },
-    { code: 'MXN', label: '🇲🇽 Mexican Peso (MXN)' },
-    { code: 'ARS', label: '🇦🇷 Argentine Peso (ARS)' },
-    { code: 'CLP', label: '🇨🇱 Chilean Peso (CLP)' },
-    { code: 'COP', label: '🇨🇴 Colombian Peso (COP)' },
-    { code: 'ZAR', label: '🇿🇦 South African Rand (ZAR)' },
-    { code: 'NGN', label: '🇳🇬 Nigerian Naira (NGN)' },
-    { code: 'KES', label: '🇰🇪 Kenyan Shilling (KES)' },
-    { code: 'GHS', label: '🇬🇭 Ghanaian Cedi (GHS)' },
-    { code: 'ETB', label: '🇪🇹 Ethiopian Birr (ETB)' },
-    { code: 'TZS', label: '🇹🇿 Tanzanian Shilling (TZS)' },
-    { code: 'RUB', label: '🇷🇺 Russian Ruble (RUB)' },
-    { code: 'UAH', label: '🇺🇦 Ukrainian Hryvnia (UAH)' },
-    { code: 'SEK', label: '🇸🇪 Swedish Krona (SEK)' },
-    { code: 'NOK', label: '🇳🇴 Norwegian Krone (NOK)' },
-    { code: 'DKK', label: '🇩🇰 Danish Krone (DKK)' },
-    { code: 'PLN', label: '🇵🇱 Polish Zloty (PLN)' },
-    { code: 'CZK', label: '🇨🇿 Czech Koruna (CZK)' },
-    { code: 'HUF', label: '🇭🇺 Hungarian Forint (HUF)' },
-    { code: 'RON', label: '🇷🇴 Romanian Leu (RON)' },
-    { code: 'AZN', label: '🇦🇿 Azerbaijani Manat (AZN)' },
-    { code: 'GEL', label: '🇬🇪 Georgian Lari (GEL)' },
-    { code: 'KZT', label: '🇰🇿 Kazakhstani Tenge (KZT)' },
-    { code: 'UZS', label: '🇺🇿 Uzbekistani Som (UZS)' },
-    { code: 'KGS', label: '🇰🇬 Kyrgyzstani Som (KGS)' },
-    { code: 'AMD', label: '🇦🇲 Armenian Dram (AMD)' },
-    { code: 'AFN', label: '🇦🇫 Afghan Afghani (AFN)' },
-    { code: 'ALL', label: '🇦🇱 Albanian Lek (ALL)' },
-    { code: 'BAM', label: '🇧🇦 Bosnia Mark (BAM)' },
-    { code: 'MDL', label: '🇲🇩 Moldovan Leu (MDL)' },
-    { code: 'XAF', label: '🌍 Central African CFA Franc (XAF)' },
-    { code: 'XOF', label: '🌍 West African CFA Franc (XOF)' },
-];
+// Currency/country ordering is centralized in utils/currencyCatalog.ts.
 
 const SPONSOR_QUICK_AMOUNTS = [5, 10, 25, 50, 100, 250, 500, 1000, 5000, 10000];
 
@@ -639,7 +569,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isAdminAuthorizing, setIsAdminAuthorizing] = useState(false);
   
-  const [newSponsor, setNewSponsor] = useState({ name: '', amount: '', currency: 'SAR', avatar: '' });
+  const [newSponsor, setNewSponsor] = useState({ name: '', amount: '', currency: 'SAR', countryCode: 'SA', avatar: '' });
   const [isAddingSponsor, setIsAddingSponsor] = useState(false);
   const [previewUSD, setPreviewUSD] = useState<number | null>(null);
 
@@ -1546,16 +1476,33 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       }
   };
 
+  const resolveSponsorCountryCode = (currency: string, countryCode?: string) =>
+      countryCode || getCurrencyMeta(currency)?.countryCode || 'US';
+
+  const handleNewSponsorCurrencyChange = (currency: string) => {
+      const code = normalizeCurrencyCode(currency);
+      setNewSponsor({
+          ...newSponsor,
+          currency: code,
+          countryCode: resolveSponsorCountryCode(code),
+      });
+  };
+
   const recalculateSponsorUsd = async (sponsor: Sponsor): Promise<Sponsor> => {
+      const currency = normalizeCurrencyCode(sponsor.currency || 'USD');
+      const countryCode = resolveSponsorCountryCode(currency, sponsor.countryCode);
       const history = Array.isArray(sponsor.history) ? sponsor.history : [];
       if (history.length > 0) {
           const nextHistory = await Promise.all(history.map(async entry => ({
               ...entry,
-              currency: entry.currency || sponsor.currency || 'USD',
-              usdAmount: await currencyService.convertToUSD(Number(entry.amount || 0), entry.currency || sponsor.currency || 'USD'),
+              currency: normalizeCurrencyCode(entry.currency || currency),
+              countryCode: resolveSponsorCountryCode(entry.currency || currency, entry.countryCode || countryCode),
+              usdAmount: await currencyService.convertToUSD(Number(entry.amount || 0), entry.currency || currency),
           })));
           return {
               ...sponsor,
+              currency,
+              countryCode,
               history: nextHistory,
               amount: nextHistory.reduce((sum, entry) => sum + Number(entry.amount || 0), 0),
               usdAmount: nextHistory.reduce((sum, entry) => sum + Number(entry.usdAmount || 0), 0),
@@ -1565,8 +1512,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       return {
           ...sponsor,
           amount: Number(sponsor.amount || 0),
-          currency: sponsor.currency || 'USD',
-          usdAmount: await currencyService.convertToUSD(Number(sponsor.amount || 0), sponsor.currency || 'USD'),
+          currency,
+          countryCode,
+          usdAmount: await currencyService.convertToUSD(Number(sponsor.amount || 0), currency),
           history: [],
       };
   };
@@ -1583,17 +1531,21 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               const value = item as Partial<Sponsor>;
               const name = String(value.name || '').trim();
               if (!name) return null;
+              const currency = normalizeCurrencyCode(value.currency || 'USD');
+              const countryCode = resolveSponsorCountryCode(currency, value.countryCode);
               return {
                   id: String(value.id || `imported-${Date.now()}-${index}`),
                   name,
                   amount: Number(value.amount || 0),
-                  currency: String(value.currency || 'USD').toUpperCase(),
+                  currency,
+                  countryCode,
                   usdAmount: Number(value.usdAmount || 0),
                   avatar: value.avatar || '',
                   history: Array.isArray(value.history) ? value.history.map((entry, entryIndex) => ({
                       id: String(entry.id || `imported-donation-${Date.now()}-${index}-${entryIndex}`),
                       amount: Number(entry.amount || 0),
-                      currency: String(entry.currency || value.currency || 'USD').toUpperCase(),
+                      currency: normalizeCurrencyCode(entry.currency || currency),
+                      countryCode: resolveSponsorCountryCode(entry.currency || currency, entry.countryCode || countryCode),
                       usdAmount: Number(entry.usdAmount || 0),
                       timestamp: Number(entry.timestamp || Date.now()),
                   })) : [],
@@ -1684,12 +1636,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       setIsAddingSponsor(true);
 
       const amountNum = parseFloat(newSponsor.amount);
-      const usdAmount = await currencyService.convertToUSD(amountNum, newSponsor.currency);
+      const currency = normalizeCurrencyCode(newSponsor.currency);
+      const countryCode = resolveSponsorCountryCode(currency, newSponsor.countryCode);
+      const usdAmount = await currencyService.convertToUSD(amountNum, currency);
 
       const donation = {
           id: `don-${Date.now()}`,
           amount: amountNum,
-          currency: newSponsor.currency,
+          currency,
+          countryCode,
           usdAmount: usdAmount,
           timestamp: Date.now()
       };
@@ -1698,7 +1653,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           id: Date.now().toString(),
           name: newSponsor.name,
           amount: amountNum,
-          currency: newSponsor.currency,
+          currency,
+          countryCode,
           usdAmount: usdAmount,
           avatar: newSponsor.avatar,
           history: [donation]
@@ -1708,7 +1664,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       updatedSponsors.sort((a, b) => Number(b.usdAmount || 0) - Number(a.usdAmount || 0));
 
       handleDraftFieldChange('sponsorsData', JSON.stringify(updatedSponsors));
-      setNewSponsor({ name: '', amount: '', currency: 'SAR', avatar: '' });
+      setNewSponsor({ name: '', amount: '', currency: 'SAR', countryCode: 'SA', avatar: '' });
       setSponsorBackupMessage({ type: 'success', text: `تمت إضافة ${sponsorToAdd.name} وتحويل المبلغ إلى $${usdAmount.toLocaleString()}.` });
       setIsAddingSponsor(false);
   };
@@ -1737,12 +1693,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       
       if (sponsorIndex !== -1) {
           const sponsor = currentSponsors[sponsorIndex];
+          const currency = normalizeCurrencyCode(sponsor.currency);
+          const countryCode = resolveSponsorCountryCode(currency, sponsor.countryCode);
           
           const donation = {
               id: `don-${Date.now()}`,
               amount: additionalAmount,
-              currency: sponsor.currency,
-              usdAmount: await currencyService.convertToUSD(additionalAmount, sponsor.currency),
+              currency,
+              countryCode,
+              usdAmount: await currencyService.convertToUSD(additionalAmount, currency),
               timestamp: Date.now()
           };
 
@@ -1754,6 +1713,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           updated[sponsorIndex] = { 
               ...sponsor, 
               amount: newTotalAmount, 
+              currency,
+              countryCode,
               usdAmount: newTotalUsdAmount,
               history: newHistory
           };
@@ -4116,11 +4077,15 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                   />
                                   <select
                                       value={newSponsor.currency}
-                                      onChange={e => setNewSponsor({ ...newSponsor, currency: e.target.value })}
+                                      onChange={e => handleNewSponsorCurrencyChange(e.target.value)}
                                       className="bg-gray-950 border border-gray-700 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                                   >
-                                      {CURRENCY_OPTIONS.map(curr => (
-                                          <option key={curr.code} value={curr.code}>{curr.label}</option>
+                                      {CURRENCY_GROUPED_OPTIONS.map(group => (
+                                          <optgroup key={group.group} label={group.label}>
+                                              {group.options.map(curr => (
+                                                  <option key={curr.code} value={curr.code}>{currencyOptionLabel(curr)}</option>
+                                              ))}
+                                          </optgroup>
                                       ))}
                                   </select>
                               </div>
@@ -4137,7 +4102,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                   ))}
                               </div>
                               <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs">
-                                  <span className="text-gray-400">تحويل سريع إلى الدولار</span>
+                                  <span className="flex items-center gap-2 text-gray-400">
+                                      <span className="text-base leading-none">{getCurrencyFlag(newSponsor.currency, newSponsor.countryCode)}</span>
+                                      <span>{getCurrencyMeta(newSponsor.currency)?.countryAr || newSponsor.currency}</span>
+                                  </span>
                                   <span className="font-mono font-black text-emerald-300">
                                       {previewUSD !== null ? `$${previewUSD.toLocaleString()}` : '$0'}
                                   </span>
@@ -4181,8 +4149,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                       <span className="text-[10px] w-6 h-6 bg-gray-800 text-gray-300 flex items-center justify-center rounded-full shrink-0">{idx + 1}</span>
                                                       <img src={s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}`} className="w-8 h-8 rounded-full object-cover" alt="" />
                                                       <div className="min-w-0">
-                                                          <div className="text-sm text-white font-bold truncate max-w-[130px]">{s.name}</div>
-                                                          <div className="text-[9px] text-gray-500">{s.history?.length || 0} دفعة</div>
+                                                          <div className="flex max-w-[150px] items-center gap-1.5">
+                                                              <span className="text-sm leading-none">{getCurrencyFlag(s.currency, s.countryCode)}</span>
+                                                              <span className="truncate text-sm text-white font-bold">{s.name}</span>
+                                                          </div>
+                                                          <div className="text-[9px] text-gray-500">{getCurrencyMeta(s.currency)?.countryAr || s.currency} - {s.history?.length || 0} دفعة</div>
                                                       </div>
                                                   </div>
                                                   <div className="flex items-center gap-3">
@@ -4191,7 +4162,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                               ${Number(s.usdAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                           </div>
                                                           <div className="text-[9px] text-gray-600">
-                                                              {Number(s.amount || 0).toLocaleString()} {s.currency}
+                                                              {getCurrencyFlag(s.currency, s.countryCode)} {Number(s.amount || 0).toLocaleString()} {s.currency}
                                                           </div>
                                                       </div>
                                                       <div className="flex items-center gap-1">
@@ -4268,7 +4239,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                                               <div key={entry.id} className="flex items-center justify-between bg-black/30 p-1.5 rounded border border-white/5 group/history">
                                                                   <div className="flex flex-col">
                                                                       <span className="text-[11px] text-green-400 font-bold font-mono">
-                                                                          {entry.amount} {entry.currency} / ${Number(entry.usdAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                                          {getCurrencyFlag(entry.currency, entry.countryCode)} {entry.amount} {entry.currency} / ${Number(entry.usdAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                                       </span>
                                                                       <span className="text-[8px] text-gray-500 flex items-center gap-1">
                                                                           <Calendar className="w-2 h-2" />
