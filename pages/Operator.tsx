@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { OverlayConfig, OverlayField, OverlayType, Sponsor } from '../types';
-import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles } from 'lucide-react';
+import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
@@ -191,6 +191,15 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
         }
       });
     }
+    setVisibility(overlay, true);
+  };
+
+  const takeSoloOverlay = (overlay: OverlayConfig) => {
+    overlays.forEach(candidate => {
+      if (candidate.id !== overlay.id && candidate.isVisible) {
+        syncManager.updateLiveField(candidate.id, 'isVisible', false);
+      }
+    });
     setVisibility(overlay, true);
   };
 
@@ -453,6 +462,12 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     overlay.fields.find(field => field.id === fieldId);
   const hasField = (overlay: OverlayConfig, fieldId: string) =>
     Boolean(getField(overlay, fieldId));
+  const getBooleanField = (overlay: OverlayConfig, fieldId: string, fallback = false) => {
+    const value = getFieldValue(overlay, fieldId, fallback);
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value === 'true';
+    return Boolean(value);
+  };
   const parseArrayField = <T,>(overlay: OverlayConfig, fieldId: string): T[] => {
     try {
       const parsed = JSON.parse(String(getFieldValue(overlay, fieldId, '[]') || '[]'));
@@ -470,6 +485,11 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     if (mode === 'new' && hasField(overlay, 'updateDate')) {
       updateField(overlay, 'updateDate', stampTodayArabic());
     }
+  };
+  const resetTransformFields = (overlay: OverlayConfig) => {
+    if (hasField(overlay, 'positionX')) updateField(overlay, 'positionX', 0);
+    if (hasField(overlay, 'positionY')) updateField(overlay, 'positionY', 0);
+    if (hasField(overlay, 'scale')) updateField(overlay, 'scale', 1);
   };
 
   const showUndecided = selectedOverlay ? getFieldValue(selectedOverlay, 'showUndecided', true) === true : false;
@@ -498,6 +518,22 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = canTakeIn(selectedOverlay);
+  const selectedHasScoreboard = hasField(selectedOverlay, 'homeScore') && hasField(selectedOverlay, 'awayScore');
+  const selectedHomeName = String(getFieldValue(selectedOverlay, 'homeName', 'HOME'));
+  const selectedAwayName = String(getFieldValue(selectedOverlay, 'awayName', 'AWAY'));
+  const selectedHomeScore = Math.max(0, Number(getFieldValue(selectedOverlay, 'homeScore', 0)) || 0);
+  const selectedAwayScore = Math.max(0, Number(getFieldValue(selectedOverlay, 'awayScore', 0)) || 0);
+  const selectedHasTransform = ['positionX', 'positionY', 'scale'].some(fieldId => hasField(selectedOverlay, fieldId));
+  const selectedPositionX = Number(getFieldValue(selectedOverlay, 'positionX', 0)) || 0;
+  const selectedPositionY = Number(getFieldValue(selectedOverlay, 'positionY', 0)) || 0;
+  const selectedScale = Number(getFieldValue(selectedOverlay, 'scale', 1)) || 1;
+  const audioQuickToggles = [
+    { id: 'soundEnabled', label: 'الصوت', fallback: true },
+    { id: 'sfxEnabled', label: 'المؤثرات', fallback: true },
+    { id: 'voiceEnabled', label: 'الصوت الحقيقي', fallback: false },
+  ].filter(item => hasField(selectedOverlay, item.id));
+  const selectedHasAudioQuick = audioQuickToggles.length > 0 || hasField(selectedOverlay, 'soundVolume');
+  const selectedSoundVolume = Number(getFieldValue(selectedOverlay, 'soundVolume', 0.7)) || 0;
   const selectedHasPages = hasField(selectedOverlay, 'pagesData') && hasField(selectedOverlay, 'currentPage');
   const selectedPages = selectedHasPages ? parseArrayField<unknown>(selectedOverlay, 'pagesData') : [];
   const selectedPageCount = Math.max(1, selectedPages.length);
@@ -860,8 +896,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
             </button>
           </div>
 
-          {(selectedHasProbabilityShift || selectedHasPages || selectedHasSponsors) && (
-            <div className="mb-8 max-w-5xl mx-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+          <div className="mb-8 max-w-5xl mx-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-bold text-white">
                   <Sparkles className="h-4 w-4 text-amber-300" />
@@ -872,7 +907,176 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-black text-white">برنامج البث</div>
+                      <div className="mt-1 text-[10px] text-gray-500">
+                        {liveOverlaysCount} مباشر / {programModeLabel}
+                      </div>
+                    </div>
+                    <Tv className="h-5 w-5 text-cyan-300" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => takeSoloOverlay(selectedOverlay)}
+                      className="rounded-lg border border-cyan-500/35 bg-cyan-600/15 px-3 py-2 text-xs font-black text-cyan-100 transition-colors hover:bg-cyan-600/25"
+                      title="إدخال القالب المحدد وإخراج كل القوالب الأخرى">
+                      Solo Live
+                    </button>
+                    <button
+                      type="button"
+                      onClick={takeOutAllVisible}
+                      disabled={liveOverlaysCount === 0}
+                      className="rounded-lg border border-red-500/30 bg-red-600/10 px-3 py-2 text-xs font-black text-red-200 transition-colors hover:bg-red-600/20 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-950 disabled:text-gray-700"
+                    >
+                      إخراج الكل
+                    </button>
+                  </div>
+                </div>
+
+                {selectedHasScoreboard && (
+                  <div className="rounded-xl border border-green-500/20 bg-green-950/10 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">لوحة النتيجة</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          {selectedHomeName} {selectedHomeScore} - {selectedAwayScore} {selectedAwayName}
+                        </div>
+                      </div>
+                      <BarChart3 className="h-5 w-5 text-green-300" />
+                    </div>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      <div className="rounded-lg border border-white/5 bg-gray-950/80 p-2 text-center">
+                        <div className="truncate text-[10px] font-bold text-gray-400">{selectedHomeName}</div>
+                        <div className="font-mono text-2xl font-black text-white">{selectedHomeScore}</div>
+                        <div className="mt-2 grid grid-cols-2 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateField(selectedOverlay, 'homeScore', Math.max(0, selectedHomeScore - 1))}
+                            className="rounded bg-red-600/15 px-2 py-1 text-xs font-black text-red-200 hover:bg-red-600/25"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateField(selectedOverlay, 'homeScore', selectedHomeScore + 1)}
+                            className="rounded bg-emerald-600/15 px-2 py-1 text-xs font-black text-emerald-200 hover:bg-emerald-600/25"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateField(selectedOverlay, 'homeScore', 0);
+                          updateField(selectedOverlay, 'awayScore', 0);
+                        }}
+                        className="rounded-lg border border-gray-800 bg-gray-950 px-2 py-2 text-[10px] font-black text-gray-400 transition-colors hover:border-gray-700 hover:text-white"
+                      >
+                        0-0
+                      </button>
+                      <div className="rounded-lg border border-white/5 bg-gray-950/80 p-2 text-center">
+                        <div className="truncate text-[10px] font-bold text-gray-400">{selectedAwayName}</div>
+                        <div className="font-mono text-2xl font-black text-white">{selectedAwayScore}</div>
+                        <div className="mt-2 grid grid-cols-2 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateField(selectedOverlay, 'awayScore', Math.max(0, selectedAwayScore - 1))}
+                            className="rounded bg-red-600/15 px-2 py-1 text-xs font-black text-red-200 hover:bg-red-600/25"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateField(selectedOverlay, 'awayScore', selectedAwayScore + 1)}
+                            className="rounded bg-emerald-600/15 px-2 py-1 text-xs font-black text-emerald-200 hover:bg-emerald-600/25"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedHasAudioQuick && (
+                  <div className="rounded-xl border border-purple-500/20 bg-purple-950/10 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">الصوت السريع</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          مفاتيح الصوت لهذا القالب
+                        </div>
+                      </div>
+                      {audioQuickToggles.some(item => getBooleanField(selectedOverlay, item.id, item.fallback))
+                        ? <Volume2 className="h-5 w-5 text-purple-300" />
+                        : <VolumeX className="h-5 w-5 text-gray-500" />}
+                    </div>
+                    {audioQuickToggles.length > 0 && (
+                      <div className="grid grid-cols-1 gap-2">
+                        {audioQuickToggles.map(item => {
+                          const active = getBooleanField(selectedOverlay, item.id, item.fallback);
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => updateField(selectedOverlay, item.id, !active)}
+                              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs font-black transition-colors ${
+                                active
+                                  ? 'border-emerald-400/35 bg-emerald-500/15 text-emerald-100'
+                                  : 'border-gray-800 bg-gray-950 text-gray-500 hover:border-gray-700 hover:text-white'
+                              }`}
+                            >
+                              <span>{item.label}</span>
+                              <span>{active ? 'ON' : 'OFF'}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {hasField(selectedOverlay, 'soundVolume') && (
+                      <label className="mt-3 block">
+                        <span className="mb-1 block text-[9px] font-black text-gray-500">مستوى المؤثرات</span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={3}
+                          step={0.05}
+                          value={selectedSoundVolume}
+                          onChange={event => updateField(selectedOverlay, 'soundVolume', Number(event.target.value))}
+                          className="w-full accent-purple-500"
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
+
+                {selectedHasTransform && (
+                  <div className="rounded-xl border border-slate-500/20 bg-slate-950/40 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">الموضع والحجم</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          X {selectedPositionX} / Y {selectedPositionY} / S {selectedScale.toFixed(2)}
+                        </div>
+                      </div>
+                      <SlidersHorizontal className="h-5 w-5 text-slate-300" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => resetTransformFields(selectedOverlay)}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs font-black text-gray-300 transition-colors hover:border-slate-500/40 hover:text-white"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      إعادة ضبط الموضع والحجم
+                    </button>
+                  </div>
+                )}
+
                 {selectedHasProbabilityShift && (
                   <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-950/10 p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
@@ -1020,7 +1224,6 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
                 )}
               </div>
             </div>
-          )}
 
           <div className="mb-8 grid grid-cols-1 gap-4 max-w-5xl mx-auto xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
             <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
