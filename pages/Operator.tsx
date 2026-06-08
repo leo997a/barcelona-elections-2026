@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { OverlayConfig, OverlayField, OverlayType } from '../types';
-import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal } from 'lucide-react';
+import { OverlayConfig, OverlayField, OverlayType, Sponsor } from '../types';
+import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
@@ -449,6 +449,29 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
 
   const getFieldValue = (overlay: OverlayConfig, fieldId: string, fallback: any = '') =>
     overlay.fields.find(f => f.id === fieldId)?.value ?? fallback;
+  const getField = (overlay: OverlayConfig, fieldId: string) =>
+    overlay.fields.find(field => field.id === fieldId);
+  const hasField = (overlay: OverlayConfig, fieldId: string) =>
+    Boolean(getField(overlay, fieldId));
+  const parseArrayField = <T,>(overlay: OverlayConfig, fieldId: string): T[] => {
+    try {
+      const parsed = JSON.parse(String(getFieldValue(overlay, fieldId, '[]') || '[]'));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+  const formatUsdShort = (value: number) =>
+    `$${Math.round(value).toLocaleString('en-US')}`;
+  const stampTodayArabic = () =>
+    new Intl.DateTimeFormat('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const updateProbabilityShiftMode = (overlay: OverlayConfig, mode: 'old' | 'new') => {
+    updateField(overlay, 'probabilityShiftMode', mode);
+    if (mode === 'new' && hasField(overlay, 'updateDate')) {
+      updateField(overlay, 'updateDate', stampTodayArabic());
+    }
+  };
+
   const showUndecided = selectedOverlay ? getFieldValue(selectedOverlay, 'showUndecided', true) === true : false;
   const selectedDesignStyle = selectedOverlay ? String(getFieldValue(selectedOverlay, 'designStyle', '')) : '';
 
@@ -475,6 +498,24 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   if (!selectedOverlay) return <div className="p-10 text-center text-gray-500">لا توجد قوالب نشطة. اذهب للمكتبة وأنشئ قالب.</div>;
 
   const canTakeInSelected = canTakeIn(selectedOverlay);
+  const selectedHasPages = hasField(selectedOverlay, 'pagesData') && hasField(selectedOverlay, 'currentPage');
+  const selectedPages = selectedHasPages ? parseArrayField<unknown>(selectedOverlay, 'pagesData') : [];
+  const selectedPageCount = Math.max(1, selectedPages.length);
+  const selectedCurrentPage = Math.max(
+    0,
+    Math.min(selectedPageCount - 1, Number(getFieldValue(selectedOverlay, 'currentPage', 0)) || 0),
+  );
+  const selectedHasSponsors = hasField(selectedOverlay, 'sponsorsData');
+  const selectedSponsors = selectedHasSponsors ? parseArrayField<Sponsor>(selectedOverlay, 'sponsorsData') : [];
+  const sponsorTotalUsd = selectedSponsors.reduce((sum, sponsor) => sum + Number(sponsor.usdAmount || 0), 0);
+  const sponsorDonationCount = selectedSponsors.reduce((sum, sponsor) => sum + (sponsor.history?.length || 0), 0);
+  const sponsorItemsPerPage = Math.max(1, Number(getFieldValue(selectedOverlay, 'itemsPerPage', 6)) || 6);
+  const sponsorPageCount = Math.max(1, Math.ceil(selectedSponsors.length / sponsorItemsPerPage));
+  const sponsorRotationTime = Math.max(3, Number(getFieldValue(selectedOverlay, 'rotationTime', 10)) || 10);
+  const sponsorDisplayField = getField(selectedOverlay, 'sponsorDisplayMode');
+  const sponsorDisplayMode = String(getFieldValue(selectedOverlay, 'sponsorDisplayMode', ''));
+  const selectedHasProbabilityShift = hasField(selectedOverlay, 'probabilityShiftMode');
+  const probabilityShiftMode = String(getFieldValue(selectedOverlay, 'probabilityShiftMode', 'old')) === 'new' ? 'new' : 'old';
   const operatorAllFieldControls = selectedOverlay.fields.filter(field => field.type !== 'hidden');
   const operatorFieldNeedle = operatorFieldSearch.trim().toLowerCase();
   const operatorFieldControls = operatorAllFieldControls
@@ -818,6 +859,168 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               <span>إخراج</span>
             </button>
           </div>
+
+          {(selectedHasProbabilityShift || selectedHasPages || selectedHasSponsors) && (
+            <div className="mb-8 max-w-5xl mx-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Sparkles className="h-4 w-4 text-amber-300" />
+                  أوامر ذكية مرتبطة بالقالب
+                </div>
+                <span className="rounded bg-gray-950 px-2 py-0.5 text-[10px] font-mono text-gray-400">
+                  LIVE OPS
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                {selectedHasProbabilityShift && (
+                  <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-950/10 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">تحويل نسب الميركاتو</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          {probabilityShiftMode === 'new' ? 'يعرض تحديث اليوم' : 'يعرض النموذج القديم'}
+                        </div>
+                      </div>
+                      <BarChart3 className="h-5 w-5 text-fuchsia-300" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateProbabilityShiftMode(selectedOverlay, 'old')}
+                        className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors ${
+                          probabilityShiftMode === 'old'
+                            ? 'border-rose-400/45 bg-rose-500/15 text-rose-100'
+                            : 'border-gray-800 bg-gray-950 text-gray-400 hover:border-gray-700 hover:text-white'
+                        }`}
+                      >
+                        القديم
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateProbabilityShiftMode(selectedOverlay, 'new')}
+                        className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors ${
+                          probabilityShiftMode === 'new'
+                            ? 'border-emerald-400/45 bg-emerald-500/15 text-emerald-100'
+                            : 'border-gray-800 bg-gray-950 text-gray-400 hover:border-gray-700 hover:text-white'
+                        }`}
+                      >
+                        تحديث اليوم
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedHasPages && (
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-950/10 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">تحكم الصفحات</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          صفحة {selectedCurrentPage + 1} من {selectedPageCount}
+                        </div>
+                      </div>
+                      <LayoutTemplate className="h-5 w-5 text-blue-300" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateField(selectedOverlay, 'currentPage', Math.max(0, selectedCurrentPage - 1))}
+                        disabled={selectedCurrentPage <= 0}
+                        className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs font-black text-gray-300 transition-colors hover:border-blue-500/40 hover:text-white disabled:cursor-not-allowed disabled:text-gray-700"
+                        title="الصفحة السابقة"
+                      >
+                        <Rewind className="mx-auto h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateField(selectedOverlay, 'currentPage', 0)}
+                        disabled={selectedCurrentPage === 0}
+                        className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs font-black text-gray-300 transition-colors hover:border-blue-500/40 hover:text-white disabled:cursor-not-allowed disabled:text-gray-700"
+                      >
+                        تصفير
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateField(selectedOverlay, 'currentPage', Math.min(selectedPageCount - 1, selectedCurrentPage + 1))}
+                        disabled={selectedCurrentPage >= selectedPageCount - 1}
+                        className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-xs font-black text-gray-300 transition-colors hover:border-blue-500/40 hover:text-white disabled:cursor-not-allowed disabled:text-gray-700"
+                        title="الصفحة التالية"
+                      >
+                        <FastForward className="mx-auto h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {selectedHasSponsors && (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-black text-white">غرفة الداعمين</div>
+                        <div className="mt-1 text-[10px] text-gray-500">
+                          {sponsorPageCount} صفحة / تبديل كل {sponsorRotationTime} ثواني
+                        </div>
+                      </div>
+                      <BadgeDollarSign className="h-5 w-5 text-amber-300" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg border border-white/5 bg-gray-950/80 p-2">
+                        <Users className="mx-auto h-3.5 w-3.5 text-amber-200" />
+                        <div className="mt-1 font-mono text-sm font-black text-white">{selectedSponsors.length}</div>
+                        <div className="text-[9px] text-gray-500">داعم</div>
+                      </div>
+                      <div className="rounded-lg border border-white/5 bg-gray-950/80 p-2">
+                        <BadgeDollarSign className="mx-auto h-3.5 w-3.5 text-emerald-200" />
+                        <div className="mt-1 font-mono text-sm font-black text-white">{formatUsdShort(sponsorTotalUsd)}</div>
+                        <div className="text-[9px] text-gray-500">الإجمالي</div>
+                      </div>
+                      <div className="rounded-lg border border-white/5 bg-gray-950/80 p-2">
+                        <Clock className="mx-auto h-3.5 w-3.5 text-blue-200" />
+                        <div className="mt-1 font-mono text-sm font-black text-white">{sponsorDonationCount}</div>
+                        <div className="text-[9px] text-gray-500">دفعة</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {hasField(selectedOverlay, 'rotationTime') && (
+                        <label className="block">
+                          <span className="mb-1 block text-[9px] font-black text-gray-500">مدة الصفحة</span>
+                          <input
+                            type="number"
+                            min={3}
+                            value={sponsorRotationTime}
+                            onChange={event => updateField(selectedOverlay, 'rotationTime', Math.max(3, Number(event.target.value) || 3))}
+                            className="h-9 w-full rounded-lg border border-gray-800 bg-gray-950 px-3 text-xs font-bold text-white outline-none transition-colors focus:border-amber-500"
+                          />
+                        </label>
+                      )}
+                      {hasField(selectedOverlay, 'itemsPerPage') && (
+                        <label className="block">
+                          <span className="mb-1 block text-[9px] font-black text-gray-500">داعمون/صفحة</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={sponsorItemsPerPage}
+                            onChange={event => updateField(selectedOverlay, 'itemsPerPage', Math.max(1, Number(event.target.value) || 1))}
+                            className="h-9 w-full rounded-lg border border-gray-800 bg-gray-950 px-3 text-xs font-bold text-white outline-none transition-colors focus:border-amber-500"
+                          />
+                        </label>
+                      )}
+                    </div>
+                    {sponsorDisplayField?.options?.length ? (
+                      <select
+                        value={sponsorDisplayMode}
+                        onChange={event => updateField(selectedOverlay, 'sponsorDisplayMode', event.target.value)}
+                        className="mt-3 h-9 w-full rounded-lg border border-gray-800 bg-gray-950 px-3 text-xs font-bold text-white outline-none transition-colors focus:border-amber-500"
+                      >
+                        {sponsorDisplayField.options.map(renderSelectOption)}
+                      </select>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mb-8 grid grid-cols-1 gap-4 max-w-5xl mx-auto xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
             <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
