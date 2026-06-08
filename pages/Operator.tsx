@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { OverlayConfig, OverlayField, OverlayType, Sponsor } from '../types';
 import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
@@ -82,6 +82,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const [operatorFieldGroup, setOperatorFieldGroup] = useState<OperatorFieldGroup | 'ALL'>('priority');
   const [draftName, setDraftName] = useState('');
   const [nameSavedPulse, setNameSavedPulse] = useState(false);
+  const [operatorPulseMessage, setOperatorPulseMessage] = useState('');
+  const operatorPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedObsCopied, setSelectedObsCopied] = useState(false);
   const [selectedEditCopied, setSelectedEditCopied] = useState(false);
   const [singleProgramMode, setSingleProgramMode] = useState(() => {
@@ -95,6 +97,12 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const selectedOverlay = overlays.find(o => o.id === selectedId);
   const secureContext = syncManager.getSmartTokenContext();
   const liveOverlaysCount = overlays.filter(overlay => overlay.isVisible).length;
+  const liveOverlays = useMemo(
+    () => overlays
+      .filter(overlay => overlay.isVisible)
+      .sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0)),
+    [overlays],
+  );
   const operatorCategories = useMemo(() => listCategories(), []);
   const getOverlayCategory = (overlay: OverlayConfig) =>
     getTaxonomy(overlay.type, overlay.templateId || overlay.id).category;
@@ -169,6 +177,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     setOperatorFieldGroup('priority');
   }, [selectedOverlay?.id]);
 
+  useEffect(() => () => {
+    if (operatorPulseTimer.current) clearTimeout(operatorPulseTimer.current);
+  }, []);
+
   const selectedMeta = useMemo(() => {
     if (!selectedOverlay) return null;
     return {
@@ -177,6 +189,11 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
       templateId: selectedOverlay.templateId || selectedOverlay.id,
     };
   }, [selectedOverlay]);
+  const markOperatorAction = (message: string) => {
+    if (operatorPulseTimer.current) clearTimeout(operatorPulseTimer.current);
+    setOperatorPulseMessage(message);
+    operatorPulseTimer.current = window.setTimeout(() => setOperatorPulseMessage(''), 2600);
+  };
   const setVisibility = (overlay: OverlayConfig, isVisible: boolean) => {
     syncManager.updateLiveField(overlay.id, 'isVisible', isVisible);
   };
@@ -192,6 +209,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
       });
     }
     setVisibility(overlay, true);
+    markOperatorAction(`IN: ${overlay.name}`);
   };
 
   const takeSoloOverlay = (overlay: OverlayConfig) => {
@@ -201,16 +219,19 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
       }
     });
     setVisibility(overlay, true);
+    markOperatorAction(`SOLO: ${overlay.name}`);
   };
 
   const takeOutOverlay = (overlay: OverlayConfig) => {
     setVisibility(overlay, false);
+    markOperatorAction(`OUT: ${overlay.name}`);
   };
 
   const takeOutAllVisible = () => {
     overlays.forEach(overlay => {
       if (overlay.isVisible) setVisibility(overlay, false);
     });
+    markOperatorAction('OUT ALL');
   };
 
   const toggleSingleProgramMode = () => {
@@ -812,6 +833,91 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
         </div>
 
         <div className="flex-1 p-8 overflow-y-auto">
+          <div className="mb-6 max-w-5xl mx-auto rounded-xl border border-gray-800 bg-gray-900/80 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">
+                <Cast className="h-4 w-4 text-red-300" />
+                برنامج البث المباشر
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {operatorPulseMessage && (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-600/15 px-2 py-0.5 text-[10px] font-black text-emerald-200">
+                    {operatorPulseMessage}
+                  </span>
+                )}
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                  liveOverlaysCount > 0
+                    ? 'border-red-500/35 bg-red-600/15 text-red-200'
+                    : 'border-gray-700 bg-gray-950 text-gray-500'
+                }`}>
+                  {liveOverlaysCount > 0 ? `${liveOverlaysCount} على الهواء` : 'لا يوجد مباشر'}
+                </span>
+              </div>
+            </div>
+
+            {liveOverlays.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-800 bg-gray-950/60 p-4 text-center text-xs text-gray-500">
+                لا يوجد أي قالب على الهواء الآن. استخدم إدخال أو Solo Live من القالب المحدد.
+              </div>
+            ) : (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {liveOverlays.map(overlay => {
+                  const isSelectedLive = overlay.id === selectedOverlay.id;
+                  return (
+                    <div
+                      key={overlay.id}
+                      className={`min-w-[230px] rounded-xl border p-3 transition-colors ${
+                        isSelectedLive
+                          ? 'border-blue-500/55 bg-blue-600/15'
+                          : 'border-gray-800 bg-gray-950/80 hover:border-gray-700'
+                      }`}
+                    >
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedId(overlay.id)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black text-white">LIVE</span>
+                          <span className="truncate text-[10px] font-mono text-gray-500">{overlay.templateIcon || overlay.type}</span>
+                        </div>
+                        <div className="truncate text-sm font-black text-white">{overlay.name}</div>
+                        <div className="mt-1 truncate text-[10px] text-gray-500">{overlay.templateDescription || overlay.templateId || overlay.id}</div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(overlay.id)}
+                          className="rounded-lg border border-blue-500/25 bg-blue-600/10 px-2 py-1.5 text-[10px] font-black text-blue-200 hover:bg-blue-600/20"
+                        >
+                          اختيار
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => takeSoloOverlay(overlay)}
+                          className="rounded-lg border border-cyan-500/25 bg-cyan-600/10 px-2 py-1.5 text-[10px] font-black text-cyan-200 hover:bg-cyan-600/20"
+                        >
+                          Solo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => takeOutOverlay(overlay)}
+                          className="rounded-lg border border-red-500/25 bg-red-600/10 px-2 py-1.5 text-[10px] font-black text-red-200 hover:bg-red-600/20"
+                        >
+                          OUT
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="mb-6 grid grid-cols-1 gap-4 max-w-5xl mx-auto lg:grid-cols-[1fr_auto]">
             <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
