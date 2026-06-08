@@ -587,9 +587,11 @@ const App: React.FC = () => {
                )}
                
                {route === 'operator' && (
-                   <Operator 
+                   <Operator
                      overlays={overlays}
                      focusedOverlayId={operatorFocusId}
+                     favoriteIds={favoriteIds}
+                     onToggleFavorite={handleToggleFavorite}
                      onUpdate={(o) => syncManager.updateOverlay(o)}
                    />
                )}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { OverlayConfig, OverlayField, OverlayType, Sponsor } from '../types';
-import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Play, Square, FastForward, Rewind, Cast, Wifi, Eye, EyeOff, LayoutTemplate, Layers, Tv, Check, Search, Star, PencilLine, Save, RotateCcw, PowerOff, ListFilter, Link2, Monitor, SlidersHorizontal, Users, BadgeDollarSign, Clock, BarChart3, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
@@ -11,6 +11,8 @@ import { getTaxonomy, listCategories, type CategoryKey } from '../utils/template
 interface OperatorProps {
   overlays: OverlayConfig[];
   focusedOverlayId?: string | null;
+  favoriteIds: string[];
+  onToggleFavorite: (id: string) => void;
   onUpdate: (updated: OverlayConfig) => void;
 }
 
@@ -80,12 +82,13 @@ const OPERATOR_APPEARANCE_FIELD_HINTS = [
 const OPERATOR_AUDIO_FIELD_HINTS = ['sound', 'audio', 'voice', 'sfx', 'duck'];
 const OPERATOR_MEDIA_FIELD_HINTS = ['image', 'avatar', 'logo', 'photo', 'media', 'video', 'url'];
 
-const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdate }) => {
+const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favoriteIds, onToggleFavorite, onUpdate }) => {
   const [selectedId, setSelectedId] = useState<string | null>(overlays.length > 0 ? overlays[0].id : null);
   const [showStreamDeckModal, setShowStreamDeckModal] = useState(false);
   const [programObsCopied, setProgramObsCopied] = useState(false);
   const [operatorSearch, setOperatorSearch] = useState('');
   const [showOnlyLive, setShowOnlyLive] = useState(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [operatorCategory, setOperatorCategory] = useState<CategoryKey | 'ALL'>('ALL');
   const [operatorSortMode, setOperatorSortMode] = useState<OperatorSortMode>('smart');
   const [operatorDensity, setOperatorDensity] = useState<OperatorDensityMode>(() => {
@@ -120,6 +123,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
       .sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0)),
     [overlays],
   );
+  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const favoriteOverlaysCount = overlays.filter(overlay => favoriteIdSet.has(overlay.id)).length;
   const operatorCategories = useMemo(() => listCategories(), []);
   const getOverlayCategory = (overlay: OverlayConfig) =>
     getTaxonomy(overlay.type, overlay.templateId || overlay.id).category;
@@ -143,6 +148,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     return overlays
       .filter(overlay => operatorCategory === 'ALL' || getOverlayCategory(overlay) === operatorCategory)
       .filter(overlay => !showOnlyLive || overlay.isVisible)
+      .filter(overlay => !showOnlyFavorites || favoriteIdSet.has(overlay.id))
       .filter(overlay => {
         if (!needle) return true;
         return [
@@ -166,9 +172,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
         }
         return (right.createdAt || 0) - (left.createdAt || 0);
       });
-  }, [operatorCategory, operatorSearch, operatorSortMode, overlays, showOnlyLive]);
+  }, [favoriteIdSet, operatorCategory, operatorSearch, operatorSortMode, overlays, showOnlyFavorites, showOnlyLive]);
   const operatorFiltersActive = Boolean(operatorSearch.trim())
     || showOnlyLive
+    || showOnlyFavorites
     || operatorCategory !== 'ALL'
     || operatorSortMode !== 'smart';
   const filteredOverlayGroups = useMemo(() => {
@@ -288,6 +295,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const resetOperatorFilters = () => {
     setOperatorSearch('');
     setShowOnlyLive(false);
+    setShowOnlyFavorites(false);
     setOperatorCategory('ALL');
     setOperatorSortMode('smart');
   };
@@ -641,6 +649,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     const compactList = operatorDensity === 'compact';
     const actionButtonSize = compactList ? 'h-7 w-7 rounded-md' : 'h-8 w-8 rounded-lg';
     const statusIconSize = compactList ? 'h-3.5 w-3.5' : 'h-4 w-4';
+    const isFavorite = favoriteIdSet.has(overlay.id);
 
     return (
       <div
@@ -669,6 +678,21 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={event => {
+              event.stopPropagation();
+              onToggleFavorite(overlay.id);
+            }}
+            className={`${actionButtonSize} border transition-colors ${
+              isFavorite
+                ? 'border-yellow-400/40 bg-yellow-500/15 text-yellow-200'
+                : 'border-gray-700 bg-gray-950 text-gray-500 hover:border-yellow-400/30 hover:text-yellow-200'
+            }`}
+            title={isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+          >
+            <Star className="mx-auto h-3.5 w-3.5" fill={isFavorite ? 'currentColor' : 'none'} />
+          </button>
           <button
             type="button"
             onClick={event => {
@@ -728,10 +752,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               className="h-10 w-full rounded-lg border border-gray-800 bg-gray-950 pr-9 pl-3 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-blue-500"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => setShowOnlyLive(current => !current)}
-              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition-colors ${
+              className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[11px] font-bold transition-colors ${
                 showOnlyLive
                   ? 'border-red-500/50 bg-red-600/15 text-red-200'
                   : 'border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-700 hover:text-white'
@@ -741,9 +765,22 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               المباشر فقط
             </button>
             <button
+              type="button"
+              onClick={() => setShowOnlyFavorites(current => !current)}
+              className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[11px] font-bold transition-colors ${
+                showOnlyFavorites
+                  ? 'border-yellow-400/50 bg-yellow-500/15 text-yellow-100'
+                  : 'border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-700 hover:text-white'
+              }`}
+              title={`القوالب المفضلة داخل غرفة التحكم: ${favoriteOverlaysCount}`}
+            >
+              <Star className="h-3.5 w-3.5" fill={showOnlyFavorites ? 'currentColor' : 'none'} />
+              المفضلة
+            </button>
+            <button
               onClick={takeOutAllVisible}
               disabled={liveOverlaysCount === 0}
-              className="flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-950/20 px-3 py-2 text-xs font-bold text-red-200 transition-colors hover:bg-red-900/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-900 disabled:text-gray-600"
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-950/20 px-2 py-2 text-[11px] font-bold text-red-200 transition-colors hover:bg-red-900/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-900 disabled:text-gray-600"
             >
               <PowerOff className="h-3.5 w-3.5" />
               إخراج الكل
