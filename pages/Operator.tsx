@@ -16,6 +16,15 @@ interface OperatorProps {
 
 const ELECTION_SOUNDS = ['RESULTS_STING', 'QUOTE_SWEEP', 'VERSUS_IMPACT', 'SIDEBAR_CHIME', 'DATA_PULSE', 'COUNTDOWN_TICK', 'BREAKING_WHOOSH', 'SOFT_FADE'];
 const SINGLE_PROGRAM_MODE_KEY = 'rge_operator_single_program_mode';
+const OPERATOR_DENSITY_MODE_KEY = 'rge_operator_density_mode';
+type OperatorSortMode = 'smart' | 'recent' | 'name' | 'type';
+type OperatorDensityMode = 'comfortable' | 'compact';
+const OPERATOR_SORT_OPTIONS: Array<{ key: OperatorSortMode; label: string }> = [
+  { key: 'smart', label: 'ذكي' },
+  { key: 'recent', label: 'الأحدث' },
+  { key: 'name', label: 'الاسم' },
+  { key: 'type', label: 'النوع' },
+];
 type OperatorFieldGroup = 'priority' | 'data' | 'appearance' | 'media' | 'audio';
 const OPERATOR_FIELD_GROUPS: Array<{ key: OperatorFieldGroup | 'ALL'; label: string }> = [
   { key: 'priority', label: 'الأهم' },
@@ -78,6 +87,14 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
   const [operatorSearch, setOperatorSearch] = useState('');
   const [showOnlyLive, setShowOnlyLive] = useState(false);
   const [operatorCategory, setOperatorCategory] = useState<CategoryKey | 'ALL'>('ALL');
+  const [operatorSortMode, setOperatorSortMode] = useState<OperatorSortMode>('smart');
+  const [operatorDensity, setOperatorDensity] = useState<OperatorDensityMode>(() => {
+    try {
+      return localStorage.getItem(OPERATOR_DENSITY_MODE_KEY) === 'compact' ? 'compact' : 'comfortable';
+    } catch {
+      return 'comfortable';
+    }
+  });
   const [operatorFieldSearch, setOperatorFieldSearch] = useState('');
   const [operatorFieldGroup, setOperatorFieldGroup] = useState<OperatorFieldGroup | 'ALL'>('priority');
   const [draftName, setDraftName] = useState('');
@@ -136,10 +153,24 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
         ].some(value => String(value).toLowerCase().includes(needle));
       })
       .sort((left, right) => {
-        if (left.isVisible !== right.isVisible) return left.isVisible ? -1 : 1;
+        if (operatorSortMode === 'name') {
+          return left.name.localeCompare(right.name, 'ar');
+        }
+        if (operatorSortMode === 'type') {
+          const leftType = `${left.type}-${left.templateId || left.id}`;
+          const rightType = `${right.type}-${right.templateId || right.id}`;
+          return leftType.localeCompare(rightType, 'en');
+        }
+        if (operatorSortMode === 'smart' && left.isVisible !== right.isVisible) {
+          return left.isVisible ? -1 : 1;
+        }
         return (right.createdAt || 0) - (left.createdAt || 0);
       });
-  }, [operatorCategory, operatorSearch, overlays, showOnlyLive]);
+  }, [operatorCategory, operatorSearch, operatorSortMode, overlays, showOnlyLive]);
+  const operatorFiltersActive = Boolean(operatorSearch.trim())
+    || showOnlyLive
+    || operatorCategory !== 'ALL'
+    || operatorSortMode !== 'smart';
   const filteredOverlayGroups = useMemo(() => {
     const grouped = operatorCategories
       .map(category => ({
@@ -242,6 +273,23 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
       } catch { /* ignore storage errors */ }
       return next;
     });
+  };
+
+  const toggleOperatorDensity = () => {
+    setOperatorDensity(current => {
+      const next = current === 'compact' ? 'comfortable' : 'compact';
+      try {
+        localStorage.setItem(OPERATOR_DENSITY_MODE_KEY, next);
+      } catch { /* ignore storage errors */ }
+      return next;
+    });
+  };
+
+  const resetOperatorFilters = () => {
+    setOperatorSearch('');
+    setShowOnlyLive(false);
+    setOperatorCategory('ALL');
+    setOperatorSortMode('smart');
   };
 
   const copyProgramObsUrl = async () => {
@@ -589,68 +637,76 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
     ? 'وضع البرنامج الواحد مفعل: إدخال قالب جديد يخرج القوالب الأخرى ويبقي قالبًا واحدًا في رابط البرنامج'
     : 'وضع البرنامج المتعدد: رابط البرنامج يسمح بعرض أكثر من قالب حي في نفس الوقت';
 
-  const renderOperatorOverlayRow = (overlay: OverlayConfig) => (
-    <div
-      key={overlay.id}
-      role="button"
-      tabIndex={0}
-      onClick={() => setSelectedId(overlay.id)}
-      onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
-      }}
-      className={`w-full p-3 rounded-lg border text-right transition-all grid grid-cols-[1fr_auto] gap-3 group cursor-pointer ${
-        selectedId === overlay.id ? 'bg-blue-900/20 border-blue-500/50 shadow-lg shadow-blue-900/10' : 'bg-gray-900 border-gray-800 hover:border-gray-600'
-      }`}
-    >
-      <div className="min-w-0">
-        <div className="font-bold text-white mb-1 truncate">{overlay.name}</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="text-[10px] text-gray-500 font-mono uppercase bg-gray-950 w-max px-1 rounded border border-gray-800">{overlay.type}</div>
-          {overlay.templateIcon && (
-            <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 rounded border border-white/10 px-1.5 py-0.5">
-              {overlay.templateIcon}
-            </div>
-          )}
+  const renderOperatorOverlayRow = (overlay: OverlayConfig) => {
+    const compactList = operatorDensity === 'compact';
+    const actionButtonSize = compactList ? 'h-7 w-7 rounded-md' : 'h-8 w-8 rounded-lg';
+    const statusIconSize = compactList ? 'h-3.5 w-3.5' : 'h-4 w-4';
+
+    return (
+      <div
+        key={overlay.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedId(overlay.id)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') setSelectedId(overlay.id);
+        }}
+        className={`w-full rounded-lg border text-right transition-all grid grid-cols-[1fr_auto] group cursor-pointer ${
+          compactList ? 'gap-2 p-2' : 'gap-3 p-3'
+        } ${
+          selectedId === overlay.id ? 'bg-blue-900/20 border-blue-500/50 shadow-lg shadow-blue-900/10' : 'bg-gray-900 border-gray-800 hover:border-gray-600'
+        }`}
+      >
+        <div className="min-w-0">
+          <div className={`font-bold text-white truncate ${compactList ? 'mb-0.5 text-sm' : 'mb-1'}`}>{overlay.name}</div>
+          <div className={`flex flex-wrap items-center ${compactList ? 'gap-1.5' : 'gap-2'}`}>
+            <div className="text-[10px] text-gray-500 font-mono uppercase bg-gray-950 w-max px-1 rounded border border-gray-800">{overlay.type}</div>
+            {overlay.templateIcon && (
+              <div className="text-[10px] font-black tracking-[0.2em] text-gray-400 rounded border border-white/10 px-1.5 py-0.5">
+                {overlay.templateIcon}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={event => {
+              event.stopPropagation();
+              takeInOverlay(overlay);
+              setSelectedId(overlay.id);
+            }}
+            disabled={!canTakeIn(overlay)}
+            className={`${actionButtonSize} border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600`}
+            title="إدخال القالب"
+          >
+            <Play className="mx-auto h-3.5 w-3.5 fill-current" />
+          </button>
+          <button
+            type="button"
+            onClick={event => {
+              event.stopPropagation();
+              takeOutOverlay(overlay);
+              setSelectedId(overlay.id);
+            }}
+            disabled={!overlay.isVisible}
+            className={`${actionButtonSize} border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600`}
+            title="إخراج القالب"
+          >
+            <Square className="mx-auto h-3.5 w-3.5 fill-current" />
+          </button>
+          <span
+            className={`${actionButtonSize} flex items-center justify-center ${
+              overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
+            }`}
+            title={overlay.isVisible ? 'على الهواء' : 'خارج البث'}
+          >
+            {overlay.isVisible ? <Eye className={statusIconSize} /> : <EyeOff className={statusIconSize} />}
+          </span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={event => {
-            event.stopPropagation();
-            takeInOverlay(overlay);
-            setSelectedId(overlay.id);
-          }}
-          disabled={!canTakeIn(overlay)}
-          className="h-8 w-8 rounded-lg border border-green-500/30 bg-green-600/15 text-green-200 transition-colors hover:bg-green-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-          title="إدخال القالب"
-        >
-          <Play className="mx-auto h-3.5 w-3.5 fill-current" />
-        </button>
-        <button
-          type="button"
-          onClick={event => {
-            event.stopPropagation();
-            takeOutOverlay(overlay);
-            setSelectedId(overlay.id);
-          }}
-          disabled={!overlay.isVisible}
-          className="h-8 w-8 rounded-lg border border-red-500/30 bg-red-600/15 text-red-200 transition-colors hover:bg-red-600/30 disabled:cursor-not-allowed disabled:border-gray-800 disabled:bg-gray-800 disabled:text-gray-600"
-          title="إخراج القالب"
-        >
-          <Square className="mx-auto h-3.5 w-3.5 fill-current" />
-        </button>
-        <span
-          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-            overlay.isVisible ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-800 text-gray-500'
-          }`}
-          title={overlay.isVisible ? 'على الهواء' : 'خارج البث'}
-        >
-          {overlay.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-full bg-gray-950">
@@ -693,6 +749,52 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
               إخراج الكل
             </button>
           </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-950/70 p-2">
+            <div className="mb-2 flex items-center justify-between text-[10px] font-black text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                تنظيم القائمة
+              </span>
+              <button
+                type="button"
+                onClick={resetOperatorFilters}
+                disabled={!operatorFiltersActive}
+                className="rounded border border-gray-800 px-2 py-0.5 text-[9px] font-black text-gray-400 transition-colors hover:border-blue-500/40 hover:text-blue-200 disabled:cursor-not-allowed disabled:text-gray-700"
+              >
+                تصفير
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {OPERATOR_SORT_OPTIONS.map(option => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setOperatorSortMode(option.key)}
+                  className={`rounded-md border px-1.5 py-1 text-[10px] font-black transition-colors ${
+                    operatorSortMode === option.key
+                      ? 'border-cyan-400/45 bg-cyan-500/15 text-cyan-100'
+                      : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-gray-700 hover:text-white'
+                  }`}
+                  title={`ترتيب القائمة: ${option.label}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={toggleOperatorDensity}
+              className={`mt-2 flex w-full items-center justify-center gap-2 rounded-md border px-2 py-1.5 text-[10px] font-black transition-colors ${
+                operatorDensity === 'compact'
+                  ? 'border-emerald-400/35 bg-emerald-500/15 text-emerald-100'
+                  : 'border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-700 hover:text-white'
+              }`}
+              title="تغيير كثافة عرض قائمة القوالب داخل غرفة التحكم"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              {operatorDensity === 'compact' ? 'عرض كثيف' : 'عرض مريح'}
+            </button>
+          </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[10px] font-black text-gray-500">
               <span>تصنيف القوالب</span>
@@ -732,7 +834,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+        <div className={`flex-1 overflow-y-auto p-2 ${operatorDensity === 'compact' ? 'space-y-1.5' : 'space-y-2'}`}>
           {filteredOverlays.length === 0 && (
             <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/40 p-5 text-center text-xs text-gray-500">
               لا توجد قوالب مطابقة داخل غرفة التحكم.
@@ -741,7 +843,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
 
           {operatorCategory === 'ALL' && filteredOverlayGroups.length > 0
             ? filteredOverlayGroups.map(group => (
-                <div key={group.category.key} className="space-y-2">
+                <div key={group.category.key} className={operatorDensity === 'compact' ? 'space-y-1.5' : 'space-y-2'}>
                   <div
                     className="sticky top-0 z-10 flex items-center justify-between rounded-lg border bg-gray-950/95 px-2.5 py-1.5 text-[10px] font-black backdrop-blur"
                     style={{ borderColor: `${group.category.accent}40`, color: group.category.accent }}
@@ -749,7 +851,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, onUpdat
                     <span className="truncate">{group.category.labelAr}</span>
                     <span className="font-mono text-gray-400">{group.overlays.length}</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className={operatorDensity === 'compact' ? 'space-y-1.5' : 'space-y-2'}>
                     {group.overlays.map(renderOperatorOverlayRow)}
                   </div>
                 </div>
