@@ -54,7 +54,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.1.0',
+      Version: '4.2.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -157,9 +157,15 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       } else if (command.action === 'set_visible') {
         next.isVisible = Boolean(command.value);
       } else if (command.action === 'update_field') {
-        next.fields = fields.map(function(field) {
-          return field.id === command.fieldId ? Object.assign({}, field, { value: command.value }) : field;
-        });
+        next.fields = setFieldValue(fields, command.fieldId, command.value);
+      } else if (command.action === 'toggle_field') {
+        var field = fields.find(function(candidate) { return candidate.id === command.fieldId; });
+        var fallback = 'fallback' in command ? Boolean(command.fallback) : false;
+        next.fields = setFieldValue(fields, command.fieldId, !Boolean(field ? field.value : fallback));
+      } else if (command.action === 'update_fields') {
+        next.fields = (command.fields || []).reduce(function(acc, item) {
+          return setFieldValue(acc, item.fieldId, item.value);
+        }, fields);
       } else if (command.action === 'increment_field') {
         next.fields = fields.map(function(field) {
           if (field.id !== command.fieldId) return field;
@@ -171,10 +177,69 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       return next;
     }
 
+    function setFieldValue(fields, fieldId, value) {
+      var hasField = fields.some(function(field) { return field.id === fieldId; });
+      if (hasField) {
+        return fields.map(function(field) {
+          return field.id === fieldId ? Object.assign({}, field, { value: value }) : field;
+        });
+      }
+
+      var meta = getKnownFieldMeta(fieldId);
+      if (!meta) return fields;
+      return fields.concat([Object.assign({}, meta, { id: fieldId, value: value })]);
+    }
+
+    function getKnownFieldMeta(fieldId) {
+      var known = {
+        soundEnabled: { label: 'تفعيل الصوت', type: 'boolean' },
+        sfxEnabled: { label: 'تفعيل المؤثرات', type: 'boolean' },
+        voiceEnabled: { label: 'تفعيل الصوت الحقيقي', type: 'boolean' },
+        soundVolume: { label: 'مستوى الصوت', type: 'range', min: 0, max: 3, step: 0.05 },
+        audioUpdateCue: { label: 'مؤثر التحديث', type: 'hidden' },
+        audioSceneId: { label: 'مشهد الصوت', type: 'hidden' },
+        positionX: { label: 'إزاحة أفقية (X)', type: 'range', min: -1500, max: 1500, step: 10 },
+        positionY: { label: 'إزاحة عمودية (Y)', type: 'range', min: -1000, max: 1000, step: 10 },
+        scale: { label: 'حجم القالب', type: 'range', min: 0.5, max: 3, step: 0.05 },
+        currentPage: { label: 'رقم الصفحة', type: 'number' }
+      };
+      return known[fieldId] || null;
+    }
+
     function mapCommand(cmd, target) {
       if (cmd === 'toggle') return { action: 'toggle_visible', targetId: target };
       if (cmd === 'set_on') return { action: 'set_visible', targetId: target, value: true };
       if (cmd === 'set_off') return { action: 'set_visible', targetId: target, value: false };
+      if (cmd === 'audio_toggle') return { action: 'toggle_field', targetId: target, fieldId: 'soundEnabled', fallback: true };
+      if (cmd === 'audio_on') return { action: 'update_field', targetId: target, fieldId: 'soundEnabled', value: true };
+      if (cmd === 'audio_off') return { action: 'update_field', targetId: target, fieldId: 'soundEnabled', value: false };
+      if (cmd === 'sfx_toggle') return { action: 'toggle_field', targetId: target, fieldId: 'sfxEnabled', fallback: true };
+      if (cmd === 'voice_toggle') return { action: 'toggle_field', targetId: target, fieldId: 'voiceEnabled', fallback: false };
+      if (cmd === 'audio_reset') {
+        return {
+          action: 'update_fields',
+          targetId: target,
+          fields: [
+            { fieldId: 'soundEnabled', value: true },
+            { fieldId: 'sfxEnabled', value: true },
+            { fieldId: 'voiceEnabled', value: false },
+            { fieldId: 'soundVolume', value: 0.55 },
+            { fieldId: 'audioUpdateCue', value: '' },
+            { fieldId: 'audioSceneId', value: '' }
+          ]
+        };
+      }
+      if (cmd === 'transform_reset') {
+        return {
+          action: 'update_fields',
+          targetId: target,
+          fields: [
+            { fieldId: 'positionX', value: 0 },
+            { fieldId: 'positionY', value: 0 },
+            { fieldId: 'scale', value: 1 }
+          ]
+        };
+      }
       if (cmd === 'score_home_plus') return { action: 'increment_field', targetId: target, fieldId: 'homeScore', amount: 1 };
       if (cmd === 'score_away_plus') return { action: 'increment_field', targetId: target, fieldId: 'awayScore', amount: 1 };
       if (cmd === 'score_home_minus') return { action: 'increment_field', targetId: target, fieldId: 'homeScore', amount: -1 };
@@ -332,6 +397,21 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       addOption(general, 'set_off', 'إخراج من البث');
       addOption(general, 'toggle', 'تبديل الظهور (قديم)');
 
+      var audio = document.createElement('optgroup');
+      audio.label = 'الصوت والمشهد';
+      select.appendChild(audio);
+      addOption(audio, 'audio_toggle', 'تبديل الصوت');
+      addOption(audio, 'audio_on', 'تشغيل الصوت');
+      addOption(audio, 'audio_off', 'كتم الصوت');
+      addOption(audio, 'sfx_toggle', 'تبديل المؤثرات');
+      addOption(audio, 'voice_toggle', 'تبديل الصوت الحقيقي');
+      addOption(audio, 'audio_reset', 'Reset Audio Safe');
+
+      var layout = document.createElement('optgroup');
+      layout.label = 'إعادة الضبط';
+      select.appendChild(layout);
+      addOption(layout, 'transform_reset', 'Reset Position / Scale');
+
       if (type === 'SCOREBOARD') {
         var score = document.createElement('optgroup');
         score.label = 'أوامر لوحة النتيجة';
@@ -402,7 +482,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_1.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_2.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -500,7 +580,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة.
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.2 تضيف أوامر
+                        الصوت وإعادة الضبط بدون إضافة endpoint جديد.
                       </p>
                       <button
                         onClick={handleDownloadPlugin}
@@ -543,8 +624,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                     <Zap className="mb-4 h-8 w-8 text-yellow-500" />
                     <h4 className="mb-2 font-bold text-white">أوامر ذكية حسب النوع</h4>
                     <p className="text-xs leading-6 text-gray-500">
-                      القوائم داخل Stream Deck تتغير حسب القالب نفسه: أخبار، نتائج، شرائح، أو
-                      انتخابات.
+                      القوائم داخل Stream Deck تتغير حسب القالب نفسه، مع أوامر عامة ثابتة للبث
+                      والصوت وإعادة ضبط الموضع.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6">
