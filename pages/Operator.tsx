@@ -103,6 +103,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
   const [draftName, setDraftName] = useState('');
   const [nameSavedPulse, setNameSavedPulse] = useState(false);
   const [operatorPulseMessage, setOperatorPulseMessage] = useState('');
+  const [operatorLastSyncAt, setOperatorLastSyncAt] = useState<number | null>(null);
   const operatorPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedObsCopied, setSelectedObsCopied] = useState(false);
   const [selectedEditCopied, setSelectedEditCopied] = useState(false);
@@ -227,8 +228,17 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
       templateId: selectedOverlay.templateId || selectedOverlay.id,
     };
   }, [selectedOverlay]);
+  const operatorLastSyncLabel = useMemo(() => {
+    if (!operatorLastSyncAt) return 'جاهز';
+    return new Intl.DateTimeFormat('ar-IQ', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(new Date(operatorLastSyncAt));
+  }, [operatorLastSyncAt]);
   const markOperatorAction = (message: string) => {
     if (operatorPulseTimer.current) clearTimeout(operatorPulseTimer.current);
+    setOperatorLastSyncAt(Date.now());
     setOperatorPulseMessage(message);
     operatorPulseTimer.current = window.setTimeout(() => setOperatorPulseMessage(''), 2600);
   };
@@ -305,6 +315,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
       const url = await syncManager.prepareProgramOutputUrl();
       await navigator.clipboard.writeText(url);
       setProgramObsCopied(true);
+      markOperatorAction('OBS PROGRAM URL');
       setTimeout(() => setProgramObsCopied(false), 2200);
     } catch {
       alert('تعذر نسخ رابط OBS العام');
@@ -317,6 +328,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
       const url = await syncManager.prepareOutputUrl(selectedOverlay.id, selectedOverlay);
       await navigator.clipboard.writeText(url);
       setSelectedObsCopied(true);
+      markOperatorAction('OBS TEMPLATE URL');
       setTimeout(() => setSelectedObsCopied(false), 2200);
     } catch {
       alert('تعذر نسخ رابط القالب');
@@ -328,6 +340,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     try {
       await navigator.clipboard.writeText(syncManager.buildEditUrl(selectedOverlay.id));
       setSelectedEditCopied(true);
+      markOperatorAction('EDIT URL');
       setTimeout(() => setSelectedEditCopied(false), 2200);
     } catch {
       alert('تعذر نسخ رابط التعديل');
@@ -336,6 +349,8 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
 
   const updateField = (overlay: OverlayConfig, fieldId: string, value: any) => {
     syncManager.updateLiveField(overlay.id, fieldId, value);
+    const fieldLabel = overlay.fields.find(field => field.id === fieldId)?.label || fieldId;
+    markOperatorAction(`SYNC: ${fieldLabel}`);
   };
 
   const classifyOperatorField = (field: OverlayField): OperatorFieldGroup => {
@@ -515,6 +530,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     const nextName = draftName.trim();
     if (!nextName || nextName === selectedOverlay.name) return;
     onUpdate({ ...selectedOverlay, name: nextName });
+    markOperatorAction(`NAME: ${nextName}`);
     setNameSavedPulse(true);
     setTimeout(() => setNameSavedPulse(false), 1600);
   };
@@ -529,6 +545,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     }
     setDraftName(baseName);
     onUpdate({ ...selectedOverlay, name: baseName });
+    markOperatorAction(`NAME: ${baseName}`);
     setNameSavedPulse(true);
     setTimeout(() => setNameSavedPulse(false), 1600);
   };
@@ -589,6 +606,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
 
     if (newPage !== currentPage) {
       syncManager.updateLiveField(overlay.id, 'currentPage', newPage);
+      markOperatorAction(`PAGE: ${newPage + 1}`);
     }
   };
 
@@ -979,8 +997,15 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
                 برنامج البث المباشر
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-600/10 px-2 py-0.5 text-[10px] font-black text-cyan-200">
+                  <Wifi className="h-3 w-3" />
+                  Live API {operatorLastSyncLabel}
+                </span>
                 {operatorPulseMessage && (
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-600/15 px-2 py-0.5 text-[10px] font-black text-emerald-200">
+                  <span
+                    className="max-w-[22rem] truncate rounded-full border border-emerald-500/30 bg-emerald-600/15 px-2 py-0.5 text-[10px] font-black text-emerald-200"
+                    title={operatorPulseMessage}
+                  >
                     {operatorPulseMessage}
                   </span>
                 )}
@@ -1559,6 +1584,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
                             targetId: selectedOverlay.id, 
                             slotName: name 
                           });
+                          markOperatorAction(`PRESET: ${name}`);
                         }}
                         className={`px-5 py-3 rounded-xl border text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
                           selectedOverlay.activeSlot === name 
