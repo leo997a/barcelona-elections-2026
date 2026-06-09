@@ -55,7 +55,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableMetricItem } from '../components/editor/SortableMetricItem';
-import { buildSmartToken } from '../utils/smartToken';
+import { buildSmartToken, describeSmartToken } from '../utils/smartToken';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -527,6 +527,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
+  const smartTokenInfo = useMemo(() => describeSmartToken(draftOverlay), [draftOverlay]);
+  const smartTokenTooltip = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
   const [panelOpen, setPanelOpen] = useState(true);
 
   // Player Intel V2 dock state — height is resizable, fit mode controls preview scale.
@@ -4530,10 +4532,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <button
                     onClick={copySmartToken}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600/15 hover:bg-yellow-600/25 text-yellow-300 rounded-lg text-xs font-bold border border-yellow-500/30 transition-colors"
-                    title="نسخ Smart Token لهذا القالب مع أوامر Stream Deck الذكية">
+                    title={smartTokenTooltip}>
                      <Key className="w-3.5 h-3.5" />
                      <span>{smartTokenCopied ? 'تم النسخ' : 'Smart Token'}</span>
                  </button>
+                 <span
+                    className="hidden 2xl:inline-flex max-w-[230px] items-center gap-1.5 rounded-lg border border-yellow-500/15 bg-yellow-500/[0.06] px-2 py-1 text-[10px] font-black text-yellow-200"
+                    title={smartTokenTooltip}>
+                    <span className="font-mono">{smartTokenInfo.fieldCount}</span>
+                    <span className="truncate">{smartTokenInfo.capabilityLabels.slice(0, 3).join(' / ')}</span>
+                 </span>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
                     const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);

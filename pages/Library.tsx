@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
 import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2, Check, SlidersHorizontal } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
-import { buildSmartToken } from '../utils/smartToken';
+import { buildSmartToken, describeSmartToken } from '../utils/smartToken';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
 import { listCategories, listSubcategoriesFor, getTaxonomy, type CategoryKey } from '../utils/templateTaxonomy';
 import OverlayRenderer from '../components/OverlayRenderer';
@@ -175,6 +175,8 @@ const MyCard: React.FC<{
   const [draftName, setDraftName] = useState(overlay.name);
   const shortOverlayId = overlay.id.length > 34 ? `${overlay.id.slice(0, 24)}...${overlay.id.slice(-6)}` : overlay.id;
   const statusLabel = overlay.isVisible ? 'على الهواء' : 'خارج البث';
+  const smartTokenInfo = useMemo(() => describeSmartToken(overlay), [overlay]);
+  const smartTokenTitle = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
 
   useEffect(() => {
     setDraftName(overlay.name);
@@ -269,6 +271,30 @@ const MyCard: React.FC<{
         <div className="flex items-center gap-1.5 text-[10px] text-gray-500" title={overlay.id}>
           <Link2 className="w-3 h-3 shrink-0 text-cyan-400/70" />
           <span className="truncate font-mono" dir="ltr">{shortOverlayId}</span>
+        </div>
+        <div
+          className="rounded-lg border border-yellow-500/15 bg-yellow-500/[0.06] px-2 py-1.5"
+          title={smartTokenTitle}
+        >
+          <div className="mb-1 flex items-center justify-between gap-2 text-[9px] font-black text-yellow-200/90">
+            <span className="flex min-w-0 items-center gap-1">
+              <Key className="h-3 w-3 shrink-0" />
+              <span className="truncate">Stream Deck DNA</span>
+            </span>
+            <span className="font-mono text-yellow-100">{smartTokenInfo.fieldCount}</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {smartTokenInfo.capabilityLabels.slice(0, 4).map(label => (
+              <span key={label} className="rounded border border-yellow-500/15 bg-black/20 px-1.5 py-0.5 text-[9px] font-bold text-yellow-100/80">
+                {label}
+              </span>
+            ))}
+            {smartTokenInfo.capabilityLabels.length > 4 && (
+              <span className="rounded border border-gray-700 bg-black/20 px-1.5 py-0.5 text-[9px] font-bold text-gray-400">
+                +{smartTokenInfo.capabilityLabels.length - 4}
+              </span>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <button onClick={onCopyObsUrl}

@@ -19,6 +19,16 @@ type SmartTokenField = {
 const FIELD_TOKEN_LIMIT = 28;
 const LABEL_LIMIT = 42;
 
+export const SMART_TOKEN_CAPABILITY_LABELS: Record<string, string> = {
+  visibility: 'ظهور',
+  audio: 'صوت',
+  transform: 'موضع',
+  scoreboard: 'نتيجة',
+  paging: 'صفحات',
+  'probability-shift': 'نسب',
+  sponsors: 'داعمين',
+};
+
 const STREAM_DECK_SKIP_FIELD_IDS = new Set([
   'audioSceneId',
   'audioUpdateCue',
@@ -124,3 +134,17 @@ export const buildSmartToken = (
   context: SmartTokenContext | null,
   origin: string,
 ) => `rge_${encodeBase64UrlUtf8(JSON.stringify(buildSmartTokenPayload(overlay, context, origin)))}`;
+
+export const getSmartTokenCapabilityLabel = (capability: string) =>
+  SMART_TOKEN_CAPABILITY_LABELS[capability] || capability;
+
+export const describeSmartToken = (overlay: OverlayConfig) => {
+  const payload = buildSmartTokenPayload(overlay, null, '');
+  return {
+    capabilities: payload.cap,
+    capabilityLabels: payload.cap.map(getSmartTokenCapabilityLabel),
+    fields: payload.fs,
+    fieldCount: payload.fs.length,
+    fieldLabels: payload.fs.map(field => field.lb || field.id),
+  };
+};
