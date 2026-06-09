@@ -54,7 +54,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.2.0',
+      Version: '4.3.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -104,7 +104,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (!payload) return showAlert(context);
 
       try {
-        await sendLiveApiCommand(settings, payload);
+        var result = await sendLiveApiCommand(settings, payload);
+        setButtonFeedback(context, settings, payload, result.nextState);
         showOk(context);
       } catch (error) {
         console.error('RGE Live API command failed', error);
@@ -133,7 +134,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
             body: JSON.stringify({ state: nextState, clientVersion: Date.now() })
           });
           if (!postResponse.ok) throw new Error('POST ' + postResponse.status);
-          return;
+          return { previousState: state, nextState: nextState };
         } catch (error) {
           lastError = error;
         }
@@ -204,6 +205,57 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         currentPage: { label: 'رقم الصفحة', type: 'number' }
       };
       return known[fieldId] || null;
+    }
+
+    function getFieldValue(state, fieldId, fallback) {
+      var fields = Array.isArray(state.fields) ? state.fields : [];
+      var field = fields.find(function(candidate) { return candidate.id === fieldId; });
+      return field ? field.value : fallback;
+    }
+
+    function setButtonFeedback(context, settings, command, state) {
+      try {
+        var title = buildButtonFeedbackTitle(settings.actionCommand, command, state);
+        if (title) setButtonTitle(context, title);
+      } catch (error) {
+        console.warn('Could not update Stream Deck title feedback', error);
+      }
+    }
+
+    function buildButtonFeedbackTitle(cmd, command, state) {
+      if (!state) return '';
+      if (command.action === 'set_visible' || command.action === 'toggle_visible') {
+        return state.isVisible ? 'LIVE' : 'OFF';
+      }
+      if (cmd === 'audio_toggle' || cmd === 'audio_on' || cmd === 'audio_off') {
+        return Boolean(getFieldValue(state, 'soundEnabled', true)) ? 'AUDIO\\nON' : 'AUDIO\\nOFF';
+      }
+      if (cmd === 'sfx_toggle') {
+        return Boolean(getFieldValue(state, 'sfxEnabled', true)) ? 'SFX\\nON' : 'SFX\\nOFF';
+      }
+      if (cmd === 'voice_toggle') {
+        return Boolean(getFieldValue(state, 'voiceEnabled', false)) ? 'VOICE\\nON' : 'VOICE\\nOFF';
+      }
+      if (cmd === 'audio_reset') return 'AUDIO\\nRESET';
+      if (cmd === 'transform_reset') return 'RESET\\nPOS';
+      if (cmd === 'score_home_plus' || cmd === 'score_home_minus') {
+        return 'HOME\\n' + String(getFieldValue(state, 'homeScore', 0));
+      }
+      if (cmd === 'score_away_plus' || cmd === 'score_away_minus') {
+        return 'AWAY\\n' + String(getFieldValue(state, 'awayScore', 0));
+      }
+      if (cmd === 'slide_next' || cmd === 'slide_prev' || cmd === 'slide_reset') {
+        return 'PAGE\\n' + String((Number(getFieldValue(state, 'currentPage', 0)) || 0) + 1);
+      }
+      return state.isVisible ? 'LIVE' : 'OFF';
+    }
+
+    function setButtonTitle(context, title) {
+      websocket.send(JSON.stringify({
+        event: 'setTitle',
+        context: context,
+        payload: { title: title, target: 0 }
+      }));
     }
 
     function mapCommand(cmd, target) {
@@ -482,7 +534,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_2.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_3.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -580,8 +632,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.2 تضيف أوامر
-                        الصوت وإعادة الضبط بدون إضافة endpoint جديد.
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.3 تضيف أوامر
+                        الصوت وإعادة الضبط مع feedback مباشر على عنوان الزر، بدون إضافة endpoint جديد.
                       </p>
                       <button
                         onClick={handleDownloadPlugin}
