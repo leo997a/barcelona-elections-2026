@@ -56,7 +56,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.4.0',
+      Version: '4.5.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -102,7 +102,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         return showAlert(context);
       }
 
-      var payload = mapCommand(settings.actionCommand, settings.overlayId);
+      var payload = mapCommand(settings.actionCommand, settings.overlayId, settings);
       if (!payload) return showAlert(context);
 
       try {
@@ -160,14 +160,14 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       } else if (command.action === 'set_visible') {
         next.isVisible = Boolean(command.value);
       } else if (command.action === 'update_field') {
-        next.fields = setFieldValue(fields, command.fieldId, command.value);
+        next.fields = setFieldValue(fields, command.fieldId, command.value, command.fieldMeta);
       } else if (command.action === 'toggle_field') {
         var field = fields.find(function(candidate) { return candidate.id === command.fieldId; });
         var fallback = 'fallback' in command ? Boolean(command.fallback) : false;
-        next.fields = setFieldValue(fields, command.fieldId, !Boolean(field ? field.value : fallback));
+        next.fields = setFieldValue(fields, command.fieldId, !Boolean(field ? field.value : fallback), command.fieldMeta);
       } else if (command.action === 'update_fields') {
         next.fields = (command.fields || []).reduce(function(acc, item) {
-          return setFieldValue(acc, item.fieldId, item.value);
+          return setFieldValue(acc, item.fieldId, item.value, item.fieldMeta);
         }, fields);
       } else if (command.action === 'increment_field') {
         next.fields = fields.map(function(field) {
@@ -180,7 +180,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       return next;
     }
 
-    function setFieldValue(fields, fieldId, value) {
+    function setFieldValue(fields, fieldId, value, fieldMeta) {
       var hasField = fields.some(function(field) { return field.id === fieldId; });
       if (hasField) {
         return fields.map(function(field) {
@@ -188,9 +188,28 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         });
       }
 
-      var meta = getKnownFieldMeta(fieldId);
+      var meta = fieldMeta || getKnownFieldMeta(fieldId);
       if (!meta) return fields;
       return fields.concat([Object.assign({}, meta, { id: fieldId, value: value })]);
+    }
+
+    function getTokenFieldMeta(settings, fieldId) {
+      var fields = Array.isArray(settings.tokenFields) ? settings.tokenFields : [];
+      var field = fields.find(function(candidate) { return candidate.id === fieldId; });
+      if (!field) return null;
+      var type = normalizeTokenFieldType(field.ty);
+      var meta = { label: field.lb || field.id, type: type };
+      if (field.min !== undefined) meta.min = field.min;
+      if (field.max !== undefined) meta.max = field.max;
+      if (field.step !== undefined) meta.step = field.step;
+      return meta;
+    }
+
+    function normalizeTokenFieldType(type) {
+      if (type === 'boolean' || type === 'number' || type === 'range' || type === 'select' || type === 'color' || type === 'image' || type === 'text') {
+        return type;
+      }
+      return 'text';
     }
 
     function getKnownFieldMeta(fieldId) {
@@ -260,8 +279,12 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       }));
     }
 
-    function mapCommand(cmd, target) {
-      if (cmd === 'toggle') return { action: 'toggle_visible', targetId: target };
+    function mapCommand(cmd, target, settings) {
+      if (cmd && cmd.indexOf('field_toggle:') === 0) {
+        var fieldId = cmd.substring('field_toggle:'.length);
+        return { action: 'toggle_field', targetId: target, fieldId: fieldId, fallback: false, fieldMeta: getTokenFieldMeta(settings || {}, fieldId) };
+      }
+      if (cmd === 'toggle') return { action: 'set_visible', targetId: target, value: true };
       if (cmd === 'set_on') return { action: 'set_visible', targetId: target, value: true };
       if (cmd === 'set_off') return { action: 'set_visible', targetId: target, value: false };
       if (cmd === 'audio_toggle') return { action: 'toggle_field', targetId: target, fieldId: 'soundEnabled', fallback: true };
@@ -301,6 +324,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (cmd === 'slide_next') return { action: 'increment_field', targetId: target, fieldId: 'currentPage', amount: 1 };
       if (cmd === 'slide_prev') return { action: 'increment_field', targetId: target, fieldId: 'currentPage', amount: -1 };
       if (cmd === 'slide_reset') return { action: 'update_field', targetId: target, fieldId: 'currentPage', value: 0 };
+      if (cmd === 'probability_old') return { action: 'update_field', targetId: target, fieldId: 'probabilityShiftMode', value: 'old' };
+      if (cmd === 'probability_today') return { action: 'update_field', targetId: target, fieldId: 'probabilityShiftMode', value: 'new' };
       return null;
     }
 
@@ -349,6 +374,9 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       <div id="details" style="margin-top:5px; display:none;">
         <div class="status-row"><span class="label">Name:</span> <span class="val" id="overlayName">-</span></div>
         <div class="status-row"><span class="label">Type:</span> <span class="val" id="overlayType">-</span></div>
+        <div class="status-row"><span class="label">Template:</span> <span class="val" id="templateId">-</span></div>
+        <div class="status-row"><span class="label">Fields:</span> <span class="val" id="fieldCount">0</span></div>
+        <div class="status-row"><span class="label">Capabilities:</span> <span class="val" id="capabilityList">-</span></div>
       </div>
     </div>
 
@@ -356,7 +384,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       <div class="sdpi-heading">Choose Action</div>
       <select id="actionCommand" onchange="saveSettings()"></select>
       <div id="toggleWarning" class="warning-box">
-        Toggle may hide the template unintentionally if pressed twice or if a duplicate command arrives. Use Show/Hide for live broadcast control.
+        Legacy Toggle is converted to safe Show in v4.5, so it will not hide a live template. Use Hide / TAKE OUT for خروج.
       </div>
       <div style="margin-top:8px; font-size:10px; color:#666;">
         This list changes based on the Smart Token type.
@@ -368,6 +396,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     var websocket = null;
     var uuid = null;
     var currentSettings = {};
+    var currentTokenData = null;
 
     function decodeBase64Url(input) {
       input = input.replace(/-/g, '+').replace(/_/g, '/');
@@ -405,6 +434,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (!raw.startsWith('rge_')) {
         statusBox.className = 'info-box invalid';
         document.getElementById('statusMsg').innerText = 'Invalid Token Format';
+        currentTokenData = null;
         details.style.display = 'none';
         actionDiv.style.display = 'none';
         return;
@@ -413,14 +443,20 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       try {
         var payload = JSON.parse(decodeBase64Url(raw.substring(4)));
         payload.ct = payload.ct || 'studio-live-control';
+        payload.fs = Array.isArray(payload.fs) ? payload.fs : [];
+        payload.cap = Array.isArray(payload.cap) ? payload.cap : [];
+        currentTokenData = payload;
 
         statusBox.className = 'info-box valid';
         document.getElementById('statusMsg').innerText = 'Token verified';
         document.getElementById('overlayName').innerText = payload.nm || 'Unknown';
         document.getElementById('overlayType').innerText = payload.tp || 'General';
+        document.getElementById('templateId').innerText = payload.tid || payload.id || '-';
+        document.getElementById('fieldCount').innerText = String(payload.fs.length || 0);
+        document.getElementById('capabilityList').innerText = payload.cap.length ? payload.cap.join(', ') : 'visibility';
         details.style.display = 'block';
 
-        populateActions(payload.tp);
+        populateActions(payload);
         actionDiv.style.display = 'block';
 
         if (shouldSave) {
@@ -435,52 +471,87 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       } catch (error) {
         statusBox.className = 'info-box invalid';
         document.getElementById('statusMsg').innerText = 'Corrupt Token Data';
+        currentTokenData = null;
         details.style.display = 'none';
         actionDiv.style.display = 'none';
       }
     }
 
-    function populateActions(type) {
+    function populateActions(token) {
       var select = document.getElementById('actionCommand');
       select.innerHTML = '';
+      var type = token.tp || 'GENERAL';
+      var fields = Array.isArray(token.fs) ? token.fs : [];
+      var caps = Array.isArray(token.cap) ? token.cap : [];
+      var fieldIds = fields.map(function(field) { return field.id; });
+      var hasField = function(id) { return fieldIds.indexOf(id) !== -1; };
+      var hasCap = function(id) { return caps.indexOf(id) !== -1; };
 
       var general = document.createElement('optgroup');
-      general.label = 'أوامر عامة';
+      general.label = 'Safe visibility';
       select.appendChild(general);
-      addOption(general, 'set_on', 'إدخال للبث');
-      addOption(general, 'set_off', 'إخراج من البث');
-      addOption(general, 'toggle', 'تبديل الظهور (قديم)');
+      addOption(general, 'set_on', 'Show / TAKE IN');
+      addOption(general, 'set_off', 'Hide / TAKE OUT');
+      addOption(general, 'toggle', 'Legacy Toggle - safe Show');
 
-      var audio = document.createElement('optgroup');
-      audio.label = 'الصوت والمشهد';
-      select.appendChild(audio);
-      addOption(audio, 'audio_toggle', 'تبديل الصوت');
-      addOption(audio, 'audio_on', 'تشغيل الصوت');
-      addOption(audio, 'audio_off', 'كتم الصوت');
-      addOption(audio, 'sfx_toggle', 'تبديل المؤثرات');
-      addOption(audio, 'voice_toggle', 'تبديل الصوت الحقيقي');
-      addOption(audio, 'audio_reset', 'Reset Audio Safe');
+      if (hasCap('audio') || ['soundEnabled', 'sfxEnabled', 'voiceEnabled', 'soundVolume'].some(hasField)) {
+        var audio = document.createElement('optgroup');
+        audio.label = 'Audio controls';
+        select.appendChild(audio);
+        addOption(audio, 'audio_toggle', 'Toggle master audio');
+        addOption(audio, 'audio_on', 'Audio ON');
+        addOption(audio, 'audio_off', 'Audio OFF');
+        if (hasField('sfxEnabled')) addOption(audio, 'sfx_toggle', 'Toggle SFX');
+        if (hasField('voiceEnabled')) addOption(audio, 'voice_toggle', 'Toggle voice');
+        addOption(audio, 'audio_reset', 'Reset Audio Safe');
+      }
 
-      var layout = document.createElement('optgroup');
-      layout.label = 'إعادة الضبط';
-      select.appendChild(layout);
-      addOption(layout, 'transform_reset', 'Reset Position / Scale');
+      if (hasCap('transform') || ['positionX', 'positionY', 'scale'].some(hasField)) {
+        var layout = document.createElement('optgroup');
+        layout.label = 'Transform';
+        select.appendChild(layout);
+        addOption(layout, 'transform_reset', 'Reset Position / Scale');
+      }
 
-      if (type === 'SCOREBOARD') {
+      if (hasCap('scoreboard') || (hasField('homeScore') && hasField('awayScore')) || type === 'SCOREBOARD') {
         var score = document.createElement('optgroup');
-        score.label = 'أوامر لوحة النتيجة';
+        score.label = 'Scoreboard';
         select.appendChild(score);
         addOption(score, 'score_home_plus', 'Home Score +1');
         addOption(score, 'score_away_plus', 'Away Score +1');
         addOption(score, 'score_home_minus', 'Home Score -1');
         addOption(score, 'score_away_minus', 'Away Score -1');
-      } else if (type === 'SMART_NEWS') {
+      }
+
+      if (hasCap('paging') || hasField('currentPage') || type === 'SMART_NEWS') {
         var slides = document.createElement('optgroup');
-        slides.label = 'Slide Controls';
+        slides.label = 'Pages / Slides';
         select.appendChild(slides);
         addOption(slides, 'slide_next', 'Next Slide');
         addOption(slides, 'slide_prev', 'Previous Slide');
         addOption(slides, 'slide_reset', 'Reset to Start');
+      }
+
+      if (hasCap('probability-shift') || hasField('probabilityShiftMode')) {
+        var probability = document.createElement('optgroup');
+        probability.label = 'Probability shift';
+        select.appendChild(probability);
+        addOption(probability, 'probability_old', 'Show old probabilities');
+        addOption(probability, 'probability_today', 'Show today update');
+      }
+
+      var dynamicBooleans = fields.filter(function(field) {
+        return field.ty === 'boolean'
+          && ['soundEnabled', 'sfxEnabled', 'voiceEnabled', 'mediaMuted'].indexOf(field.id) === -1;
+      }).slice(0, 12);
+
+      if (dynamicBooleans.length > 0) {
+        var toggles = document.createElement('optgroup');
+        toggles.label = 'Template toggles from token';
+        select.appendChild(toggles);
+        dynamicBooleans.forEach(function(field) {
+          addOption(toggles, 'field_toggle:' + field.id, 'Toggle ' + (field.lb || field.id));
+        });
       }
     }
 
@@ -492,9 +563,12 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     }
 
     function saveSettings(tokenData) {
+      var sourceToken = tokenData || currentTokenData || {};
       var payload = {
         rawToken: document.getElementById('rawToken').value,
-        actionCommand: document.getElementById('actionCommand').value
+        actionCommand: document.getElementById('actionCommand').value,
+        tokenFields: Array.isArray(sourceToken.fs) ? sourceToken.fs : (currentSettings.tokenFields || []),
+        tokenCaps: Array.isArray(sourceToken.cap) ? sourceToken.cap : (currentSettings.tokenCaps || [])
       };
       updateToggleWarning();
 
@@ -536,7 +610,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_4.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_5.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -634,8 +708,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.4 تضيف
-                        أيقونات فعلية داخل الحزمة مع أوامر الصوت وإعادة الضبط وfeedback مباشر.
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.5 تضيف
+                        قراءة ذكية لقدرات القالب وحقوله داخل Stream Deck مع أوامر آمنة للعرض والإخفاء.
                       </p>
                       <button
                         onClick={handleDownloadPlugin}
@@ -666,7 +740,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                         آلية التشغيل الجديدة
                       </strong>
                       <p className="mb-2">1. أنشئ أو حدّث الربط الآمن من صفحة الحماية.</p>
-                      <p className="mb-2">2. من المكتبة انسخ Smart Token الخاص بالقالب المطلوب.</p>
+                      <p className="mb-2">2. من المكتبة أو من داخل محرر القالب انسخ Smart Token الخاص بالقالب المطلوب.</p>
                       <p className="mb-2">3. ألصق التوكن داخل Stream Deck.</p>
                       <p>4. الأوامر ستصل مباشرة إلى قناة التحكم الخاصة بهذا الاستوديو فقط.</p>
                     </div>

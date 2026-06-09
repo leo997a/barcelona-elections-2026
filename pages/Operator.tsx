@@ -586,6 +586,32 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     if (hasField(overlay, 'scale')) updateField(overlay, 'scale', 1);
   };
 
+  const buildSilentPreviewOverlay = (overlay: OverlayConfig): OverlayConfig => {
+    const mutedIds = new Set(['soundEnabled', 'sfxEnabled', 'voiceEnabled']);
+    const zeroVolumeIds = new Set(['soundVolume', 'voiceVolume']);
+    const fields = overlay.fields.map(field => {
+      if (mutedIds.has(field.id)) return { ...field, value: false };
+      if (zeroVolumeIds.has(field.id)) return { ...field, value: 0 };
+      if (field.id === 'mediaMuted') return { ...field, value: true };
+      return field;
+    });
+
+    if (!fields.some(field => field.id === 'mediaMuted')) {
+      fields.push({ id: 'mediaMuted', label: 'Operator preview muted media', type: 'boolean', value: true });
+    }
+    if (!fields.some(field => field.id === 'soundEnabled')) {
+      fields.push({ id: 'soundEnabled', label: 'Operator preview muted audio', type: 'boolean', value: false });
+    }
+    if (!fields.some(field => field.id === 'sfxEnabled')) {
+      fields.push({ id: 'sfxEnabled', label: 'Operator preview muted sfx', type: 'boolean', value: false });
+    }
+    if (!fields.some(field => field.id === 'voiceEnabled')) {
+      fields.push({ id: 'voiceEnabled', label: 'Operator preview muted voice', type: 'boolean', value: false });
+    }
+
+    return { ...overlay, fields, isVisible: true };
+  };
+
   const showUndecided = selectedOverlay ? getFieldValue(selectedOverlay, 'showUndecided', true) === true : false;
   const selectedDesignStyle = selectedOverlay ? String(getFieldValue(selectedOverlay, 'designStyle', '')) : '';
 
@@ -657,7 +683,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
         String(value).toLowerCase().includes(operatorFieldNeedle),
       );
     });
-  const previewOverlay: OverlayConfig = { ...selectedOverlay, isVisible: true };
+  const previewOverlay = buildSilentPreviewOverlay(selectedOverlay);
   const programModeLabel = singleProgramMode ? 'فردي' : 'متعدد';
   const programModeTitle = singleProgramMode
     ? 'وضع البرنامج الواحد مفعل: إدخال قالب جديد يخرج القوالب الأخرى ويبقي قالبًا واحدًا في رابط البرنامج'

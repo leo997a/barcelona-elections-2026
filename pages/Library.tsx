@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
 import { Plus, Edit3, Trash2, Play, Key, Settings2, X, Star, Search, ChevronDown, BookOpen, FolderOpen, Tv, Link2, Check, SlidersHorizontal } from 'lucide-react';
 import { syncManager } from '../services/syncManager';
-import { encodeBase64UrlUtf8 } from '../utils/base64';
+import { buildSmartToken } from '../utils/smartToken';
 import { getTemplateMeta, getVisibleTemplates, createOverlayFromTemplate } from '../utils/templateRegistry';
 import { listCategories, listSubcategoriesFor, getTaxonomy, type CategoryKey } from '../utils/templateTaxonomy';
 import OverlayRenderer from '../components/OverlayRenderer';
@@ -374,18 +374,8 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRenam
 
   const handleCopyToken = (overlay: OverlayConfig, e: React.MouseEvent) => {
     e.stopPropagation();
-    const ctx = syncManager.getSmartTokenContext();
-    const payload = {
-      s: ctx?.studioId || syncManager.getStudioId(),
-      id: overlay.id,
-      tp: overlay.type,
-      nm: overlay.name,
-      sv: ctx?.provider || 'live-api',
-      ct: ctx?.controlAccessKey || 'studio-live-control',
-      u: window.location.origin,
-    };
     try {
-      navigator.clipboard.writeText('rge_' + encodeBase64UrlUtf8(JSON.stringify(payload)));
+      navigator.clipboard.writeText(buildSmartToken(overlay, syncManager.getSmartTokenContext(), window.location.origin));
       const btn = e.currentTarget as HTMLElement;
       const orig = btn.innerHTML;
       btn.innerHTML = '✓ تم';

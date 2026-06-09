@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload, Search } from 'lucide-react';
+import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload, Search, Key } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -55,6 +55,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableMetricItem } from '../components/editor/SortableMetricItem';
+import { buildSmartToken } from '../utils/smartToken';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -486,6 +487,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [aiError, setAiError] = useState(false);
   const [previewChroma, setPreviewChroma] = useState(false);
   const [editLinkCopied, setEditLinkCopied] = useState(false);
+  const [smartTokenCopied, setSmartTokenCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sponsorBackupInputRef = useRef<HTMLInputElement>(null);
   const screenshotInputRef = useRef<HTMLInputElement>(null);
@@ -1187,6 +1189,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setTimeout(() => setEditLinkCopied(false), 1800);
       } catch {
           alert('تعذر نسخ رابط التعديل');
+      }
+  };
+
+  const copySmartToken = async () => {
+      try {
+          await navigator.clipboard.writeText(buildSmartToken(draftOverlay, syncManager.getSmartTokenContext(), window.location.origin));
+          setSmartTokenCopied(true);
+          setTimeout(() => setSmartTokenCopied(false), 1800);
+      } catch {
+          alert('تعذر نسخ Smart Token');
       }
   };
 
@@ -4514,6 +4526,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     title="نسخ رابط تعديل هذا القالب">
                      <Copy className="w-3.5 h-3.5" />
                      <span>{editLinkCopied ? 'تم النسخ' : 'رابط التعديل'}</span>
+                 </button>
+                 <button
+                    onClick={copySmartToken}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600/15 hover:bg-yellow-600/25 text-yellow-300 rounded-lg text-xs font-bold border border-yellow-500/30 transition-colors"
+                    title="نسخ Smart Token لهذا القالب مع أوامر Stream Deck الذكية">
+                     <Key className="w-3.5 h-3.5" />
+                     <span>{smartTokenCopied ? 'تم النسخ' : 'Smart Token'}</span>
                  </button>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
