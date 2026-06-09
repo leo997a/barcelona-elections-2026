@@ -19,6 +19,8 @@ interface IntegrationsProps {
   overlays: OverlayConfig[];
 }
 
+const STREAM_DECK_ICON_PNG_BASE64 = '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';
+
 const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
   const [activeTab, setActiveTab] = useState<'plugin' | 'webdeck'>('plugin');
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'done'>('idle');
@@ -54,7 +56,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.3.0',
+      Version: '4.4.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -525,16 +527,16 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
     const images = folder.folder('images');
     if (images) {
-      images.file('actionIcon.png', '');
-      images.file('pluginIcon.png', '');
-      images.file('categoryIcon.png', '');
+      images.file('actionIcon.png', STREAM_DECK_ICON_PNG_BASE64, { base64: true });
+      images.file('pluginIcon.png', STREAM_DECK_ICON_PNG_BASE64, { base64: true });
+      images.file('categoryIcon.png', STREAM_DECK_ICON_PNG_BASE64, { base64: true });
     }
 
     const content = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_3.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_4.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -632,8 +634,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.3 تضيف أوامر
-                        الصوت وإعادة الضبط مع feedback مباشر على عنوان الزر، بدون إضافة endpoint جديد.
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.4 تضيف
+                        أيقونات فعلية داخل الحزمة مع أوامر الصوت وإعادة الضبط وfeedback مباشر.
                       </p>
                       <button
                         onClick={handleDownloadPlugin}
