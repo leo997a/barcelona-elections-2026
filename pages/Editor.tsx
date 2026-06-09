@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import OverlayRenderer from '../components/OverlayRenderer';
-import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload } from 'lucide-react';
+import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload, Search } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
 import { currencyService } from '../services/currencyService';
 import { syncManager } from '../services/syncManager';
@@ -570,8 +570,35 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [isAdminAuthorizing, setIsAdminAuthorizing] = useState(false);
   
   const [newSponsor, setNewSponsor] = useState({ name: '', amount: '', currency: 'SAR', countryCode: 'SA', avatar: '' });
+  const [sponsorCurrencySearch, setSponsorCurrencySearch] = useState('');
   const [isAddingSponsor, setIsAddingSponsor] = useState(false);
   const [previewUSD, setPreviewUSD] = useState<number | null>(null);
+  const sponsorCurrencyGroups = useMemo(() => {
+      const needle = sponsorCurrencySearch.trim().toLowerCase();
+      return CURRENCY_GROUPED_OPTIONS
+          .map(group => ({
+              ...group,
+              options: group.options.filter(curr => {
+                  if (!needle) return true;
+                  return [
+                      curr.code,
+                      curr.countryCode,
+                      curr.countryAr,
+                      curr.currencyAr,
+                      currencyOptionLabel(curr),
+                  ].some(value => String(value).toLowerCase().includes(needle));
+              }),
+          }))
+          .filter(group => group.options.length > 0);
+  }, [sponsorCurrencySearch]);
+  const sponsorCurrencyOptionCount = useMemo(
+      () => sponsorCurrencyGroups.reduce((sum, group) => sum + group.options.length, 0),
+      [sponsorCurrencyGroups],
+  );
+  const selectedSponsorCurrencyMeta = getCurrencyMeta(newSponsor.currency);
+  const selectedSponsorCurrencyVisible = sponsorCurrencyGroups.some(group =>
+      group.options.some(curr => curr.code === newSponsor.currency)
+  );
 
   const [topUpSponsorId, setTopUpSponsorId] = useState<string | null>(null);
   const [topUpAmount, setTopUpAmount] = useState('');
@@ -4066,7 +4093,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                   onChange={e => setNewSponsor({ ...newSponsor, name: e.target.value })}
                                   className="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                               />
-                              <div className="grid grid-cols-[1fr_150px] gap-2">
+                              <div className="relative">
+                                  <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
+                                  <input
+                                      type="text"
+                                      value={sponsorCurrencySearch}
+                                      onChange={e => setSponsorCurrencySearch(e.target.value)}
+                                      placeholder="بحث عن عملة أو دولة: العراق، السعودية، USD..."
+                                      className="w-full rounded-xl border border-gray-700 bg-gray-950 py-2 pl-3 pr-9 text-xs text-white outline-none transition-colors placeholder:text-gray-600 focus:border-emerald-500"
+                                      dir="rtl"
+                                  />
+                              </div>
+                              <div className="grid grid-cols-[minmax(0,1fr)_210px] gap-2">
                                   <input
                                       type="number"
                                       min="0"
@@ -4080,14 +4118,33 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                       onChange={e => handleNewSponsorCurrencyChange(e.target.value)}
                                       className="bg-gray-950 border border-gray-700 rounded-xl px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                                   >
-                                      {CURRENCY_GROUPED_OPTIONS.map(group => (
+                                      {selectedSponsorCurrencyMeta && !selectedSponsorCurrencyVisible && (
+                                          <optgroup label="العملة المختارة">
+                                              <option value={selectedSponsorCurrencyMeta.code}>{currencyOptionLabel(selectedSponsorCurrencyMeta)}</option>
+                                          </optgroup>
+                                      )}
+                                      {sponsorCurrencyGroups.map(group => (
                                           <optgroup key={group.group} label={group.label}>
                                               {group.options.map(curr => (
                                                   <option key={curr.code} value={curr.code}>{currencyOptionLabel(curr)}</option>
                                               ))}
                                           </optgroup>
                                       ))}
+                                      {sponsorCurrencyOptionCount === 0 && !selectedSponsorCurrencyMeta && (
+                                          <option value={newSponsor.currency}>لا توجد نتائج مطابقة</option>
+                                      )}
                                   </select>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] font-bold text-gray-500">
+                                  <span>العملات مرتبة حسب المنطقة، والنتائج الحالية: {sponsorCurrencyOptionCount}</span>
+                                  <button
+                                      type="button"
+                                      onClick={() => setSponsorCurrencySearch('')}
+                                      disabled={!sponsorCurrencySearch}
+                                      className="text-emerald-300 hover:text-white disabled:text-gray-700"
+                                  >
+                                      تصفير البحث
+                                  </button>
                               </div>
                               <div className="grid grid-cols-5 gap-1">
                                   {SPONSOR_QUICK_AMOUNTS.slice(0, 10).map(value => (
