@@ -3686,18 +3686,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       {probabilityShiftDealControls.map(deal => (
                         <div key={deal.idx} className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                           <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="text-[10px] font-black text-slate-500">نسبة خاصة للاعب {deal.idx}</div>
-                              <div className="truncate text-sm font-black text-white">{deal.player}</div>
-                            </div>
-                            <div className={`rounded-lg px-2 py-1 font-mono text-xs font-black ${deal.delta >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
-                              {deal.delta >= 0 ? '+' : ''}{deal.delta}%
-                            </div>
-                          </div>
-                          <div className="mt-3 grid grid-cols-2 gap-3">
-                            <label className="space-y-1">
+                             <div className="min-w-0">
+                               <div className="text-[10px] font-black text-slate-500">Deal {deal.idx}</div>
+                               <div className="truncate text-sm font-black text-white">{deal.player}</div>
+                             </div>
+                             <div className={`rounded-lg px-2 py-1 font-mono text-xs font-black ${deal.delta >= 0 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>
+                               {deal.delta >= 0 ? '+' : ''}{deal.delta}%
+                             </div>
+                           </div>
+                           <div className="mt-3 grid grid-cols-2 gap-3">
+                             <label className="space-y-1">
                               <div className="flex items-center justify-between text-[10px] font-bold text-rose-200/80">
-                                <span>النسبة القديمة</span>
+                                 <span>Old %</span>
                                 <span className="font-mono">{deal.oldPct}%</span>
                               </div>
                               <input
@@ -3712,7 +3712,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             </label>
                             <label className="space-y-1">
                               <div className="flex items-center justify-between text-[10px] font-bold text-emerald-200/80">
-                                <span>نسبة اليوم</span>
+                                 <span>New %</span>
                                 <span className="font-mono">{deal.newPct}%</span>
                               </div>
                               <input
@@ -3731,7 +3731,52 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                     </div>
                   </div>
                 )}
-                {draftOverlay.fields.map((field) => {
+                 {activeTab === 'fields' && isGlobalProbabilityShiftTemplate && (
+                   <div style={{ borderRadius: 16, border: '1px solid rgba(6,182,212,0.3)', padding: 16, background: 'rgba(6,182,212,0.07)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8 }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                       <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(6,182,212,0.2)', color: '#67e8f9', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AI</span>
+                       <span style={{ fontSize: 13, fontWeight: 900, color: '#67e8f9' }}>Smart JSON Box</span>
+                     </div>
+                     <p style={{ fontSize: 11, color: 'rgba(207,250,254,0.6)', lineHeight: 1.6, margin: 0 }}>
+                       Paste JSON array (max 6 deals). Keys: player, fromClub, toClub, oldPct, newPct, fee, status, source
+                     </p>
+                     <textarea
+                       rows={5}
+                       placeholder={'[{ "player": "...", "fromClub": "...", "toClub": "...", "oldPct": 45, "newPct": 82, "fee": "60M", "status": "...", "source": "..." }]'}
+                       style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(6,182,212,0.25)', padding: '10px 12px', fontFamily: 'monospace', fontSize: 11, background: 'rgba(2,6,23,0.85)', color: '#cbd5e1', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+                       onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {
+                         const raw = e.target.value.trim();
+                         if (!raw) return;
+                         try {
+                           const parsed = JSON.parse(raw);
+                           const arr: Record<string, unknown>[] = Array.isArray(parsed) ? parsed : [parsed];
+                           const updates: Record<string, unknown> = {};
+                           arr.slice(0, 6).forEach((item, i) => {
+                             const n = i + 1;
+                             if (item.player) updates['deal' + n + 'Player'] = String(item.player);
+                             if (item.fromClub) updates['deal' + n + 'From'] = String(item.fromClub);
+                             if (item.toClub) updates['deal' + n + 'To'] = String(item.toClub);
+                             if (item.fee) updates['deal' + n + 'Fee'] = String(item.fee);
+                             if (item.status) updates['deal' + n + 'Status'] = String(item.status);
+                             if (item.source) updates['deal' + n + 'Source'] = String(item.source);
+                             const op = Number(item.oldPct);
+                             const np = Number(item.newPct);
+                             if (Number.isFinite(op)) updates['deal' + n + 'OldPct'] = Math.max(0, Math.min(100, Math.round(op)));
+                             if (Number.isFinite(np)) updates['deal' + n + 'NewPct'] = Math.max(0, Math.min(100, Math.round(np)));
+                           });
+                           if (Object.keys(updates).length > 0) {
+                             handleDraftFieldChanges(updates);
+                             e.target.value = '';
+                             e.target.style.borderColor = 'rgba(34,197,94,0.5)';
+                             e.target.placeholder = 'Applied ' + arr.slice(0, 6).length + ' deals!';
+                             setTimeout(() => { e.target.style.borderColor = 'rgba(6,182,212,0.25)'; }, 2500);
+                           }
+                         } catch { /* invalid JSON */ }
+                       }}
+                     />
+                   </div>
+                 )}
+                 {draftOverlay.fields.map((field) => {
                   if (field.type === 'hidden' || field.id === 'currentPage') return null;
                   if (isProbabilityShiftTemplate && /^deal[1-6](OldPct|NewPct)$/.test(field.id)) return null;
 

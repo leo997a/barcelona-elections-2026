@@ -1534,36 +1534,106 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
     const pct = activePct(deal);
     const change = delta(deal);
     const color = probabilityColor(pct, t);
+    const isFeatured = deal.idx === featured.idx;
+    const tierLabel = pct >= 80 ? 'ساخن' : pct >= 62 ? 'متقدم' : pct >= 45 ? 'مراقبة' : 'فاتر';
     return (
       <div
-        className={`relative overflow-hidden rounded-lg transition-all duration-700 ${horizontal ? 'px-3 py-2' : compact ? 'p-2.5' : 'p-3'}`}
+        className={`relative overflow-hidden rounded-xl ${horizontal ? 'px-4 py-3' : compact ? 'p-3' : 'p-4'}`}
         style={{
-          background: deal.idx === featured.idx ? `linear-gradient(135deg, ${color}18, ${t.surfaceDeep} 65%)` : t.surface,
-          border: `1px solid ${deal.idx === featured.idx ? `${color}75` : t.border}`,
-          animation: showNew ? `globalDealReveal 720ms cubic-bezier(.2,.8,.2,1) ${deal.idx * 70}ms both` : undefined,
+          background: isFeatured
+            ? `linear-gradient(135deg, ${color}22 0%, ${t.surfaceDeep} 50%, ${t.surface} 100%)`
+            : `linear-gradient(135deg, ${t.surface} 0%, ${t.surfaceDeep} 100%)`,
+          border: `1px solid ${isFeatured ? `${color}80` : t.border}`,
+          boxShadow: isFeatured ? `0 0 20px ${color}18, inset 0 0 0 1px ${color}10` : 'none',
+          animation: showNew ? `globalDealReveal 600ms cubic-bezier(.16,.84,.44,1) ${deal.idx * 80}ms both` : undefined,
         }}
       >
-        <div className="absolute inset-y-0 right-0 w-[3px]" style={{ background: color }} />
+        {/* Color accent bar */}
+        <div className="absolute top-0 right-0 left-0 h-[2px]" style={{
+          background: `linear-gradient(to left, transparent, ${color}, transparent)`,
+          opacity: isFeatured ? 1 : 0.6,
+        }} />
+        {/* Right accent stripe */}
+        <div className="absolute inset-y-0 right-0 w-[3px] rounded-r-xl" style={{
+          background: `linear-gradient(to bottom, ${color}, ${color}40)`,
+        }} />
         <div className={`flex ${horizontal ? 'items-center' : 'items-start'} gap-3`}>
-          <Avatar t={t} name={deal.player} image={deal.image} accent={color} size={compact || horizontal ? 42 : 54} />
+          {/* Player avatar with glow */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full blur-sm opacity-40" style={{ background: color }} />
+            <Avatar t={t} name={deal.player} image={deal.image} accent={color} size={compact || horizontal ? 44 : 56} />
+          </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate font-black" style={{ color: t.text, fontSize: compact ? 13 : 16 }}>{deal.player}</div>
-                <div className="truncate text-[9px] mt-0.5" style={{ color }}>{deal.status}</div>
+            {/* Top row: name + percentage */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-black leading-tight" style={{ color: t.text, fontSize: compact ? 13 : 15 }}>{deal.player}</div>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span className="rounded-sm px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide" style={{
+                    background: `${color}20`,
+                    color,
+                    border: `1px solid ${color}35`,
+                  }}>{tierLabel}</span>
+                  {deal.status && <span className="truncate text-[8px]" style={{ color: t.dim }}>{deal.status}</span>}
+                </div>
               </div>
+              {/* Percentage display — the critical animation target */}
               <div className="shrink-0 text-left">
-                <div className="font-mono font-black leading-none transition-all duration-1000" style={{ color, fontSize: compact ? 23 : 30 }}>{pct}%</div>
-                <div className="mt-1 text-[9px] font-mono font-black" style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>
+                <div
+                  className="font-mono font-black leading-none"
+                  style={{
+                    color,
+                    fontSize: compact ? 26 : 32,
+                    // Flash animation on showNew change
+                    animation: showNew
+                      ? `globalPctFlip 500ms cubic-bezier(.34,1.56,.64,1) ${deal.idx * 90}ms both`
+                      : undefined,
+                    textShadow: isFeatured ? `0 0 18px ${color}80` : 'none',
+                  }}
+                >{pct}%</div>
+                <div className="mt-1 flex items-center justify-end gap-1 text-[9px] font-mono font-black">
+                  <span style={{ color: '#ff5c8a' }}>{deal.oldPct}%</span>
+                  <span style={{ color: t.dim }}>→</span>
+                  <span style={{ color: '#38f5c8' }}>{deal.newPct}%</span>
+                </div>
+                <div className={`mt-0.5 text-center text-[10px] font-mono font-black rounded px-1.5 py-0.5`} style={{
+                  color: change >= 0 ? t.success : '#ff5c8a',
+                  background: change >= 0 ? `${t.success}15` : 'rgba(255,92,138,0.12)',
+                }}>
                   {change >= 0 ? '+' : ''}{change}%
                 </div>
               </div>
             </div>
-            <div className="mt-2"><Route deal={deal} compact={compact || horizontal} /></div>
+            {/* Club route */}
+            <div className="mt-2.5"><Route deal={deal} compact={compact || horizontal} /></div>
+            {/* Bar: old → new */}
             {!horizontal && (
-              <div className="mt-2 flex items-center justify-between gap-2 text-[8px]">
-                <span className="truncate" style={{ color: t.dim }}>{sourceLabel}: {deal.source}</span>
-                <span className="shrink-0 font-mono" style={{ color: t.sub }}>{oldLabel} {deal.oldPct}%</span>
+              <div className="mt-2.5 relative h-2 rounded-full overflow-hidden" style={{ background: `rgba(255,92,138,0.14)` }}>
+                {/* Old position marker */}
+                <div className="absolute top-0 bottom-0 left-0 rounded-full" style={{
+                  width: `${deal.oldPct}%`,
+                  background: 'rgba(255,92,138,0.35)',
+                }} />
+                {/* New fill */}
+                <div className="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-[1200ms] ease-out" style={{
+                  width: `${pct}%`,
+                  background: `linear-gradient(to right, ${color}80, ${color})`,
+                }} />
+                {/* Old marker line */}
+                {showNew && (
+                  <span className="absolute top-0 h-full w-[2px]" style={{
+                    left: `${deal.oldPct}%`,
+                    background: 'rgba(255,255,255,0.7)',
+                  }} />
+                )}
+              </div>
+            )}
+            {!horizontal && (
+              <div className="mt-1.5 flex items-center justify-between text-[8px]">
+                <span style={{ color: t.dim }}>{sourceLabel}: <span style={{ color: t.sub }}>{deal.source || '—'}</span></span>
+                <span className="font-black" style={{ color: probabilityLabel(pct) === 'ساخنة جدًا' ? t.success : color }}>
+                  {probabilityLabel(pct)}
+                </span>
               </div>
             )}
           </div>
@@ -1600,35 +1670,99 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
   );
 
   const FeaturedPanel = ({ wide = false }: { wide?: boolean }) => {
-    const color = probabilityColor(activePct(featured), t);
+    const pct = activePct(featured);
+    const color = probabilityColor(pct, t);
+    const change = delta(featured);
+    const tierLabel = pct >= 80 ? 'ساخن جدًا 🔥' : pct >= 62 ? 'متقدم' : pct >= 45 ? 'مراقبة' : 'فاتر';
     return (
-      <div className={`relative overflow-hidden rounded-xl ${wide ? 'p-4 grid grid-cols-[auto_1fr_220px] items-center gap-5' : 'p-5 flex flex-col'}`} style={{
-        background: `radial-gradient(circle at 25% 25%, ${color}24, ${t.surfaceDeep} 58%)`,
-        border: `1px solid ${color}65`,
+      <div className={`relative overflow-hidden rounded-2xl ${wide ? 'p-5 grid grid-cols-[auto_1fr_240px] items-center gap-5' : 'p-5 flex flex-col'}`} style={{
+        background: `radial-gradient(ellipse at 30% 20%, ${color}28 0%, ${t.surfaceDeep} 55%, ${t.surface} 100%)`,
+        border: `1.5px solid ${color}70`,
+        boxShadow: `0 0 40px ${color}20, 0 0 80px ${color}08`,
       }}>
-        <div className="absolute inset-0 opacity-[0.08]" style={{
+        {/* Grid overlay pattern */}
+        <div className="absolute inset-0 opacity-[0.055]" style={{
           backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`,
-          backgroundSize: '34px 34px',
+          backgroundSize: '28px 28px',
         }} />
-        <div className="relative">
-          <Avatar t={t} name={featured.player} image={featured.image} accent={color} size={wide ? 92 : 118} />
+        {/* Top glow bar */}
+        <div className="absolute top-0 left-0 right-0 h-[3px]" style={{
+          background: `linear-gradient(to right, transparent, ${color}, ${color}, transparent)`,
+        }} />
+        {/* Corner shine */}
+        <div className="absolute top-0 left-0 w-40 h-40 rounded-full opacity-15 pointer-events-none" style={{
+          background: `radial-gradient(circle, ${color}, transparent 70%)`,
+        }} />
+        {/* Avatar with animated glow ring */}
+        <div className="relative shrink-0">
+          <div className="absolute inset-0 rounded-full opacity-50 blur-md" style={{ background: color }} />
+          <div className="relative rounded-full p-[3px]" style={{ background: `conic-gradient(${color}, ${color}40, ${color})` }}>
+            <div className="rounded-full overflow-hidden" style={{
+              width: wide ? 92 : 114,
+              height: wide ? 92 : 114,
+              background: t.surfaceDeep,
+            }}>
+              <Avatar t={t} name={featured.player} image={featured.image} accent={color} size={wide ? 86 : 108} />
+            </div>
+          </div>
+          {/* Tier badge on avatar */}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[8px] font-black whitespace-nowrap" style={{
+            background: `${color}20`,
+            border: `1px solid ${color}60`,
+            color,
+          }}>{tierLabel}</div>
         </div>
-        <div className={`relative min-w-0 ${wide ? '' : 'mt-5 text-center'}`}>
-          <div className="text-[9px] font-black uppercase tracking-[0.24em]" style={{ color }}>{featuredLabel}</div>
-          <div className="mt-1 truncate text-[28px] font-black" style={{ color: t.text }}>{featured.player}</div>
-          <div className="mt-3"><Route deal={featured} /></div>
-          <div className="mt-3 flex items-center gap-2 text-[9px]">
-            <span className="rounded px-2 py-1" style={{ color: t.sub, background: t.surface }}>{featured.status}</span>
-            <span className="truncate" style={{ color: t.dim }}>{sourceLabel}: {featured.source}</span>
+        <div className={`relative min-w-0 ${wide ? '' : 'mt-6 text-center'}`}>
+          <div className="text-[9px] font-black uppercase tracking-[0.28em] mb-1" style={{ color }}>{featuredLabel}</div>
+          <div className="truncate text-[24px] font-black leading-tight" style={{ color: t.text }}>{featured.player}</div>
+          <div className="mt-2"><Route deal={featured} /></div>
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {featured.status && (
+              <span className="rounded-full px-2.5 py-0.5 text-[9px] font-bold" style={{ background: t.surface, color: t.sub, border: `1px solid ${t.border}` }}>{featured.status}</span>
+            )}
+            {featured.source && (
+              <span className="truncate text-[8px]" style={{ color: t.dim }}>{sourceLabel}: {featured.source}</span>
+            )}
           </div>
         </div>
-        <div className={`relative ${wide ? 'text-center' : 'mt-auto pt-5 text-center'}`}>
-          <div className="font-mono text-[72px] font-black leading-none transition-all duration-1000" style={{ color }}>{activePct(featured)}%</div>
-          <div className="mt-2 flex items-center justify-center gap-2 font-mono text-[10px]">
-            <span style={{ color: '#ff5c8a' }}>{featured.oldPct}%</span>
-            <Icon name="arrow" size={13} color={color} />
-            <span style={{ color }}>{featured.newPct}%</span>
+        {/* Percentage hero block */}
+        <div className={`relative ${wide ? 'text-center' : 'mt-auto pt-4 text-center'}`}>
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: t.dim }}>احتمال الانتقال</div>
+          <div className="font-mono leading-none" style={{
+            color,
+            fontSize: wide ? 68 : 76,
+            fontWeight: 900,
+            textShadow: `0 0 30px ${color}70, 0 0 60px ${color}30`,
+            animation: showNew ? 'globalPctFlip 600ms cubic-bezier(.34,1.56,.64,1) both' : undefined,
+          }}>{pct}%</div>
+          {/* Old → New row */}
+          <div className="mt-2 flex items-center justify-center gap-3 text-[11px] font-mono font-black">
+            <span className="rounded-lg px-2 py-1" style={{ color: '#ff5c8a', background: 'rgba(255,92,138,0.12)', border: '1px solid rgba(255,92,138,0.25)' }}>
+              {featured.oldPct}%
+            </span>
+            <span style={{ color: t.dim }}>→</span>
+            <span className="rounded-lg px-2 py-1" style={{ color: '#38f5c8', background: 'rgba(56,245,200,0.12)', border: '1px solid rgba(56,245,200,0.25)' }}>
+              {featured.newPct}%
+            </span>
+            <span className="rounded-lg px-2 py-1" style={{
+              color: change >= 0 ? t.success : '#ff5c8a',
+              background: change >= 0 ? `${t.success}15` : 'rgba(255,92,138,0.12)',
+              border: `1px solid ${change >= 0 ? t.success : '#ff5c8a'}35`,
+            }}>{change >= 0 ? '+' : ''}{change}%</span>
           </div>
+          {/* Dual-layer bar */}
+          <div className="mt-3 h-2.5 rounded-full overflow-hidden relative" style={{ background: 'rgba(255,92,138,0.14)' }}>
+            <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${featured.oldPct}%`, background: 'rgba(255,92,138,0.3)' }} />
+            <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-[1400ms] ease-out" style={{
+              width: `${pct}%`,
+              background: `linear-gradient(to right, ${color}70, ${color})`,
+              animation: showNew ? 'globalBarSweep 1.4s ease-out both' : undefined,
+            }} />
+            {showNew && (
+              <span className="absolute top-0 h-full w-[2px]" style={{ left: `${featured.oldPct}%`, background: 'rgba(255,255,255,0.8)' }} />
+            )}
+          </div>
+          <div className="mt-1 text-[9px] font-black" style={{ color }}>{probabilityLabel(pct)}</div>
         </div>
       </div>
     );
@@ -1636,10 +1770,21 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
 
   const MotionStyles = () => (
     <style>{`
-      @keyframes globalDealReveal { 0% { opacity:.45; transform:translateY(12px) scale(.985); } 100% { opacity:1; transform:none; } }
+      @keyframes globalDealReveal { 0% { opacity:.3; transform:translateY(16px) scale(.97); } 100% { opacity:1; transform:none; } }
       @keyframes globalRoutePulse { 0% { opacity:.2; transform:translateX(8px) scale(.7); } 55% { opacity:1; transform:translateX(-3px) scale(1.2); } 100% { opacity:1; transform:none; } }
       @keyframes globalOrbit { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
       @keyframes globalScan { 0% { transform:translateX(110%); opacity:0; } 20%,70% { opacity:.8; } 100% { transform:translateX(-110%); opacity:0; } }
+      @keyframes globalPctFlip {
+        0%   { opacity:0; transform:translateY(-14px) scale(.82); filter:blur(4px); }
+        40%  { opacity:1; filter:blur(0); }
+        60%  { transform:translateY(3px) scale(1.06); }
+        80%  { transform:translateY(-1px) scale(0.98); }
+        100% { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+      }
+      @keyframes globalBarSweep {
+        0%   { transform:scaleX(0); transform-origin:left; }
+        100% { transform:scaleX(1); transform-origin:left; }
+      }
     `}</style>
   );
 
