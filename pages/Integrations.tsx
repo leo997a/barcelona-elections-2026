@@ -56,7 +56,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.5.0',
+      Version: '4.6.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -265,7 +265,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (cmd === 'score_away_plus' || cmd === 'score_away_minus') {
         return 'AWAY\\n' + String(getFieldValue(state, 'awayScore', 0));
       }
-      if (cmd === 'slide_next' || cmd === 'slide_prev' || cmd === 'slide_reset') {
+      if (cmd === 'slide_next' || cmd === 'slide_prev' || cmd === 'slide_reset' || cmd === 'slide_go_to') {
         return 'PAGE\\n' + String((Number(getFieldValue(state, 'currentPage', 0)) || 0) + 1);
       }
       return state.isVisible ? 'LIVE' : 'OFF';
@@ -324,6 +324,10 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       if (cmd === 'slide_next') return { action: 'increment_field', targetId: target, fieldId: 'currentPage', amount: 1 };
       if (cmd === 'slide_prev') return { action: 'increment_field', targetId: target, fieldId: 'currentPage', amount: -1 };
       if (cmd === 'slide_reset') return { action: 'update_field', targetId: target, fieldId: 'currentPage', value: 0 };
+      if (cmd === 'slide_go_to') {
+        var oneBasedPage = Math.max(1, Math.floor(Number(settings.pageNumber) || 1));
+        return { action: 'update_field', targetId: target, fieldId: 'currentPage', value: oneBasedPage - 1 };
+      }
       if (cmd === 'probability_old') return { action: 'update_field', targetId: target, fieldId: 'probabilityShiftMode', value: 'old' };
       if (cmd === 'probability_today') return { action: 'update_field', targetId: target, fieldId: 'probabilityShiftMode', value: 'new' };
       return null;
@@ -382,9 +386,16 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
     <div id="actionConfig" style="display:none;">
       <div class="sdpi-heading">Choose Action</div>
-      <select id="actionCommand" onchange="saveSettings()"></select>
+      <select id="actionCommand" onchange="handleActionCommandChange()"></select>
+      <div id="pageNumberConfig" style="display:none; margin-top:8px;">
+        <div class="sdpi-heading" style="margin-top:8px;">Page number</div>
+        <input type="number" id="pageNumber" min="1" step="1" value="1" onchange="saveSettings()" oninput="saveSettings()">
+        <div style="margin-top:6px; font-size:10px; color:#777;">
+          Stream Deck shows pages from 1, while the template stores currentPage internally from 0.
+        </div>
+      </div>
       <div id="toggleWarning" class="warning-box">
-        Legacy Toggle is converted to safe Show in v4.5, so it will not hide a live template. Use Hide / TAKE OUT for خروج.
+        Legacy Toggle is converted to safe Show in v4.6, so it will not hide a live template. Use Hide / TAKE OUT for خروج.
       </div>
       <div style="margin-top:8px; font-size:10px; color:#666;">
         This list changes based on the Smart Token type.
@@ -413,6 +424,9 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       var info = JSON.parse(inActionInfo);
       if (info.payload && info.payload.settings) {
         currentSettings = info.payload.settings;
+        if (currentSettings.pageNumber) {
+          document.getElementById('pageNumber').value = String(currentSettings.pageNumber);
+        }
         if (currentSettings.rawToken) {
           document.getElementById('rawToken').value = currentSettings.rawToken;
           parseToken(false);
@@ -467,7 +481,11 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         } else if (currentSettings.actionCommand) {
           document.getElementById('actionCommand').value = currentSettings.actionCommand;
         }
+        if (currentSettings.pageNumber) {
+          document.getElementById('pageNumber').value = String(currentSettings.pageNumber);
+        }
         updateToggleWarning();
+        updatePageNumberVisibility();
       } catch (error) {
         statusBox.className = 'info-box invalid';
         document.getElementById('statusMsg').innerText = 'Corrupt Token Data';
@@ -530,6 +548,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         addOption(slides, 'slide_next', 'Next Slide');
         addOption(slides, 'slide_prev', 'Previous Slide');
         addOption(slides, 'slide_reset', 'Reset to Start');
+        addOption(slides, 'slide_go_to', 'Go to page number');
       }
 
       if (hasCap('probability-shift') || hasField('probabilityShiftMode')) {
@@ -567,10 +586,12 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       var payload = {
         rawToken: document.getElementById('rawToken').value,
         actionCommand: document.getElementById('actionCommand').value,
+        pageNumber: Math.max(1, Math.floor(Number(document.getElementById('pageNumber').value) || 1)),
         tokenFields: Array.isArray(sourceToken.fs) ? sourceToken.fs : (currentSettings.tokenFields || []),
         tokenCaps: Array.isArray(sourceToken.cap) ? sourceToken.cap : (currentSettings.tokenCaps || [])
       };
       updateToggleWarning();
+      updatePageNumberVisibility();
 
       if (tokenData) {
         payload.studioId = tokenData.s;
@@ -588,10 +609,22 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: payload }));
     }
 
+    function handleActionCommandChange() {
+      updateToggleWarning();
+      updatePageNumberVisibility();
+      saveSettings();
+    }
+
     function updateToggleWarning() {
       var warning = document.getElementById('toggleWarning');
       var select = document.getElementById('actionCommand');
       if (warning && select) warning.style.display = select.value === 'toggle' ? 'block' : 'none';
+    }
+
+    function updatePageNumberVisibility() {
+      var row = document.getElementById('pageNumberConfig');
+      var select = document.getElementById('actionCommand');
+      if (row && select) row.style.display = select.value === 'slide_go_to' ? 'block' : 'none';
     }
   </script>
 </body>
@@ -610,7 +643,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_5.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_6.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -708,7 +741,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.5 تضيف
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.6 تضيف
                         قراءة ذكية لقدرات القالب وحقوله داخل Stream Deck مع أوامر آمنة للعرض والإخفاء.
                       </p>
                       <button
