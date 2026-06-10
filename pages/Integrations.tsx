@@ -56,7 +56,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       Description: 'Official Live API controller for REO Live overlays',
       Name: 'RGE Live Controller',
       Icon: 'images/pluginIcon',
-      Version: '4.6.0',
+      Version: '4.7.0',
       OS: [
         { Platform: 'mac', MinimumVersion: '10.11' },
         { Platform: 'windows', MinimumVersion: '10' },
@@ -347,15 +347,17 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     folder.file('index.html', indexHtml);
 
     const piHtml = `<!DOCTYPE html>
-<html>
+<html dir="rtl" lang="ar">
 <head>
   <meta charset="utf-8" />
-  <title>RGE Live Settings</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>إعدادات RGE Live</title>
   <style>
-    body { background-color: #2d2d2d; color: #b0b0b0; font-family: sans-serif; font-size: 12px; padding: 12px; }
+    body { background-color: #2d2d2d; color: #b0b0b0; direction: rtl; text-align: right; font-family: Tahoma, Arial, sans-serif; font-size: 12px; padding: 12px; }
     .sdpi-heading { color: #888; text-transform: uppercase; font-size: 10px; font-weight: bold; margin-bottom: 8px; margin-top: 16px; }
     input, select { width: 100%; padding: 6px; background: #3d3d3d; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
     input:focus { border-color: #3b82f6; outline: none; }
+    button { width: 100%; margin-top: 8px; padding: 7px; border: 1px solid #4b5563; border-radius: 4px; background: #374151; color: white; cursor: pointer; }
     .token-box { font-family: monospace; font-size: 10px; color: #84cc16; }
     .info-box { background: #333; padding: 8px; border-radius: 4px; margin-top: 5px; display: none; border-left: 2px solid #888; }
     .info-box.valid { border-color: #84cc16; display: block; }
@@ -370,35 +372,37 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 </head>
 <body>
   <div class="sdpi-wrapper">
-    <div class="sdpi-heading">RGE Smart Token</div>
-    <input type="text" id="rawToken" class="token-box" placeholder="Paste rge_... token here" onchange="parseToken()">
+    <div class="sdpi-heading">مفتاح القالب الذكي</div>
+    <input type="text" id="rawToken" class="token-box" placeholder="ألصق rge_... هنا" onchange="parseToken()">
 
     <div id="statusBox" class="info-box">
-      <div id="statusMsg">Waiting for token...</div>
+      <div id="statusMsg">بانتظار المفتاح...</div>
       <div id="details" style="margin-top:5px; display:none;">
-        <div class="status-row"><span class="label">Name:</span> <span class="val" id="overlayName">-</span></div>
-        <div class="status-row"><span class="label">Type:</span> <span class="val" id="overlayType">-</span></div>
-        <div class="status-row"><span class="label">Template:</span> <span class="val" id="templateId">-</span></div>
-        <div class="status-row"><span class="label">Fields:</span> <span class="val" id="fieldCount">0</span></div>
-        <div class="status-row"><span class="label">Capabilities:</span> <span class="val" id="capabilityList">-</span></div>
+        <div class="status-row"><span class="label">الاسم:</span> <span class="val" id="overlayName">-</span></div>
+        <div class="status-row"><span class="label">النوع:</span> <span class="val" id="overlayType">-</span></div>
+        <div class="status-row"><span class="label">القالب:</span> <span class="val" id="templateId">-</span></div>
+        <div class="status-row"><span class="label">الحقول:</span> <span class="val" id="fieldCount">0</span></div>
+        <div class="status-row"><span class="label">القدرات:</span> <span class="val" id="capabilityList">-</span></div>
       </div>
+      <button type="button" onclick="testDirectConnection()">فحص الاتصال المباشر</button>
+      <div id="connectionResult" style="margin-top:7px; font-size:10px; line-height:1.5;"></div>
     </div>
 
     <div id="actionConfig" style="display:none;">
-      <div class="sdpi-heading">Choose Action</div>
+      <div class="sdpi-heading">اختر الأمر</div>
       <select id="actionCommand" onchange="handleActionCommandChange()"></select>
       <div id="pageNumberConfig" style="display:none; margin-top:8px;">
-        <div class="sdpi-heading" style="margin-top:8px;">Page number</div>
+        <div class="sdpi-heading" style="margin-top:8px;">رقم الصفحة</div>
         <input type="number" id="pageNumber" min="1" step="1" value="1" onchange="saveSettings()" oninput="saveSettings()">
         <div style="margin-top:6px; font-size:10px; color:#777;">
-          Stream Deck shows pages from 1, while the template stores currentPage internally from 0.
+          اكتب رقم الصفحة كما تراه. سيتم تحويله داخليًا إلى currentPage بشكل صحيح.
         </div>
       </div>
       <div id="toggleWarning" class="warning-box">
-        Legacy Toggle is converted to safe Show in v4.6, so it will not hide a live template. Use Hide / TAKE OUT for خروج.
+        أمر التبديل القديم يتحول إلى إظهار آمن، حتى لا يخفي قالبًا مباشرًا بالخطأ.
       </div>
       <div style="margin-top:8px; font-size:10px; color:#666;">
-        This list changes based on the Smart Token type.
+        تتغير قائمة الأوامر تلقائيًا حسب نوع القالب وقدرات Smart Token.
       </div>
     </div>
   </div>
@@ -447,7 +451,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
       if (!raw.startsWith('rge_')) {
         statusBox.className = 'info-box invalid';
-        document.getElementById('statusMsg').innerText = 'Invalid Token Format';
+        document.getElementById('statusMsg').innerText = 'صيغة المفتاح غير صحيحة';
         currentTokenData = null;
         details.style.display = 'none';
         actionDiv.style.display = 'none';
@@ -462,25 +466,23 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         currentTokenData = payload;
 
         statusBox.className = 'info-box valid';
-        document.getElementById('statusMsg').innerText = 'Token verified';
-        document.getElementById('overlayName').innerText = payload.nm || 'Unknown';
-        document.getElementById('overlayType').innerText = payload.tp || 'General';
+        document.getElementById('statusMsg').innerText = 'تم التحقق من المفتاح';
+        document.getElementById('overlayName').innerText = payload.nm || 'غير معروف';
+        document.getElementById('overlayType').innerText = payload.tp || 'عام';
         document.getElementById('templateId').innerText = payload.tid || payload.id || '-';
         document.getElementById('fieldCount').innerText = String(payload.fs.length || 0);
-        document.getElementById('capabilityList').innerText = payload.cap.length ? payload.cap.join(', ') : 'visibility';
+        document.getElementById('capabilityList').innerText = payload.cap.length ? payload.cap.join(', ') : 'ظهور';
         details.style.display = 'block';
 
         populateActions(payload);
         actionDiv.style.display = 'block';
 
-        if (shouldSave) {
-          if (!currentSettings.actionCommand) {
-            document.getElementById('actionCommand').selectedIndex = 0;
-          }
-          saveSettings(payload);
-        } else if (currentSettings.actionCommand) {
-          document.getElementById('actionCommand').value = currentSettings.actionCommand;
-        }
+        var actionSelect = document.getElementById('actionCommand');
+        var savedActionExists = currentSettings.actionCommand
+          && Array.prototype.some.call(actionSelect.options, function(option) { return option.value === currentSettings.actionCommand; });
+        if (savedActionExists) actionSelect.value = currentSettings.actionCommand;
+        else actionSelect.selectedIndex = 0;
+        if (shouldSave) saveSettings(payload);
         if (currentSettings.pageNumber) {
           document.getElementById('pageNumber').value = String(currentSettings.pageNumber);
         }
@@ -488,7 +490,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         updatePageNumberVisibility();
       } catch (error) {
         statusBox.className = 'info-box invalid';
-        document.getElementById('statusMsg').innerText = 'Corrupt Token Data';
+        document.getElementById('statusMsg').innerText = 'بيانات المفتاح تالفة';
         currentTokenData = null;
         details.style.display = 'none';
         actionDiv.style.display = 'none';
@@ -506,57 +508,57 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       var hasCap = function(id) { return caps.indexOf(id) !== -1; };
 
       var general = document.createElement('optgroup');
-      general.label = 'Safe visibility';
+      general.label = 'ظهور آمن';
       select.appendChild(general);
-      addOption(general, 'set_on', 'Show / TAKE IN');
-      addOption(general, 'set_off', 'Hide / TAKE OUT');
-      addOption(general, 'toggle', 'Legacy Toggle - safe Show');
+      addOption(general, 'set_on', 'إظهار القالب');
+      addOption(general, 'set_off', 'إخفاء القالب');
+      addOption(general, 'toggle', 'تبديل قديم - يتحول إلى إظهار آمن');
 
       if (hasCap('audio') || ['soundEnabled', 'sfxEnabled', 'voiceEnabled', 'soundVolume'].some(hasField)) {
         var audio = document.createElement('optgroup');
-        audio.label = 'Audio controls';
+        audio.label = 'الصوت';
         select.appendChild(audio);
-        addOption(audio, 'audio_toggle', 'Toggle master audio');
-        addOption(audio, 'audio_on', 'Audio ON');
-        addOption(audio, 'audio_off', 'Audio OFF');
-        if (hasField('sfxEnabled')) addOption(audio, 'sfx_toggle', 'Toggle SFX');
-        if (hasField('voiceEnabled')) addOption(audio, 'voice_toggle', 'Toggle voice');
-        addOption(audio, 'audio_reset', 'Reset Audio Safe');
+        addOption(audio, 'audio_toggle', 'تبديل الصوت الرئيسي');
+        addOption(audio, 'audio_on', 'تشغيل الصوت');
+        addOption(audio, 'audio_off', 'إيقاف الصوت');
+        if (hasField('sfxEnabled')) addOption(audio, 'sfx_toggle', 'تبديل المؤثرات');
+        if (hasField('voiceEnabled')) addOption(audio, 'voice_toggle', 'تبديل الصوت الحقيقي');
+        addOption(audio, 'audio_reset', 'إعادة ضبط الصوت بأمان');
       }
 
       if (hasCap('transform') || ['positionX', 'positionY', 'scale'].some(hasField)) {
         var layout = document.createElement('optgroup');
-        layout.label = 'Transform';
+        layout.label = 'الموضع والحجم';
         select.appendChild(layout);
-        addOption(layout, 'transform_reset', 'Reset Position / Scale');
+        addOption(layout, 'transform_reset', 'إعادة ضبط الموضع والحجم');
       }
 
       if (hasCap('scoreboard') || (hasField('homeScore') && hasField('awayScore')) || type === 'SCOREBOARD') {
         var score = document.createElement('optgroup');
-        score.label = 'Scoreboard';
+        score.label = 'لوحة النتيجة';
         select.appendChild(score);
-        addOption(score, 'score_home_plus', 'Home Score +1');
-        addOption(score, 'score_away_plus', 'Away Score +1');
-        addOption(score, 'score_home_minus', 'Home Score -1');
-        addOption(score, 'score_away_minus', 'Away Score -1');
+        addOption(score, 'score_home_plus', 'زيادة نتيجة الفريق الأول');
+        addOption(score, 'score_away_plus', 'زيادة نتيجة الفريق الثاني');
+        addOption(score, 'score_home_minus', 'إنقاص نتيجة الفريق الأول');
+        addOption(score, 'score_away_minus', 'إنقاص نتيجة الفريق الثاني');
       }
 
       if (hasCap('paging') || hasField('currentPage') || type === 'SMART_NEWS') {
         var slides = document.createElement('optgroup');
-        slides.label = 'Pages / Slides';
+        slides.label = 'صفحات القالب';
         select.appendChild(slides);
-        addOption(slides, 'slide_next', 'Next Slide');
-        addOption(slides, 'slide_prev', 'Previous Slide');
-        addOption(slides, 'slide_reset', 'Reset to Start');
-        addOption(slides, 'slide_go_to', 'Go to page number');
+        addOption(slides, 'slide_next', 'الصفحة التالية');
+        addOption(slides, 'slide_prev', 'الصفحة السابقة');
+        addOption(slides, 'slide_reset', 'الصفحة الأولى');
+        addOption(slides, 'slide_go_to', 'اختيار رقم الصفحة');
       }
 
       if (hasCap('probability-shift') || hasField('probabilityShiftMode')) {
         var probability = document.createElement('optgroup');
-        probability.label = 'Probability shift';
+        probability.label = 'تحول النسب';
         select.appendChild(probability);
-        addOption(probability, 'probability_old', 'Show old probabilities');
-        addOption(probability, 'probability_today', 'Show today update');
+        addOption(probability, 'probability_old', 'عرض النسب القديمة');
+        addOption(probability, 'probability_today', 'عرض تحديث اليوم');
       }
 
       var dynamicBooleans = fields.filter(function(field) {
@@ -566,10 +568,10 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
 
       if (dynamicBooleans.length > 0) {
         var toggles = document.createElement('optgroup');
-        toggles.label = 'Template toggles from token';
+        toggles.label = 'خيارات القالب من المفتاح';
         select.appendChild(toggles);
         dynamicBooleans.forEach(function(field) {
-          addOption(toggles, 'field_toggle:' + field.id, 'Toggle ' + (field.lb || field.id));
+          addOption(toggles, 'field_toggle:' + field.id, 'تبديل: ' + (field.lb || field.id));
         });
       }
     }
@@ -579,6 +581,37 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       option.value = value;
       option.innerText = text;
       parent.appendChild(option);
+    }
+
+    function testDirectConnection() {
+      var result = document.getElementById('connectionResult');
+      var token = currentTokenData || {};
+      var overlayId = token.id || currentSettings.overlayId;
+      var siteUrl = token.u || currentSettings.siteUrl || 'https://barcelona-elections-2026.vercel.app';
+      if (!overlayId) {
+        result.innerText = 'ألصق Smart Token صالحًا أولًا.';
+        result.style.color = '#fca5a5';
+        return;
+      }
+
+      var endpoint = String(siteUrl).replace(/\\/+$/, '') + '/api/live?id=' + encodeURIComponent(overlayId);
+      result.innerText = 'جارٍ فحص Live API المباشر...';
+      result.style.color = '#fde68a';
+      fetch(endpoint + '&_=' + Date.now(), { cache: 'no-store' })
+        .then(function(response) {
+          if (response.status === 404) {
+            result.innerText = 'الاتصال المباشر ناجح، لكن القالب غير منشور حاليًا في Live API.';
+            result.style.color = '#fde68a';
+            return;
+          }
+          if (!response.ok) throw new Error('GET ' + response.status);
+          result.innerText = 'الاتصال المباشر ناجح والقالب منشور في Live API.';
+          result.style.color = '#86efac';
+        })
+        .catch(function(error) {
+          result.innerText = 'فشل الاتصال المباشر: ' + error.message;
+          result.style.color = '#fca5a5';
+        });
     }
 
     function saveSettings(tokenData) {
@@ -643,7 +676,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
     const url = URL.createObjectURL(content);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'RGE_Live_Controller_v4_6.streamDeckPlugin';
+    link.download = 'RGE_Live_Controller_v4_7.streamDeckPlugin';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -741,8 +774,8 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
                       </h3>
                       <p className="mb-6 max-w-2xl text-sm leading-7 text-gray-400">
                         الإضافة ستُنشأ وفي داخلها مسار Live API فقط، بينما صلاحية
-                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.6 تضيف
-                        قراءة ذكية لقدرات القالب وحقوله داخل Stream Deck مع أوامر آمنة للعرض والإخفاء.
+                        التحكم الفعلية تأتي من Smart Token لكل قالب على حدة. نسخة v4.7 تضيف
+                        واجهة عربية سليمة، حفظ آخر أمر ورقم صفحة، فحص اتصال Live API مباشر، وأوامر آمنة حسب قدرات القالب.
                       </p>
                       <button
                         onClick={handleDownloadPlugin}
