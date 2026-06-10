@@ -270,6 +270,8 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
     String(getField('deal2NewPct') || ''),           // probability_shift
     String(getField('deal3NewPct') || ''),           // probability_shift
     String(getField('deal4NewPct') || ''),           // probability_shift
+    String(getField('deal5NewPct') || ''),           // global_probability_shift
+    String(getField('deal6NewPct') || ''),           // global_probability_shift
   ].join('|');
 
   useEffect(() => {
@@ -291,6 +293,7 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
           {variant === 'deadline_hour' && <DeadlineHourVariant t={t} getField={getField} />}
           {variant === 'source_confidence' && <SourceConfidenceVariant t={t} getField={getField} />}
           {variant === 'probability_shift' && <ProbabilityShiftVariant t={t} getField={getField} />}
+          {variant === 'global_probability_shift' && <GlobalProbabilityShiftVariant t={t} getField={getField} />}
           {variant === 'clause_reveal' && <ClauseRevealVariant t={t} getField={getField} />}
           {variant === 'medical_tracker' && <MedicalTrackerVariant t={t} getField={getField} />}
           {variant === 'hijack_alert' && <HijackAlertVariant t={t} getField={getField} />}
@@ -1429,6 +1432,282 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
             {showNew && <div className="mt-2 text-[10px] font-mono" style={{ color: delta(featured) >= 0 ? t.success : '#ff5c8a' }}>{delta(featured) >= 0 ? '+' : ''}{delta(featured)}% منذ النموذج القديم</div>}
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+interface GlobalProbabilityDeal extends ProbabilityShiftDeal {
+  fromLogo: string;
+  toLogo: string;
+  fee: string;
+  status: string;
+  source: string;
+}
+
+const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
+  const mode = String(getField('probabilityShiftMode') || 'old');
+  const showNew = mode === 'new';
+  const layout = String(getField('matrixLayout') || 'global_exchange');
+  const title = String(getField('matrixTitle') || 'شبكة تحوّل نسب الصفقات العالمية');
+  const subtitle = String(getField('matrixSubtitle') || '');
+  const eyebrow = String(getField('matrixEyebrow') || 'GLOBAL MERCATO INTELLIGENCE');
+  const updateDate = String(getField('updateDate') || '');
+  const oldLabel = String(getField('oldLabel') || 'النسبة السابقة');
+  const newLabel = String(getField('newLabel') || 'النسبة الجديدة');
+  const movementLabel = String(getField('movementLabel') || 'حركة السوق');
+  const featuredLabel = String(getField('featuredLabel') || 'الصفقة الرئيسية');
+  const sourceLabel = String(getField('sourceLabel') || 'المصدر');
+  const featuredDealIndex = Math.max(1, Math.min(6, Number(getField('featuredDealIndex') || 1)));
+
+  const deals: GlobalProbabilityDeal[] = [1, 2, 3, 4, 5, 6].map(idx => ({
+    idx,
+    player: String(getField(`deal${idx}Player`) || `اسم اللاعب ${idx}`),
+    fromClub: String(getField(`deal${idx}From`) || 'النادي الحالي'),
+    toClub: String(getField(`deal${idx}To`) || 'النادي المهتم'),
+    image: String(getField(`deal${idx}Image`) || ''),
+    fromLogo: String(getField(`deal${idx}FromLogo`) || ''),
+    toLogo: String(getField(`deal${idx}ToLogo`) || ''),
+    oldPct: clampPercent(getField(`deal${idx}OldPct`)),
+    newPct: clampPercent(getField(`deal${idx}NewPct`)),
+    fee: String(getField(`deal${idx}Fee`) || ''),
+    status: String(getField(`deal${idx}Status`) || ''),
+    source: String(getField(`deal${idx}Source`) || ''),
+  }));
+  const visibleDeals = deals.filter(deal => deal.player.trim());
+  const featured = visibleDeals.find(deal => deal.idx === featuredDealIndex) || visibleDeals[0] || deals[0];
+  const supportingDeals = visibleDeals.filter(deal => deal.idx !== featured.idx);
+  const activePct = (deal: GlobalProbabilityDeal) => showNew ? deal.newPct : deal.oldPct;
+  const delta = (deal: GlobalProbabilityDeal) => deal.newPct - deal.oldPct;
+  const average = (key: 'oldPct' | 'newPct') => visibleDeals.length
+    ? Math.round(visibleDeals.reduce((sum, deal) => sum + deal[key], 0) / visibleDeals.length)
+    : 0;
+  const avgOld = average('oldPct');
+  const avgNew = average('newPct');
+  const risingCount = visibleDeals.filter(deal => delta(deal) > 0).length;
+  const fallingCount = visibleDeals.filter(deal => delta(deal) < 0).length;
+  const modeColor = showNew ? '#38f5c8' : '#ff5c8a';
+
+  const ClubMark: React.FC<{ logo: string; name: string; size?: number }> = ({ logo, name, size = 32 }) => (
+    <div
+      className="shrink-0 rounded-lg flex items-center justify-center overflow-hidden font-black"
+      style={{
+        width: size,
+        height: size,
+        color: t.text,
+        background: t.surfaceDeep,
+        border: `1px solid ${t.border}`,
+        fontSize: Math.max(9, size * 0.28),
+      }}
+    >
+      {logo ? <img src={logo} alt="" className="h-full w-full object-contain p-1" /> : getInitials(name)}
+    </div>
+  );
+
+  const Route: React.FC<{ deal: GlobalProbabilityDeal; compact?: boolean }> = ({ deal, compact }) => (
+    <div className="flex items-center gap-2 min-w-0" dir="rtl">
+      <ClubMark logo={deal.fromLogo} name={deal.fromClub} size={compact ? 26 : 34} />
+      <div className="min-w-0 text-right">
+        <div className="truncate font-bold" style={{ color: t.text, fontSize: compact ? 9 : 11 }}>{deal.fromClub}</div>
+        <div className="h-[2px] mt-1 overflow-hidden rounded-full" style={{ background: t.border }}>
+          <div
+            className="h-full rounded-full transition-all duration-1000"
+            style={{ width: `${activePct(deal)}%`, background: probabilityColor(activePct(deal), t) }}
+          />
+        </div>
+      </div>
+      <div className="shrink-0" style={{
+        color: probabilityColor(activePct(deal), t),
+        animation: showNew ? `globalRoutePulse 1.1s ease-out ${deal.idx * 80}ms both` : undefined,
+      }}>
+        <Icon name="arrow" size={compact ? 13 : 17} color="currentColor" />
+      </div>
+      <div className="min-w-0 text-left">
+        <div className="truncate font-bold" style={{ color: t.text, fontSize: compact ? 9 : 11 }}>{deal.toClub}</div>
+        <div className="mt-1 text-[8px] font-mono truncate" style={{ color: t.dim }}>{deal.fee}</div>
+      </div>
+      <ClubMark logo={deal.toLogo} name={deal.toClub} size={compact ? 26 : 34} />
+    </div>
+  );
+
+  const DealCard: React.FC<{ deal: GlobalProbabilityDeal; compact?: boolean; horizontal?: boolean }> = ({ deal, compact, horizontal }) => {
+    const pct = activePct(deal);
+    const change = delta(deal);
+    const color = probabilityColor(pct, t);
+    return (
+      <div
+        className={`relative overflow-hidden rounded-lg transition-all duration-700 ${horizontal ? 'px-3 py-2' : compact ? 'p-2.5' : 'p-3'}`}
+        style={{
+          background: deal.idx === featured.idx ? `linear-gradient(135deg, ${color}18, ${t.surfaceDeep} 65%)` : t.surface,
+          border: `1px solid ${deal.idx === featured.idx ? `${color}75` : t.border}`,
+          animation: showNew ? `globalDealReveal 720ms cubic-bezier(.2,.8,.2,1) ${deal.idx * 70}ms both` : undefined,
+        }}
+      >
+        <div className="absolute inset-y-0 right-0 w-[3px]" style={{ background: color }} />
+        <div className={`flex ${horizontal ? 'items-center' : 'items-start'} gap-3`}>
+          <Avatar t={t} name={deal.player} image={deal.image} accent={color} size={compact || horizontal ? 42 : 54} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate font-black" style={{ color: t.text, fontSize: compact ? 13 : 16 }}>{deal.player}</div>
+                <div className="truncate text-[9px] mt-0.5" style={{ color }}>{deal.status}</div>
+              </div>
+              <div className="shrink-0 text-left">
+                <div className="font-mono font-black leading-none transition-all duration-1000" style={{ color, fontSize: compact ? 23 : 30 }}>{pct}%</div>
+                <div className="mt-1 text-[9px] font-mono font-black" style={{ color: change >= 0 ? t.success : '#ff5c8a' }}>
+                  {change >= 0 ? '+' : ''}{change}%
+                </div>
+              </div>
+            </div>
+            <div className="mt-2"><Route deal={deal} compact={compact || horizontal} /></div>
+            {!horizontal && (
+              <div className="mt-2 flex items-center justify-between gap-2 text-[8px]">
+                <span className="truncate" style={{ color: t.dim }}>{sourceLabel}: {deal.source}</span>
+                <span className="shrink-0 font-mono" style={{ color: t.sub }}>{oldLabel} {deal.oldPct}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const HeaderBar = () => (
+    <div className="relative overflow-hidden rounded-xl px-5 py-3 flex items-center justify-between gap-5" style={{
+      background: `linear-gradient(135deg, ${t.surfaceDeep}, ${t.surface})`,
+      border: `1px solid ${t.border}`,
+    }}>
+      <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${modeColor}, ${t.accent2}, transparent)` }} />
+      <div className="min-w-0">
+        <div className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: modeColor }}>{eyebrow}</div>
+        <div className="mt-1 truncate text-[26px] font-black leading-none" style={{ color: t.text }}>{title}</div>
+        <div className="mt-1 truncate text-[10px]" style={{ color: t.sub }}>{subtitle}</div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {[
+          { label: oldLabel, value: `${avgOld}%`, color: '#ff5c8a' },
+          { label: newLabel, value: `${avgNew}%`, color: '#38f5c8' },
+          { label: movementLabel, value: `${avgNew - avgOld >= 0 ? '+' : ''}${avgNew - avgOld}%`, color: modeColor },
+        ].map(item => (
+          <div key={item.label} className="rounded-lg px-3 py-1.5 text-center" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="text-[7px] font-black truncate max-w-24" style={{ color: t.dim }}>{item.label}</div>
+            <div className="font-mono text-[18px] font-black" style={{ color: item.color }}>{item.value}</div>
+          </div>
+        ))}
+        <Pill t={t} color={modeColor} label={showNew ? (updateDate || newLabel) : oldLabel} pulse={showNew} />
+      </div>
+    </div>
+  );
+
+  const FeaturedPanel = ({ wide = false }: { wide?: boolean }) => {
+    const color = probabilityColor(activePct(featured), t);
+    return (
+      <div className={`relative overflow-hidden rounded-xl ${wide ? 'p-4 grid grid-cols-[auto_1fr_220px] items-center gap-5' : 'p-5 flex flex-col'}`} style={{
+        background: `radial-gradient(circle at 25% 25%, ${color}24, ${t.surfaceDeep} 58%)`,
+        border: `1px solid ${color}65`,
+      }}>
+        <div className="absolute inset-0 opacity-[0.08]" style={{
+          backgroundImage: `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`,
+          backgroundSize: '34px 34px',
+        }} />
+        <div className="relative">
+          <Avatar t={t} name={featured.player} image={featured.image} accent={color} size={wide ? 92 : 118} />
+        </div>
+        <div className={`relative min-w-0 ${wide ? '' : 'mt-5 text-center'}`}>
+          <div className="text-[9px] font-black uppercase tracking-[0.24em]" style={{ color }}>{featuredLabel}</div>
+          <div className="mt-1 truncate text-[28px] font-black" style={{ color: t.text }}>{featured.player}</div>
+          <div className="mt-3"><Route deal={featured} /></div>
+          <div className="mt-3 flex items-center gap-2 text-[9px]">
+            <span className="rounded px-2 py-1" style={{ color: t.sub, background: t.surface }}>{featured.status}</span>
+            <span className="truncate" style={{ color: t.dim }}>{sourceLabel}: {featured.source}</span>
+          </div>
+        </div>
+        <div className={`relative ${wide ? 'text-center' : 'mt-auto pt-5 text-center'}`}>
+          <div className="font-mono text-[72px] font-black leading-none transition-all duration-1000" style={{ color }}>{activePct(featured)}%</div>
+          <div className="mt-2 flex items-center justify-center gap-2 font-mono text-[10px]">
+            <span style={{ color: '#ff5c8a' }}>{featured.oldPct}%</span>
+            <Icon name="arrow" size={13} color={color} />
+            <span style={{ color }}>{featured.newPct}%</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const MotionStyles = () => (
+    <style>{`
+      @keyframes globalDealReveal { 0% { opacity:.45; transform:translateY(12px) scale(.985); } 100% { opacity:1; transform:none; } }
+      @keyframes globalRoutePulse { 0% { opacity:.2; transform:translateX(8px) scale(.7); } 55% { opacity:1; transform:translateX(-3px) scale(1.2); } 100% { opacity:1; transform:none; } }
+      @keyframes globalOrbit { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+      @keyframes globalScan { 0% { transform:translateX(110%); opacity:0; } 20%,70% { opacity:.8; } 100% { transform:translateX(-110%); opacity:0; } }
+    `}</style>
+  );
+
+  if (layout === 'orbit_network') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <MotionStyles /><HeaderBar />
+        <div className="flex-1 grid grid-cols-[1fr_440px_1fr] gap-3 min-h-0">
+          <div className="grid grid-rows-3 gap-3">{supportingDeals.slice(0, 3).map(deal => <DealCard key={deal.idx} deal={deal} compact />)}</div>
+          <div className="relative rounded-full p-10 flex items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle, ${modeColor}18, ${t.surfaceDeep} 68%)`, border: `1px solid ${modeColor}45` }}>
+            <div className="absolute inset-6 rounded-full border opacity-30" style={{ borderColor: modeColor, animation: 'globalOrbit 18s linear infinite' }} />
+            <div className="absolute inset-16 rounded-full border border-dashed opacity-25" style={{ borderColor: t.accent2, animation: 'globalOrbit 12s linear reverse infinite' }} />
+            <FeaturedPanel />
+          </div>
+          <div className="grid grid-rows-3 gap-3">{supportingDeals.slice(3, 6).map(deal => <DealCard key={deal.idx} deal={deal} compact />)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === 'broadcast_wall') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <MotionStyles /><HeaderBar />
+        <div className="h-[42%]"><FeaturedPanel wide /></div>
+        <div className="flex-1 grid grid-cols-5 gap-3 min-h-0">{supportingDeals.slice(0, 5).map(deal => <DealCard key={deal.idx} deal={deal} compact />)}</div>
+      </div>
+    );
+  }
+
+  if (layout === 'route_race') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <MotionStyles /><HeaderBar />
+        <div className="flex-1 rounded-xl p-4 grid grid-rows-6 gap-2 relative overflow-hidden" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="absolute inset-y-0 w-20 opacity-20 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${modeColor}, transparent)`, animation: showNew ? 'globalScan 1.8s ease-out both' : undefined }} />
+          {visibleDeals.map(deal => <DealCard key={deal.idx} deal={deal} horizontal />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (layout === 'deal_ticker_lab') {
+    return (
+      <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+        <MotionStyles /><HeaderBar />
+        <div className="flex-1 grid grid-cols-[300px_1fr] gap-3 min-h-0">
+          <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>{movementLabel}</div>
+            {[
+              { label: 'صفقات صاعدة', value: risingCount, color: t.success },
+              { label: 'صفقات متراجعة', value: fallingCount, color: '#ff5c8a' },
+              { label: 'إجمالي الملفات', value: visibleDeals.length, color: t.accent },
+            ].map(item => <FieldCard key={item.label} t={t} label={item.label} value={String(item.value)} accent={item.color} />)}
+            <div className="mt-auto"><DealCard deal={featured} compact /></div>
+          </div>
+          <div className="grid grid-cols-2 grid-rows-3 gap-3 min-h-0">{visibleDeals.map(deal => <DealCard key={deal.idx} deal={deal} compact />)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
+      <MotionStyles /><HeaderBar />
+      <div className="flex-1 grid grid-cols-[390px_1fr] gap-3 min-h-0">
+        <FeaturedPanel />
+        <div className="grid grid-cols-2 gap-3 min-h-0">{supportingDeals.slice(0, 5).map(deal => <DealCard key={deal.idx} deal={deal} />)}</div>
       </div>
     </div>
   );

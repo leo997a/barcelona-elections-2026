@@ -476,7 +476,7 @@ const getInputError = (body: AiRequestBody): string | null => {
 const fieldManifest = (fields?: Record<string, unknown>) => {
   if (!fields) return 'لا توجد حقول مرسلة.';
   return Object.entries(fields)
-    .slice(0, 90)
+    .slice(0, 140)
     .map(([id, value]) => `${id}: ${String(value ?? '').slice(0, 180)}`)
     .join('\n');
 };
@@ -763,6 +763,17 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       const rawText = body.rawText?.trim() || '';
       const templateType = body.templateType || body.overlayType || 'broadcast overlay';
       const overlayName = body.overlayName || templateType;
+      const isGlobalProbabilityMatrix = String(body.currentFields?.mercatoVariant || '') === 'global_probability_shift';
+      const probabilityMatrixInstructions = isGlobalProbabilityMatrix
+        ? (
+            'تعليمات خاصة بقالب شبكة نسب الصفقات العالمية:\n' +
+            '- استخرج حتى ست صفقات مستقلة من النص، بالترتيب، واملأ لكل صفقة المفاتيح dealNPlayer/dealNFrom/dealNTo/dealNOldPct/dealNNewPct/dealNFee/dealNStatus/dealNSource.\n' +
+            '- النسبة السابقة والجديدة تخصان اللاعب نفسه. لا تضع نسبة صفقة في صفقة أخرى.\n' +
+            '- لا تفترض أن الوجهة برشلونة؛ استخدم الناديين المذكورين لكل صفقة مهما كانا.\n' +
+            '- لا تخترع نسبة أو قيمة أو مصدرًا غير موجود في النص. اترك القيمة الحالية عند غياب المعلومة.\n' +
+            '- يمكنك تحديث matrixTitle وmatrixSubtitle، لكن لا تغيّر matrixLayout أو probabilityShiftMode أو حقول الصوت.\n'
+          )
+        : '';
       const imageParts: GeminiPart[] = (body.images || []).slice(0, 2).map(image => ({
         inlineData: {
           mimeType: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
@@ -783,6 +794,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
                 '- إذا كان القالب أخبارا، قسّم عدة أخبار إلى صفحات قصيرة، واجعل pagesData عبارة عن JSON string لمصفوفة نصوص.\n' +
                 '- إذا كان القالب ميركاتو أو بطاقة لاعب، املأ playerName/fromClub/toClub/headline/subheadline/playerStatsJson/marketItems عندما تكون مناسبة.\n' +
                 '- لا تخترع نتيجة مباراة مباشرة. لا تضع إحصائيات رقمية مؤكدة إذا لم تكن في النص؛ يمكن وضع تقديرات تحريرية كنصوص مثل \"غير متوفر\".\n' +
+                probabilityMatrixInstructions +
                 '- أعد JSON فقط بهذا الشكل: {"fields":{"fieldId":"value"},"title":"عنوان قصير","subtitle":"سطر داعم","assetHints":{"playerName":"...","clubName":"...","fromClub":"...","toClub":"..."},"notes":["تنبيه قصير"]}\n' +
                 `الحقول الحالية:\n${fieldManifest(body.currentFields)}\n\n` +
                 `المدخل:\n${rawText}`,

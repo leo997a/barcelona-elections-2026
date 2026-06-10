@@ -747,7 +747,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
   const mercadoVariant = String(getDraftValue('mercatoVariant') || '');
-  const isProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED && mercadoVariant === 'probability_shift';
+  const isGlobalProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED && mercadoVariant === 'global_probability_shift';
+  const isProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED &&
+    (mercadoVariant === 'probability_shift' || isGlobalProbabilityShiftTemplate);
+  const probabilityShiftDealCount = isGlobalProbabilityShiftTemplate ? 6 : 4;
   const probabilityShiftMode = String(getDraftValue('probabilityShiftMode') || 'old');
 
   const formatProbabilityShiftToday = () => {
@@ -770,7 +773,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
   };
 
-  const probabilityShiftDealControls = [1, 2, 3, 4].map(idx => {
+  const probabilityShiftDealControls = Array.from({ length: probabilityShiftDealCount }, (_, index) => index + 1).map(idx => {
     const oldPct = normalizeProbabilityPercent(getDraftValue(`deal${idx}OldPct`));
     const newPct = normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`));
     return {
@@ -984,6 +987,27 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
               const slotLogo = findAssetUrl([slotClub, ...assetCandidates(slotClub)], clubs);
               if (slotImage && !String(updates[imageId] || current[imageId] || '').trim()) updates[imageId] = slotImage;
               if (slotLogo && !String(updates[logoId] || current[logoId] || '').trim()) updates[logoId] = slotLogo;
+          });
+      }
+
+      if (isGlobalProbabilityShiftTemplate) {
+          [1, 2, 3, 4, 5, 6].forEach(idx => {
+              const playerId = `deal${idx}Player`;
+              const fromId = `deal${idx}From`;
+              const toId = `deal${idx}To`;
+              const playerImageId = `deal${idx}Image`;
+              const fromLogoId = `deal${idx}FromLogo`;
+              const toLogoId = `deal${idx}ToLogo`;
+              const dealPlayer = String(updates[playerId] || current[playerId] || '').trim();
+              const dealFrom = String(updates[fromId] || current[fromId] || '').trim();
+              const dealTo = String(updates[toId] || current[toId] || '').trim();
+              const dealImage = findAssetUrl([dealPlayer, ...assetCandidates(dealPlayer)], renders) ||
+                  findAssetUrl([dealPlayer, ...assetCandidates(dealPlayer)], players);
+              const dealFromLogo = findAssetUrl([dealFrom, ...assetCandidates(dealFrom)], clubs);
+              const dealToLogo = findAssetUrl([dealTo, ...assetCandidates(dealTo)], clubs);
+              if (dealImage && !String(updates[playerImageId] || current[playerImageId] || '').trim()) updates[playerImageId] = dealImage;
+              if (dealFromLogo && !String(updates[fromLogoId] || current[fromLogoId] || '').trim()) updates[fromLogoId] = dealFromLogo;
+              if (dealToLogo && !String(updates[toLogoId] || current[toLogoId] || '').trim()) updates[toLogoId] = dealToLogo;
           });
       }
 
@@ -1469,6 +1493,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   if (!generated) throw new Error('AI returned no template data');
 
                   updates = { ...(generated.fields || {}) };
+                  if (isGlobalProbabilityShiftTemplate) {
+                      updates.probabilityShiftMode = 'old';
+                      updates.updateDate = formatProbabilityShiftToday();
+                  }
                   const headlineField = ['headline', 'title', 'content', 'specialText'].find(id => id in currentFields);
                   const subtitleField = ['subheadline', 'subline', 'bodyText', 'subtitle'].find(id => id in currentFields);
                   if (generated.title && headlineField && !updates[headlineField]) updates[headlineField] = generated.title;
@@ -3705,7 +3733,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 )}
                 {draftOverlay.fields.map((field) => {
                   if (field.type === 'hidden' || field.id === 'currentPage') return null;
-                  if (isProbabilityShiftTemplate && /^deal[1-4](OldPct|NewPct)$/.test(field.id)) return null;
+                  if (isProbabilityShiftTemplate && /^deal[1-6](OldPct|NewPct)$/.test(field.id)) return null;
 
                   // Separate Font Size controls for Typography section
                  if (['headerFontSize', 'nameFontSize', 'amountFontSize'].includes(field.id)) return null;

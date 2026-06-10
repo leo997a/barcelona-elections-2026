@@ -2830,6 +2830,20 @@ const mercatoTodayLabel = (): string => {
   }
 };
 
+const globalProbabilityDealFields = (idx: number): OverlayField[] => [
+  { id: `deal${idx}Player`, label: `صفقة ${idx} — اسم اللاعب`, type: 'text', value: `اسم اللاعب ${idx}` },
+  { id: `deal${idx}From`, label: `صفقة ${idx} — النادي الحالي`, type: 'text', value: 'النادي الحالي' },
+  { id: `deal${idx}To`, label: `صفقة ${idx} — النادي المهتم`, type: 'text', value: 'النادي المهتم' },
+  { id: `deal${idx}OldPct`, label: `صفقة ${idx} — النسبة السابقة`, type: 'range', value: 0, min: 0, max: 100, step: 1 },
+  { id: `deal${idx}NewPct`, label: `صفقة ${idx} — النسبة الجديدة`, type: 'range', value: 0, min: 0, max: 100, step: 1 },
+  { id: `deal${idx}Image`, label: `صفقة ${idx} — صورة اللاعب`, type: 'image', value: '' },
+  { id: `deal${idx}FromLogo`, label: `صفقة ${idx} — شعار النادي الحالي`, type: 'image', value: '' },
+  { id: `deal${idx}ToLogo`, label: `صفقة ${idx} — شعار النادي المهتم`, type: 'image', value: '' },
+  { id: `deal${idx}Fee`, label: `صفقة ${idx} — قيمة الصفقة`, type: 'text', value: 'غير محدد' },
+  { id: `deal${idx}Status`, label: `صفقة ${idx} — حالة المفاوضات`, type: 'text', value: 'بانتظار البيانات' },
+  { id: `deal${idx}Source`, label: `صفقة ${idx} — المصدر`, type: 'text', value: 'غير محدد' },
+];
+
 const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
   // 1. Agent Call #2
   createMercatoTemplate({
@@ -2977,6 +2991,43 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
       { id: 'deal4OldPct', label: 'صفقة 4 — النسبة القديمة', type: 'range', value: 50, min: 0, max: 100, step: 1 },
       { id: 'deal4NewPct', label: 'صفقة 4 — نسبة اليوم', type: 'range', value: 42, min: 0, max: 100, step: 1 },
       { id: 'deal4Image', label: 'صفقة 4 — صورة اللاعب', type: 'image', value: '' },
+    ],
+  }),
+  // Global deal probability network — all clubs, six deals, five structures.
+  createMercatoTemplate({
+    id: 'template-mercato-x8-global-deal-probability-network',
+    variant: 'global_probability_shift',
+    name: 'ميركاتو — شبكة تحوّل نسب الصفقات العالمية',
+    templateIcon: '٪',
+    templateAccent: '#38f5c8',
+    description: 'قالب عالمي ذكي لعرض تحوّل نسب ست صفقات بين أي أندية، بخمسة تصاميم مستقلة وحركة وصوت تحديث.',
+    audioSceneId: 'analysis_lab',
+    dataFields: [
+      { id: 'probabilityShiftMode', label: 'حالة عرض النسب', type: 'hidden', value: 'old' },
+      { id: 'audioUpdateCue', label: 'مؤثر تحديث النسب', type: 'hidden', value: 'LIVE_UPDATE_PING' },
+      { id: 'soundInStyle', label: 'مؤثر دخول القالب', type: 'hidden', value: 'TARGET_REVEAL' },
+      { id: 'soundOutStyle', label: 'مؤثر خروج القالب', type: 'hidden', value: 'SOFT_FADE' },
+      { id: 'matrixLayout', label: 'نوع تصميم شبكة الصفقات', type: 'select', value: 'global_exchange', options: [
+        { value: 'global_exchange', label: 'بورصة الانتقالات العالمية' },
+        { value: 'orbit_network', label: 'مدارات الأندية والصفقات' },
+        { value: 'broadcast_wall', label: 'جدار غرفة الأخبار' },
+        { value: 'route_race', label: 'سباق مسارات التفاوض' },
+        { value: 'deal_ticker_lab', label: 'مختبر حركة السوق' },
+      ] },
+      { id: 'matrixEyebrow', label: 'النص العلوي', type: 'text', value: 'GLOBAL MERCATO INTELLIGENCE' },
+      { id: 'matrixTitle', label: 'عنوان القالب', type: 'text', value: 'شبكة تحوّل نسب الصفقات العالمية' },
+      { id: 'matrixSubtitle', label: 'وصف القالب', type: 'text', value: 'قراءة مباشرة لحركة الصفقات بين الأندية' },
+      { id: 'updateDate', label: 'تاريخ تحديث النسب', type: 'text', value: mercatoTodayLabel() },
+      { id: 'oldLabel', label: 'تسمية النسب السابقة', type: 'text', value: 'النسبة السابقة' },
+      { id: 'newLabel', label: 'تسمية النسب الجديدة', type: 'text', value: 'النسبة الجديدة' },
+      { id: 'movementLabel', label: 'تسمية الحركة', type: 'text', value: 'حركة السوق' },
+      { id: 'featuredLabel', label: 'تسمية الصفقة الرئيسية', type: 'text', value: 'الصفقة الرئيسية' },
+      { id: 'sourceLabel', label: 'تسمية المصدر', type: 'text', value: 'المصدر' },
+      { id: 'featuredDealIndex', label: 'الصفقة الرئيسية', type: 'select', value: '1', options: [1, 2, 3, 4, 5, 6].map(idx => ({
+        value: String(idx),
+        label: `الصفقة ${idx}`,
+      })) },
+      ...[1, 2, 3, 4, 5, 6].flatMap(globalProbabilityDealFields),
     ],
   }),
   // 3. Club Statement
