@@ -26,79 +26,45 @@ import { listAudioScenes, getAudioScene, sceneToFieldUpdates, sceneToFieldUpdate
 import { resolveTemplateAudio } from '../utils/templateRuntime';
 import { playCue, PREVIEWABLE_CUES } from '../services/audioEngine';
 
-/**
- * Phase X11/X12 — SFX style presets surfaced as labeled buttons in the
- * SFX section. Each preset writes a fixed combination of soundInStyle +
- * soundOutStyle + audioUpdateCue + sfxEnabled + (optionally) audioSceneId.
- *
- * Goal: users pick a vibe by name instead of fishing through 60+ raw cue
- * keys. The 5 presets cover the actual matchday/mercato audio needs:
- *
- *   1. silent       — SFX OFF entirely (the safest default)
- *   2. ultra_subtle — barely audible polite cues (LOWER_THIRD_WIPE / SOFT_FADE / SOFT_CHAT_TICK)
- *   3. call         — gentle agent-call vibe (SOFT_CALL_RING_LIGHT / SOFT_CALL_END / SOFT_CHAT_INCOMING)
- *   4. chat         — chat tick vibe (SOFT_NOTIFICATION_PULSE / SOFT_FADE / SOFT_CHAT_TICK)
- *   5. breaking     — clean breaking news (BREAKING_RISER / SOFT_FADE / DATA_TICK)
- *
- * Using existing cue keys only — no new audio files, no new cue synth.
- */
-type SfxStylePreset = {
-  id: 'silent' | 'ultra_subtle' | 'call' | 'chat' | 'breaking';
-  labelAr: string;
-  descriptionAr: string;
-  sfxEnabled: boolean;
-  soundInStyle: string;
-  soundOutStyle: string;
-  audioUpdateCue: string;
+const CUE_CATEGORY_LABELS: Record<string, string> = {
+  featured: 'مختارات سريعة',
+  news: 'أخبار وتنبيهات',
+  football: 'كرة القدم والملعب',
+  mercato: 'الميركاتو والصفقات',
+  tactical: 'تحليل وتكتيك',
+  report: 'تقارير وتحقيقات',
+  lowerthird: 'شرائط وانتقالات',
+  cinematic: 'سينمائي ودرامي',
+  experimental: 'تجريبي وخاص',
+  legacy: 'أصوات قديمة مدعومة',
+  other: 'أصوات أخرى',
 };
 
-const SFX_STYLE_PRESETS: ReadonlyArray<SfxStylePreset> = [
-  {
-    id: 'silent',
-    labelAr: 'بدون مؤثرات',
-    descriptionAr: 'يطفئ كل المؤثرات. الصوت الحقيقي يدوي فقط.',
-    sfxEnabled: false,
-    soundInStyle: 'HARD_CUT',
-    soundOutStyle: 'HARD_CUT',
-    audioUpdateCue: 'HARD_CUT',
-  },
-  {
-    id: 'ultra_subtle',
-    labelAr: 'ناعم جدًا',
-    descriptionAr: 'دخول ناعم + خروج fade + tick خفيف للتحديث.',
-    sfxEnabled: true,
-    soundInStyle: 'LOWER_THIRD_WIPE',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'SOFT_CHAT_TICK',
-  },
-  {
-    id: 'call',
-    labelAr: 'مكالمة خفيفة',
-    descriptionAr: 'نغمة اتصال خفيفة + إنهاء + رسالة واردة.',
-    sfxEnabled: true,
-    soundInStyle: 'SOFT_CALL_RING_LIGHT',
-    soundOutStyle: 'SOFT_CALL_END',
-    audioUpdateCue: 'SOFT_CHAT_INCOMING',
-  },
-  {
-    id: 'chat',
-    labelAr: 'دردشة خفيفة',
-    descriptionAr: 'إشعار خفيف + fade خروج + tick رسالة.',
-    sfxEnabled: true,
-    soundInStyle: 'SOFT_NOTIFICATION_PULSE',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'SOFT_CHAT_TICK',
-  },
-  {
-    id: 'breaking',
-    labelAr: 'خبر عاجل نظيف',
-    descriptionAr: 'افتتاحية خبر بدون مبالغة في الـ bass.',
-    sfxEnabled: true,
-    soundInStyle: 'BREAKING_RISER',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'DATA_TICK',
-  },
-];
+const CUE_LABELS_AR: Record<string, string> = {
+  BREAKING_RISER: 'افتتاحية خبر عاجل',
+  BREAKING_HIT: 'ضربة خبر قصيرة',
+  OFFICIAL_STAMP: 'ختم رسمي',
+  HERE_WE_GO_STING: 'إعلان صفقة',
+  DEAL_LOCK: 'قفل الصفقة',
+  TARGET_REVEAL: 'كشف الهدف',
+  TARGET_SCAN: 'مسح رادار',
+  DEADLINE_ALARM: 'توتر نهاية الميركاتو',
+  STADIUM_WHOOSH: 'صعود جمهور',
+  LUXURY_SWEEP: 'انتقال تكتيكي فاخر',
+  LOWER_THIRD_WIPE: 'تعريف ناعم',
+  CONTRACT_STAMP: 'تأكيد نهائي',
+  HARD_CUT: 'قطع مباشر',
+  SOFT_FADE: 'خروج ناعم',
+  DATA_TICK: 'نبضة بيانات',
+};
+
+const cueDisplayLabel = (label: string, value: string) => {
+  const ar = CUE_LABELS_AR[value];
+  if (ar) return `${ar} — ${value}`;
+  const [, maybeArabic] = label.split('—').map(part => part.trim());
+  if (maybeArabic && /[\u0600-\u06FF]/.test(maybeArabic)) return `${maybeArabic} — ${value}`;
+  return `${label.replace(/—/g, '-')} — ${value}`;
+};
 
 interface Props {
   overlay: OverlayConfig;
@@ -135,12 +101,14 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
 
   const voiceList = listVoicesForTemplate(String(overlay.type));
   const scenes = listAudioScenes();
-  const cueGroups = PREVIEWABLE_CUES.reduce<Record<string, typeof PREVIEWABLE_CUES>>((groups, cue) => {
-    const category = cue.category || 'other';
-    if (!groups[category]) groups[category] = [];
-    groups[category].push(cue);
-    return groups;
-  }, {});
+  const cueGroups = PREVIEWABLE_CUES
+    .filter((cue, index, all) => all.findIndex(item => item.value === cue.value) === index)
+    .reduce<Record<string, typeof PREVIEWABLE_CUES>>((groups, cue) => {
+      const category = cue.category || 'other';
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(cue);
+      return groups;
+    }, {});
 
   const applyUpdates = (updates: Record<string, string | number | boolean>) => {
     if (onUpdateMany) {
@@ -171,33 +139,7 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
     } catch { /* silent */ }
   };
 
-  // Phase X11/X12 — apply an SFX style preset. Writes 4 fields atomically.
-  // Does NOT touch master soundEnabled or voice settings.
-  const applySfxPreset = (preset: SfxStylePreset) => {
-    applyUpdates({
-      sfxEnabled: preset.sfxEnabled,
-      soundInStyle: preset.soundInStyle,
-      soundOutStyle: preset.soundOutStyle,
-      audioUpdateCue: preset.audioUpdateCue,
-    });
-  };
-
-  // Detect which SFX preset (if any) currently matches the overlay state.
-  // Used to highlight the active preset button.
   const audioUpdateCue = fieldVal<string>(overlay, 'audioUpdateCue', '');
-  const activeSfxPresetId: SfxStylePreset['id'] | null = (() => {
-    if (!sfxEnabled) return 'silent';
-    for (const p of SFX_STYLE_PRESETS) {
-      if (p.id === 'silent') continue;
-      if (
-        p.sfxEnabled === sfxEnabled &&
-        p.soundInStyle === soundInStyle &&
-        p.soundOutStyle === soundOutStyle &&
-        p.audioUpdateCue === audioUpdateCue
-      ) return p.id;
-    }
-    return null;
-  })();
 
   const previewIn = () => {
     if (!soundEnabled || !sfxEnabled) return;
@@ -377,61 +319,6 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
 
         {sfxEnabled && soundEnabled && (
           <div className="space-y-2">
-            {/* Phase X11 — SFX style presets (named vibes instead of raw cue keys) */}
-            <div>
-              <div className={`${labelSize} text-slate-400 mb-1`}>نمط المؤثرات</div>
-              <div className="grid grid-cols-2 gap-1">
-                {SFX_STYLE_PRESETS.map(p => {
-                  const active = activeSfxPresetId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => applySfxPreset(p)}
-                      title={p.descriptionAr}
-                      className={[
-                        'rounded text-[10px] font-bold py-1.5 px-2 transition-colors',
-                        active
-                          ? 'bg-blue-700 text-white border border-blue-500'
-                          : 'bg-slate-900 text-slate-300 border border-slate-700 hover:border-slate-500',
-                      ].join(' ')}
-                    >
-                      {p.labelAr}
-                    </button>
-                  );
-                })}
-              </div>
-              {activeSfxPresetId === null && sfxEnabled && (
-                <div className="text-[9px] text-slate-500 mt-1">
-                  مخصص: in={soundInStyle}, out={soundOutStyle}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                onClick={previewIn}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
-              >
-                <Play className="w-2.5 h-2.5" />
-                IN
-              </button>
-              <button
-                onClick={previewOut}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
-              >
-                <Play className="w-2.5 h-2.5" />
-                OUT
-              </button>
-              <button
-                onClick={previewUpdate}
-                disabled={!audioUpdateCue}
-                title={audioUpdateCue ? `تجربة صوت التحديث: ${audioUpdateCue}` : 'لا يوجد updateCue معرَّف — طبّق مشهدًا أولًا'}
-                className="bg-amber-900/40 hover:bg-amber-800/60 disabled:opacity-30 disabled:cursor-not-allowed text-amber-200 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1"
-              >
-                <Play className="w-2.5 h-2.5" />
-                UPDATE
-              </button>
-            </div>
             <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/10">
               <button
                 type="button"
@@ -461,8 +348,8 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
                         >
                           <option value={item.fallback}>{item.id === 'audioUpdateCue' ? 'افتراضي القالب' : 'افتراضي نوع القالب'}</option>
                           {Object.entries(cueGroups).map(([category, cues]) => (
-                            <optgroup key={category} label={category.toUpperCase()}>
-                              {cues.map(cue => <option key={`${item.id}-${cue.value}`} value={cue.value}>{cue.label}</option>)}
+                            <optgroup key={category} label={CUE_CATEGORY_LABELS[category] || category}>
+                              {cues.map(cue => <option key={`${item.id}-${cue.value}`} value={cue.value}>{cueDisplayLabel(cue.label, cue.value)}</option>)}
                             </optgroup>
                           ))}
                         </select>

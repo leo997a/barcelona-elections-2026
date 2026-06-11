@@ -146,7 +146,7 @@ const DealTile: React.FC<{ deal: Deal; showNew: boolean; labels: Labels; feature
   const delta = deal.newPct - deal.oldPct;
   const color = colorFor(pct);
   return (
-    <article data-index={deal.idx} className={`gpn-tile ${featured ? 'is-featured' : ''} ${compact ? 'is-compact' : ''}`} style={{ '--deal-color': color } as React.CSSProperties}>
+    <article data-index={deal.idx} className={`gpn-tile ${featured ? 'is-featured' : ''} ${compact ? 'is-compact' : ''}`} style={{ '--deal-color': color, '--deal-delay': `${deal.idx * 90}ms` } as React.CSSProperties}>
       {featured && <span className="gpn-featured-label">{labels.featured}</span>}
       <div className="gpn-tile-top">
         <Portrait deal={deal} size={compact ? 44 : featured ? 106 : 62} />
@@ -173,7 +173,7 @@ const DealLane: React.FC<{ deal: Deal; showNew: boolean; labels: Labels }> = ({ 
   const delta = deal.newPct - deal.oldPct;
   const color = colorFor(pct);
   return (
-    <div className="gpn-lane" style={{ '--deal-color': color } as React.CSSProperties}>
+    <div className="gpn-lane" style={{ '--deal-color': color, '--deal-delay': `${deal.idx * 90}ms` } as React.CSSProperties}>
       <div className="gpn-lane-player"><Portrait deal={deal} size={44} /><div><strong>{deal.player}</strong><small>{deal.status}</small></div></div>
       <TransferRoute deal={deal} labels={labels} compact />
       <div className="gpn-lane-track">
@@ -182,6 +182,42 @@ const DealLane: React.FC<{ deal: Deal; showNew: boolean; labels: Labels }> = ({ 
         <span className="live-pin" style={{ left: `${pct}%` }}>{pct}</span>
       </div>
       <div className={`gpn-lane-delta ${delta >= 0 ? 'up' : 'down'}`}>{showNew ? `${delta >= 0 ? '+' : ''}${delta}%` : '—'}</div>
+    </div>
+  );
+};
+
+const DealSignalRow: React.FC<{ deal: Deal; showNew: boolean; labels: Labels }> = ({ deal, showNew, labels }) => {
+  const pct = showNew ? deal.newPct : deal.oldPct;
+  const delta = deal.newPct - deal.oldPct;
+  const color = colorFor(pct);
+  return (
+    <article className="gpn-signal-row" style={{ '--deal-color': color, '--deal-delay': `${deal.idx * 90}ms` } as React.CSSProperties}>
+      <div className="gpn-signal-player">
+        <Portrait deal={deal} size={54} />
+        <div><strong>{deal.player}</strong><small>{deal.status || labelFor(pct)}</small></div>
+      </div>
+      <TransferRoute deal={deal} labels={labels} compact />
+      <div className="gpn-signal-prob">
+        <span>{labels.old}</span>
+        <b className="old">{deal.oldPct}%</b>
+        <i />
+        <span>{labels.current}</span>
+        <AnimatedNumber from={deal.oldPct} to={pct} active={showNew} delay={deal.idx * 95} size={34} />
+      </div>
+      <div className={`gpn-signal-delta ${delta >= 0 ? 'up' : 'down'}`}>{showNew ? `${delta >= 0 ? '+' : ''}${delta}%` : '—'}</div>
+    </article>
+  );
+};
+
+const MiniDealRow: React.FC<{ deal: Deal; showNew: boolean }> = ({ deal, showNew }) => {
+  const pct = showNew ? deal.newPct : deal.oldPct;
+  const delta = deal.newPct - deal.oldPct;
+  return (
+    <div className="gpn-mini-row" style={{ '--deal-color': colorFor(pct), '--deal-delay': `${deal.idx * 90}ms` } as React.CSSProperties}>
+      <Portrait deal={deal} size={38} />
+      <div><strong>{deal.player}</strong><small>{deal.fromClub} → {deal.toClub}</small></div>
+      <b>{pct}%</b>
+      <em className={delta >= 0 ? 'up' : 'down'}>{showNew ? `${delta >= 0 ? '+' : ''}${delta}` : '—'}</em>
     </div>
   );
 };
@@ -280,6 +316,14 @@ const GlobalProbabilityNetworkRenderer: React.FC<GlobalProbabilityNetworkRendere
   ].filter(Boolean).join(' ');
   const showAverageSummary = getField('showAverageSummary') !== false;
   const showTransitionBanner = getField('showTransitionBanner') !== false;
+  const historyEntries = (() => {
+    try {
+      const parsed = JSON.parse(String(getField('probabilityHistoryJson') || '[]'));
+      return Array.isArray(parsed) ? parsed.slice(-4).reverse() : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const commonHeader = <Header title={title} subtitle={subtitle} eyebrow={eyebrow} updateDate={updateDate} showNew={revealNew} avgOld={avgOld} avgNew={avgNew} labels={labels} showAverageSummary={showAverageSummary} />;
 
@@ -302,9 +346,16 @@ const GlobalProbabilityNetworkRenderer: React.FC<GlobalProbabilityNetworkRendere
         .gpn-orbit{flex:1;position:relative;min-height:0}.gpn-orbit-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:280px;height:280px;border:1px solid rgba(55,232,255,.42);border-radius:50%;display:grid;place-content:center;text-align:center;background:radial-gradient(circle,rgba(13,44,64,.94),rgba(3,10,17,.98) 68%);box-shadow:0 0 50px rgba(55,232,255,.12);animation:gpnOrbitPulse 2.2s ease-in-out infinite alternate}.gpn-orbit-center span{font-size:9px;color:var(--muted);font-weight:900}.gpn-orbit-center b{font:900 64px/1 ui-monospace,monospace;color:${COLORS.mint}}.gpn-orbit-center small{margin-top:8px;font-size:8px;color:${COLORS.cyan}}.gpn-orbit-node{position:absolute;width:280px;height:176px}.gpn-orbit-node .gpn-tile{height:100%}.gpn-orbit-node.pos-1{top:0;left:0}.gpn-orbit-node.pos-2{top:0;right:0}.gpn-orbit-node.pos-3{top:50%;left:0;transform:translateY(-50%)}.gpn-orbit-node.pos-4{top:50%;right:0;transform:translateY(-50%)}.gpn-orbit-node.pos-5{bottom:0;left:0}.gpn-orbit-node.pos-6{bottom:0;right:0}.gpn-orbit-ring{position:absolute;left:50%;top:50%;width:440px;height:440px;border:1px dashed rgba(77,255,184,.22);border-radius:50%;animation:gpnOrbit 22s linear infinite}
         .gpn-wall{flex:1;display:grid;direction:ltr;grid-template-columns:1fr 54%;gap:10px;min-height:0}.gpn-wall .hero{display:flex;min-height:0}.gpn-wall .hero .gpn-tile{flex:1}.gpn-wall .hero .gpn-tile-top{margin-block:24px}.gpn-wall .hero .gpn-route{margin-bottom:20px}.gpn-wall-stack{display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:7px;min-height:0}.gpn-wall-stack .gpn-tile{min-height:0;display:grid;grid-template-columns:150px 1fr 170px;align-items:center;gap:8px;padding:6px 8px}.gpn-wall-stack .gpn-tile-top,.gpn-wall-stack .gpn-route,.gpn-wall-stack .gpn-metrics{min-width:0}.gpn-wall-stack .gpn-track,.gpn-wall-stack footer{display:none}
         .gpn-race{flex:1;min-height:0}.gpn-terminal{flex:1;display:grid;grid-template-columns:250px 1fr;gap:14px;min-height:0}.gpn-terminal-side{border:1px solid rgba(119,168,204,.16);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;background:#07111b}.gpn-terminal-stat{padding:12px 0;border-bottom:1px solid var(--line)}.gpn-terminal-stat span{font-size:8px;color:var(--muted)}.gpn-terminal-stat b{display:block;font:900 32px ui-monospace,monospace}.gpn-terminal-table{min-height:0}.gpn-terminal-row{height:78px;display:grid;direction:ltr;grid-template-columns:52px 1fr 260px 90px 90px;align-items:center;gap:10px;border:1px solid rgba(119,168,204,.13);border-radius:8px;padding:0 10px;margin-bottom:6px;background:#07111b}.gpn-terminal-row strong{font-size:13px}.gpn-terminal-row small{display:block;font-size:8px;color:var(--muted)}.gpn-terminal-row .previous{color:#9ba8b7;font:900 18px ui-monospace,monospace}.gpn-terminal-row .current{color:var(--deal-color);font:900 28px ui-monospace,monospace}
-        .is-updated .gpn-tile{animation:gpnTileIn .72s cubic-bezier(.16,.84,.44,1) both}.is-updated .gpn-tile:nth-child(2){animation-delay:.08s}.is-updated .gpn-tile:nth-child(3){animation-delay:.16s}.is-updated .gpn-tile:nth-child(4){animation-delay:.24s}.is-updated .gpn-tile:nth-child(5){animation-delay:.32s}.is-updated .gpn-tile:nth-child(6){animation-delay:.4s}.is-updated .gpn-number{animation:gpnNumber .72s cubic-bezier(.16,.84,.44,1) both}.is-updated .gpn-route-arrow i{animation:gpnRoute 1s cubic-bezier(.16,.84,.44,1) both}
-        .gpn-shift-event{position:absolute;z-index:12;inset:0;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at center,rgba(4,26,42,.92),rgba(2,7,12,.8) 58%,transparent 82%);opacity:0}.stage-scan .gpn-shift-event,.stage-reveal .gpn-shift-event{animation:gpnEventWindow 2.35s both}.gpn-shift-core{width:min(720px,72%);padding:26px;border:1px solid rgba(55,232,255,.38);border-radius:8px;background:linear-gradient(145deg,rgba(5,17,28,.98),rgba(3,9,16,.96));box-shadow:0 30px 100px rgba(0,0,0,.65),0 0 70px rgba(55,232,255,.15);text-align:center;overflow:hidden;position:relative}.gpn-shift-core:before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 22%,rgba(55,232,255,.15) 48%,transparent 74%);transform:translateX(-120%)}.stage-scan .gpn-shift-core:before{animation:gpnCoreScan .75s ease-in-out both}.gpn-shift-core small{display:block;color:${COLORS.cyan};font-size:9px;font-weight:900;letter-spacing:.18em}.gpn-shift-core strong{display:block;margin-top:5px;font-size:31px}.gpn-shift-numbers{direction:ltr;display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;margin-top:20px}.gpn-shift-numbers b{font:900 84px/.9 ui-monospace,monospace}.gpn-shift-numbers .before{color:${COLORS.coral}}.gpn-shift-numbers .after{color:${COLORS.mint};filter:drop-shadow(0 0 18px rgba(77,255,184,.35));opacity:.15;transform:scale(.82)}.stage-reveal .gpn-shift-numbers .after{animation:gpnRevealValue .8s cubic-bezier(.16,.84,.44,1) .08s both}.gpn-shift-arrow{height:3px;background:${COLORS.cyan};position:relative;box-shadow:0 0 14px ${COLORS.cyan};transform:scaleX(.25);transform-origin:left}.stage-reveal .gpn-shift-arrow{animation:gpnRoute .7s cubic-bezier(.16,.84,.44,1) both}.gpn-shift-arrow:after{content:"";position:absolute;right:-2px;top:-5px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid ${COLORS.cyan}}
-        .hide-fees .gpn-tile-name small{display:none}.hide-status .gpn-tile-name>span{display:none}.hide-sources .gpn-tile footer span{visibility:hidden}.hide-club-labels .gpn-route-club small{display:none}.hide-probability-track .gpn-track,.hide-probability-track .gpn-lane-track{display:none}.hide-deal-delta .gpn-metric.movement,.hide-deal-delta .gpn-lane-delta{display:none}.hide-average-summary .gpn-terminal-side{display:none}.hide-average-summary .gpn-terminal{grid-template-columns:1fr}
+        .layout-global_exchange .gpn-exchange{grid-template-rows:338px 1fr}.layout-global_exchange .gpn-exchange-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:11px}.layout-global_exchange .gpn-exchange-grid .gpn-tile{min-height:0}.layout-global_exchange .gpn-exchange-grid .gpn-tile-name strong{font-size:20px}.layout-global_exchange .gpn-exchange-grid .gpn-metric.current .gpn-number{font-size:34px!important}
+        .gpn-signal-row{--deal-color:${COLORS.cyan};min-height:88px;display:grid;direction:ltr;grid-template-columns:235px minmax(240px,1fr) 210px 72px;align-items:center;gap:12px;border:1px solid color-mix(in srgb,var(--deal-color) 28%,rgba(255,255,255,.08));border-radius:9px;padding:10px 12px;background:linear-gradient(90deg,color-mix(in srgb,var(--deal-color) 9%,rgba(8,17,28,.94)),rgba(5,12,21,.95));box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}.gpn-signal-player{display:flex;align-items:center;gap:10px;min-width:0;direction:rtl}.gpn-signal-player strong{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gpn-signal-player small{display:block;font-size:8px;color:var(--muted)}.gpn-signal-prob{display:grid;direction:ltr;grid-template-columns:auto 44px 18px auto 76px;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:8px;background:rgba(2,7,12,.48)}.gpn-signal-prob span{font-size:7px;color:var(--muted);font-weight:900;direction:rtl}.gpn-signal-prob .old{font:900 20px ui-monospace,monospace;color:#9aa8b6}.gpn-signal-prob i{height:2px;background:var(--deal-color);box-shadow:0 0 10px var(--deal-color)}.gpn-signal-delta{font:900 22px ui-monospace,monospace;text-align:left}.gpn-mini-row{--deal-color:${COLORS.cyan};display:grid;direction:ltr;grid-template-columns:42px 1fr 58px 42px;align-items:center;gap:9px;min-height:58px;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px;background:rgba(7,16,27,.82)}.gpn-mini-row strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gpn-mini-row small{display:block;font-size:7px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gpn-mini-row b{font:900 22px ui-monospace,monospace;color:var(--deal-color)}.gpn-mini-row em{font-style:normal;font:900 12px ui-monospace,monospace}
+        .gpn-intel{flex:1;display:grid;grid-template-columns:230px 1fr 240px;gap:12px;min-height:0}.gpn-intel-side,.gpn-intel-hot,.gpn-focus-side,.gpn-focus-notes,.gpn-watch-side{border:1px solid rgba(119,168,204,.16);border-radius:9px;background:rgba(5,13,23,.82);padding:12px;min-height:0}.gpn-intel-side{display:grid;grid-template-rows:repeat(4,1fr);gap:8px}.gpn-stat-card{border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:10px;background:linear-gradient(135deg,rgba(19,48,74,.72),rgba(4,12,21,.82))}.gpn-stat-card span{display:block;font-size:8px;color:var(--muted);font-weight:900}.gpn-stat-card b{display:block;margin-top:4px;font:900 28px ui-monospace,monospace;color:${COLORS.mint}}.gpn-intel-core{min-height:0;display:flex;flex-direction:column;gap:10px}.gpn-intel-title{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;border:1px solid rgba(55,232,255,.17);border-radius:9px;padding:12px;background:rgba(4,13,23,.82)}.gpn-intel-title strong{font-size:25px}.gpn-intel-title b{font:900 44px ui-monospace,monospace;color:${COLORS.cyan}}.gpn-intel-rows{min-height:0;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:8px}.gpn-intel-hot{display:flex;flex-direction:column;gap:8px}.gpn-intel-hot h3,.gpn-focus-notes h3,.gpn-watch-side h3{margin:0 0 4px;font-size:13px}.gpn-history-entry{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px;background:rgba(255,255,255,.025)}.gpn-history-entry strong{display:block;font-size:11px}.gpn-history-entry small{display:block;font-size:8px;color:var(--muted);margin-top:3px}
+        .gpn-focus{flex:1;display:grid;grid-template-columns:330px minmax(0,1fr) 260px;gap:12px;min-height:0}.gpn-focus-side{display:flex;flex-direction:column;gap:7px}.gpn-focus-hero{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) 170px;gap:10px}.gpn-focus-hero .gpn-tile.is-featured{min-height:0}.gpn-focus-chart{border:1px solid rgba(55,232,255,.15);border-radius:9px;background:linear-gradient(180deg,rgba(10,25,39,.82),rgba(4,10,17,.94));padding:12px;position:relative;overflow:hidden}.gpn-focus-chart:before{content:"";position:absolute;inset:16px;background:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:52px 34px}.gpn-focus-line{position:absolute;left:24px;right:24px;bottom:42px;height:3px;background:linear-gradient(90deg,${COLORS.coral},${COLORS.amber},${COLORS.mint});box-shadow:0 0 18px rgba(77,255,184,.22)}.gpn-focus-chart b{position:absolute;right:18px;top:14px;font:900 36px ui-monospace,monospace;color:${COLORS.mint}}.gpn-focus-notes{display:flex;flex-direction:column;gap:8px}.gpn-note{border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:10px;background:rgba(255,255,255,.025)}.gpn-note span{display:block;font-size:8px;color:var(--muted)}.gpn-note b{font:900 25px ui-monospace,monospace;color:${COLORS.mint}}
+        .gpn-pulse{flex:1;display:grid;grid-template-rows:92px 315px 1fr;gap:11px;min-height:0}.gpn-pulse-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.gpn-pulse-hero{min-height:0}.gpn-pulse-hero .gpn-tile{height:100%;display:grid;grid-template-columns:360px 1fr 300px;grid-template-rows:1fr auto;align-items:center;gap:18px;padding:18px 24px;background:radial-gradient(circle at 20% 40%,color-mix(in srgb,var(--deal-color) 24%,transparent),transparent 35%),linear-gradient(100deg,#102333,#05101a 72%)}.gpn-pulse-hero .gpn-tile-top{grid-column:1}.gpn-pulse-hero .gpn-route{grid-column:2}.gpn-pulse-hero .gpn-metrics{grid-column:3}.gpn-pulse-hero .gpn-track{grid-column:1/4;grid-row:2;height:8px}.gpn-pulse-hero footer,.gpn-pulse-hero .gpn-featured-label{display:none}.gpn-pulse-hero .gpn-portrait{width:160px!important;height:160px!important;border-radius:10px}.gpn-pulse-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;min-height:0}
+        .gpn-route-grid{flex:1;position:relative;min-height:0}.gpn-route-hub{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:390px;height:390px;border-radius:50%;border:1px solid rgba(55,232,255,.26);background:radial-gradient(circle,rgba(16,53,72,.92),rgba(3,10,17,.95) 66%);box-shadow:0 0 70px rgba(55,232,255,.14);display:grid;place-items:center;text-align:center}.gpn-route-hub:before{content:"";position:absolute;inset:42px;border:1px dashed rgba(77,255,184,.26);border-radius:50%;animation:gpnOrbit 26s linear infinite}.gpn-route-hub strong{font-size:22px}.gpn-route-hub b{display:block;font:900 64px ui-monospace,monospace;color:${COLORS.mint}}.gpn-route-card{position:absolute;width:322px;height:190px}.gpn-route-card .gpn-tile{height:100%}.gpn-route-card.pos-1{left:0;top:0}.gpn-route-card.pos-2{right:0;top:0}.gpn-route-card.pos-3{left:0;top:50%;transform:translateY(-50%)}.gpn-route-card.pos-4{right:0;top:50%;transform:translateY(-50%)}.gpn-route-card.pos-5{left:18%;bottom:0}.gpn-route-card.pos-6{right:18%;bottom:0}
+        .gpn-watch{flex:1;display:grid;grid-template-columns:1fr 460px;gap:12px;min-height:0}.gpn-watch-list{min-height:0;display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:7px}.gpn-watch-main{min-height:0;display:grid;grid-template-rows:1fr 190px;gap:10px}.gpn-watch-main .gpn-tile{min-height:0}.gpn-watch-side{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gpn-watch-side h3{grid-column:1/3}.gpn-watch-side .gpn-history-entry{min-height:0}
+        .is-updated .gpn-tile,.is-updated .gpn-signal-row,.is-updated .gpn-mini-row{animation:gpnTileIn .72s cubic-bezier(.16,.84,.44,1) both;animation-delay:var(--deal-delay,0ms)}.is-updated .gpn-number{animation:gpnNumber .72s cubic-bezier(.16,.84,.44,1) both}.is-updated .gpn-route-arrow i{animation:gpnRoute 1s cubic-bezier(.16,.84,.44,1) both}
+        .gpn-shift-event{position:absolute;z-index:12;inset:0;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at center,rgba(4,26,42,.86),rgba(2,7,12,.7) 58%,transparent 84%);opacity:0}.stage-scan .gpn-shift-event,.stage-reveal .gpn-shift-event{animation:gpnEventWindow 2.35s both}.gpn-shift-core{width:min(920px,82%);padding:22px;border:1px solid rgba(55,232,255,.38);border-radius:10px;background:linear-gradient(145deg,rgba(5,17,28,.98),rgba(3,9,16,.96));box-shadow:0 30px 100px rgba(0,0,0,.65),0 0 70px rgba(55,232,255,.15);text-align:center;overflow:hidden;position:relative}.gpn-shift-core:before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 22%,rgba(55,232,255,.15) 48%,transparent 74%);transform:translateX(-120%)}.stage-scan .gpn-shift-core:before{animation:gpnCoreScan .75s ease-in-out both}.gpn-shift-core small{display:block;color:${COLORS.cyan};font-size:9px;font-weight:900;letter-spacing:.18em}.gpn-shift-core strong{display:block;margin-top:5px;font-size:31px}.gpn-shift-numbers{direction:ltr;display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;margin-top:16px}.gpn-shift-numbers b{font:900 78px/.9 ui-monospace,monospace}.gpn-shift-numbers .before{color:${COLORS.coral}}.gpn-shift-numbers .after{color:${COLORS.mint};filter:drop-shadow(0 0 18px rgba(77,255,184,.35));opacity:.15;transform:scale(.82)}.stage-reveal .gpn-shift-numbers .after{animation:gpnRevealValue .8s cubic-bezier(.16,.84,.44,1) .08s both}.gpn-shift-arrow{height:3px;background:${COLORS.cyan};position:relative;box-shadow:0 0 14px ${COLORS.cyan};transform:scaleX(.25);transform-origin:left}.stage-reveal .gpn-shift-arrow{animation:gpnRoute .7s cubic-bezier(.16,.84,.44,1) both}.gpn-shift-arrow:after{content:"";position:absolute;right:-2px;top:-5px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid ${COLORS.cyan}}.gpn-shift-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px}.gpn-shift-chip{display:grid;direction:ltr;grid-template-columns:1fr 52px 1fr;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:7px 9px;background:rgba(255,255,255,.035);text-align:right}.gpn-shift-chip span{min-width:0;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:900}.gpn-shift-chip em{font-style:normal;font:900 15px ui-monospace,monospace;color:${COLORS.coral}}.gpn-shift-chip b{font:900 18px ui-monospace,monospace;color:${COLORS.mint};opacity:.2}.stage-reveal .gpn-shift-chip b{animation:gpnRevealValue .55s cubic-bezier(.16,.84,.44,1) both;animation-delay:var(--deal-delay,0ms)}
+        .hide-fees .gpn-tile-name small{display:none}.hide-status .gpn-tile-name>span{display:none}.hide-sources .gpn-tile footer span{visibility:hidden}.hide-club-labels .gpn-route-club small{display:none}.hide-probability-track .gpn-track,.hide-probability-track .gpn-lane-track{display:none}.hide-deal-delta .gpn-metric.movement,.hide-deal-delta .gpn-lane-delta,.hide-deal-delta .gpn-signal-delta{display:none}.hide-average-summary .gpn-terminal-side{display:none}.hide-average-summary .gpn-terminal{grid-template-columns:1fr}.hide-average-summary .gpn-intel-side,.hide-average-summary .gpn-pulse-stats{display:none}.hide-average-summary .gpn-intel{grid-template-columns:1fr 240px}.hide-average-summary .gpn-pulse{grid-template-rows:315px 1fr}
         @keyframes gpnTileIn{0%{opacity:.3;transform:translateY(12px)}100%{opacity:1;transform:none}}@keyframes gpnNumber{0%{filter:blur(5px);transform:translateY(-7px) scale(.82)}65%{filter:none;transform:translateY(1px) scale(1.06)}100%{transform:none}}@keyframes gpnRoute{0%{transform:scaleX(0);transform-origin:left;opacity:.2}100%{transform:scaleX(1);transform-origin:left;opacity:1}}@keyframes gpnSignalSweep{0%{transform:translateX(0);opacity:0}12%{opacity:1}85%{opacity:.8}100%{transform:translateX(1320px);opacity:0}}@keyframes gpnOrbit{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}@keyframes gpnOrbitPulse{to{box-shadow:0 0 60px rgba(55,232,255,.2)}}@keyframes gpnEventWindow{0%{opacity:0}9%,74%{opacity:1}100%{opacity:0}}@keyframes gpnCoreScan{to{transform:translateX(120%)}}@keyframes gpnRevealValue{0%{opacity:.15;transform:scale(.82);filter:blur(10px)}70%{opacity:1;transform:scale(1.09);filter:none}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(77,255,184,.35))}}
       `}</style>
       {showTransitionBanner && featured && showNew && transitionStage !== 'settled' && (
@@ -316,6 +367,15 @@ const GlobalProbabilityNetworkRenderer: React.FC<GlobalProbabilityNetworkRendere
               <b className="before">{featured.oldPct}%</b>
               <i className="gpn-shift-arrow" />
               <b className="after">{featured.newPct}%</b>
+            </div>
+            <div className="gpn-shift-strip">
+              {deals.slice(0, 6).map(deal => (
+                <div key={deal.idx} className="gpn-shift-chip" style={{ '--deal-delay': `${deal.idx * 85}ms` } as React.CSSProperties}>
+                  <span>{deal.player}</span>
+                  <em>{deal.oldPct}%</em>
+                  <b>{deal.newPct}%</b>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -352,6 +412,75 @@ const GlobalProbabilityNetworkRenderer: React.FC<GlobalProbabilityNetworkRendere
               <TransferRoute deal={deal} labels={labels} compact /><span className="previous">{deal.oldPct}%</span><span className="current"><AnimatedNumber from={deal.oldPct} to={pct} active={revealNew} delay={deal.idx * 90} size={28} /></span>
             </div>;
           })}</section>
+        </main>
+      ) : layout === 'intelligence_center' ? (
+        <main className="gpn-intel">
+          <aside className="gpn-intel-side">
+            <div className="gpn-stat-card"><span>{labels.previousAverage}</span><b style={{ color: COLORS.coral }}>{avgOld}%</b></div>
+            <div className="gpn-stat-card"><span>{labels.currentAverage}</span><b>{avgNew}%</b></div>
+            <div className="gpn-stat-card"><span>{labels.risingFalling}</span><b>{rising}/{falling}</b></div>
+            <div className="gpn-stat-card"><span>{labels.featured}</span><b style={{ color: colorFor(featured?.newPct || avgNew) }}>{featured?.newPct || avgNew}%</b></div>
+          </aside>
+          <section className="gpn-intel-core">
+            <div className="gpn-intel-title">
+              <strong>{title}</strong>
+              <b>{revealNew ? avgNew : avgOld}%</b>
+            </div>
+            <div className="gpn-intel-rows">{deals.slice(0, 5).map(deal => <DealSignalRow key={deal.idx} deal={deal} showNew={revealNew} labels={labels} />)}</div>
+          </section>
+          <aside className="gpn-intel-hot">
+            <h3>الصفقات الساخنة</h3>
+            {[...deals].sort((a, b) => b.newPct - a.newPct).slice(0, 5).map(deal => <MiniDealRow key={deal.idx} deal={deal} showNew={revealNew} />)}
+          </aside>
+        </main>
+      ) : layout === 'player_focus_lab' && featured ? (
+        <main className="gpn-focus">
+          <aside className="gpn-focus-side">{deals.map(deal => <MiniDealRow key={deal.idx} deal={deal} showNew={revealNew} />)}</aside>
+          <section className="gpn-focus-hero">
+            <DealTile deal={featured} showNew={revealNew} labels={labels} featured />
+            <div className="gpn-focus-chart">
+              <b>{revealNew ? featured.newPct : featured.oldPct}%</b>
+              <span className="gpn-focus-line" />
+            </div>
+          </section>
+          <aside className="gpn-focus-notes">
+            <h3>سجل التحديثات</h3>
+            {historyEntries.length ? historyEntries.map((entry, index) => {
+              const record = entry as { id?: string; dateLabel?: string; deals?: unknown[] };
+              return <div key={record.id || index} className="gpn-history-entry"><strong>{record.dateLabel || updateDate || labels.current}</strong><small>{record.deals?.length || 0} صفقات محفوظة</small></div>;
+            }) : <div className="gpn-history-entry"><strong>لا يوجد سجل بعد</strong><small>سيتم حفظ أول لقطة عند تطبيق JSON أو تشغيل النسب الجديدة.</small></div>}
+            <div className="gpn-note"><span>{labels.movement}</span><b className={featured.newPct >= featured.oldPct ? 'up' : 'down'}>{featured.newPct - featured.oldPct >= 0 ? '+' : ''}{featured.newPct - featured.oldPct}%</b></div>
+          </aside>
+        </main>
+      ) : layout === 'market_pulse_board' && featured ? (
+        <main className="gpn-pulse">
+          <section className="gpn-pulse-stats">
+            <div className="gpn-stat-card"><span>{labels.previousAverage}</span><b style={{ color: COLORS.coral }}>{avgOld}%</b></div>
+            <div className="gpn-stat-card"><span>{labels.currentAverage}</span><b>{avgNew}%</b></div>
+            <div className="gpn-stat-card"><span>إجمالي الصفقات</span><b>{deals.length}</b></div>
+            <div className="gpn-stat-card"><span>{labels.risingFalling}</span><b>{rising}/{falling}</b></div>
+          </section>
+          <section className="gpn-pulse-hero"><DealTile deal={featured} showNew={revealNew} labels={labels} featured /></section>
+          <section className="gpn-pulse-grid">{others.slice(0, 5).map(deal => <DealTile key={deal.idx} deal={deal} showNew={revealNew} labels={labels} compact />)}</section>
+        </main>
+      ) : layout === 'global_route_grid' ? (
+        <main className="gpn-route-grid">
+          <div className="gpn-route-hub"><div><strong>{eyebrow}</strong><b>{revealNew ? avgNew : avgOld}%</b><small>{rising} صاعدة / {falling} متراجعة</small></div></div>
+          {deals.slice(0, 6).map((deal, index) => <div key={deal.idx} className={`gpn-route-card pos-${index + 1}`}><DealTile deal={deal} showNew={revealNew} labels={labels} compact /></div>)}
+        </main>
+      ) : layout === 'executive_watch_room' && featured ? (
+        <main className="gpn-watch">
+          <section className="gpn-watch-list">{deals.map(deal => <DealSignalRow key={deal.idx} deal={deal} showNew={revealNew} labels={labels} />)}</section>
+          <section className="gpn-watch-main">
+            <DealTile deal={featured} showNew={revealNew} labels={labels} featured />
+            <aside className="gpn-watch-side">
+              <h3>سجل ذكي</h3>
+              {historyEntries.length ? historyEntries.slice(0, 3).map((entry, index) => {
+                const record = entry as { id?: string; dateLabel?: string; deals?: unknown[] };
+                return <div key={record.id || index} className="gpn-history-entry"><strong>{record.dateLabel || labels.current}</strong><small>{record.deals?.length || 0} صفقات</small></div>;
+              }) : <div className="gpn-history-entry"><strong>لا يوجد سجل بعد</strong><small>سيظهر بعد أول تحديث محفوظ.</small></div>}
+            </aside>
+          </section>
         </main>
       ) : featured ? (
         <main className="gpn-exchange">

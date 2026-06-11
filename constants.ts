@@ -2993,14 +2993,14 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
       { id: 'deal4Image', label: 'صفقة 4 — صورة اللاعب', type: 'image', value: '' },
     ],
   }),
-  // Global deal probability network — all clubs, six deals, five structures.
+  // Global deal probability network — all clubs, six deals, ten structures.
   createMercatoTemplate({
     id: 'template-mercato-x8-global-deal-probability-network',
     variant: 'global_probability_shift',
     name: 'ميركاتو — شبكة تحوّل نسب الصفقات العالمية',
     templateIcon: '٪',
     templateAccent: '#38f5c8',
-    description: 'قالب عالمي ذكي لعرض تحوّل نسب ست صفقات بين أي أندية، بخمسة تصاميم مستقلة وحركة وصوت تحديث.',
+    description: 'قالب عالمي ذكي لعرض تحوّل نسب ست صفقات بين أي أندية، بعشرة تصاميم مستقلة وحركة وصوت تحديث.',
     audioSceneId: 'analysis_lab',
     dataFields: [
       { id: 'probabilityShiftMode', label: 'حالة عرض النسب', type: 'hidden', value: 'old' },
@@ -3013,6 +3013,11 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
         { value: 'broadcast_wall', label: 'جدار غرفة الأخبار' },
         { value: 'route_race', label: 'سباق مسارات التفاوض' },
         { value: 'deal_ticker_lab', label: 'مختبر حركة السوق' },
+        { value: 'intelligence_center', label: 'مركز الذكاء الانتقالي' },
+        { value: 'player_focus_lab', label: 'مختبر اللاعب المحوري' },
+        { value: 'market_pulse_board', label: 'لوحة نبض السوق' },
+        { value: 'global_route_grid', label: 'رادار المسارات العالمية' },
+        { value: 'executive_watch_room', label: 'غرفة مراقبة تنفيذية' },
       ] },
       { id: 'matrixEyebrow', label: 'النص العلوي', type: 'text', value: 'GLOBAL MERCATO INTELLIGENCE' },
       { id: 'matrixTitle', label: 'عنوان القالب', type: 'text', value: 'شبكة تحوّل نسب الصفقات العالمية' },

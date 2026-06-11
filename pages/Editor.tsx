@@ -859,11 +859,16 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const currentGlobalDealsJson = () => JSON.stringify(
     Array.from({ length: 6 }, (_, index) => index + 1).map(idx => ({
       player: String(getDraftValue(`deal${idx}Player`) || ''),
+      arabicName: String(getDraftValue(`deal${idx}Player`) || ''),
       fromClub: String(getDraftValue(`deal${idx}From`) || ''),
+      from: String(getDraftValue(`deal${idx}From`) || ''),
       toClub: String(getDraftValue(`deal${idx}To`) || ''),
+      to: String(getDraftValue(`deal${idx}To`) || ''),
       oldPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}OldPct`)),
       newPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`)),
+      confidence: normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`)),
       fee: String(getDraftValue(`deal${idx}Fee`) || ''),
+      tag: String(getDraftValue(`deal${idx}Fee`) || ''),
       status: String(getDraftValue(`deal${idx}Status`) || ''),
       source: String(getDraftValue(`deal${idx}Source`) || ''),
       image: String(getDraftValue(`deal${idx}Image`) || ''),
@@ -886,22 +891,73 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       if (!deals.length) throw new Error('يجب أن يحتوي JSON على مصفوفة صفقات أو مفتاح deals.');
 
       const updates: Record<string, unknown> = {};
+      const usedSlots = new Set<number>();
+      const firstValue = (...values: unknown[]) => values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+      const clean = (value: unknown) => value === undefined || value === null ? '' : String(value).trim();
+      const currentDeals = Array.from({ length: 6 }, (_, index) => {
+        const idx = index + 1;
+        return {
+          idx,
+          playerKey: normalizeAssetKey(getDraftValue(`deal${idx}Player`)),
+          fromClubKey: normalizeAssetKey(getDraftValue(`deal${idx}From`)),
+          toClubKey: normalizeAssetKey(getDraftValue(`deal${idx}To`)),
+          oldPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}OldPct`)),
+          newPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`)),
+        };
+      });
+      const pickSlot = (deal: Record<string, unknown>, fallbackIndex: number) => {
+        const player = clean(firstValue(deal.arabicName, deal.player, deal.name));
+        const fromClub = clean(firstValue(deal.from, deal.fromClub, deal.currentClub));
+        const toClub = clean(firstValue(deal.to, deal.toClub, deal.destinationClub));
+        const playerKey = normalizeAssetKey(player);
+        const fromClubKey = normalizeAssetKey(fromClub);
+        const toClubKey = normalizeAssetKey(toClub);
+        const exact = currentDeals.find(item =>
+          !usedSlots.has(item.idx)
+          && playerKey
+          && item.playerKey === playerKey
+          && (!fromClubKey || item.fromClubKey === fromClubKey)
+          && (!toClubKey || item.toClubKey === toClubKey)
+        );
+        if (exact) return exact.idx;
+        const byPlayer = currentDeals.find(item => !usedSlots.has(item.idx) && playerKey && item.playerKey === playerKey);
+        if (byPlayer) return byPlayer.idx;
+        const fallback = Math.min(6, fallbackIndex + 1);
+        if (!usedSlots.has(fallback)) return fallback;
+        return currentDeals.find(item => !usedSlots.has(item.idx))?.idx || fallback;
+      };
+
       deals.slice(0, 6).forEach((rawDeal: unknown, index: number) => {
         if (!rawDeal || typeof rawDeal !== 'object') return;
         const deal = rawDeal as Record<string, unknown>;
-        const n = index + 1;
-        const textFields: Array<[string, string]> = [
-          ['player', 'Player'], ['fromClub', 'From'], ['toClub', 'To'],
-          ['fee', 'Fee'], ['status', 'Status'], ['source', 'Source'],
-          ['image', 'Image'], ['fromLogo', 'FromLogo'], ['toLogo', 'ToLogo'],
+        const n = pickSlot(deal, index);
+        usedSlots.add(n);
+        const slotBefore = currentDeals[n - 1];
+        const textFields: Array<[unknown, string]> = [
+          [firstValue(deal.arabicName, deal.player, deal.name), 'Player'],
+          [firstValue(deal.from, deal.fromClub, deal.currentClub), 'From'],
+          [firstValue(deal.to, deal.toClub, deal.destinationClub), 'To'],
+          [firstValue(deal.fee, deal.value, deal.tag), 'Fee'],
+          [firstValue(deal.status, deal.state), 'Status'],
+          [firstValue(deal.source, deal.sourceName, deal.note), 'Source'],
+          [firstValue(deal.image, deal.playerImage, deal.photo), 'Image'],
+          [firstValue(deal.fromLogo, deal.currentLogo), 'FromLogo'],
+          [firstValue(deal.toLogo, deal.destinationLogo), 'ToLogo'],
         ];
-        textFields.forEach(([sourceKey, fieldSuffix]) => {
-          if (deal[sourceKey] !== undefined && String(deal[sourceKey]).trim()) {
-            updates[`deal${n}${fieldSuffix}`] = String(deal[sourceKey]).trim();
-          }
+        textFields.forEach(([value, fieldSuffix]) => {
+          const text = clean(value);
+          if (text) updates[`deal${n}${fieldSuffix}`] = text;
         });
-        if (deal.oldPct !== undefined) updates[`deal${n}OldPct`] = normalizeProbabilityPercent(deal.oldPct);
-        if (deal.newPct !== undefined) updates[`deal${n}NewPct`] = normalizeProbabilityPercent(deal.newPct);
+
+        const explicitOld = firstValue(deal.oldPct, deal.previousPct, deal.previous, deal.before, deal.oldConfidence);
+        const incomingNew = firstValue(deal.newPct, deal.confidence, deal.currentPct, deal.probability, deal.percent, deal.pct);
+        if (explicitOld !== undefined) updates[`deal${n}OldPct`] = normalizeProbabilityPercent(explicitOld);
+        if (incomingNew !== undefined) {
+          updates[`deal${n}OldPct`] = explicitOld !== undefined
+            ? normalizeProbabilityPercent(explicitOld)
+            : normalizeProbabilityPercent(slotBefore?.newPct ?? slotBefore?.oldPct ?? 0);
+          updates[`deal${n}NewPct`] = normalizeProbabilityPercent(incomingNew);
+        }
       });
 
       if (!Object.keys(updates).length) throw new Error('لم أجد حقول صفقات قابلة للتطبيق.');
@@ -909,7 +965,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       updates.updateDate = formatProbabilityShiftToday();
       updates.probabilityHistoryJson = appendProbabilityHistory(updates);
       handleDraftFieldChanges(updates);
-      setGlobalDealsJsonMessage({ type: 'success', text: `تم تطبيق ${Math.min(deals.length, 6)} صفقات. القالب جاهز للانتقال من السابق إلى الجديد.` });
+      setGlobalDealsJsonMessage({ type: 'success', text: `تم تطبيق ${Math.min(deals.length, 6)} صفقات. confidence تُقرأ كنسبة اليوم، والسجل حفظ لقطة جديدة للتحول.` });
     } catch (error) {
       setGlobalDealsJsonMessage({ type: 'error', text: error instanceof Error ? error.message : 'JSON غير صالح.' });
     }
@@ -3904,7 +3960,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                          setGlobalDealsJsonInput(event.target.value);
                          setGlobalDealsJsonMessage(null);
                        }}
-                       placeholder={'{"deals":[{"player":"...","fromClub":"...","toClub":"...","oldPct":35,"newPct":78,"fee":"€60M","status":"مفاوضات متقدمة","source":"..."}]}'}
+                       placeholder={'[{"player":"Bernardo Silva","arabicName":"برناردو سيلفا","from":"Manchester City","to":"Barcelona","confidence":85,"tag":"Free Deal","image":"https://...","fromLogo":"https://...","toLogo":"https://..."}]'}
                        className="w-full resize-y rounded-lg border border-cyan-800/50 bg-slate-950 px-3 py-3 font-mono text-[10px] leading-5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-400"
                      />
                      <div className="grid grid-cols-2 gap-2">
