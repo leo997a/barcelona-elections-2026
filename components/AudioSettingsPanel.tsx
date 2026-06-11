@@ -24,7 +24,7 @@ import type { OverlayConfig } from '../types';
 import { listVoicesForTemplate, resolveVoiceUrl, NO_VOICE_OPTION } from '../utils/voiceLibrary';
 import { listAudioScenes, getAudioScene, sceneToFieldUpdates, sceneToFieldUpdatesWithVoice } from '../utils/templateAudioScenes';
 import { resolveTemplateAudio } from '../utils/templateRuntime';
-import { playCue } from '../services/audioEngine';
+import { playCue, PREVIEWABLE_CUES } from '../services/audioEngine';
 
 /**
  * Phase X11/X12 — SFX style presets surfaced as labeled buttons in the
@@ -131,9 +131,16 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
 
   const [showResolved, setShowResolved] = useState(false);
   const [showScenePicker, setShowScenePicker] = useState(false);
+  const [showCuePicker, setShowCuePicker] = useState(true);
 
   const voiceList = listVoicesForTemplate(String(overlay.type));
   const scenes = listAudioScenes();
+  const cueGroups = PREVIEWABLE_CUES.reduce<Record<string, typeof PREVIEWABLE_CUES>>((groups, cue) => {
+    const category = cue.category || 'other';
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(cue);
+    return groups;
+  }, {});
 
   const applyUpdates = (updates: Record<string, string | number | boolean>) => {
     if (onUpdateMany) {
@@ -424,6 +431,54 @@ const AudioSettingsPanel: React.FC<Props> = ({ overlay, onUpdate, onUpdateMany, 
                 <Play className="w-2.5 h-2.5" />
                 UPDATE
               </button>
+            </div>
+            <div className="rounded-lg border border-cyan-500/20 bg-cyan-950/10">
+              <button
+                type="button"
+                onClick={() => setShowCuePicker(value => !value)}
+                className="flex w-full items-center justify-between gap-3 px-2.5 py-2 text-right"
+              >
+                <span>
+                  <strong className="block text-[11px] text-cyan-200">اختيار صوت مستقل لكل حدث</strong>
+                  <small className="block text-[9px] text-slate-500">حدد صوت الدخول والخروج والتحديث بنفسك، بدون التقيد بالمشهد الجاهز.</small>
+                </span>
+                {showCuePicker ? <ChevronUp className="h-3.5 w-3.5 text-cyan-300" /> : <ChevronDown className="h-3.5 w-3.5 text-cyan-300" />}
+              </button>
+              {showCuePicker && (
+                <div className="space-y-2 border-t border-cyan-500/10 p-2.5">
+                  {[
+                    { id: 'soundInStyle', label: 'صوت دخول القالب IN', value: soundInStyle, preview: previewIn, fallback: 'DEFAULT' },
+                    { id: 'audioUpdateCue', label: 'صوت الحدث أو التحديث UPDATE', value: audioUpdateCue, preview: previewUpdate, fallback: '' },
+                    { id: 'soundOutStyle', label: 'صوت خروج القالب OUT', value: soundOutStyle, preview: previewOut, fallback: 'DEFAULT' },
+                  ].map(item => (
+                    <div key={item.id} className="grid grid-cols-[1fr_30px] gap-1.5">
+                      <label className="min-w-0">
+                        <span className="mb-1 block text-[9px] font-bold text-slate-400">{item.label}</span>
+                        <select
+                          value={item.value}
+                          onChange={(event) => onUpdate(item.id, event.target.value)}
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-[10px] text-slate-100 outline-none focus:border-cyan-500"
+                        >
+                          <option value={item.fallback}>{item.id === 'audioUpdateCue' ? 'افتراضي القالب' : 'افتراضي نوع القالب'}</option>
+                          {Object.entries(cueGroups).map(([category, cues]) => (
+                            <optgroup key={category} label={category.toUpperCase()}>
+                              {cues.map(cue => <option key={`${item.id}-${cue.value}`} value={cue.value}>{cue.label}</option>)}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={item.preview}
+                        className="mt-[18px] grid h-[30px] w-[30px] place-items-center rounded border border-cyan-500/25 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20"
+                        title={`تجربة ${item.label}`}
+                      >
+                        <Play className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className={`text-[9px] text-slate-500 leading-relaxed`}>
               IN/OUT يشتغلان تلقائيًا. UPDATE يُسمَع فقط عند تغيّر بيانات حساسة على البث (مثل chatLines أو probability).

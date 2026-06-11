@@ -3033,6 +3033,10 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
       { id: 'showDealStatus', label: 'إظهار حالة الصفقة', type: 'boolean', value: true },
       { id: 'showDealSource', label: 'إظهار مصدر الصفقة', type: 'boolean', value: true },
       { id: 'showClubLabels', label: 'إظهار تسميات الأندية', type: 'boolean', value: true },
+      { id: 'showAverageSummary', label: 'إظهار متوسطات النسب الكلية', type: 'boolean', value: true },
+      { id: 'showTransitionBanner', label: 'إظهار لحظة التحول الدرامية', type: 'boolean', value: true },
+      { id: 'showProbabilityTrack', label: 'إظهار مسار النسبة', type: 'boolean', value: true },
+      { id: 'showDealDelta', label: 'إظهار مقدار التغير', type: 'boolean', value: true },
       { id: 'probabilityHistoryJson', label: 'سجل تحوّل النسب', type: 'hidden', value: '[]' },
       { id: 'featuredDealIndex', label: 'الصفقة الرئيسية', type: 'select', value: '1', options: [1, 2, 3, 4, 5, 6].map(idx => ({
         value: String(idx),

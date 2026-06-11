@@ -3718,7 +3718,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           )}
 
           {/* ALWAYS for non-ELECTION: Sound tab if exists — hidden in Player Stats easy mode */}
-          {!isPlayerStatsEasyMode && draftOverlay.type !== OverlayType.ELECTION && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
+          {!isPlayerStatsEasyMode && draftOverlay.fields.some(f => f.id === 'soundEnabled' || f.id === 'useTTS') && (
             <button onClick={() => setActiveTab('sound')} className={`px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${activeTab === 'sound' ? 'text-green-400 border-green-500 bg-green-500/5' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>صوت</button>
           )}
 
@@ -3750,7 +3750,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
         <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {/* AUDIO-X4: Universal audio panel — shows on every template's sound tab */}
-          {activeTab === 'sound' && draftOverlay.type !== OverlayType.ELECTION && (
+          {activeTab === 'sound' && (
             <AudioSettingsPanel
               overlay={draftOverlay}
               onUpdate={(id, val) => handleDraftFieldChange(id, val)}
@@ -3950,6 +3950,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
                   // SMART UNIVERSAL FIELD FILTERING
                   if (draftOverlay.type === OverlayType.ELECTION) {
+                      if (activeTab === 'sound') return null;
                       const isStyleField = ['themePreset', 'designStyle', 'barcaLogo', 'scale', 'positionX', 'positionY', 'transitionIn', 'transitionOut', 'soundEnabled', 'soundVolume', 'soundInStyle', 'soundOutStyle', 'boxColor', 'accentColor'].includes(field.id);
                       const isCandidateField = field.id.startsWith('candidate') || ['showUndecided', 'undecidedLabel', 'undecidedPercent', 'undecidedColor'].includes(field.id);
                       const isTimeField = ['targetDate', 'targetTime', 'countdownTitle', 'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'].includes(field.id);
@@ -3999,7 +4000,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // Phase A4 — scene fields surface as audio settings
                         'audioSceneId', 'audioUpdateCue',
                       ];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'sponsorDisplayMode', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'showSponsorStats', 'showGoalProgress', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'sponsorDisplayMode', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'showSponsorStats', 'showGoalProgress', 'showAverageSummary', 'showTransitionBanner', 'showProbabilityTrack', 'showDealDelta', 'showDealFee', 'showDealStatus', 'showDealSource', 'showClubLabels', 'transitionEffect', 'transitionIn', 'transitionOut', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);

@@ -360,6 +360,9 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   const resolveSynthCue = (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
       if (config.type === OverlayType.ELECTION) {
           const designStyle = resolveElectionStyle(String(getField('designStyle') || 'RESULTS_BAR'));
+          if (type === 'TRANSITION') {
+              return String(getField('audioUpdateCue') || '') || resolveTemplateAudio(config).updateCue;
+          }
           const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
           if (fieldCue !== 'DEFAULT') return fieldCue;
           return type === 'EXIT'
@@ -367,8 +370,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
               : ELECTION_SOUND_IN_DEFAULTS[designStyle] || 'RESULTS_STING';
       }
 
-      const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
-      if (fieldCue !== 'DEFAULT') return fieldCue;
       if (type === 'TRANSITION') {
           // Phase A3 — prefer scene-level audioUpdateCue if present
           // (set by sceneToFieldUpdates), otherwise fall back to the
@@ -387,6 +388,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           // so every template ticks consistently.
           return resolveTemplateAudio(config).updateCue;
       }
+      const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
+      if (fieldCue !== 'DEFAULT') return fieldCue;
       // ENTRY / EXIT: prefer the per-type SOUND_*_DEFAULTS map for backward
       // compatibility, then fall back to the universal runtime profile so
       // NO template ever plays a generic STADIUM_WHOOSH by accident.
