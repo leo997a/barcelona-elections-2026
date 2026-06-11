@@ -3004,7 +3004,7 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
     audioSceneId: 'analysis_lab',
     dataFields: [
       { id: 'probabilityShiftMode', label: 'حالة عرض النسب', type: 'hidden', value: 'old' },
-      { id: 'audioUpdateCue', label: 'مؤثر تحديث النسب', type: 'hidden', value: 'LIVE_UPDATE_PING' },
+      { id: 'audioUpdateCue', label: 'مؤثر تحديث النسب', type: 'hidden', value: 'TARGET_REVEAL_DARK' },
       { id: 'soundInStyle', label: 'مؤثر دخول القالب', type: 'hidden', value: 'TARGET_REVEAL' },
       { id: 'soundOutStyle', label: 'مؤثر خروج القالب', type: 'hidden', value: 'SOFT_FADE' },
       { id: 'matrixLayout', label: 'نوع تصميم شبكة الصفقات', type: 'select', value: 'global_exchange', options: [
@@ -3023,6 +3023,17 @@ const MERCATO_X6_TEMPLATES: OverlayConfig[] = [
       { id: 'movementLabel', label: 'تسمية الحركة', type: 'text', value: 'حركة السوق' },
       { id: 'featuredLabel', label: 'تسمية الصفقة الرئيسية', type: 'text', value: 'الصفقة الرئيسية' },
       { id: 'sourceLabel', label: 'تسمية المصدر', type: 'text', value: 'المصدر' },
+      { id: 'fromClubLabel', label: 'تسمية النادي الحالي', type: 'text', value: 'النادي الحالي' },
+      { id: 'toClubLabel', label: 'تسمية الوجهة المحتملة', type: 'text', value: 'الوجهة المحتملة' },
+      { id: 'readyLabel', label: 'تسمية حالة ما قبل التحديث', type: 'text', value: 'جاهز للتحديث' },
+      { id: 'previousAverageLabel', label: 'تسمية متوسط السوق السابق', type: 'text', value: 'متوسط السوق السابق' },
+      { id: 'currentAverageLabel', label: 'تسمية متوسط السوق الحالي', type: 'text', value: 'متوسط السوق الحالي' },
+      { id: 'risingFallingLabel', label: 'تسمية الصفقات الصاعدة والمتراجعة', type: 'text', value: 'صفقات صاعدة / متراجعة' },
+      { id: 'showDealFee', label: 'إظهار قيمة الصفقة', type: 'boolean', value: true },
+      { id: 'showDealStatus', label: 'إظهار حالة الصفقة', type: 'boolean', value: true },
+      { id: 'showDealSource', label: 'إظهار مصدر الصفقة', type: 'boolean', value: true },
+      { id: 'showClubLabels', label: 'إظهار تسميات الأندية', type: 'boolean', value: true },
+      { id: 'probabilityHistoryJson', label: 'سجل تحوّل النسب', type: 'hidden', value: '[]' },
       { id: 'featuredDealIndex', label: 'الصفقة الرئيسية', type: 'select', value: '1', options: [1, 2, 3, 4, 5, 6].map(idx => ({
         value: String(idx),
         label: `الصفقة ${idx}`,

@@ -21,6 +21,7 @@ import React from 'react';
 import { RendererProps } from './SharedComponents';
 import { useEffect } from 'react';
 import { evaluateTransitionAttempt } from '../../utils/templateTransitionDiagnostics';
+import GlobalProbabilityNetworkRenderer from './GlobalProbabilityNetworkRenderer';
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
 
@@ -293,7 +294,7 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
           {variant === 'deadline_hour' && <DeadlineHourVariant t={t} getField={getField} />}
           {variant === 'source_confidence' && <SourceConfidenceVariant t={t} getField={getField} />}
           {variant === 'probability_shift' && <ProbabilityShiftVariant t={t} getField={getField} />}
-          {variant === 'global_probability_shift' && <GlobalProbabilityShiftVariant t={t} getField={getField} />}
+          {variant === 'global_probability_shift' && <GlobalProbabilityNetworkRenderer getField={getField} />}
           {variant === 'clause_reveal' && <ClauseRevealVariant t={t} getField={getField} />}
           {variant === 'medical_tracker' && <MedicalTrackerVariant t={t} getField={getField} />}
           {variant === 'hijack_alert' && <HijackAlertVariant t={t} getField={getField} />}

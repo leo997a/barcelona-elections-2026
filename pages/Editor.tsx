@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
+import { INITIAL_TEMPLATES } from '../constants';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload, Search, Key } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
@@ -22,6 +23,7 @@ import {
   assetCandidates,
   fetchAssetCaches,
   findAssetUrl,
+  normalizeAssetKey,
 } from '../utils/assetCache';
 import { identityToAssetFields, resolveClubIdentity, resolvePlayerIdentity } from '../utils/playerIdentity';
 import { LABELS, METRIC_LABELS, getMetricLabel, t } from '../utils/playerStatsLabels';
@@ -503,6 +505,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatusSnapshot | null>(null);
   const [aiBoxInput, setAiBoxInput] = useState('');
   const [aiBoxMessage, setAiBoxMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [globalDealsJsonInput, setGlobalDealsJsonInput] = useState('');
+  const [globalDealsJsonMessage, setGlobalDealsJsonMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [clubLogoMap, setClubLogoMap] = useState<Record<string, string>>({});
   const [playerImageMap, setPlayerImageMap] = useState<Record<string, string>>({});
   const [playerRenderMap, setPlayerRenderMap] = useState<Record<string, string>>({});
@@ -753,6 +757,23 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const probabilityShiftDealCount = isGlobalProbabilityShiftTemplate ? 6 : 4;
   const probabilityShiftMode = String(getDraftValue('probabilityShiftMode') || 'old');
 
+  useEffect(() => {
+    if (!isGlobalProbabilityShiftTemplate) return;
+    const sourceTemplate = INITIAL_TEMPLATES.find(template =>
+      template.type === OverlayType.MERCATO_UNIFIED
+      && template.fields.some(field => field.id === 'mercatoVariant' && field.value === 'global_probability_shift')
+    );
+    if (!sourceTemplate) return;
+    const existingIds = new Set(draftOverlay.fields.map(field => field.id));
+    const missingFields = sourceTemplate.fields
+      .filter(field => !existingIds.has(field.id))
+      .map(field => ({ ...field, options: field.options?.map(option => typeof option === 'string' ? option : { ...option }) }));
+    if (!missingFields.length) return;
+    const upgradedOverlay = { ...draftOverlay, fields: [...draftOverlay.fields, ...missingFields] };
+    setDraftOverlay(upgradedOverlay);
+    syncManager.updateOverlay(upgradedOverlay);
+  }, [draftOverlay, isGlobalProbabilityShiftTemplate]);
+
   const formatProbabilityShiftToday = () => {
     try {
       return new Intl.DateTimeFormat('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
@@ -761,10 +782,55 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     }
   };
 
+  const readProbabilityHistory = () => {
+    try {
+      const parsed = JSON.parse(String(getDraftValue('probabilityHistoryJson') || '[]'));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const appendProbabilityHistory = (overrides: Record<string, unknown> = {}) => {
+    const read = (id: string) => Object.prototype.hasOwnProperty.call(overrides, id) ? overrides[id] : getDraftValue(id);
+    const deals = Array.from({ length: 6 }, (_, index) => index + 1).map(idx => ({
+      player: String(read(`deal${idx}Player`) || '').trim(),
+      playerKey: normalizeAssetKey(read(`deal${idx}Player`)),
+      fromClub: String(read(`deal${idx}From`) || '').trim(),
+      fromClubKey: normalizeAssetKey(read(`deal${idx}From`)),
+      toClub: String(read(`deal${idx}To`) || '').trim(),
+      toClubKey: normalizeAssetKey(read(`deal${idx}To`)),
+      previousPct: normalizeProbabilityPercent(read(`deal${idx}OldPct`)),
+      currentPct: normalizeProbabilityPercent(read(`deal${idx}NewPct`)),
+    })).filter(deal => deal.player);
+    if (!deals.length) return String(getDraftValue('probabilityHistoryJson') || '[]');
+
+    const fingerprint = deals.map(deal => [
+      deal.playerKey,
+      deal.fromClubKey,
+      deal.toClubKey,
+      deal.previousPct,
+      deal.currentPct,
+    ].join('|')).join('::');
+    const history = readProbabilityHistory();
+    if (history.at(-1)?.fingerprint === fingerprint) return JSON.stringify(history);
+
+    return JSON.stringify([...history, {
+      id: `probability-${Date.now()}`,
+      timestamp: Date.now(),
+      dateLabel: formatProbabilityShiftToday(),
+      fingerprint,
+      deals,
+    }].slice(-30));
+  };
+
   const setProbabilityShiftMode = (mode: 'old' | 'new') => {
     handleDraftFieldChanges({
       probabilityShiftMode: mode,
-      ...(mode === 'new' ? { updateDate: formatProbabilityShiftToday() } : {}),
+      ...(mode === 'new' ? {
+        updateDate: formatProbabilityShiftToday(),
+        probabilityHistoryJson: appendProbabilityHistory(),
+      } : {}),
     });
   };
 
@@ -784,9 +850,69 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       delta: newPct - oldPct,
     };
   });
+  const probabilityHistoryEntries = isGlobalProbabilityShiftTemplate ? readProbabilityHistory().slice(-4).reverse() : [];
 
   const setProbabilityDealPercent = (idx: number, kind: 'OldPct' | 'NewPct', value: number) => {
     handleDraftFieldChange(`deal${idx}${kind}`, normalizeProbabilityPercent(value));
+  };
+
+  const currentGlobalDealsJson = () => JSON.stringify(
+    Array.from({ length: 6 }, (_, index) => index + 1).map(idx => ({
+      player: String(getDraftValue(`deal${idx}Player`) || ''),
+      fromClub: String(getDraftValue(`deal${idx}From`) || ''),
+      toClub: String(getDraftValue(`deal${idx}To`) || ''),
+      oldPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}OldPct`)),
+      newPct: normalizeProbabilityPercent(getDraftValue(`deal${idx}NewPct`)),
+      fee: String(getDraftValue(`deal${idx}Fee`) || ''),
+      status: String(getDraftValue(`deal${idx}Status`) || ''),
+      source: String(getDraftValue(`deal${idx}Source`) || ''),
+      image: String(getDraftValue(`deal${idx}Image`) || ''),
+      fromLogo: String(getDraftValue(`deal${idx}FromLogo`) || ''),
+      toLogo: String(getDraftValue(`deal${idx}ToLogo`) || ''),
+    })),
+    null,
+    2,
+  );
+
+  const applyGlobalDealsJson = () => {
+    setGlobalDealsJsonMessage(null);
+    try {
+      const parsed = JSON.parse(globalDealsJsonInput);
+      const deals = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.deals)
+          ? parsed.deals
+          : [];
+      if (!deals.length) throw new Error('يجب أن يحتوي JSON على مصفوفة صفقات أو مفتاح deals.');
+
+      const updates: Record<string, unknown> = {};
+      deals.slice(0, 6).forEach((rawDeal: unknown, index: number) => {
+        if (!rawDeal || typeof rawDeal !== 'object') return;
+        const deal = rawDeal as Record<string, unknown>;
+        const n = index + 1;
+        const textFields: Array<[string, string]> = [
+          ['player', 'Player'], ['fromClub', 'From'], ['toClub', 'To'],
+          ['fee', 'Fee'], ['status', 'Status'], ['source', 'Source'],
+          ['image', 'Image'], ['fromLogo', 'FromLogo'], ['toLogo', 'ToLogo'],
+        ];
+        textFields.forEach(([sourceKey, fieldSuffix]) => {
+          if (deal[sourceKey] !== undefined && String(deal[sourceKey]).trim()) {
+            updates[`deal${n}${fieldSuffix}`] = String(deal[sourceKey]).trim();
+          }
+        });
+        if (deal.oldPct !== undefined) updates[`deal${n}OldPct`] = normalizeProbabilityPercent(deal.oldPct);
+        if (deal.newPct !== undefined) updates[`deal${n}NewPct`] = normalizeProbabilityPercent(deal.newPct);
+      });
+
+      if (!Object.keys(updates).length) throw new Error('لم أجد حقول صفقات قابلة للتطبيق.');
+      updates.probabilityShiftMode = 'old';
+      updates.updateDate = formatProbabilityShiftToday();
+      updates.probabilityHistoryJson = appendProbabilityHistory(updates);
+      handleDraftFieldChanges(updates);
+      setGlobalDealsJsonMessage({ type: 'success', text: `تم تطبيق ${Math.min(deals.length, 6)} صفقات. القالب جاهز للانتقال من السابق إلى الجديد.` });
+    } catch (error) {
+      setGlobalDealsJsonMessage({ type: 'error', text: error instanceof Error ? error.message : 'JSON غير صالح.' });
+    }
   };
 
   // Phase E.1: hide bottom tabs in Player Stats easy mode
@@ -3682,6 +3808,31 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       <Calendar className="h-3.5 w-3.5" />
                       تاريخ التحديث الحالي: {String(getDraftValue('updateDate') || 'غير محدد')}
                     </div>
+                    {isGlobalProbabilityShiftTemplate && (
+                      <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs font-black text-white">
+                            <History className="h-4 w-4 text-cyan-300" />
+                            سجل النسب الذكي
+                          </div>
+                          <span className="font-mono text-[9px] font-black text-cyan-300">{readProbabilityHistory().length} SNAPSHOTS</span>
+                        </div>
+                        {probabilityHistoryEntries.length ? (
+                          <div className="space-y-1.5">
+                            {probabilityHistoryEntries.map((entry: { id?: unknown; dateLabel?: unknown; deals?: unknown[] }) => (
+                              <div key={String(entry.id)} className="flex items-center justify-between gap-3 rounded-md border border-white/[0.06] bg-white/[0.03] px-2.5 py-2">
+                                <span className="text-[10px] font-bold text-slate-300">{String(entry.dateLabel || 'تحديث محفوظ')}</span>
+                                <span className="text-[9px] font-black text-slate-500">{Array.isArray(entry.deals) ? entry.deals.length : 0} صفقات</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] leading-5 text-slate-500">
+                            سيُحفظ أول سجل تلقائيًا عند استيراد الصفقات أو تشغيل «تحديث لنسب اليوم»، ويتزامن ضمن بيانات القالب الحالية.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 gap-2">
                       {probabilityShiftDealControls.map(deal => (
                         <div key={deal.idx} className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
@@ -3697,7 +3848,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                            <div className="mt-3 grid grid-cols-2 gap-3">
                              <label className="space-y-1">
                               <div className="flex items-center justify-between text-[10px] font-bold text-rose-200/80">
-                                 <span>Old %</span>
+                                 <span>النسبة السابقة</span>
                                 <span className="font-mono">{deal.oldPct}%</span>
                               </div>
                               <input
@@ -3712,7 +3863,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                             </label>
                             <label className="space-y-1">
                               <div className="flex items-center justify-between text-[10px] font-bold text-emerald-200/80">
-                                 <span>New %</span>
+                                 <span>النسبة الحالية</span>
                                 <span className="font-mono">{deal.newPct}%</span>
                               </div>
                               <input
@@ -3732,49 +3883,63 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                   </div>
                 )}
                  {activeTab === 'fields' && isGlobalProbabilityShiftTemplate && (
-                   <div style={{ borderRadius: 16, border: '1px solid rgba(6,182,212,0.3)', padding: 16, background: 'rgba(6,182,212,0.07)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8 }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                       <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(6,182,212,0.2)', color: '#67e8f9', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>AI</span>
-                       <span style={{ fontSize: 13, fontWeight: 900, color: '#67e8f9' }}>Smart JSON Box</span>
+                   <section className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4 space-y-3" dir="rtl">
+                     <div className="flex items-start justify-between gap-3">
+                       <div>
+                         <div className="flex items-center gap-2 text-cyan-200">
+                           <Sparkles className="h-4 w-4" />
+                           <h3 className="text-sm font-black">استيراد الصفقات الذكي</h3>
+                         </div>
+                         <p className="mt-1 text-[11px] leading-5 text-cyan-100/60">
+                           الصق مصفوفة JSON أو كائنًا يحتوي على <span className="font-mono text-cyan-300">deals</span>. سيتم تجهيز ست صفقات ثم إرجاع العرض إلى النسب السابقة قبل تشغيل انتقال اليوم.
+                         </p>
+                       </div>
+                       <span className="rounded-md border border-cyan-400/25 bg-cyan-400/10 px-2 py-1 text-[9px] font-black text-cyan-200">6 DEALS</span>
                      </div>
-                     <p style={{ fontSize: 11, color: 'rgba(207,250,254,0.6)', lineHeight: 1.6, margin: 0 }}>
-                       Paste JSON array (max 6 deals). Keys: player, fromClub, toClub, oldPct, newPct, fee, status, source
-                     </p>
                      <textarea
-                       rows={5}
-                       placeholder={'[{ "player": "...", "fromClub": "...", "toClub": "...", "oldPct": 45, "newPct": 82, "fee": "60M", "status": "...", "source": "..." }]'}
-                       style={{ width: '100%', borderRadius: 12, border: '1px solid rgba(6,182,212,0.25)', padding: '10px 12px', fontFamily: 'monospace', fontSize: 11, background: 'rgba(2,6,23,0.85)', color: '#cbd5e1', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
-                       onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {
-                         const raw = e.target.value.trim();
-                         if (!raw) return;
-                         try {
-                           const parsed = JSON.parse(raw);
-                           const arr: Record<string, unknown>[] = Array.isArray(parsed) ? parsed : [parsed];
-                           const updates: Record<string, unknown> = {};
-                           arr.slice(0, 6).forEach((item, i) => {
-                             const n = i + 1;
-                             if (item.player) updates['deal' + n + 'Player'] = String(item.player);
-                             if (item.fromClub) updates['deal' + n + 'From'] = String(item.fromClub);
-                             if (item.toClub) updates['deal' + n + 'To'] = String(item.toClub);
-                             if (item.fee) updates['deal' + n + 'Fee'] = String(item.fee);
-                             if (item.status) updates['deal' + n + 'Status'] = String(item.status);
-                             if (item.source) updates['deal' + n + 'Source'] = String(item.source);
-                             const op = Number(item.oldPct);
-                             const np = Number(item.newPct);
-                             if (Number.isFinite(op)) updates['deal' + n + 'OldPct'] = Math.max(0, Math.min(100, Math.round(op)));
-                             if (Number.isFinite(np)) updates['deal' + n + 'NewPct'] = Math.max(0, Math.min(100, Math.round(np)));
-                           });
-                           if (Object.keys(updates).length > 0) {
-                             handleDraftFieldChanges(updates);
-                             e.target.value = '';
-                             e.target.style.borderColor = 'rgba(34,197,94,0.5)';
-                             e.target.placeholder = 'Applied ' + arr.slice(0, 6).length + ' deals!';
-                             setTimeout(() => { e.target.style.borderColor = 'rgba(6,182,212,0.25)'; }, 2500);
-                           }
-                         } catch { /* invalid JSON */ }
+                       rows={9}
+                       dir="ltr"
+                       value={globalDealsJsonInput}
+                       onChange={(event) => {
+                         setGlobalDealsJsonInput(event.target.value);
+                         setGlobalDealsJsonMessage(null);
                        }}
+                       placeholder={'{"deals":[{"player":"...","fromClub":"...","toClub":"...","oldPct":35,"newPct":78,"fee":"€60M","status":"مفاوضات متقدمة","source":"..."}]}'}
+                       className="w-full resize-y rounded-lg border border-cyan-800/50 bg-slate-950 px-3 py-3 font-mono text-[10px] leading-5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-400"
                      />
-                   </div>
+                     <div className="grid grid-cols-2 gap-2">
+                       <button
+                         type="button"
+                         onClick={applyGlobalDealsJson}
+                         disabled={!globalDealsJsonInput.trim()}
+                         className="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 text-xs font-black text-slate-950 hover:bg-cyan-300 disabled:bg-slate-800 disabled:text-slate-500"
+                       >
+                         <Check className="h-4 w-4" />
+                         تطبيق الصفقات
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => {
+                           setGlobalDealsJsonInput(currentGlobalDealsJson());
+                           setGlobalDealsJsonMessage({ type: 'success', text: 'تم تحميل بيانات الصفقات الحالية داخل المحرر.' });
+                         }}
+                         className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-200 hover:border-cyan-500/50 hover:text-white"
+                       >
+                         <RefreshCw className="h-4 w-4" />
+                         تحميل البيانات الحالية
+                       </button>
+                     </div>
+                     {globalDealsJsonMessage && (
+                       <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-[11px] font-bold ${
+                         globalDealsJsonMessage.type === 'success'
+                           ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
+                           : 'border-rose-500/25 bg-rose-500/10 text-rose-200'
+                       }`}>
+                         {globalDealsJsonMessage.type === 'success' ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
+                         <span>{globalDealsJsonMessage.text}</span>
+                       </div>
+                     )}
+                   </section>
                  )}
                  {draftOverlay.fields.map((field) => {
                   if (field.type === 'hidden' || field.id === 'currentPage') return null;

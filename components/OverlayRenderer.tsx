@@ -374,6 +374,14 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           // (set by sceneToFieldUpdates), otherwise fall back to the
           // template's runtime profile updateCue.
           const sceneUpdateCue = String(getField('audioUpdateCue') || '');
+          const isGlobalProbabilityShift = config.type === OverlayType.MERCATO_UNIFIED
+              && String(getField('mercatoVariant') || '') === 'global_probability_shift';
+          // Existing instances created before the global probability redesign
+          // still carry LIVE_UPDATE_PING. Upgrade that weak default at runtime
+          // while preserving any explicit custom cue selected by the user.
+          if (isGlobalProbabilityShift && (!sceneUpdateCue || sceneUpdateCue === 'LIVE_UPDATE_PING')) {
+              return 'TARGET_REVEAL_DARK';
+          }
           if (sceneUpdateCue) return sceneUpdateCue;
           // Universal transition fallback — resolve via runtime profile
           // so every template ticks consistently.
