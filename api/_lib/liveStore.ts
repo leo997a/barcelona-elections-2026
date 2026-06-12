@@ -1,5 +1,3 @@
-import { getCache } from '@vercel/functions';
-
 const CACHE_NAMESPACE = 'rge-live-output-v2';
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
@@ -12,8 +10,31 @@ export interface LiveStateEntry {
 }
 
 const fallbackStore = new Map<string, LiveStateEntry>();
+const listeners = new Map<string, Set<(entry: LiveStateEntry) => void>>();
 
-const cache = getCache({ namespace: CACHE_NAMESPACE });
+type RuntimeCache = {
+  get: (key: string) => Promise<unknown>;
+  set: (
+    key: string,
+    value: unknown,
+    options: { ttl: number; tags: string[]; name: string },
+  ) => Promise<unknown>;
+};
+
+let runtimeCachePromise: Promise<RuntimeCache | null> | null = null;
+
+const getRuntimeCache = () => {
+  if (!process.env.VERCEL) return Promise.resolve(null);
+  if (!runtimeCachePromise) {
+    runtimeCachePromise = import('@vercel/functions')
+      .then(({ getCache }) => getCache({ namespace: CACHE_NAMESPACE }) as RuntimeCache)
+      .catch(error => {
+        console.warn('Runtime cache unavailable, using process-local live state', error);
+        return null;
+      });
+  }
+  return runtimeCachePromise;
+};
 
 const keyFor = (id: string) => `overlay:${id}`;
 
@@ -25,7 +46,8 @@ const isLiveEntry = (value: unknown): value is LiveStateEntry => {
 
 export const getLiveState = async (id: string): Promise<LiveStateEntry | null> => {
   try {
-    const cached = await cache.get(keyFor(id));
+    const cache = await getRuntimeCache();
+    const cached = await cache?.get(keyFor(id));
     if (isLiveEntry(cached)) {
       fallbackStore.set(id, cached);
       return cached;
@@ -56,16 +78,34 @@ export const setLiveState = async (
   };
 
   fallbackStore.set(id, entry);
+  listeners.get(id)?.forEach(listener => listener(entry));
 
   try {
-    await cache.set(keyFor(id), entry, {
-      ttl: CACHE_TTL_SECONDS,
-      tags: ['rge-live-output', `rge-live-output:${id}`],
-      name: `RGE live output ${id}`,
-    });
+    const cache = await getRuntimeCache();
+    if (cache) {
+      await cache.set(keyFor(id), entry, {
+        ttl: CACHE_TTL_SECONDS,
+        tags: ['rge-live-output', `rge-live-output:${id}`],
+        name: `RGE live output ${id}`,
+      });
+    }
   } catch (error) {
     console.warn('Runtime cache write failed, using local fallback', error);
   }
 
   return entry;
+};
+
+export const subscribeLiveState = (
+  id: string,
+  listener: (entry: LiveStateEntry) => void,
+) => {
+  const idListeners = listeners.get(id) ?? new Set<(entry: LiveStateEntry) => void>();
+  idListeners.add(listener);
+  listeners.set(id, idListeners);
+
+  return () => {
+    idListeners.delete(listener);
+    if (idListeners.size === 0) listeners.delete(id);
+  };
 };

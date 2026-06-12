@@ -99,15 +99,15 @@ class SyncManager {
       this.status = 'local';
     }
 
-    if (!window.location.hash.includes('/output/') && this.currentState.length > 0) {
+    if (!this.isOutputRoute() && this.currentState.length > 0) {
       setTimeout(() => this.pushToLiveApi(), 1500);
-      setInterval(() => this.pushToLiveApi(), 30_000);
     }
   }
 
 
   private isOutputRoute() {
-    return window.location.hash.includes('/output/');
+    return window.location.hash.includes('/output/')
+      || window.location.pathname.toLowerCase().startsWith('/output/');
   }
 
   private isLegacyFirebaseSyncEnabled() {
@@ -262,7 +262,7 @@ class SyncManager {
         ...firebaseConfig,
         studioId: this.studioId || DEFAULT_STUDIO_ID,
         stateAccessKey: DEFAULT_STATE_ACCESS_KEY,
-        controlAccessKey: window.location.hash.includes('/output/') ? '' : DEFAULT_CONTROL_ACCESS_KEY,
+        controlAccessKey: this.isOutputRoute() ? '' : DEFAULT_CONTROL_ACCESS_KEY,
         updatedAt: Date.now(),
       };
     }
@@ -743,7 +743,7 @@ class SyncManager {
   }
 
   public buildOutputUrl(overlayId: string, embedData?: OverlayConfig) {
-    const baseUrl = `${window.location.origin}${window.location.pathname}?${this.buildOutputShellQuery()}#/output/${overlayId}`;
+    const baseUrl = `${window.location.origin}/output/${encodeURIComponent(overlayId)}?${this.buildOutputShellQuery()}`;
 
     if (embedData) {
       this.publishOverlaySnapshot(embedData).catch(() => { /* silent */ });
@@ -753,7 +753,11 @@ class SyncManager {
   }
 
   public buildProgramOutputUrl() {
-    return `${window.location.origin}${window.location.pathname}?${this.buildOutputShellQuery()}#/output/${PROGRAM_OUTPUT_ID}`;
+    return `${window.location.origin}/output/${encodeURIComponent(PROGRAM_OUTPUT_ID)}?${this.buildOutputShellQuery()}`;
+  }
+
+  public buildControlUrl(overlayId: string) {
+    return `${window.location.origin}/control/${encodeURIComponent(overlayId)}`;
   }
 
   public buildEditUrl(overlayId: string) {

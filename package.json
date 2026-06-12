@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:server",
+    "build:server": "tsc -p tsconfig.server.json",
     "lint": "tsc --noEmit",
     "preview": "vite preview",
+    "start": "node dist-server/server/server.js",
     "sync:player-cache": "node scripts/sync-player-image-cache.mjs"
   },
   "dependencies": {

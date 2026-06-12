@@ -4,7 +4,12 @@ import {
   type ServerlessRequest,
   type ServerlessResponse,
 } from './_lib/http.js';
-import { getLiveState, setLiveState } from './_lib/liveStore.js';
+import {
+  getLiveState,
+  setLiveState,
+  subscribeLiveState,
+  type LiveStateEntry,
+} from './_lib/liveStore.js';
 
 type StreamRequest = ServerlessRequest & {
   url?: string;
@@ -92,16 +97,23 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
     closed = true;
   });
 
-  writeSse(res, 'retry: 1000\n\n');
+  const emitEntry = (entry: LiveStateEntry | null) => {
+    if (!entry || entry.version === lastVersion || closed) return;
+    lastVersion = entry.version;
+    writeSse(res, `id: ${entry.version}\ndata: ${JSON.stringify(entry.state)}\n\n`);
+  };
+
+  const unsubscribe = subscribeLiveState(id, emitEntry);
+
+  writeSse(res, 'retry: 3000\n\n');
   writeSse(res, ': connected\n\n');
+  emitEntry(await getLiveState(id));
 
   const startedAt = Date.now();
-  while (!closed && Date.now() - startedAt < 55_000) {
-    const entry = await getLiveState(id);
-    if (entry && entry.version !== lastVersion) {
-      lastVersion = entry.version;
-      writeSse(res, `id: ${entry.version}\ndata: ${JSON.stringify(entry.state)}\n\n`);
-    }
+  const maxConnectionMs = process.env.VERCEL ? 55_000 : 6 * 60 * 60 * 1000;
+  const refreshMs = process.env.VERCEL ? 1_000 : 12_000;
+  while (!closed && Date.now() - startedAt < maxConnectionMs) {
+    emitEntry(await getLiveState(id));
 
     const now = Date.now();
     if (now - lastHeartbeat > 12_000) {
@@ -109,8 +121,9 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
       writeSse(res, ': ping\n\n');
     }
 
-    await delay(220);
+    await delay(refreshMs);
   }
 
+  unsubscribe();
   res.end('');
 }

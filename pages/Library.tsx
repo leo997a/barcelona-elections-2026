@@ -166,10 +166,11 @@ const MyCard: React.FC<{
   onToggleFavorite: (e: React.MouseEvent) => void;
   onCopyToken: (e: React.MouseEvent) => void;
   onCopyObsUrl: (e: React.MouseEvent) => void;
+  onCopyControlUrl: (e: React.MouseEvent) => void;
   onCopyEditUrl: (e: React.MouseEvent) => void;
   onRename: (nextName: string) => void;
   onOpenOperator: (e: React.MouseEvent) => void;
-}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyEditUrl, onRename, onOpenOperator }) => {
+}> = ({ overlay, isFavorite, onSelect, onDelete, onToggleFavorite, onCopyToken, onCopyObsUrl, onCopyControlUrl, onCopyEditUrl, onRename, onOpenOperator }) => {
   const accent = overlay.templateAccent || ACCENT[overlay.type] || '#888';
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftName, setDraftName] = useState(overlay.name);
@@ -296,11 +297,16 @@ const MyCard: React.FC<{
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           <button onClick={onCopyObsUrl}
             className="flex items-center justify-center gap-1 bg-green-600/10 text-green-400 hover:bg-green-600/25 border border-green-600/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
             title="نسخ رابط القالب الخاص للمستخدم في OBS">
             <Tv className="w-3 h-3" /> رابط القالب
+          </button>
+          <button onClick={onCopyControlUrl}
+            className="flex items-center justify-center gap-1 bg-cyan-600/10 text-cyan-300 hover:bg-cyan-600/25 border border-cyan-500/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+            title="نسخ رابط التحكم النظيف لهذا القالب">
+            <Link2 className="w-3 h-3" /> رابط التحكم
           </button>
           <button onClick={onOpenOperator}
             className="flex items-center justify-center gap-1 bg-indigo-600/10 text-indigo-300 hover:bg-indigo-600/25 border border-indigo-500/30 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
@@ -421,6 +427,17 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRenam
       btn.style.background = 'rgba(34,197,94,0.2)';
       setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2500);
     } catch { alert('خطأ في نسخ الرابط'); }
+  };
+
+  const handleCopyControlUrl = (overlay: OverlayConfig, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      navigator.clipboard.writeText(syncManager.buildControlUrl(overlay.id));
+      const btn = e.currentTarget as HTMLElement;
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ تم النسخ';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    } catch { alert('تعذر نسخ رابط التحكم'); }
   };
 
   const handleRenameOverlay = (overlay: OverlayConfig, nextName: string) => {
@@ -655,6 +672,7 @@ const Library: React.FC<LibraryProps> = ({ overlays, onSelect, onDelete, onRenam
                     onToggleFavorite={e => { e.stopPropagation(); onToggleFavorite(overlay.id); }}
                     onCopyToken={e => handleCopyToken(overlay, e)}
                     onCopyObsUrl={e => handleCopyObsUrl(overlay, e)}
+                    onCopyControlUrl={e => handleCopyControlUrl(overlay, e)}
                     onCopyEditUrl={e => handleCopyEditUrl(overlay, e)}
                     onRename={nextName => handleRenameOverlay(overlay, nextName)}
                     onOpenOperator={e => { e.stopPropagation(); onNavigateOperator(overlay.id); }}

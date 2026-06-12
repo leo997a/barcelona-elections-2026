@@ -44,19 +44,71 @@ const AudioUnlockOverlay = () => {
 // ─── LiveOutputView ─────────────────────────────────────────────────────────
 // SSE-based output view — يستقبل تحديثات فورية عبر Server-Sent Events
 // لا polling، لا تأخر، لا كراشات — الاتصال يبقى مفتوحاً دائماً
+const OUTPUT_PATH_PREFIX = '/output/';
+const CONTROL_PATH_PREFIX = '/control/';
+
+const extractPathId = (pathname: string, prefix: string) => {
+  if (!pathname.toLowerCase().startsWith(prefix)) return null;
+  const raw = pathname.slice(prefix.length).split('/')[0]?.split('?')[0];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
+const extractOutputId = (hashPath: string) => {
+  const cleanPathId = extractPathId(window.location.pathname, OUTPUT_PATH_PREFIX);
+  if (cleanPathId) return cleanPathId;
+  const raw = hashPath.split('/output/')[1]?.split('?')[0];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
+type OutputState = OverlayConfig | OverlayConfig[];
+const OUTPUT_CACHE_PREFIX = 'rge_output_last_state:';
+const OUTPUT_CACHE_MAX_BYTES = 1_000_000;
+
+const readCachedOutputState = (id: string | null): OutputState | null => {
+  if (!id) return null;
+  try {
+    const raw = localStorage.getItem(`${OUTPUT_CACHE_PREFIX}${id}`);
+    return raw ? JSON.parse(raw) as OutputState : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedOutputState = (id: string | null, state: OutputState) => {
+  if (!id) return;
+  try {
+    const raw = JSON.stringify(state);
+    if (raw.length <= OUTPUT_CACHE_MAX_BYTES) {
+      localStorage.setItem(`${OUTPUT_CACHE_PREFIX}${id}`, raw);
+    }
+  } catch {
+    // OBS keeps the in-memory last-known state when storage is unavailable.
+  }
+};
+
 const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
-  const id = hashPath.split('/output/')[1]?.split('?')[0];
+  const id = extractOutputId(hashPath);
   const isProgramOutput = id === PROGRAM_OUTPUT_ID;
   const embeddedOverlay = React.useMemo(
     () => syncManager.extractEmbeddedOverlay(hashPath) ?? null,
     [hashPath]
   );
+  const cachedOutputState = React.useMemo(() => readCachedOutputState(id), [id]);
+  const initialOutputState = embeddedOverlay ?? cachedOutputState;
 
   // آخر حالة معروفة — لا تُمسح أبداً حتى عند انقطاع الاتصال
-  const lastGoodState = React.useRef<OverlayConfig | OverlayConfig[] | null>(
-    embeddedOverlay
-  );
-  const [outputState, setOutputState] = useState<OverlayConfig | OverlayConfig[] | null>(embeddedOverlay);
+  const lastGoodState = React.useRef<OutputState | null>(initialOutputState);
+  const [outputState, setOutputState] = useState<OutputState | null>(initialOutputState);
   const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
 
   useEffect(() => {
@@ -81,6 +133,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     if (embeddedOverlay) {
       lastGoodState.current = embeddedOverlay;
       setOutputState(embeddedOverlay);
+      writeCachedOutputState(id, embeddedOverlay);
       setConnStatus('fallback');
       return;
     }
@@ -159,6 +212,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       lastAppliedFingerprint = fingerprint;
       lastGoodState.current = newState;
       setOutputState(newState);
+      writeCachedOutputState(id, newState);
     };
 
     const fetchLiveState = async () => {
@@ -229,7 +283,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
         es.onopen = () => {
           setConnStatus('live');
-          startFallback();
+          stopFallback();
         };
 
         es.onmessage = (event) => {
@@ -259,7 +313,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     };
 
     // ── Official output sync: SSE + light polling fallback over /api/live ──
-    startFallback();
     connectSSE();
 
     return () => {
@@ -328,6 +381,7 @@ const App: React.FC = () => {
   // URL pathname-based routing
   const pathnameToRoute = (p: string): string => {
     const clean = p.replace(/^\/+|\/+$/g, '').toLowerCase();
+    if (clean.startsWith('control/')) return 'operator';
     if (clean === 'library') return 'library';
     if (clean === 'operator') return 'operator';
     if (clean === 'integrations') return 'integrations';
@@ -336,7 +390,9 @@ const App: React.FC = () => {
     return 'home';
   };
   const [route, setRouteState] = useState<string>(() => pathnameToRoute(window.location.pathname));
-  const [operatorFocusId, setOperatorFocusId] = useState<string | null>(null);
+  const [operatorFocusId, setOperatorFocusId] = useState<string | null>(() =>
+    extractPathId(window.location.pathname, CONTROL_PATH_PREFIX)
+  );
   const setRoute = (page: string) => {
     setOperatorFocusId(null);
     setRouteState(page);
@@ -384,7 +440,10 @@ const App: React.FC = () => {
     const handlePopState = () => {
       const historyState = window.history.state as { route?: string; overlayId?: string } | null;
       setRouteState(pathnameToRoute(window.location.pathname));
-      setOperatorFocusId(historyState?.route === 'operator' && typeof historyState.overlayId === 'string' ? historyState.overlayId : null);
+      const historyOverlayId = historyState?.route === 'operator' && typeof historyState.overlayId === 'string'
+        ? historyState.overlayId
+        : extractPathId(window.location.pathname, CONTROL_PATH_PREFIX);
+      setOperatorFocusId(historyOverlayId);
       setHashPath(window.location.hash);
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -420,7 +479,8 @@ const App: React.FC = () => {
     setSelectedOverlayId(null);
     setOperatorFocusId(id || null);
     setRouteState('operator');
-    window.history.pushState({ route: 'operator', overlayId: id || null }, '', `/Operator${buildCleanAppSearch()}`);
+    const operatorPath = id ? `/control/${encodeURIComponent(id)}` : '/Operator';
+    window.history.pushState({ route: 'operator', overlayId: id || null }, '', `${operatorPath}${buildCleanAppSearch()}`);
   };
 
   const closeEditor = () => {
@@ -467,7 +527,7 @@ const App: React.FC = () => {
   // ----------------------------------------------------
   // RENDER: Output View (Browser Source) — NO AUTH REQUIRED + LIVE SYNC
   // ----------------------------------------------------
-  if (hashPath.startsWith('#/output/')) {
+  if (extractOutputId(hashPath)) {
     return <LiveOutputView hashPath={hashPath} />;
   }
 
