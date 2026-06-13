@@ -1,0 +1,14 @@
+{
+  "name": "reo-player-stats-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "verify": "node scripts/verify-contract.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
+
