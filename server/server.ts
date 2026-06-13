@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,6 +52,41 @@ const serverDir = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = resolve(serverDir, '..', '..');
 const distDir = resolve(projectRoot, 'dist');
 const indexPath = resolve(distDir, 'index.html');
+
+const parseEnvValue = (value: string) => {
+  const raw = value.trim();
+  const quote = raw[0];
+  if ((quote === '"' || quote === "'") && raw.endsWith(quote)) return raw.slice(1, -1);
+  return raw;
+};
+
+const loadEnvFile = (filePath: string) => {
+  if (!existsSync(filePath)) return;
+  const raw = readFileSync(filePath, 'utf8');
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const normalized = trimmed.startsWith('export ') ? trimmed.slice(7).trim() : trimmed;
+    const separator = normalized.indexOf('=');
+    if (separator <= 0) continue;
+    const key = normalized.slice(0, separator).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (process.env[key]) continue;
+    process.env[key] = parseEnvValue(normalized.slice(separator + 1));
+  }
+};
+
+const loadRuntimeEnv = () => {
+  const candidates = [
+    resolve(projectRoot, '.env'),
+    resolve(projectRoot, '.env.local'),
+    resolve(projectRoot, '..', 'public_html', '.builds', 'config', '.env'),
+  ];
+  for (const candidate of candidates) loadEnvFile(candidate);
+};
+
+loadRuntimeEnv();
+
 const port = Number(process.env.PORT || 3000);
 
 const sendJsonError = (response: ServerResponse, statusCode: number, message: string) => {
