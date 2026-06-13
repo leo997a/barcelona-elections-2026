@@ -43,6 +43,11 @@ REO_PLAYER_STATS_ALLOWED_ORIGINS=https://peachpuff-herring-712997.hostingersite.
 
 Do not commit the token or the real data file.
 
+The bridge also reads ignored `.env` files at startup before it reads the
+runtime constants. This is intentionally tiny and dependency-free so Hostinger
+Node.js deployments can work whether variables arrive as process environment
+values or through Hostinger's generated `.builds/config/.env` file.
+
 Generate a local ignored env template without printing the secret:
 
 ```bash

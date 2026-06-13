@@ -1,10 +1,54 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function parseEnvValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const quote = raw[0];
+  if ((quote === '"' || quote === "'") && raw.endsWith(quote)) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) return;
+  const raw = readFileSync(filePath, 'utf8');
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const normalized = trimmed.startsWith('export ') ? trimmed.slice(7).trim() : trimmed;
+    const separator = normalized.indexOf('=');
+    if (separator <= 0) continue;
+    const key = normalized.slice(0, separator).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (process.env[key]) continue;
+    process.env[key] = parseEnvValue(normalized.slice(separator + 1));
+  }
+}
+
+function loadRuntimeEnv() {
+  const hostingerConfigEnv = resolve(__dirname, '..', '..', '..', 'public_html', '.builds', 'config', '.env');
+  const cwdHostingerConfigEnv = resolve(process.cwd(), '..', 'public_html', '.builds', 'config', '.env');
+  const candidates = [
+    resolve(__dirname, '.env'),
+    resolve(__dirname, '.env.local'),
+    resolve(process.cwd(), '.env'),
+    resolve(process.cwd(), '.env.local'),
+    hostingerConfigEnv,
+    cwdHostingerConfigEnv,
+    join(dirname(process.cwd()), 'public_html', '.builds', 'config', '.env'),
+  ];
+  for (const candidate of new Set(candidates)) loadEnvFile(candidate);
+}
+
+loadRuntimeEnv();
+
 const PORT = Number(process.env.PORT || process.env.REO_PLAYER_STATS_BRIDGE_PORT || 3015);
 const HOST = process.env.REO_PLAYER_STATS_BRIDGE_HOST || '0.0.0.0';
 const TOKEN = String(process.env.REO_PLAYER_STATS_BRIDGE_TOKEN || '').trim();
