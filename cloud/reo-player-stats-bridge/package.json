@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "hostinger:build": "node --check server.js",
     "verify": "node scripts/verify-contract.mjs",
     "smoke:remote": "node scripts/remote-smoke.mjs",
     "import:json": "node scripts/import-json.mjs",

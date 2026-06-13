@@ -27,7 +27,7 @@ Framework preset: Other / Node.js
 Node.js version: 22.x
 Package manager: npm
 Install command: npm install
-Build command: npm run verify
+Build command: npm run hostinger:build
 Start command: npm start
 Entry file: server.js
 ```
@@ -41,13 +41,26 @@ server.js
 If it asks for output directory, leave it empty. This is an API service, not a
 static Vite/Next build.
 
+Why not `npm run verify` as the Hostinger build command?
+
+`npm run verify` starts a temporary local server and runs contract tests. It is
+excellent on your machine before deployment, but hosting build environments can
+block temporary ports or behave differently. `npm run hostinger:build` performs
+a lightweight syntax check that is safer for Hostinger's build step.
+
+Before pushing a release, still run locally:
+
+```powershell
+npm run verify
+```
+
 ## 2. Environment Variables
 
 Set these on the bridge app itself:
 
 ```text
 REO_PLAYER_STATS_BRIDGE_TOKEN=<new-long-token>
-REO_PLAYER_STATS_DATA_FILE=/home/<hostinger-user>/reo-player-stats/player-stats.json
+REO_PLAYER_STATS_DATA_FILE=./data/player-stats.json
 REO_PLAYER_STATS_ALLOWED_ORIGINS=https://peachpuff-herring-712997.hostingersite.com
 ```
 
@@ -60,6 +73,11 @@ REO_PLAYER_STATS_BRIDGE_HOST=0.0.0.0
 
 Do not set `REO_PLAYER_STATS_BRIDGE_URL` on the bridge app. That variable is for
 the main REO Live app after the bridge is live.
+
+The `./data/player-stats.json` path is the safest first Hostinger test value
+because it stays inside this app. Treat it as experimental until you confirm
+Hostinger keeps the file across redeploys. For permanent production storage, a
+VPS path such as `/var/lib/reo-player-stats-bridge/player-stats.json` is better.
 
 ## 3. First Smoke Test
 
@@ -154,4 +172,3 @@ If anything looks wrong:
 3. The app will return to compatibility fallback.
 
 This should not affect Output, Control, OBS, Stream Deck, or license login.
-

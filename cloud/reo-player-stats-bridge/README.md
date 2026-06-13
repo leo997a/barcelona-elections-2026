@@ -257,7 +257,7 @@ Use `HOSTINGER.md` for the exact Hostinger fields:
 ```text
 Root directory: cloud/reo-player-stats-bridge
 Framework preset: Other / Node.js
-Build command: npm run verify
+Build command: npm run hostinger:build
 Start command: npm start
 Entry file: server.js
 ```
