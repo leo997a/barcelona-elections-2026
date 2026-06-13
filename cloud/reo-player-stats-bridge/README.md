@@ -43,6 +43,20 @@ REO_PLAYER_STATS_ALLOWED_ORIGINS=https://peachpuff-herring-712997.hostingersite.
 
 Do not commit the token or the real data file.
 
+Generate a local ignored env template without printing the secret:
+
+```bash
+npm run secrets:init
+```
+
+The generated file is:
+
+```text
+.env.generated
+```
+
+It is ignored by Git. Copy values from it into Hostinger manually.
+
 ## Endpoints
 
 Public:
@@ -154,6 +168,12 @@ npm run smoke:remote -- "Bernardo Silva" "Manchester City" "goals,assists,rating
 
 ## Import/export CLI
 
+Validate trusted data before importing:
+
+```powershell
+npm run validate:json -- .\players.json
+```
+
 Import trusted data:
 
 ```bash
@@ -229,3 +249,15 @@ Expected:
 ```
 
 Missing metrics remain `pending` instead of being invented.
+
+## Hostinger runbook
+
+Use `HOSTINGER.md` for the exact Hostinger fields:
+
+```text
+Root directory: cloud/reo-player-stats-bridge
+Framework preset: Other / Node.js
+Build command: npm run verify
+Start command: npm start
+Entry file: server.js
+```

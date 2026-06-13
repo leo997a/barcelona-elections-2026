@@ -8,7 +8,9 @@
     "verify": "node scripts/verify-contract.mjs",
     "smoke:remote": "node scripts/remote-smoke.mjs",
     "import:json": "node scripts/import-json.mjs",
-    "export:json": "node scripts/export-json.mjs"
+    "export:json": "node scripts/export-json.mjs",
+    "validate:json": "node scripts/validate-json.mjs",
+    "secrets:init": "node scripts/init-secret-env.mjs"
   },
   "engines": {
     "node": ">=20.19.0"
