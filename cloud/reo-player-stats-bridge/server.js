@@ -189,8 +189,12 @@ function readStore() {
       updatedAt: parsed.updatedAt || null,
       players: Array.isArray(parsed.players) ? parsed.players : [],
     };
-  } catch {
-    return { version: 1, updatedAt: null, players: [] };
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return { version: 1, updatedAt: null, players: [] };
+    }
+    const message = error instanceof Error ? error.message : 'Unknown data file error';
+    throw new Error(`Unable to read player stats data file: ${message}`);
   }
 }
 
@@ -518,6 +522,17 @@ async function handleImport(req, res, auth) {
   });
 }
 
+function handleExport(req, res, auth) {
+  const store = readStore();
+  sendJson(res, 200, {
+    ok: true,
+    service: 'reo-player-stats-bridge',
+    auth,
+    exportedAt: nowIso(),
+    ...store,
+  });
+}
+
 async function route(req, res) {
   setCors(req, res);
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
@@ -547,6 +562,7 @@ async function route(req, res) {
     if (url.pathname === '/api/player-stats' && (req.method === 'GET' || req.method === 'POST')) return await handlePlayerStats(req, res, auth);
     if (url.pathname === '/api/control/upsert-player' && req.method === 'POST') return await handleUpsert(req, res, auth);
     if (url.pathname === '/api/control/import-json' && req.method === 'POST') return await handleImport(req, res, auth);
+    if (url.pathname === '/api/control/export-json' && req.method === 'GET') return handleExport(req, res, auth);
     sendJson(res, 404, { error: 'Route not found.', auth });
   } catch (error) {
     sendJson(res, 500, {
@@ -572,4 +588,3 @@ const shutdown = () => {
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
-

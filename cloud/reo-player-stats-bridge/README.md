@@ -60,6 +60,7 @@ GET  /api/player-stats
 POST /api/player-stats
 POST /api/control/upsert-player
 POST /api/control/import-json
+GET  /api/control/export-json
 ```
 
 ## Data policy
@@ -101,6 +102,15 @@ curl -X POST "$BRIDGE_URL/api/control/import-json" \
 
 Use `"mode": "replace"` only when you want to replace the full store.
 
+## Export backup
+
+```bash
+curl "$BRIDGE_URL/api/control/export-json" \
+  -H "Authorization: Bearer $REO_PLAYER_STATS_BRIDGE_TOKEN"
+```
+
+The response contains the current JSON store. Save it before any replace import.
+
 ## Verify locally
 
 ```bash
@@ -114,6 +124,77 @@ record, requests stats, and confirms:
 - `bridgeConfigured` is true,
 - real imported values are returned,
 - missing metrics remain `pending`.
+
+## Remote smoke test
+
+After deploying the bridge, run a read-only smoke test from your machine:
+
+```bash
+REO_PLAYER_STATS_BRIDGE_URL="https://<bridge-host>/api/player-stats" \
+REO_PLAYER_STATS_BRIDGE_TOKEN="<same-token>" \
+npm run smoke:remote
+```
+
+Optional player override:
+
+```bash
+npm run smoke:remote -- --player "Bernardo Silva" --club "Manchester City" --metrics goals,assists,rating
+```
+
+This checks `/health`, authenticated `/api/status`, and the public player-stats
+contract. It does not write data.
+
+Windows PowerShell positional form:
+
+```powershell
+$env:REO_PLAYER_STATS_BRIDGE_URL="https://<bridge-host>/api/player-stats"
+$env:REO_PLAYER_STATS_BRIDGE_TOKEN="<same-token>"
+npm run smoke:remote -- "Bernardo Silva" "Manchester City" "goals,assists,rating"
+```
+
+## Import/export CLI
+
+Import trusted data:
+
+```bash
+REO_PLAYER_STATS_BRIDGE_URL="https://<bridge-host>/api/player-stats" \
+REO_PLAYER_STATS_BRIDGE_TOKEN="<same-token>" \
+npm run import:json -- --file ./players.json
+```
+
+Windows PowerShell:
+
+```powershell
+$env:REO_PLAYER_STATS_BRIDGE_URL="https://<bridge-host>/api/player-stats"
+$env:REO_PLAYER_STATS_BRIDGE_TOKEN="<same-token>"
+npm run import:json -- .\players.json
+```
+
+Replace the full store only when intentional:
+
+```bash
+npm run import:json -- --file ./players.json --replace
+```
+
+Windows PowerShell:
+
+```powershell
+npm run import:json -- .\players.json replace
+```
+
+Export a backup:
+
+```bash
+REO_PLAYER_STATS_BRIDGE_URL="https://<bridge-host>/api/player-stats" \
+REO_PLAYER_STATS_BRIDGE_TOKEN="<same-token>" \
+npm run export:json -- --out ./player-stats-backup.json
+```
+
+Windows PowerShell:
+
+```powershell
+npm run export:json -- .\player-stats-backup.json
+```
 
 ## Hostinger integration
 

@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "verify": "node scripts/verify-contract.mjs"
+    "verify": "node scripts/verify-contract.mjs",
+    "smoke:remote": "node scripts/remote-smoke.mjs",
+    "import:json": "node scripts/import-json.mjs",
+    "export:json": "node scripts/export-json.mjs"
   },
   "engines": {
     "node": ">=20.19.0"
   }
 }
-

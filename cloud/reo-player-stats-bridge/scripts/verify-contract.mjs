@@ -33,6 +33,18 @@ child.stderr.on('data', chunk => {
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+async function stopChild() {
+  if (child.exitCode !== null || child.signalCode) return;
+  await new Promise(resolve => {
+    const timeout = setTimeout(resolve, 1500);
+    child.once('exit', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    child.kill('SIGTERM');
+  });
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
@@ -106,6 +118,10 @@ try {
   if (player?.stats?.goals?.value !== 19) throw new Error('goals value was not returned from store');
   if (player?.stats?.shots?.value !== 'pending') throw new Error('missing metric should be pending, not fake');
 
+  const exported = await request('/api/control/export-json');
+  if (!exported.response.ok) throw new Error(`export-json failed with HTTP ${exported.response.status}`);
+  if (exported.json.players?.length !== 1) throw new Error('export-json should include the imported player');
+
   console.log(JSON.stringify({
     ok: true,
     status: status.json,
@@ -115,9 +131,10 @@ try {
       player: player.name,
       goals: player.stats.goals.value,
       missingMetric: player.stats.shots.value,
+      exportedPlayers: exported.json.players.length,
     },
   }, null, 2));
 } finally {
-  child.kill('SIGTERM');
+  await stopChild();
   rmSync(tempDir, { recursive: true, force: true });
 }
