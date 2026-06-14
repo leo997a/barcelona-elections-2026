@@ -12,7 +12,7 @@
  */
 import { OverlayType } from '../types';
 
-export type CategoryKey = 'mercato' | 'match' | 'player' | 'newsroom' | 'social_stream' | 'utilities' | 'legacy';
+export type CategoryKey = 'mercato' | 'match' | 'player' | 'newsroom' | 'social_stream' | 'utilities' | 'legacy' | 'mondial';
 
 export interface CategoryDef {
   key: CategoryKey;
@@ -24,6 +24,7 @@ export interface CategoryDef {
 }
 
 export const CATEGORIES: Record<CategoryKey, CategoryDef> = {
+  mondial:       { key: 'mondial',       labelAr: 'مونديال 2026',      labelEn: 'World Cup 2026',   icon: '🏆', accent: '#E63946', order: 0 },
   mercato:       { key: 'mercato',       labelAr: 'ميركاتو',           labelEn: 'Mercato',          icon: '💼', accent: '#22d3ee', order: 1 },
   match:         { key: 'match',         labelAr: 'المباريات',         labelEn: 'Match',            icon: '⚽', accent: '#22c55e', order: 2 },
   player:        { key: 'player',        labelAr: 'استخبارات اللاعب',  labelEn: 'Player Intel',     icon: '🧠', accent: '#7c5cff', order: 3 },
@@ -40,6 +41,15 @@ export interface SubcategoryDef {
 }
 
 export const SUBCATEGORIES: Record<string, SubcategoryDef> = {
+  // Mondial subgroups
+  'mondial.live':      { key: 'mondial.live',      parent: 'mondial', labelAr: '🔴 بث مباشر' },
+  'mondial.stats':     { key: 'mondial.stats',     parent: 'mondial', labelAr: '📊 إحصائيات' },
+  'mondial.results':   { key: 'mondial.results',   parent: 'mondial', labelAr: '🏅 نتائج وجداول' },
+  'mondial.editorial': { key: 'mondial.editorial', parent: 'mondial', labelAr: '🎙️ تصريحات وتقارير' },
+  'mondial.analysis':  { key: 'mondial.analysis',  parent: 'mondial', labelAr: '🧠 تحليل تكتيكي' },
+  'mondial.stars':     { key: 'mondial.stars',     parent: 'mondial', labelAr: '🌟 نجوم وتوقعات' },
+  'mondial.iraq':      { key: 'mondial.iraq',      parent: 'mondial', labelAr: '🇮🇶 المنتخب العراقي' },
+
   // Mercato subgroups
   'mercato.breaking':        { key: 'mercato.breaking',        parent: 'mercato', labelAr: 'عاجل وميركاتو' },
   'mercato.agents_sources':  { key: 'mercato.agents_sources',  parent: 'mercato', labelAr: 'وكلاء ومصادر' },
@@ -77,6 +87,16 @@ export const SUBCATEGORIES: Record<string, SubcategoryDef> = {
  * Defaults to legacy.classic for any future type that forgets to register.
  */
 export const TYPE_TO_TAXONOMY: Partial<Record<OverlayType, { category: CategoryKey; subcategory: string; priority: number }>> = {
+  // Mondial 2026
+  [OverlayType.MONDIAL_LIVE]:     { category: 'mondial', subcategory: 'mondial.live',      priority: 1 },
+  [OverlayType.MONDIAL_STATS]:    { category: 'mondial', subcategory: 'mondial.stats',     priority: 2 },
+  [OverlayType.MONDIAL_RESULTS]:  { category: 'mondial', subcategory: 'mondial.results',   priority: 3 },
+  [OverlayType.MONDIAL_QUOTES]:   { category: 'mondial', subcategory: 'mondial.editorial', priority: 4 },
+  [OverlayType.MONDIAL_REPORTS]:  { category: 'mondial', subcategory: 'mondial.editorial', priority: 5 },
+  [OverlayType.MONDIAL_ANALYSIS]: { category: 'mondial', subcategory: 'mondial.analysis',  priority: 6 },
+  [OverlayType.MONDIAL_STARS]:    { category: 'mondial', subcategory: 'mondial.stars',     priority: 7 },
+  [OverlayType.MONDIAL_IRAQ]:     { category: 'mondial', subcategory: 'mondial.iraq',      priority: 0 },
+
   // Mercato — new unified family
   [OverlayType.MERCATO_UNIFIED]:        { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 10 },
   [OverlayType.MERCATO_MEDIA_STORY]:    { category: 'mercato', subcategory: 'mercato.media_story',     priority: 5 },
@@ -117,6 +137,31 @@ export const TYPE_TO_TAXONOMY: Partial<Record<OverlayType, { category: CategoryK
 };
 
 const TEMPLATE_TO_TAXONOMY: Record<string, { category: CategoryKey; subcategory: string; priority: number }> = {
+  // Mondial 2026 templates
+  'template-mondial-scoreboard-full': { category: 'mondial', subcategory: 'mondial.live', priority: 1 },
+  'template-mondial-scorebug':        { category: 'mondial', subcategory: 'mondial.live', priority: 2 },
+  'template-mondial-var-alert':       { category: 'mondial', subcategory: 'mondial.live', priority: 3 },
+  'template-mondial-match-preview':   { category: 'mondial', subcategory: 'mondial.live', priority: 4 },
+  'template-mondial-lineup':          { category: 'mondial', subcategory: 'mondial.live', priority: 5 },
+  'template-mondial-match-result':     { category: 'mondial', subcategory: 'mondial.live', priority: 6 },
+  'template-mondial-match-stats':     { category: 'mondial', subcategory: 'mondial.stats', priority: 1 },
+  'template-mondial-group-table':     { category: 'mondial', subcategory: 'mondial.results', priority: 1 },
+  'template-mondial-match-report':    { category: 'mondial', subcategory: 'mondial.results', priority: 2 },
+  'template-mondial-ticker':          { category: 'mondial', subcategory: 'mondial.results', priority: 3 },
+  'template-mondial-quote':           { category: 'mondial', subcategory: 'mondial.editorial', priority: 1 },
+  'template-mondial-lower-third':     { category: 'mondial', subcategory: 'mondial.editorial', priority: 2 },
+  'template-mondial-analysis':        { category: 'mondial', subcategory: 'mondial.analysis', priority: 1 },
+  'template-mondial-golden-boot':     { category: 'mondial', subcategory: 'mondial.stars', priority: 1 },
+  'template-mondial-prediction':      { category: 'mondial', subcategory: 'mondial.stars', priority: 2 },
+  'template-mondial-player-spotlight': { category: 'mondial', subcategory: 'mondial.stars', priority: 3 },
+  'template-mondial-iraq-squad':      { category: 'mondial', subcategory: 'mondial.iraq', priority: 1 },
+  'template-mondial-iraq-player':     { category: 'mondial', subcategory: 'mondial.iraq', priority: 2 },
+  'template-mondial-iraq-ticker':     { category: 'mondial', subcategory: 'mondial.iraq', priority: 3 },
+  'template-mondial-iraq-history':    { category: 'mondial', subcategory: 'mondial.iraq', priority: 4 },
+  'template-mondial-iraq-fan-pulse':  { category: 'mondial', subcategory: 'mondial.iraq', priority: 5 },
+  'template-mondial-iraq-dashboard':  { category: 'mondial', subcategory: 'mondial.iraq', priority: 6 },
+
+  // Mercato templates
   'template-mercato-x6-agent-call':        { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 10 },
   'template-mercato-x6-source-confidence': { category: 'mercato', subcategory: 'mercato.agents_sources', priority: 11 },
   'template-mercato-x6-deal-radar':        { category: 'mercato', subcategory: 'mercato.deal_analysis',  priority: 10 },

@@ -40,6 +40,8 @@ import {
 import MercatoUnifiedRenderer from './renderers/MercatoUnifiedRenderer';
 import MercatoMediaStoryRenderer from './renderers/MercatoMediaStoryRenderer';
 import { PlayerIntelV2Renderer } from './renderers/PlayerIntelV2Renderer';
+import { Mondial2026Renderer } from './renderers/Mondial2026Renderer';
+import { MondialIraqRenderer } from './renderers/MondialIraqRenderer';
 
 // ─── TV Animation Maps ────────────────────────────────────────────────────────
 const ENTER: Partial<Record<OverlayType, string>> = {
@@ -73,6 +75,14 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep',
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep',
+  [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep',
+  [OverlayType.MONDIAL_STATS]: 'tv-data-rush',
+  [OverlayType.MONDIAL_RESULTS]: 'tv-slide-up',
+  [OverlayType.MONDIAL_QUOTES]: 'tv-slide-left',
+  [OverlayType.MONDIAL_REPORTS]: 'tv-slide-up',
+  [OverlayType.MONDIAL_ANALYSIS]: 'tv-stadium-sweep',
+  [OverlayType.MONDIAL_STARS]: 'tv-slide-right',
+  [OverlayType.MONDIAL_IRAQ]: 'tv-stadium-sweep',
 };
 
 const EXIT: Partial<Record<OverlayType, string>> = {
@@ -106,6 +116,14 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep-out',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep-out',
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep-out',
+  [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep-out',
+  [OverlayType.MONDIAL_STATS]: 'tv-data-rush-out',
+  [OverlayType.MONDIAL_RESULTS]: 'tv-slide-down-out',
+  [OverlayType.MONDIAL_QUOTES]: 'tv-slide-left-out',
+  [OverlayType.MONDIAL_REPORTS]: 'tv-slide-down-out',
+  [OverlayType.MONDIAL_ANALYSIS]: 'tv-stadium-sweep-out',
+  [OverlayType.MONDIAL_STARS]: 'tv-slide-right-out',
+  [OverlayType.MONDIAL_IRAQ]: 'tv-stadium-sweep-out',
 };
 
 const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
@@ -579,6 +597,14 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
                   {config.type === OverlayType.MERCATO_UNIFIED && <MercatoUnifiedRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_MEDIA_STORY && <MercatoMediaStoryRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.PLAYER_INTEL_V2 && <PlayerIntelV2Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_LIVE && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_STATS && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_RESULTS && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_QUOTES && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_REPORTS && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_ANALYSIS && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_STARS && <Mondial2026Renderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MONDIAL_IRAQ && <MondialIraqRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.ELECTION && (
                       <ElectionOverlay
                           key={activeSlot}

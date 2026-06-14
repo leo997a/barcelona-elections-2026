@@ -162,6 +162,46 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#22d3ee',
     description: 'قوالب ميركاتو ميديا عصرية تدعم صورة أو فيديو محلي أو رابط مباشر مع موسيقى حقيقية منخفضة ومناسبة للبث.',
   },
+  [OverlayType.MONDIAL_LIVE]: {
+    icon: 'WC26',
+    accent: '#E63946',
+    description: 'قوالب البث المباشر لمونديال 2026.',
+  },
+  [OverlayType.MONDIAL_STATS]: {
+    icon: '📊',
+    accent: '#3b82f6',
+    description: 'إحصائيات مباريات المونديال.',
+  },
+  [OverlayType.MONDIAL_RESULTS]: {
+    icon: 'GRP',
+    accent: '#22c55e',
+    description: 'جداول المجموعات والنتائج والأخبار للمونديال.',
+  },
+  [OverlayType.MONDIAL_QUOTES]: {
+    icon: 'QTE',
+    accent: '#a855f7',
+    description: 'تصريحات واقتباسات نجوم المونديال.',
+  },
+  [OverlayType.MONDIAL_REPORTS]: {
+    icon: 'RPT',
+    accent: '#10b981',
+    description: 'تقارير ما بعد المباريات للمونديال.',
+  },
+  [OverlayType.MONDIAL_ANALYSIS]: {
+    icon: 'ANA',
+    accent: '#22d3ee',
+    description: 'استوديو التحليل التكتيكي لمباريات المونديال.',
+  },
+  [OverlayType.MONDIAL_STARS]: {
+    icon: '👟',
+    accent: '#FFD700',
+    description: 'سباق الهدافين وتوقعات المباريات في المونديال.',
+  },
+  [OverlayType.MONDIAL_IRAQ]: {
+    icon: '🇮🇶',
+    accent: '#007A3D',
+    description: 'قوالب مخصصة للمنتخب العراقي في مونديال 2026.',
+  },
 };
 
 const cloneOverlay = <T,>(value: T): T => {

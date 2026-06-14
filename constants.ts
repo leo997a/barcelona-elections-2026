@@ -1,5 +1,6 @@
 
 import { OverlayType, OverlayConfig, OverlayField } from './types';
+import { MONDIAL_2026_TEMPLATES } from './components/renderers/MondialTemplates';
 import {
   createElectionCandidateProfileField,
   createElectionStatementFields,
@@ -3666,6 +3667,7 @@ const _allTemplates: OverlayConfig[] = [
   ...MERCATO_X6_TEMPLATES,
   ...MERCATO_MEDIA_STORY_TEMPLATES,
   ...PLAYER_INTEL_V2_TEMPLATES,
+  ...MONDIAL_2026_TEMPLATES,
 ];
 const _seenIds = new Set<string>();
 export const INITIAL_TEMPLATES: OverlayConfig[] = _allTemplates

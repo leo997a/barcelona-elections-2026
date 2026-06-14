@@ -131,6 +131,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     getTaxonomy(overlay.type, overlay.templateId || overlay.id).category;
   const operatorCategoryCounts = useMemo(() => {
     const counts: Record<CategoryKey, number> = {
+      mondial: 0,
       mercato: 0,
       match: 0,
       player: 0,

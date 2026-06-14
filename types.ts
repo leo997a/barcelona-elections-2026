@@ -32,7 +32,16 @@ export enum OverlayType {
   // AUDIO-PACKS-X5 / MERCATO-TEMPLATES-X6 — 10 new mercato variants
   // (rendered by a single MercatoUnifiedRenderer that branches on the
   // mercatoVariant field; all share the broadcast control + audio infra).
-  MERCATO_UNIFIED = 'MERCATO_UNIFIED'
+  MERCATO_UNIFIED = 'MERCATO_UNIFIED',
+  // Mondial 2026
+  MONDIAL_LIVE = 'MONDIAL_LIVE',
+  MONDIAL_STATS = 'MONDIAL_STATS',
+  MONDIAL_RESULTS = 'MONDIAL_RESULTS',
+  MONDIAL_QUOTES = 'MONDIAL_QUOTES',
+  MONDIAL_REPORTS = 'MONDIAL_REPORTS',
+  MONDIAL_ANALYSIS = 'MONDIAL_ANALYSIS',
+  MONDIAL_STARS = 'MONDIAL_STARS',
+  MONDIAL_IRAQ = 'MONDIAL_IRAQ'
 }
 
 export type OverlayStatus = 'LIVE' | 'PREVIEW' | 'HIDDEN';
