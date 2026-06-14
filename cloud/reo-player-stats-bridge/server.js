@@ -55,6 +55,9 @@ const TOKEN = String(process.env.REO_PLAYER_STATS_BRIDGE_TOKEN || '').trim();
 const DATA_FILE = resolve(
   process.env.REO_PLAYER_STATS_DATA_FILE || resolve(__dirname, 'data', 'player-stats.json'),
 );
+const SEED_FILE = process.env.REO_PLAYER_STATS_SEED_FILE === 'off'
+  ? ''
+  : resolve(process.env.REO_PLAYER_STATS_SEED_FILE || resolve(__dirname, 'seeds', 'player-intel-v2-seed.json'));
 const ALLOWED_ORIGINS = String(process.env.REO_PLAYER_STATS_ALLOWED_ORIGINS || '*')
   .split(',')
   .map(item => item.trim())
@@ -224,18 +227,34 @@ function requireAuth(req, res) {
   return auth;
 }
 
+function readSeedStore() {
+  if (!SEED_FILE || !existsSync(SEED_FILE)) return null;
+  const raw = readFileSync(SEED_FILE, 'utf8');
+  const parsed = JSON.parse(raw);
+  const players = Array.isArray(parsed.players) ? parsed.players : [];
+  if (!players.length) return null;
+  return {
+    version: 1,
+    updatedAt: parsed.updatedAt || parsed.generatedAt || null,
+    players,
+  };
+}
+
 function readStore() {
   try {
     const raw = readFileSync(DATA_FILE, 'utf8');
     const parsed = JSON.parse(raw);
+    const players = Array.isArray(parsed.players) ? parsed.players : [];
+    const seedStore = players.length ? null : readSeedStore();
+    if (seedStore) return seedStore;
     return {
       version: 1,
       updatedAt: parsed.updatedAt || null,
-      players: Array.isArray(parsed.players) ? parsed.players : [],
+      players,
     };
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      return { version: 1, updatedAt: null, players: [] };
+      return readSeedStore() || { version: 1, updatedAt: null, players: [] };
     }
     const message = error instanceof Error ? error.message : 'Unknown data file error';
     throw new Error(`Unable to read player stats data file: ${message}`);
@@ -478,6 +497,8 @@ function handleStatus(req, res, auth) {
     service: 'reo-player-stats-bridge',
     auth,
     dataFile: DATA_FILE,
+    seedFile: SEED_FILE,
+    seedAvailable: Boolean(readSeedStore()),
     playerCount: store.players.length,
     seasons,
     updatedAt: store.updatedAt,

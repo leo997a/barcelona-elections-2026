@@ -19,6 +19,7 @@ const child = spawn(process.execPath, ['server.js'], {
     REO_PLAYER_STATS_BRIDGE_HOST: '127.0.0.1',
     REO_PLAYER_STATS_BRIDGE_TOKEN: token,
     REO_PLAYER_STATS_DATA_FILE: dataFile,
+    REO_PLAYER_STATS_SEED_FILE: 'off',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });

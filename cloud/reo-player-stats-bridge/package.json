@@ -8,6 +8,7 @@
     "hostinger:build": "node --check server.js",
     "verify": "node scripts/verify-contract.mjs",
     "smoke:remote": "node scripts/remote-smoke.mjs",
+    "seed:player-intel-v2": "node scripts/build-player-intel-v2-seed.mjs",
     "import:json": "node scripts/import-json.mjs",
     "export:json": "node scripts/export-json.mjs",
     "validate:json": "node scripts/validate-json.mjs",
