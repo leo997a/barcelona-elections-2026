@@ -539,6 +539,8 @@ async function handlePlayerStats(req, res, auth) {
     source: 'REO Player Stats Bridge',
     updatedAt: store.updatedAt || nowIso(),
     bridgeConfigured: true,
+    seedAvailable: Boolean(readSeedStore()),
+    playerCount: store.players.length,
     realDataAvailable,
     auth,
     supportedModes: ['SINGLE', 'COMPARE', 'SCOUT_CARD'],

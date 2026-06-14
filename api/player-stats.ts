@@ -39,9 +39,27 @@ type PlayerStatsBody = {
   };
 };
 
-const trimSlash = (value: string) => value.replace(/\/+$/, '');
+type PlayerStatsDiagnostics = {
+  bridgeUrlConfigured: boolean;
+  bridgeUrlEnvConfigured: boolean;
+  bridgeUrlDefaultUsed: boolean;
+  bridgeTokenConfigured: boolean;
+  upstreamAttempted: boolean;
+  upstreamStatus: number | null;
+  responseMode: 'bridge' | 'legacy' | 'fallback';
+};
 
-const playerStatsBridgeUrl = () => process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim() || '';
+const trimSlash = (value: string) => value.replace(/\/+$/, '');
+const DEFAULT_PLAYER_STATS_BRIDGE_URL = 'https://lightslategray-toad-139780.hostingersite.com/api/player-stats';
+
+const playerStatsBridgeUrl = () => {
+  const raw = process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim() || DEFAULT_PLAYER_STATS_BRIDGE_URL;
+  if (!raw) return '';
+  const trimmed = trimSlash(raw);
+  return trimmed.endsWith('/api/player-stats') ? trimmed : `${trimmed}/api/player-stats`;
+};
+
+const playerStatsBridgeUrlEnvConfigured = () => Boolean(process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim());
 
 const playerStatsBridgeToken = () => process.env.REO_PLAYER_STATS_BRIDGE_TOKEN?.trim() || '';
 
@@ -196,7 +214,11 @@ const metricStats = (selectedMetrics: string[]) => {
   });
 };
 
-const fallbackPayload = (query: PlayerStatsQuery) => {
+const fallbackPayload = (
+  query: PlayerStatsQuery,
+  diagnostics: PlayerStatsDiagnostics,
+  extraWarnings: string[] = [],
+) => {
   const statsArray = query.selectedMetrics.length ? metricStats(query.selectedMetrics) : categoryStats(query.categories);
   const stats = Object.fromEntries(statsArray.map(stat => [stat.key || stat.label.toLowerCase().replace(/[^a-z0-9]+/g, '_'), stat]));
   const players = [
@@ -214,11 +236,25 @@ const fallbackPayload = (query: PlayerStatsQuery) => {
     presentation: query.presentation,
     source: 'REO Player Stats Bridge contract',
     updatedAt: new Date().toISOString(),
-    bridgeConfigured: false,
-    auth: { required: false, provided: Boolean(playerStatsBridgeToken()), valid: false },
+    bridgeConfigured: diagnostics.bridgeUrlConfigured,
+    bridgeUrlConfigured: diagnostics.bridgeUrlConfigured,
+    bridgeUrlEnvConfigured: diagnostics.bridgeUrlEnvConfigured,
+    bridgeUrlDefaultUsed: diagnostics.bridgeUrlDefaultUsed,
+    bridgeTokenConfigured: diagnostics.bridgeTokenConfigured,
+    upstreamAttempted: diagnostics.upstreamAttempted,
+    upstreamStatus: diagnostics.upstreamStatus,
+    responseMode: diagnostics.responseMode,
+    auth: {
+      required: diagnostics.bridgeUrlConfigured,
+      provided: diagnostics.bridgeTokenConfigured,
+      valid: false,
+    },
     supportedModes: ['SINGLE', 'COMPARE', 'SCOUT_CARD'],
     supportedCategories: [...new Set(ALL_CATEGORY_STATS.map(stat => stat.category))],
-    warnings: query.selectedMetrics.length ? [] : ['No selectedMetrics were provided; returning compatibility fallback only.'],
+    warnings: [
+      ...extraWarnings,
+      ...(query.selectedMetrics.length ? [] : ['No selectedMetrics were provided; returning compatibility fallback only.']),
+    ],
     players,
     notes: [
       'This endpoint is ready for the Google Cloud player extractor.',
@@ -226,6 +262,25 @@ const fallbackPayload = (query: PlayerStatsQuery) => {
     ],
   };
 };
+
+const withDiagnostics = (
+  payload: Record<string, unknown>,
+  diagnostics: PlayerStatsDiagnostics,
+  warnings: string[] = [],
+) => ({
+  ...payload,
+  bridgeUrlConfigured: diagnostics.bridgeUrlConfigured,
+  bridgeUrlEnvConfigured: diagnostics.bridgeUrlEnvConfigured,
+  bridgeUrlDefaultUsed: diagnostics.bridgeUrlDefaultUsed,
+  bridgeTokenConfigured: diagnostics.bridgeTokenConfigured,
+  upstreamAttempted: diagnostics.upstreamAttempted,
+  upstreamStatus: diagnostics.upstreamStatus,
+  responseMode: diagnostics.responseMode,
+  warnings: [
+    ...warnings,
+    ...(Array.isArray(payload.warnings) ? payload.warnings : []),
+  ],
+});
 
 const legacyBridgeUrl = (queryString: string) => {
   const bridgeBase = process.env.REO_BRIDGE_URL?.trim();
@@ -288,19 +343,45 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const explicitUrl = playerStatsBridgeUrl();
   const legacyUrl = explicitUrl ? '' : legacyBridgeUrl(queryString);
   const url = explicitUrl || legacyUrl;
+  const diagnostics: PlayerStatsDiagnostics = {
+    bridgeUrlConfigured: Boolean(explicitUrl),
+    bridgeUrlEnvConfigured: playerStatsBridgeUrlEnvConfigured(),
+    bridgeUrlDefaultUsed: Boolean(explicitUrl) && !playerStatsBridgeUrlEnvConfigured(),
+    bridgeTokenConfigured: Boolean(playerStatsBridgeToken()),
+    upstreamAttempted: Boolean(url),
+    upstreamStatus: null,
+    responseMode: explicitUrl ? 'bridge' : (legacyUrl ? 'legacy' : 'fallback'),
+  };
 
   if (url) {
     try {
       const upstream = explicitUrl
         ? await fetchExplicitBridge(explicitUrl, query, queryObject(req))
         : await fetchLegacyBridge(url);
+      diagnostics.upstreamStatus = upstream.status;
       const payload = await upstream.json().catch(() => null);
-      if (explicitUrl && payload) return sendJson(res, upstream.status, payload);
-      if (upstream.ok && payload) return sendJson(res, 200, payload);
+      if (explicitUrl && upstream.ok && payload && typeof payload === 'object') {
+        return sendJson(res, upstream.status, withDiagnostics(payload as Record<string, unknown>, diagnostics));
+      }
+      if (!explicitUrl && upstream.ok && payload && typeof payload === 'object') {
+        return sendJson(res, 200, withDiagnostics(payload as Record<string, unknown>, diagnostics));
+      }
+      if (explicitUrl) {
+        diagnostics.responseMode = 'fallback';
+        return sendJson(res, 200, fallbackPayload(query, diagnostics, [
+          `Configured player stats bridge returned HTTP ${upstream.status}; compatibility fallback returned pending values.`,
+        ]));
+      }
     } catch (error) {
       console.warn('Player stats bridge unavailable', error);
+      if (explicitUrl) {
+        diagnostics.responseMode = 'fallback';
+        return sendJson(res, 200, fallbackPayload(query, diagnostics, [
+          'Configured player stats bridge could not be reached; compatibility fallback returned pending values.',
+        ]));
+      }
     }
   }
 
-  return sendJson(res, 200, fallbackPayload(query));
+  return sendJson(res, 200, fallbackPayload(query, diagnostics));
 }
