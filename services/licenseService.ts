@@ -7,7 +7,6 @@ export interface LicenseState {
   valid: boolean;
   role: LicenseRole;
   studioId: string;
-  key: string;
   exp: number;
 }
 
@@ -18,36 +17,66 @@ const ROLE_HIERARCHY: Record<LicenseRole, number> = {
   ADMIN: 3,
 };
 
+const normalizeStoredLicense = (raw: string): LicenseState | null => {
+  const parsed = JSON.parse(raw) as Partial<LicenseState>;
+  if (!parsed.valid || !parsed.role || !parsed.studioId || typeof parsed.exp !== 'number') {
+    return null;
+  }
+  if (!(parsed.role in ROLE_HIERARCHY)) {
+    return null;
+  }
+  return {
+    valid: true,
+    role: parsed.role,
+    studioId: parsed.studioId,
+    exp: parsed.exp,
+  };
+};
+
 export const licenseService = {
   /** Returns stored license or null */
   getStored(): LicenseState | null {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      return JSON.parse(raw) as LicenseState;
+      const state = normalizeStoredLicense(raw);
+      if (!state) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      const sanitized = JSON.stringify(state);
+      if (raw !== sanitized) {
+        localStorage.setItem(STORAGE_KEY, sanitized);
+      }
+      return state;
     } catch {
+      localStorage.removeItem(STORAGE_KEY);
       return null;
     }
   },
 
   /** Verify a key with the server and store result */
   async activate(key: string): Promise<LicenseState> {
+    const cleanKey = key.trim();
+    if (!cleanKey) {
+      throw new Error('أدخل مفتاح الدخول أولًا.');
+    }
+
     const res = await fetch('/api/license', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verify', key }),
+      body: JSON.stringify({ action: 'verify', key: cleanKey }),
     });
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.valid) {
-      throw new Error(data.error || 'المفتاح غير صالح.');
+      throw new Error(data.error || 'مفتاح الدخول غير صالح.');
     }
 
     const state: LicenseState = {
       valid: true,
       role: data.role as LicenseRole,
       studioId: data.studioId,
-      key,
       exp: data.exp,
     };
 

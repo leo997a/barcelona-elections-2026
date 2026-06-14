@@ -11,7 +11,7 @@ import Settings from './pages/Settings';
 import BroadcastControl from './pages/BroadcastControl';
 import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
-import { Volume2, CloudLightning, Tv, AlertTriangle } from 'lucide-react';
+import { Volume2, CloudLightning, Tv, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
@@ -407,20 +407,27 @@ const App: React.FC = () => {
   });
   const [license, setLicense] = useState<LicenseState | null>(() => licenseService.getStored());
   const [licenseKey, setLicenseKey] = useState('');
-  const [licenseEmail, setLicenseEmail] = useState('');
+  const [licenseEmail, setLicenseEmail] = useState(() => localStorage.getItem('rge_license_email') || '');
   const [licenseError, setLicenseError] = useState('');
   const [licenseLoading, setLicenseLoading] = useState(false);
+  const [showLicenseKey, setShowLicenseKey] = useState(false);
 
   const handleActivateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
     setLicenseError('');
+    const trimmedEmail = licenseEmail.trim();
+    const trimmedKey = licenseKey.trim();
+    if (!trimmedEmail || !trimmedKey) {
+      setLicenseError('أدخل البريد ومفتاح الدخول أولًا.');
+      return;
+    }
     setLicenseLoading(true);
     try {
-      const state = await licenseService.activate(licenseKey.trim());
-      localStorage.setItem('rge_license_email', licenseEmail.trim());
+      const state = await licenseService.activate(trimmedKey);
+      localStorage.setItem('rge_license_email', trimmedEmail);
       setLicense(state);
     } catch (err) {
-      setLicenseError(err instanceof Error ? err.message : 'فشل التحقق من المفتاح.');
+      setLicenseError(err instanceof Error ? err.message : 'فشل التحقق من مفتاح الدخول.');
     } finally {
       setLicenseLoading(false);
     }
@@ -558,28 +565,45 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* ── ACTIVATE PANEL ── */}
+          {/* Activate panel */}
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl mb-3">
             <h2 className="text-lg font-black text-white mb-1 text-center">تفعيل الاستوديو</h2>
-            <p className="text-gray-500 text-xs text-center mb-5">الصق مفتاح الترخيص هنا</p>
+            <p className="text-gray-500 text-xs text-center mb-5">أدخل البريد ومفتاح الدخول فقط</p>
 
-            <form onSubmit={handleActivateLicense} className="space-y-3">
-              <input
-                type="text"
-                value={licenseKey}
-                onChange={e => setLicenseKey(e.target.value)}
-                placeholder="REO-XXXX-XXXX-XXXX-XXXX"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
-                dir="ltr"
-              />
+            <form onSubmit={handleActivateLicense} className="space-y-3" autoComplete="on">
               <input
                 type="email"
+                name="username"
+                autoComplete="username"
                 value={licenseEmail}
                 onChange={e => setLicenseEmail(e.target.value)}
                 placeholder="email@example.com"
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center"
                 dir="ltr"
+                inputMode="email"
+                required
               />
+              <div className="relative">
+                <input
+                  type={showLicenseKey ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  value={licenseKey}
+                  onChange={e => setLicenseKey(e.target.value)}
+                  placeholder="REO-XXXX-XXXX-XXXX-XXXX"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-12 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
+                  dir="ltr"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLicenseKey(prev => !prev)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 hover:bg-gray-700/70 hover:text-white transition-colors"
+                  aria-label={showLicenseKey ? 'إخفاء مفتاح الدخول' : 'إظهار مفتاح الدخول'}
+                >
+                  {showLicenseKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {licenseError && (
                 <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-2">
                   <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
@@ -588,7 +612,7 @@ const App: React.FC = () => {
               )}
               <button type="submit" disabled={licenseLoading || !licenseKey.trim() || !licenseEmail.trim()}
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30">
-                {licenseLoading ? 'جاري التحقق...' : '🔐 دخول الاستوديو'}
+                {licenseLoading ? 'جاري التحقق...' : 'دخول الاستوديو'}
               </button>
             </form>
           </div>

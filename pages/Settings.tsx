@@ -301,8 +301,8 @@ const Settings: React.FC = () => {
                     <span>انتهاء الصلاحية</span>
                     <span className="font-mono text-green-300">{currentLicense.exp === 0 ? 'لا تنتهي أبداً' : new Date(currentLicense.exp * 1000).toLocaleDateString('ar')}</span>
                   </div>
-                  <div className="pt-2 font-mono text-[10px] text-gray-600 break-all bg-black/30 rounded-lg p-2">
-                    {currentLicense.key}
+                  <div className="pt-2 text-[10px] text-gray-500 bg-black/30 rounded-lg p-2">
+                    لا يتم حفظ مفتاح الدخول كنص صريح داخل المتصفح.
                   </div>
                 </div>
                 <button onClick={() => { licenseService.revoke(); setCurrentLicense(null); window.location.reload(); }}
