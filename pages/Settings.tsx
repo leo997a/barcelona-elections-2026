@@ -23,6 +23,7 @@ import { FirebaseWebConfig } from '../types';
 import { syncManager } from '../services/syncManager';
 import { toSystemRole, can, getRoleDisplayName, type SystemRole } from '../utils/permissions';
 import { adminSessionService } from '../services/adminSession';
+import { sessionService } from '../services/sessionService';
 
 const RULES_SNIPPET = `{
   "rules": {
@@ -165,7 +166,26 @@ const Settings: React.FC = () => {
 
   // ── License state ──────────────────────────────────────────────────────────
   const [currentLicense, setCurrentLicense] = useState<LicenseState | null>(() => licenseService.getStored());
+  const [licenseLogoutLoading, setLicenseLogoutLoading] = useState(false);
+  const [licenseLogoutError, setLicenseLogoutError] = useState('');
   const isAdmin = currentLicense?.role === 'ADMIN';
+
+  const logoutLicense = async () => {
+    if (licenseLogoutLoading) return;
+    setLicenseLogoutLoading(true);
+    setLicenseLogoutError('');
+    try {
+      await sessionService.logout();
+      setCurrentLicense(null);
+    } catch (error) {
+      if (!licenseService.getStored()) {
+        setCurrentLicense(null);
+      }
+      setLicenseLogoutError(error instanceof Error ? error.message : 'تعذر تسجيل الخروج. أعد المحاولة.');
+    } finally {
+      setLicenseLogoutLoading(false);
+    }
+  };
   
   // Generator form (admin only)
   const [genAdminSecret, setGenAdminSecret] = useState('');
@@ -305,10 +325,11 @@ const Settings: React.FC = () => {
                     لا يتم حفظ مفتاح الدخول كنص صريح داخل المتصفح.
                   </div>
                 </div>
-                <button onClick={() => { licenseService.revoke(); setCurrentLicense(null); window.location.reload(); }}
-                  className="mt-4 w-full text-xs text-red-400 hover:text-red-300 border border-red-900/40 rounded-lg py-2 transition-colors">
-                  إلغاء الترخيص
+                <button onClick={logoutLicense} disabled={licenseLogoutLoading}
+                  className="mt-4 w-full text-xs text-red-400 hover:text-red-300 border border-red-900/40 rounded-lg py-2 transition-colors disabled:cursor-wait disabled:opacity-60">
+                  {licenseLogoutLoading ? 'جاري تسجيل الخروج...' : 'إلغاء الترخيص'}
                 </button>
+                {licenseLogoutError && <p className="mt-2 text-xs text-red-300">{licenseLogoutError}</p>}
               </>
             ) : (
               <div className="text-center py-6">

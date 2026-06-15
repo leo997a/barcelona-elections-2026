@@ -15,6 +15,7 @@ import { Volume2, CloudLightning, Tv, AlertTriangle, Eye, EyeOff } from 'lucide-
 import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
+import { REO_LOGOUT_STORAGE_KEY, REO_SESSION_LOGOUT_EVENT, sessionService } from './services/sessionService';
 
 import { unlockAudio } from './services/audioEngine';
 
@@ -411,6 +412,40 @@ const App: React.FC = () => {
   const [licenseError, setLicenseError] = useState('');
   const [licenseLoading, setLicenseLoading] = useState(false);
   const [showLicenseKey, setShowLicenseKey] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+
+  const applyLoggedOutUi = React.useCallback(() => {
+    if (extractOutputId(window.location.hash)) return;
+    setLicense(null);
+    setLicenseKey('');
+    setLicenseEmail('');
+    setLicenseError('');
+    setShowLicenseKey(false);
+    setSelectedOverlayId(null);
+    setOperatorFocusId(null);
+    setRouteState('home');
+    setHashPath('');
+    window.history.replaceState({ route: 'home' }, '', '/');
+  }, []);
+
+  const handleLogout = async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    setLogoutError('');
+    try {
+      await sessionService.logout();
+      applyLoggedOutUi();
+    } catch (err) {
+      const hasStoredLicense = Boolean(licenseService.getStored());
+      if (!hasStoredLicense) {
+        applyLoggedOutUi();
+      }
+      setLogoutError(err instanceof Error ? err.message : 'تعذر تسجيل الخروج. أعد المحاولة.');
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
 
   const handleActivateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -453,13 +488,23 @@ const App: React.FC = () => {
       setOperatorFocusId(historyOverlayId);
       setHashPath(window.location.hash);
     };
+    const handleSessionLogout = () => applyLoggedOutUi();
+    const handleStorageLogout = (event: StorageEvent) => {
+      if (event.key === REO_LOGOUT_STORAGE_KEY && event.newValue) {
+        applyLoggedOutUi();
+      }
+    };
     window.addEventListener('hashchange', handleHashChange);
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener(REO_SESSION_LOGOUT_EVENT, handleSessionLogout);
+    window.addEventListener('storage', handleStorageLogout);
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener(REO_SESSION_LOGOUT_EVENT, handleSessionLogout);
+      window.removeEventListener('storage', handleStorageLogout);
     };
-  }, []);
+  }, [applyLoggedOutUi]);
 
   // Sync Manager Subscription
   useEffect(() => {
@@ -642,7 +687,14 @@ const App: React.FC = () => {
         </div>
       ) : (
         <>
-          <Sidebar activePage={route} onNavigate={setRoute} favoriteCount={favoriteIds.length} />
+          <Sidebar
+            activePage={route}
+            onNavigate={setRoute}
+            favoriteCount={favoriteIds.length}
+            onLogout={handleLogout}
+            logoutLoading={logoutLoading}
+            logoutError={logoutError}
+          />
           
           <main className="flex-1 overflow-y-auto bg-gray-950 relative">
              <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />

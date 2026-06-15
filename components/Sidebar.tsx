@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star, Radio, Lock } from 'lucide-react';
+import { AlertTriangle, Home, LayoutGrid, Play, Tv, Cpu, Shield, Wifi, Star, Radio, Lock, LogOut, Loader2 } from 'lucide-react';
 import { licenseService } from '../services/licenseService';
 import { toSystemRole, can, getRoleDisplayName, type SystemRole } from '../utils/permissions';
 
@@ -8,6 +8,9 @@ interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
   favoriteCount?: number;
+  onLogout?: () => void;
+  logoutLoading?: boolean;
+  logoutError?: string;
 }
 
 const NAV_ALL = [
@@ -26,7 +29,14 @@ const ROLE_BADGE_STYLE: Record<SystemRole, string> = {
   VIEWER:          'bg-gray-800/50 text-gray-400 border-gray-700/40',
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, favoriteCount = 0 }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  activePage,
+  onNavigate,
+  favoriteCount = 0,
+  onLogout,
+  logoutLoading = false,
+  logoutError = '',
+}) => {
   const stored = licenseService.getStored();
   const systemRole: SystemRole = stored?.valid ? toSystemRole(stored.role) : 'VIEWER';
   const roleName = getRoleDisplayName(systemRole);
@@ -109,6 +119,32 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, favoriteCount
 
       {/* Bottom hint */}
       <div className="p-3 border-t border-gray-800/80">
+        {onLogout && (
+          <div className="mb-3 rounded-xl border border-gray-800 bg-gray-900/60 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500">REO Access</p>
+                <p className="truncate text-xs font-bold text-gray-200">{roleName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onLogout}
+                disabled={logoutLoading}
+                className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-red-900/40 bg-red-950/30 text-red-300 transition-colors hover:border-red-700/70 hover:bg-red-900/40 disabled:cursor-wait disabled:opacity-60"
+                title="تسجيل الخروج"
+                aria-label="تسجيل الخروج"
+              >
+                {logoutLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {logoutError && (
+              <div className="flex items-start gap-1.5 rounded-lg border border-red-900/40 bg-red-950/30 px-2 py-1.5 text-[10px] leading-4 text-red-200">
+                <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                <span>{logoutError}</span>
+              </div>
+            )}
+          </div>
+        )}
         <div className="bg-blue-900/20 rounded-xl p-3 border border-blue-500/15">
           <div className="flex items-center gap-2 mb-1.5">
             <Wifi className="w-3 h-3 text-blue-400" />
