@@ -50,10 +50,9 @@ type PlayerStatsDiagnostics = {
 };
 
 const trimSlash = (value: string) => value.replace(/\/+$/, '');
-const DEFAULT_PLAYER_STATS_BRIDGE_URL = 'https://lightslategray-toad-139780.hostingersite.com/api/player-stats';
 
 const playerStatsBridgeUrl = () => {
-  const raw = process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim() || DEFAULT_PLAYER_STATS_BRIDGE_URL;
+  const raw = process.env.REO_PLAYER_STATS_BRIDGE_URL?.trim() || '';
   if (!raw) return '';
   const trimmed = trimSlash(raw);
   return trimmed.endsWith('/api/player-stats') ? trimmed : `${trimmed}/api/player-stats`;
