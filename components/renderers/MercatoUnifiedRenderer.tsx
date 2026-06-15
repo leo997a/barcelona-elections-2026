@@ -41,25 +41,13 @@ import {
 
 // ─── Theme — Mondial 2026 Identity ──────────────────────────────────────────
 //
-// All Mercato variants now use the Mondial 2026 theme system from
-// MondialSharedComponents.tsx. Old theme names map to Mondial equivalents.
-//
-// Backward compatibility: old Editor selections (TACTICAL_DARK, etc.) map
-// to their closest Mondial counterpart.
+// All Mercato variants now use the Mondial 2026 theme system directly.
+// Available themes: MUNDIAL_MAIN, MUNDIAL_NIGHT, MUNDIAL_GOLD,
+//                   IRAQ_PRIDE, TACTICAL_DARK, CLEAN_BROADCAST
 
 type UnifiedTheme = MondialTheme;
 
-const MERCATO_THEME_MAP: Record<string, string> = {
-  TACTICAL_DARK:    'TACTICAL_DARK',
-  CLEAN_BROADCAST:  'CLEAN_BROADCAST',
-  LUXE_GOLD:        'MUNDIAL_GOLD',
-  MUNDIAL_MAIN:     'MUNDIAL_MAIN',
-  MUNDIAL_NIGHT:    'MUNDIAL_NIGHT',
-  MUNDIAL_GOLD:     'MUNDIAL_GOLD',
-  IRAQ_PRIDE:       'IRAQ_PRIDE',
-};
-
-const getTheme = (id: string): UnifiedTheme => getMondialTheme(MERCATO_THEME_MAP[id] || id);
+const getTheme = (id: string): UnifiedTheme => getMondialTheme(id || 'MUNDIAL_MAIN');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -185,7 +173,7 @@ const ProgressBar: React.FC<{ t: UnifiedTheme; value: number; color?: string; he
 
 export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, playSound }) => {
   const variant = String(getField('mercatoVariant') || 'agent_call');
-  const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
+  const themeId = String(getField('visualTheme') || 'MUNDIAL_MAIN');
   const t = getTheme(themeId);
 
   // Phase-A-Hotfix-1 — UPDATE cue hook with module-level state.
