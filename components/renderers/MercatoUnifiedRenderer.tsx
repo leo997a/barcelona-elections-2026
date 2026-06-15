@@ -18,58 +18,48 @@
  *     visual language consistent without adding more renderers.
  */
 import React from 'react';
-import { RendererProps } from './SharedComponents';
 import { useEffect } from 'react';
+import { RendererProps } from './SharedComponents';
 import { evaluateTransitionAttempt } from '../../utils/templateTransitionDiagnostics';
 import GlobalProbabilityNetworkRenderer from './GlobalProbabilityNetworkRenderer';
+import {
+  getMondialTheme,
+  MondialTheme,
+  MondialHeader,
+  MondialPill,
+  MondialBar,
+  MondialFieldCard,
+  MondialFlag,
+  MondialStadiumBackground,
+  MondialLiveBadge,
+  MondialWaveform,
+  TrophyIcon,
+  MONDIAL_KEYFRAMES,
+  safeParse as mondialSafeParse,
+  clamp as mondialClamp,
+} from './MondialSharedComponents';
 
-// ─── Theme ──────────────────────────────────────────────────────────────────
+// ─── Theme — Mondial 2026 Identity ──────────────────────────────────────────
+//
+// All Mercato variants now use the Mondial 2026 theme system from
+// MondialSharedComponents.tsx. Old theme names map to Mondial equivalents.
+//
+// Backward compatibility: old Editor selections (TACTICAL_DARK, etc.) map
+// to their closest Mondial counterpart.
 
-interface UnifiedTheme {
-  bg: string;
-  surface: string;
-  surfaceLight: string;
-  surfaceDeep: string;
-  border: string;
-  text: string;
-  sub: string;
-  dim: string;
-  accent: string;
-  accentSoft: string;
-  accent2: string;
-  success: string;
-  warning: string;
-  danger: string;
-}
+type UnifiedTheme = MondialTheme;
 
-const THEMES: Record<string, UnifiedTheme> = {
-  TACTICAL_DARK: {
-    bg: 'radial-gradient(ellipse at 70% 30%, rgba(15,30,55,1) 0%, rgba(8,12,22,1) 70%)',
-    surface: 'rgba(15,25,45,0.85)', surfaceLight: 'rgba(25,40,70,0.75)',
-    surfaceDeep: 'rgba(8,14,28,0.95)',
-    border: 'rgba(60,90,140,0.45)', text: '#ffffff', sub: '#94a3b8', dim: '#475569',
-    accent: '#22d3ee', accentSoft: 'rgba(34,211,238,0.10)', accent2: '#7c5cff',
-    success: '#22c55e', warning: '#f59e0b', danger: '#ef4444',
-  },
-  CLEAN_BROADCAST: {
-    bg: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-    surface: 'rgba(30,41,59,0.85)', surfaceLight: 'rgba(51,65,85,0.75)',
-    surfaceDeep: 'rgba(15,23,42,0.95)',
-    border: 'rgba(100,116,139,0.45)', text: '#f1f5f9', sub: '#94a3b8', dim: '#64748b',
-    accent: '#3b82f6', accentSoft: 'rgba(59,130,246,0.10)', accent2: '#06b6d4',
-    success: '#22c55e', warning: '#f59e0b', danger: '#ef4444',
-  },
-  LUXE_GOLD: {
-    bg: 'radial-gradient(ellipse at 70% 30%, rgba(50,30,10,1) 0%, rgba(20,10,4,1) 70%)',
-    surface: 'rgba(50,30,10,0.85)', surfaceLight: 'rgba(80,50,20,0.75)',
-    surfaceDeep: 'rgba(20,10,4,0.95)',
-    border: 'rgba(180,140,60,0.45)', text: '#fffbe6', sub: '#fcd34d', dim: '#92400e',
-    accent: '#fbbf24', accentSoft: 'rgba(251,191,36,0.10)', accent2: '#f59e0b',
-    success: '#22c55e', warning: '#f59e0b', danger: '#ef4444',
-  },
+const MERCATO_THEME_MAP: Record<string, string> = {
+  TACTICAL_DARK:    'TACTICAL_DARK',
+  CLEAN_BROADCAST:  'CLEAN_BROADCAST',
+  LUXE_GOLD:        'MUNDIAL_GOLD',
+  MUNDIAL_MAIN:     'MUNDIAL_MAIN',
+  MUNDIAL_NIGHT:    'MUNDIAL_NIGHT',
+  MUNDIAL_GOLD:     'MUNDIAL_GOLD',
+  IRAQ_PRIDE:       'IRAQ_PRIDE',
 };
 
-const getTheme = (id: string): UnifiedTheme => THEMES[id] || THEMES.TACTICAL_DARK;
+const getTheme = (id: string): UnifiedTheme => getMondialTheme(MERCATO_THEME_MAP[id] || id);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -159,35 +149,16 @@ const Avatar: React.FC<{ t: UnifiedTheme; name?: string; image?: string; size?: 
   );
 };
 
-// X13 — broadcast-style audio waveform bars, animated. Pure CSS.
-const Waveform: React.FC<{ color: string; bars?: number; height?: number }> = ({ color, bars = 12, height = 18 }) => (
-  <div className="flex items-end gap-[2px]" style={{ height }} aria-hidden>
-    {Array.from({ length: bars }).map((_, i) => (
-      <span key={i} style={{
-        width: 2,
-        height: '100%',
-        background: color,
-        borderRadius: 1,
-        animation: `mercatoWave 1.${(i % 9) + 1}s ease-in-out ${i * 0.07}s infinite`,
-        transformOrigin: 'bottom',
-      }} />
-    ))}
-    <style>{`@keyframes mercatoWave { 0%,100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }`}</style>
-  </div>
-);
+// ─── Mondial 2026 Aliases ──────────────────────────────────────────────────
+//
+// These thin wrappers delegate to MondialSharedComponents so every
+// variant in this file automatically inherits the Mondial 2026 visual
+// identity (glassmorphism, FIFA stripe, glow effects, Orbitron font).
 
-// ─── Shared primitives ─────────────────────────────────────────────────────
+const Waveform = MondialWaveform;
 
-const Pill: React.FC<{ t: UnifiedTheme; color?: string; label: string; pulse?: boolean; small?: boolean }> = ({ t, color, label, pulse, small }) => (
-  <span className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-wider ${small ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'}`}
-    style={{
-      background: `${color || t.accent}20`,
-      color: color || t.accent,
-      border: `1px solid ${color || t.accent}50`,
-    }}>
-    {pulse && <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color || t.accent }} />}
-    {label}
-  </span>
+const Pill: React.FC<{ t: UnifiedTheme; color?: string; label: string; pulse?: boolean; small?: boolean; gold?: boolean }> = (props) => (
+  <MondialPill {...props} />
 );
 
 const Header: React.FC<{
@@ -198,44 +169,16 @@ const Header: React.FC<{
   pills?: React.ReactNode;
   rightSlot?: React.ReactNode;
   accent?: string;
-}> = ({ t, eyebrow, title, subtitle, pills, rightSlot, accent }) => (
-  <div className="rounded-xl px-5 py-4 relative overflow-hidden" style={{
-    background: t.surface,
-    border: `1px solid ${t.border}`,
-  }}>
-    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{
-      background: `linear-gradient(to right, transparent, ${accent || t.accent}, transparent)`,
-    }} />
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-black uppercase tracking-[0.25em] mb-1" style={{ color: accent || t.accent }}>
-          {eyebrow}
-        </div>
-        <div className="text-[24px] font-black leading-tight tracking-tight" style={{ color: t.text }}>{title}</div>
-        {subtitle && <div className="text-[12px] mt-1" style={{ color: t.sub }}>{subtitle}</div>}
-        {pills && <div className="flex flex-wrap gap-1.5 mt-2">{pills}</div>}
-      </div>
-      {rightSlot && <div className="shrink-0 text-right">{rightSlot}</div>}
-    </div>
-  </div>
+}> = (props) => (
+  <MondialHeader {...props} />
 );
 
 const FieldCard: React.FC<{ t: UnifiedTheme; label: string; value: string; accent?: string; large?: boolean }> = ({ t, label, value, accent, large }) => (
-  <div className="rounded-xl p-4 flex flex-col justify-center" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
-    <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: t.dim }}>{label}</div>
-    <div className={`font-black mt-1 ${large ? 'text-[28px]' : 'text-[20px]'}`} style={{ color: accent || t.text }}>
-      {value || '—'}
-    </div>
-  </div>
+  <MondialFieldCard t={t} label={label} value={value} accent={accent} large={large} />
 );
 
 const ProgressBar: React.FC<{ t: UnifiedTheme; value: number; color?: string; height?: number }> = ({ t, value, color, height = 4 }) => (
-  <div className="w-full rounded-full overflow-hidden" style={{ background: `${color || t.accent}15`, height }}>
-    <div className="h-full rounded-full transition-all" style={{
-      width: `${Math.max(0, Math.min(100, value))}%`,
-      background: color || t.accent,
-    }} />
-  </div>
+  <MondialBar t={t} value={value} color={color} height={height} />
 );
 
 // ─── Main router ────────────────────────────────────────────────────────────
@@ -285,9 +228,12 @@ export const MercatoUnifiedRenderer: React.FC<RendererProps> = ({ config, getFie
   }, [watchedKey, playSound, config]);
 
   return (
-    <div style={containerStyle}>
-      <div style={contentWrapperStyle}>
-        <div className="w-full h-full" style={{ background: t.bg, fontFamily: "'Tajawal', sans-serif" }}>
+    <div style={containerStyle} className="relative overflow-hidden w-full h-full">
+      <style>{MONDIAL_KEYFRAMES}</style>
+      <div style={contentWrapperStyle} className="w-full h-full relative">
+        <div className="w-full h-full relative overflow-hidden" style={{ background: t.bg, fontFamily: "'Tajawal', 'Outfit', 'Inter', sans-serif" }}>
+          {/* Mondial 2026 Stadium Background for all variants */}
+          <MondialStadiumBackground accentColor={t.accent2} accentColor2={t.accent} />
           {variant === 'agent_call' && <AgentCallVariant t={t} getField={getField} />}
           {variant === 'deal_radar' && <DealRadarVariant t={t} getField={getField} />}
           {variant === 'club_statement' && <ClubStatementVariant t={t} getField={getField} />}
