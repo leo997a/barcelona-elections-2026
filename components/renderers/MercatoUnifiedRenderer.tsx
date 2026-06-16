@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mercato Unified Renderer (X7 polish).
  *
  * Single renderer that supports 10 layout variants chosen via the
@@ -322,7 +322,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
       {/* Top bar: caller identity + status + duration */}
       <div className="rounded-xl px-5 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-4 relative overflow-hidden" style={{
-        background: `linear-gradient(135deg, ${t.surfaceDeep} 0%, ${t.surface} 55%, ${t.surfaceDeep} 100%)`,
+        background: 'rgba(6, 12, 30, 0.45)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         border: `1px solid ${t.border}`,
       }}>
         <div className="absolute top-0 left-0 right-0 h-[2px]" style={{
@@ -396,7 +396,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             </div>
           </div>
           {(clubFrom || clubTo) && (
-            <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
               <div className="text-[10px] text-center flex-1">
                 <div className="opacity-60 text-[8px]" style={{ color: t.dim }}>{labels.fromLabel}</div>
                 <div className="font-bold mt-0.5" style={{ color: t.text }}>{clubFrom || '—'}</div>
@@ -413,11 +413,11 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             <div className="text-[20px] font-black leading-none mt-0.5" style={{ color: t.accent }}>{dealValue || '—'}</div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
               <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>{labels.reporterMetricLabel}</div>
               <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent }}>{reporterLineCount}</div>
             </div>
-            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+            <div className="rounded-lg p-2.5" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
               <div className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: t.dim }}>{labels.agentMetricLabel}</div>
               <div className="mt-1 text-[18px] font-black font-mono" style={{ color: t.accent2 }}>{agentLineCount}</div>
             </div>
@@ -425,7 +425,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         </div>
 
         {/* Center: Transcript */}
-        <div className="rounded-xl flex flex-col overflow-hidden" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl flex flex-col overflow-hidden" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="px-4 py-2 border-b flex items-center justify-between" style={{ borderColor: t.border, background: t.surface }}>
             <div className="flex items-center gap-2">
               <Icon name="lock" size={13} color={t.accent} />
@@ -471,7 +471,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
         </div>
 
         {/* Right: Source / dynamic stages from chat length */}
-        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           <div className="flex items-center justify-between gap-2">
             <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: isPrivate ? t.accent2 : t.warning }}>{labels.sourceLabel}</div>
             <span className="rounded-full px-2 py-0.5 text-[9px] font-black" style={{
@@ -481,7 +481,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
             }}>{isPrivate ? labels.sourceClosedBadge : labels.sourceFollowBadge}</span>
           </div>
           <div className="rounded-lg p-3 text-center" style={{
-            background: t.surfaceDeep,
+            background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             border: `1px dashed ${isPrivate ? t.accent2 : t.border}`,
           }}>
             <div className="flex justify-center mb-1.5"><Icon name="lock" size={26} color={isPrivate ? t.accent2 : t.warning} /></div>
@@ -498,7 +498,7 @@ const AgentCallVariant: React.FC<VariantProps> = ({ t, getField }) => {
               }}>{lastSignal}</div>
             </div>
           )}
-          <div className="rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="rounded-lg p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
             <div className="text-[9px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>{labels.progressLabel}</div>
             <div className="space-y-1.5">
               {/* Stages now reflect confidencePct so the right panel feels alive */}
@@ -653,7 +653,7 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
             <div className="text-[9px] font-mono mt-0.5 opacity-70" style={{ color: t.dim }}>{normalizedSources.length} مصدر مرصود · متوسط {averageReliability}%</div>
           </div>
         </div>
-        <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           <div className="flex items-center justify-between gap-2">
             <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: t.accent }}>المصادر · موثوقية</div>
             <div className="text-[10px] font-mono" style={{ color: t.dim }}>TOP {Math.min(sortedSources.length, 6)}</div>
@@ -687,7 +687,7 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
             </div>
           )}
         </div>
-        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           <div className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: verdictColor }}>قرار البث</div>
           <div className="rounded-xl p-4 text-center" style={{ background: `${verdictColor}10`, border: `1px solid ${verdictColor}55` }}>
             <div className="flex justify-center mb-2"><Icon name={marketSignal >= 84 ? 'check' : marketSignal >= 46 ? 'pulse' : 'warning'} size={28} color={verdictColor} /></div>
@@ -704,7 +704,7 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
           <FieldCard t={t} label="متوسط المصادر" value={`${averageReliability}%`} accent={t.accent} />
           <FieldCard t={t} label="مصادر ذهبية" value={`${eliteSources}`} accent={t.success} />
-          <div className="mt-auto rounded-lg p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="mt-auto rounded-lg p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
             <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>TOP SOURCE</div>
             <div className="mt-1 truncate text-[13px] font-black" style={{ color: t.text }}>
               {sortedSources[0]?.name || 'لا يوجد مصدر'}
@@ -760,7 +760,7 @@ const ClubStatementVariant: React.FC<VariantProps> = ({ t, getField }) => {
           </div>
           <Icon name="stamp" size={22} color={t.accent} />
           <div className="text-[9px] font-black uppercase tracking-[0.3em] mt-1.5" style={{ color: t.dim }}>OFFICIAL</div>
-          <div className="mt-5 w-full rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="mt-5 w-full rounded-xl p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
             <div className="text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>DOCUMENT ID</div>
             <div className="mt-1 font-mono text-[18px] font-black" style={{ color: t.accent }}>{documentCode}</div>
           </div>
@@ -855,7 +855,7 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
         }
       />
       <div className="grid grid-cols-[1fr_1.2fr_1fr] gap-3">
-        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>المرحلة الحالية</div>
           <div className="mt-1 text-[24px] font-black" style={{ color: t.accent }}>{activeStageLabel}</div>
         </div>
@@ -863,12 +863,12 @@ const DeadlineHourVariant: React.FC<VariantProps> = ({ t, getField }) => {
           <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>قرار غرفة البث</div>
           <div className="mt-1 text-[25px] font-black" style={{ color: urgencyColor }}>{urgencyLabel}</div>
         </div>
-        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>الخطوة التالية</div>
           <div className="mt-1 text-[24px] font-black" style={{ color: t.success }}>{nextStageLabel}</div>
         </div>
       </div>
-      <div className="flex-1 rounded-xl p-5 flex flex-col justify-center gap-4 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+      <div className="flex-1 rounded-xl p-5 flex flex-col justify-center gap-4 relative overflow-hidden" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
         <div className="absolute -bottom-14 -left-10 opacity-[0.045] pointer-events-none">
           <Icon name="clock" size={260} color={urgencyColor} />
         </div>
@@ -988,7 +988,7 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
           const matching = sources.filter(s => s.tier === tier);
           return (
             <div key={tier} className="rounded-xl p-4 flex flex-col" style={{
-              background: t.surface,
+              background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
               border: `2px solid ${tierColor(tier)}40`,
             }}>
               <div className="flex items-center justify-between mb-3">
@@ -1009,7 +1009,7 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
                 ) : (
                   matching.map((s, i) => (
                     <div key={i} className="rounded-lg p-2" style={{
-                      background: t.surfaceDeep,
+                      background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                       border: `1px solid ${tierColor(tier)}30`,
                       borderRightWidth: 3,
                       borderRightColor: tierColor(tier),
@@ -1195,7 +1195,7 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
         <div className="mt-1 text-[11px]" style={{ color: t.sub }}>{subtitle}</div>
       </div>
       <div className="flex items-center gap-3">
-        <div className="rounded-xl px-3 py-2 text-center" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl px-3 py-2 text-center" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="text-[8px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>النموذج القديم</div>
           <div className="mt-1 font-mono text-[24px] font-black" style={{ color: '#ff5c8a' }}>{avgOld}%</div>
         </div>
@@ -1224,7 +1224,7 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
             }} />
             <div className="relative flex items-center justify-between">
               <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>الصفقة الرئيسية</div>
-              <div className="rounded-md px-2 py-1 font-mono text-[11px] font-black" style={{ color: totalMovement >= 0 ? t.success : '#ff5c8a', background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+              <div className="rounded-md px-2 py-1 font-mono text-[11px] font-black" style={{ color: totalMovement >= 0 ? t.success : '#ff5c8a', background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
                 {totalMovement >= 0 ? '+' : ''}{totalMovement}% متوسط الحركة
               </div>
             </div>
@@ -1316,7 +1316,7 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
           <FieldCard t={t} label="قائمة مراقبة" value={String(watchCount)} accent={t.warning} />
           <FieldCard t={t} label="إشارة منخفضة" value={String(lowCount)} accent="#ff5c8a" />
         </div>
-        <div className="flex-1 rounded-xl p-4 grid grid-rows-4 gap-2 min-h-0" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="flex-1 rounded-xl p-4 grid grid-rows-4 gap-2 min-h-0" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           {visibleDeals.map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
         </div>
       </div>
@@ -1327,20 +1327,20 @@ const ProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) => {
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
       <HeaderBar />
       <div className="flex-1 grid grid-cols-[1.05fr_1fr_360px] gap-3 min-h-0">
-        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           <div className="flex items-center justify-between">
           <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>مصفوفة الاحتمال</div>
             <div className="font-mono text-[10px]" style={{ color: t.dim }}>0-100</div>
           </div>
           {visibleDeals.map(deal => <DealRow key={deal.idx} deal={deal} compact />)}
         </div>
-        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: t.accent }}>حركة السوق</div>
           {visibleDeals.map(deal => {
             const change = delta(deal);
             const color = change >= 0 ? t.success : '#ff5c8a';
             return (
-              <div key={deal.idx} className="rounded-lg px-3 py-2 flex items-center justify-between" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+              <div key={deal.idx} className="rounded-lg px-3 py-2 flex items-center justify-between" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
                 <div className="min-w-0">
                   <div className="truncate text-[14px] font-black" style={{ color: t.text }}>{deal.player}</div>
                   <div className="text-[9px]" style={{ color: t.dim }}>{deal.oldPct}% إلى {deal.newPct}%</div>
@@ -1430,7 +1430,7 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
         width: size,
         height: size,
         color: t.text,
-        background: t.surfaceDeep,
+        background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
         border: `1px solid ${t.border}`,
         fontSize: Math.max(9, size * 0.28),
       }}
@@ -1594,7 +1594,7 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
           { label: newLabel, value: `${avgNew}%`, color: '#38f5c8' },
           { label: movementLabel, value: `${avgNew - avgOld >= 0 ? '+' : ''}${avgNew - avgOld}%`, color: modeColor },
         ].map(item => (
-          <div key={item.label} className="rounded-lg px-3 py-1.5 text-center" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div key={item.label} className="rounded-lg px-3 py-1.5 text-center" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
             <div className="text-[7px] font-black truncate max-w-24" style={{ color: t.dim }}>{item.label}</div>
             <div className="font-mono text-[18px] font-black" style={{ color: item.color }}>{item.value}</div>
           </div>
@@ -1754,7 +1754,7 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
     return (
       <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
         <MotionStyles /><HeaderBar />
-        <div className="flex-1 rounded-xl p-4 grid grid-rows-6 gap-2 relative overflow-hidden" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+        <div className="flex-1 rounded-xl p-4 grid grid-rows-6 gap-2 relative overflow-hidden" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
           <div className="absolute inset-y-0 w-20 opacity-20 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${modeColor}, transparent)`, animation: showNew ? 'globalScan 1.8s ease-out both' : undefined }} />
           {visibleDeals.map(deal => <DealCard key={deal.idx} deal={deal} horizontal />)}
         </div>
@@ -1767,7 +1767,7 @@ const GlobalProbabilityShiftVariant: React.FC<VariantProps> = ({ t, getField }) 
       <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
         <MotionStyles /><HeaderBar />
         <div className="flex-1 grid grid-cols-[300px_1fr] gap-3 min-h-0">
-          <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+          <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
             <div className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: modeColor }}>{movementLabel}</div>
             {[
               { label: 'صفقات صاعدة', value: risingCount, color: t.success },
@@ -1803,7 +1803,7 @@ const ClauseRevealVariant: React.FC<VariantProps> = ({ t, getField }) => {
 
   return (
     <div className="w-full h-full p-6 flex items-center justify-center" dir="rtl">
-      <div className="w-full max-w-2xl rounded-2xl p-8 relative overflow-hidden" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+      <div className="w-full max-w-2xl rounded-2xl p-8 relative overflow-hidden" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
         <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(to right, transparent, ${t.warning}, transparent)` }} />
         {/* Subtle document watermark */}
         <div className="absolute -bottom-6 -right-6 opacity-[0.05] pointer-events-none" style={{ color: t.warning }}>
@@ -1813,7 +1813,7 @@ const ClauseRevealVariant: React.FC<VariantProps> = ({ t, getField }) => {
           <Pill t={t} color={t.warning} label="بند في العقد" pulse />
           <span className="text-[9px] font-mono uppercase tracking-wider px-2 py-0.5 rounded" style={{
             color: t.dim,
-            background: t.surfaceDeep,
+            background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             border: `1px solid ${t.border}`,
           }}>CLASSIFIED · CLAUSE</span>
         </div>
@@ -1953,7 +1953,7 @@ const HijackAlertVariant: React.FC<VariantProps> = ({ t, getField }) => {
         }
       />
       <div className="flex-1 grid grid-cols-[1fr_140px_1fr] gap-3 items-stretch min-h-0">
-        <div className="rounded-xl p-5 flex flex-col justify-center" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div className="rounded-xl p-5 flex flex-col justify-center" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
           <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: t.sub }}>النادي الأصلي</div>
           <div className="flex items-center gap-3">
             <Avatar t={t} name={originalClub} accent={t.success} size={48} />
@@ -2034,7 +2034,7 @@ const PersonalTermsVariant: React.FC<VariantProps> = ({ t, getField }) => {
         <FieldCard t={t} label="سنوات العقد" value={years ? `${years} سنوات` : '—'} accent={t.success} large />
         <FieldCard t={t} label="عمولة الوكيل" value={agentFee || '—'} accent={t.warning} large />
       </div>
-      <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, border: `1px solid ${t.border}` }}>
+      <div className="rounded-xl p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.sub }}>تقدم المفاوضات</span>
           <span className="text-[10px] font-mono font-black" style={{ color: t.accent }}>{completionPct}%</span>
@@ -2082,7 +2082,7 @@ const HereWeGoBuildUpVariant: React.FC<VariantProps> = ({ t, getField }) => {
         pills={<Pill t={t} label={`${timeline.length} مراحل`} />}
         rightSlot={playerName ? <Avatar t={t} name={playerName} image={playerImage} accent={t.accent} size={44} /> : undefined}
       />
-      <div className="flex-1 rounded-xl p-5 overflow-y-auto" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+      <div className="flex-1 rounded-xl p-5 overflow-y-auto" style={{ background: t.surface, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `1px solid ${t.border}` }}>
         {timeline.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-2" style={{ color: t.dim }}>
             <Icon name="sparkle" size={28} color={t.dim} />
