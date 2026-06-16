@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MercatoInnovativeRenderers.tsx
  *
  *  Five rare, "outside-the-box" mercato templates exported as separate
@@ -114,55 +114,80 @@ const useMercatoAudio = (
   return sessionRef;
 };
 
-// ─── Shared theme palette ───────────────────────────────────────────────────
+// ─── Shared theme palette — Mondial 2026 Identity ──────────────────────────
 const SHARED_THEMES: Record<string, { bg: string; card: string; border: string; accent: string; text: string; secondary: string }> = {
+  MUNDIAL_MAIN: {
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(0,79,254,.35) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(255,255,255,0.08)',
+    accent: '#FF2D55',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
+  },
   CLEAN_BROADCAST: {
-    bg: 'linear-gradient(180deg, #0b1117 0%, #131820 100%)',
-    card: 'rgba(20,26,36,0.92)',
-    border: 'rgba(255,255,255,0.1)',
-    accent: '#3b82f6',
-    text: '#ffffff',
-    secondary: 'rgba(255,255,255,0.6)',
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(0,79,254,.25) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(255,255,255,0.08)',
+    accent: '#004FFE',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
   },
   TACTICAL_DARK: {
-    bg: 'linear-gradient(180deg, #050608 0%, #0a0d14 100%)',
-    card: 'rgba(15,18,28,0.94)',
-    border: 'rgba(255,75,62,0.25)',
-    accent: '#ff4b3e',
-    text: '#e8eef4',
-    secondary: 'rgba(232,238,244,0.55)',
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(255,45,85,.2) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(255,255,255,0.08)',
+    accent: '#FF2D55',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
   },
+  MUNDIAL_GOLD: {
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(255,230,0,.2) 0%, rgba(20,15,5,.97) 60%, #0a0804 100%)',
+    card: 'rgba(20, 15, 5, 0.45)',
+    border: 'rgba(255,230,0,0.12)',
+    accent: '#FFE600',
+    text: '#FFFBE6',
+    secondary: 'rgba(255,255,255,0.55)',
+  },
+  IRAQ_PRIDE: {
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(0,255,169,.2) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(0,255,169,0.12)',
+    accent: '#00FFA9',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
+  },
+  // Backward compat aliases
   LUXE_GOLD: {
-    bg: 'linear-gradient(180deg, #0a0805 0%, #14100a 100%)',
-    card: 'rgba(20,16,8,0.94)',
-    border: 'rgba(237,177,17,0.32)',
-    accent: '#edb111',
-    text: '#fff9e6',
-    secondary: 'rgba(255,235,180,0.6)',
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(255,230,0,.2) 0%, rgba(20,15,5,.97) 60%, #0a0804 100%)',
+    card: 'rgba(20, 15, 5, 0.45)',
+    border: 'rgba(255,230,0,0.12)',
+    accent: '#FFE600',
+    text: '#FFFBE6',
+    secondary: 'rgba(255,255,255,0.55)',
   },
   EMERALD_FIELD: {
-    bg: 'linear-gradient(180deg, #001a0e 0%, #00261a 100%)',
-    card: 'rgba(2,18,12,0.94)',
-    border: 'rgba(16,185,129,0.28)',
-    accent: '#10b981',
-    text: '#ecfdf5',
-    secondary: 'rgba(180,255,220,0.6)',
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(0,255,169,.2) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(0,255,169,0.12)',
+    accent: '#00FFA9',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
   },
   HOLOGRAM_PURPLE: {
-    bg: 'linear-gradient(180deg, #08001a 0%, #14002e 100%)',
-    card: 'rgba(12,2,28,0.94)',
-    border: 'rgba(216,180,254,0.32)',
+    bg: 'radial-gradient(ellipse at 50% -20%, rgba(168,85,247,.2) 0%, rgba(8,12,32,.97) 60%, #03050a 100%)',
+    card: 'rgba(6, 12, 30, 0.45)',
+    border: 'rgba(168,85,247,0.12)',
     accent: '#a855f7',
-    text: '#f5e8ff',
-    secondary: 'rgba(216,180,254,0.6)',
+    text: '#F4F6F9',
+    secondary: 'rgba(255,255,255,0.55)',
   },
 };
 
-const getTheme = (id: string) => SHARED_THEMES[id] || SHARED_THEMES.CLEAN_BROADCAST;
+const getTheme = (id: string) => SHARED_THEMES[id] || SHARED_THEMES.MUNDIAL_MAIN;
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
 const SHARED_FONTS = (
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=JetBrains+Mono:wght@500;700&family=Tajawal:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=JetBrains+Mono:wght@500;700&family=Tajawal:wght@500;700;800;900&family=Outfit:wght@500;700;800;900&family=Orbitron:wght@500;700;800;900&display=swap" rel="stylesheet" />
 );
 
 const SHARED_KEYFRAMES = `
@@ -204,7 +229,7 @@ const parseChatLines = (raw: unknown): ChatLine[] => {
 
 export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
   useMercatoAudio(getField, config.isVisible, isEditor);
-  const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
+  const themeId = String(getField('visualTheme') || 'MUNDIAL_MAIN');
   const theme = getTheme(themeId);
   const callerName = String(getField('callerName') || 'AGENT — JORGE MENDES');
   const callerRole = String(getField('callerRole') || 'GESTIFUTE');
@@ -252,7 +277,7 @@ export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getF
 
         <div className="absolute inset-0 pt-16 pb-32 px-8 grid grid-cols-[300px_1fr_280px] gap-6">
           {/* LEFT — Caller card with avatar & waveform */}
-          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card }}>
+          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
             <div className="p-5 border-b" style={{ borderColor: theme.border }}>
               <div className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>INCOMING</div>
               <div className="mt-1 font-['Barlow_Condensed'] text-2xl font-black leading-tight">{callerName}</div>
@@ -262,7 +287,7 @@ export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getF
             <div className="flex-1 flex flex-col items-center justify-center gap-5">
               <div className="relative">
                 <div className="absolute inset-0 rounded-full" style={{ background: theme.accent, opacity: 0.2, animation: 'mercPulse 1.4s infinite', transform: 'scale(1.4)' }} />
-                <div className="relative w-32 h-32 rounded-full flex items-center justify-center" style={{ background: theme.card, border: `3px solid ${theme.accent}` }}>
+                <div className="relative w-32 h-32 rounded-full flex items-center justify-center" style={{ background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: `3px solid ${theme.accent}` }}>
                   <Phone className="w-12 h-12" style={{ color: theme.accent }} strokeWidth={2} />
                 </div>
               </div>
@@ -286,7 +311,7 @@ export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getF
           </div>
 
           {/* MIDDLE — Chat bubbles */}
-          <div className="border overflow-hidden flex flex-col" style={{ borderColor: theme.border, background: theme.card }}>
+          <div className="border overflow-hidden flex flex-col" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4" style={{ color: theme.accent }} strokeWidth={2.4} />
@@ -325,7 +350,7 @@ export const MercatoAgentCallRenderer: React.FC<RendererProps> = ({ config, getF
           </div>
 
           {/* RIGHT — Deal context */}
-          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card }}>
+          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
             <div className="p-4 border-b" style={{ borderColor: theme.border }}>
               <div className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>DEAL CONTEXT</div>
             </div>
@@ -436,7 +461,7 @@ export const MercatoDealTimelineRenderer: React.FC<RendererProps> = ({ config, g
         </div>
 
         {/* Player card on left */}
-        <div className="absolute left-10 top-1/2 -translate-y-1/2 w-72 border" style={{ borderColor: theme.border, background: theme.card }}>
+        <div className="absolute left-10 top-1/2 -translate-y-1/2 w-72 border" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="aspect-[4/5] relative overflow-hidden border-b" style={{ borderColor: theme.border, background: 'rgba(0,0,0,0.4)' }}>
             {playerImage ? (
               <img src={playerImage} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -580,7 +605,7 @@ export const MercatoBudgetTrackerRenderer: React.FC<RendererProps> = ({ config, 
           ].map((stat, idx) => {
             const Icon = stat.icon;
             return (
-              <div key={idx} className="border p-4" style={{ borderColor: theme.border, background: theme.card, animation: `mercCountUp 0.5s ${idx * 0.1}s both` }}>
+              <div key={idx} className="border p-4" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', animation: `mercCountUp 0.5s ${idx * 0.1}s both` }}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[9px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>{stat.label}</span>
                   {Icon ? <Icon className="w-4 h-4" style={{ color: stat.color }} strokeWidth={2.4} /> : null}
@@ -603,7 +628,7 @@ export const MercatoBudgetTrackerRenderer: React.FC<RendererProps> = ({ config, 
         </div>
 
         {/* Ledger */}
-        <div className="absolute left-10 right-10 top-[280px] bottom-10 border overflow-hidden" style={{ borderColor: theme.border, background: theme.card }}>
+        <div className="absolute left-10 right-10 top-[280px] bottom-10 border overflow-hidden" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="grid grid-cols-[80px_1fr_1fr_180px_140px] gap-3 px-5 py-3 border-b text-[9px] font-black uppercase tracking-[0.22em]" style={{ borderColor: theme.border, color: theme.secondary, background: 'rgba(0,0,0,0.4)' }}>
             <div>TYPE</div>
             <div>PLAYER</div>
@@ -676,7 +701,7 @@ const useCountdown = (target: string) => {
 
 export const MercatoDeadlineDayRenderer: React.FC<RendererProps> = ({ config, getField, containerStyle, contentWrapperStyle, isEditor }) => {
   useMercatoAudio(getField, config.isVisible, isEditor);
-  const themeId = String(getField('visualTheme') || 'TACTICAL_DARK');
+  const themeId = String(getField('visualTheme') || 'MUNDIAL_MAIN');
   const theme = getTheme(themeId);
   const headline = String(getField('headline') || 'DEADLINE DAY');
   const subline = String(getField('subline') || 'SUMMER MERCATO 2026 — CLOSES TONIGHT');
@@ -751,7 +776,7 @@ export const MercatoDeadlineDayRenderer: React.FC<RendererProps> = ({ config, ge
           ].map((s, i) => {
             const Icon = s.icon;
             return (
-              <div key={i} className="border px-5 py-3 flex items-center gap-4" style={{ borderColor: theme.border, background: theme.card }}>
+              <div key={i} className="border px-5 py-3 flex items-center gap-4" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
                 <div className="w-12 h-12 flex items-center justify-center" style={{ background: `${s.color}22`, border: `1px solid ${s.color}55` }}>
                   <Icon className="w-6 h-6" style={{ color: s.color }} strokeWidth={2.4} />
                 </div>
@@ -765,7 +790,7 @@ export const MercatoDeadlineDayRenderer: React.FC<RendererProps> = ({ config, ge
         </div>
 
         {/* Live deals feed */}
-        <div className="absolute left-10 right-10 top-[298px] bottom-6 border overflow-hidden" style={{ borderColor: theme.border, background: theme.card }}>
+        <div className="absolute left-10 right-10 top-[298px] bottom-6 border overflow-hidden" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
           <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: theme.border, background: 'rgba(0,0,0,0.4)' }}>
             <ScanLine className="w-4 h-4" style={{ color: theme.accent }} strokeWidth={2.5} />
             <span className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>LIVE DEAL FEED</span>
@@ -912,7 +937,7 @@ export const MercatoXRayRenderer: React.FC<RendererProps> = ({ config, getField,
         {/* 3-column body */}
         <div className="absolute inset-0 pt-24 pb-6 px-10 grid grid-cols-[300px_400px_1fr] gap-6">
           {/* LEFT — player ID card */}
-          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card }}>
+          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
             <div className="aspect-[4/5] relative overflow-hidden border-b" style={{ borderColor: theme.border, background: 'rgba(0,0,0,0.5)' }}>
               {playerImage ? (
                 <img src={playerImage} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -943,7 +968,7 @@ export const MercatoXRayRenderer: React.FC<RendererProps> = ({ config, getField,
           </div>
 
           {/* MIDDLE — radar chart */}
-          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card }}>
+          <div className="border flex flex-col" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
             <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: theme.border }}>
               <Radar className="w-4 h-4" style={{ color: theme.accent }} strokeWidth={2.4} />
               <span className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>ATTRIBUTE RADAR</span>
@@ -988,7 +1013,7 @@ export const MercatoXRayRenderer: React.FC<RendererProps> = ({ config, getField,
           {/* RIGHT — bars + heat map + verdict */}
           <div className="flex flex-col gap-4">
             {/* Bars */}
-            <div className="border p-4" style={{ borderColor: theme.border, background: theme.card }}>
+            <div className="border p-4" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <Target className="w-4 h-4" style={{ color: theme.accent }} strokeWidth={2.4} />
                 <span className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>ATTRIBUTE BREAKDOWN</span>
@@ -1007,7 +1032,7 @@ export const MercatoXRayRenderer: React.FC<RendererProps> = ({ config, getField,
             </div>
 
             {/* Heat zones */}
-            <div className="border p-4 flex-1" style={{ borderColor: theme.border, background: theme.card }}>
+            <div className="border p-4 flex-1" style={{ borderColor: theme.border, background: theme.card, backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4" style={{ color: theme.accent }} strokeWidth={2.4} />
                 <span className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: theme.secondary }}>HEAT MAP — ACTIVITY ZONES</span>
