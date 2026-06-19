@@ -327,8 +327,11 @@ const Settings: React.FC = () => {
                 </div>
                 <button onClick={logoutLicense} disabled={licenseLogoutLoading}
                   className="mt-4 w-full text-xs text-red-400 hover:text-red-300 border border-red-900/40 rounded-lg py-2 transition-colors disabled:cursor-wait disabled:opacity-60">
-                  {licenseLogoutLoading ? 'جاري تسجيل الخروج...' : 'إلغاء الترخيص'}
+                  {licenseLogoutLoading ? 'جاري تسجيل الخروج...' : 'تسجيل الخروج من هذا الجهاز'}
                 </button>
+                <p className="mt-2 text-[10px] leading-4 text-gray-500">
+                  سيتم إنهاء الجلسة المحلية فقط، ولن يتم إلغاء مفتاح الترخيص.
+                </p>
                 {licenseLogoutError && <p className="mt-2 text-xs text-red-300">{licenseLogoutError}</p>}
               </>
             ) : (
