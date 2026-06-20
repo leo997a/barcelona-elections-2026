@@ -1,4 +1,5 @@
 import { serverSessionService } from './serverSessionService';
+import { identityClientConfig } from './identityConfig';
 
 export const REO_IDENTITY_LOGOUT_EVENT = 'reo:identity-logout';
 export const REO_IDENTITY_LOGOUT_STORAGE_KEY = 'rge_identity_logout_at';
@@ -15,8 +16,14 @@ export const identitySessionService = {
     const session = await serverSessionService.create(idToken);
     try {
       await serverSessionService.syncUserProfile();
+      if (identityClientConfig.trialProvisioningEnabled) {
+        await serverSessionService.provisionTrial();
+      }
     } catch (error) {
       await serverSessionService.destroy().catch(() => undefined);
+      if (identityClientConfig.trialProvisioningEnabled) {
+        await firebaseAuthClient.logout().catch(() => undefined);
+      }
       throw error;
     }
     if (!session.authenticated || !session.user) {

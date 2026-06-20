@@ -1,4 +1,5 @@
 import type { IdentityUser, PlatformErrorPayload } from '../../types/auth';
+import type { TrialProvisioningResponse, TrialStudioResponse } from '../../types/trial';
 
 interface SessionResponse {
   ok: true;
@@ -65,6 +66,14 @@ export const serverSessionService = {
 
   syncUserProfile() {
     return requestPlatform<{ ok: true; profileSynced: true }>('sync-user-profile', jsonPost());
+  },
+
+  provisionTrial() {
+    return requestPlatform<TrialProvisioningResponse>('provision-trial', jsonPost());
+  },
+
+  getStudio() {
+    return requestPlatform<TrialStudioResponse>('studio', { method: 'GET' });
   },
 
   destroy() {

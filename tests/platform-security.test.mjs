@@ -56,16 +56,22 @@ test('fixed-window limiter returns a bounded retry delay', () => {
 test('server identity flags default to disabled', () => {
   const previousIdentity = process.env.REO_IDENTITY_ENABLED;
   const previousSessions = process.env.REO_SERVER_SESSIONS_ENABLED;
+  const previousTrial = process.env.REO_TRIAL_PROVISIONING_ENABLED;
   delete process.env.REO_IDENTITY_ENABLED;
   delete process.env.REO_SERVER_SESSIONS_ENABLED;
+  delete process.env.REO_TRIAL_PROVISIONING_ENABLED;
   try {
     const config = getPlatformConfig();
     assert.equal(config.identityEnabled, false);
     assert.equal(config.serverSessionsEnabled, false);
+    assert.equal(config.trialProvisioningEnabled, false);
+    assert.equal(config.trialDays, 14);
   } finally {
     if (previousIdentity === undefined) delete process.env.REO_IDENTITY_ENABLED;
     else process.env.REO_IDENTITY_ENABLED = previousIdentity;
     if (previousSessions === undefined) delete process.env.REO_SERVER_SESSIONS_ENABLED;
     else process.env.REO_SERVER_SESSIONS_ENABLED = previousSessions;
+    if (previousTrial === undefined) delete process.env.REO_TRIAL_PROVISIONING_ENABLED;
+    else process.env.REO_TRIAL_PROVISIONING_ENABLED = previousTrial;
   }
 });

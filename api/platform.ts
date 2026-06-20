@@ -19,6 +19,11 @@ import {
   hasJsonContentType,
   isTrustedRequestOrigin,
 } from './_lib/platformSecurity.js';
+import {
+  getTrialStudio,
+  provisionTrialStudio,
+  TrialProvisioningError,
+} from './_lib/trialProvisioning.js';
 
 const SESSION_COOKIE = '__Host-reo_session';
 const SESSION_REAUTH_MAX_AGE_SECONDS = 5 * 60;
@@ -234,6 +239,43 @@ const handleSyncUserProfile = async (request: ServerlessRequest, response: Serve
   return sendJson(response, 200, { ok: true, profileSynced: true });
 };
 
+const handleProvisionTrial = async (
+  request: ServerlessRequest,
+  response: ServerlessResponse,
+  trialDays: number,
+) => {
+  if (request.method !== 'POST') return sendMethodNotAllowed(response, 'POST', { ok: false, code: 'METHOD_NOT_ALLOWED' });
+  if (!requireSafeJsonPost(request, response)) return;
+  if (!enforceRateLimit(request, response, 'provision-trial', 5, 60 * 60_000)) return;
+
+  const user = await getVerifiedSessionUser(request);
+  if (!user) return sendError(response, 401, 'SESSION_INVALID', 'الجلسة غير صالحة أو منتهية.');
+
+  const { firestore } = getIdentityAdminServices();
+  const result = await provisionTrialStudio(firestore, {
+    uid: user.uid,
+    email: user.email ?? '',
+    displayName: user.displayName,
+  }, trialDays);
+  return sendJson(response, 200, { ok: true, ...result });
+};
+
+const handleGetStudio = async (request: ServerlessRequest, response: ServerlessResponse) => {
+  if (request.method !== 'GET') return sendMethodNotAllowed(response, 'GET', { ok: false, code: 'METHOD_NOT_ALLOWED' });
+  if (!enforceRateLimit(request, response, 'get-studio', 60, 60_000)) return;
+
+  const user = await getVerifiedSessionUser(request);
+  if (!user) return sendError(response, 401, 'SESSION_INVALID', 'الجلسة غير صالحة أو منتهية.');
+
+  const { firestore } = getIdentityAdminServices();
+  const studio = await getTrialStudio(firestore, {
+    uid: user.uid,
+    email: user.email ?? '',
+    displayName: user.displayName,
+  });
+  return sendJson(response, 200, { ok: true, studio });
+};
+
 export default async function handler(request: ServerlessRequest, response: ServerlessResponse) {
   const config = getPlatformConfig();
   if (!config.identityEnabled || !config.serverSessionsEnabled) {
@@ -249,16 +291,32 @@ export default async function handler(request: ServerlessRequest, response: Serv
     if (action === 'destroy-session') return await handleDestroySession(request, response);
     if (action === 'me') return await handleMe(request, response);
     if (action === 'sync-user-profile') return await handleSyncUserProfile(request, response);
+    if (action === 'provision-trial' || action === 'studio') {
+      if (!config.trialProvisioningEnabled) {
+        return sendError(response, 404, 'TRIAL_PROVISIONING_DISABLED', 'نظام الاستوديو التجريبي غير مفعل.');
+      }
+      if (action === 'provision-trial') return await handleProvisionTrial(request, response, config.trialDays);
+      return await handleGetStudio(request, response);
+    }
     return sendError(response, 404, 'ACTION_NOT_FOUND', 'إجراء الهوية غير معروف.');
   } catch (error) {
     if (error instanceof IdentityAdminConfigurationError) {
       return sendError(response, 503, 'IDENTITY_NOT_CONFIGURED', 'إعدادات خادم الهوية غير مكتملة.');
+    }
+    if (error instanceof TrialProvisioningError) {
+      return sendError(response, error.status, error.code, error.message);
     }
     if (action === 'create-session') {
       return sendError(response, 401, 'AUTHENTICATION_FAILED', 'تعذر التحقق من جلسة الحساب.');
     }
     if (action === 'sync-user-profile') {
       return sendError(response, 503, 'PROFILE_SYNC_FAILED', 'تعذر مزامنة ملف المستخدم.');
+    }
+    if (action === 'provision-trial') {
+      return sendError(response, 503, 'TRIAL_PROVISIONING_FAILED', 'تعذر تجهيز الاستوديو التجريبي. حاول مرة أخرى.');
+    }
+    if (action === 'studio') {
+      return sendError(response, 503, 'TRIAL_STUDIO_READ_FAILED', 'تعذر تحميل الاستوديو التجريبي.');
     }
     return sendError(response, 500, 'IDENTITY_REQUEST_FAILED', 'تعذر إكمال طلب الهوية.');
   }

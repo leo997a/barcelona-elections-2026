@@ -9,6 +9,8 @@ const clampInteger = (value: string | undefined, fallback: number, minimum: numb
 export const getPlatformConfig = () => ({
   identityEnabled: readFlag(process.env.REO_IDENTITY_ENABLED),
   serverSessionsEnabled: readFlag(process.env.REO_SERVER_SESSIONS_ENABLED),
+  trialProvisioningEnabled: readFlag(process.env.REO_TRIAL_PROVISIONING_ENABLED),
+  trialDays: clampInteger(process.env.REO_TRIAL_DAYS, 14, 1, 30),
   sessionCookieDays: clampInteger(process.env.REO_SESSION_COOKIE_DAYS, 7, 1, 14),
   firebaseProjectIdConfigured: Boolean(process.env.FIREBASE_PROJECT_ID?.trim()),
   firebaseClientEmailConfigured: Boolean(process.env.FIREBASE_CLIENT_EMAIL?.trim()),

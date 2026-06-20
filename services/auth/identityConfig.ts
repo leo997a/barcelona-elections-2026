@@ -6,6 +6,7 @@ const readFlag = (value: string | undefined) => value?.trim().toLowerCase() === 
 
 export const identityClientConfig = Object.freeze({
   enabled: readFlag(viteEnvironment.VITE_REO_IDENTITY_ENABLED),
+  trialProvisioningEnabled: readFlag(viteEnvironment.VITE_REO_TRIAL_PROVISIONING_ENABLED),
   firebase: {
     apiKey: viteEnvironment.VITE_FIREBASE_API_KEY?.trim() ?? '',
     authDomain: viteEnvironment.VITE_FIREBASE_AUTH_DOMAIN?.trim() ?? '',
