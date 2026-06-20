@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "preview": "vite preview",
     "start": "node dist-server/server/server.js",
+    "test:identity": "npm run build:server && node --test tests/platform-security.test.mjs",
     "sync:player-cache": "node scripts/sync-player-image-cache.mjs"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@google/genai": "^1.41.0",
     "@vercel/functions": "^3.5.0",
     "firebase": "^12.10.0",
+    "firebase-admin": "^14.0.0",
     "jszip": "3.10.1",
     "lucide-react": "^0.564.0",
     "react": "^19.2.4",

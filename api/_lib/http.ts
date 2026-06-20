@@ -2,6 +2,7 @@ type HeaderValue = string | string[] | undefined;
 
 export interface ServerlessRequest {
   method?: string;
+  url?: string;
   body?: unknown;
   headers: Record<string, HeaderValue>;
   on?: (event: 'data' | 'end' | 'error', handler: (chunk?: Buffer | Error) => void) => void;

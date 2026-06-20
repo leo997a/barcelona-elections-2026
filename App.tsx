@@ -11,13 +11,23 @@ import Settings from './pages/Settings';
 import BroadcastControl from './pages/BroadcastControl';
 import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
-import { Volume2, CloudLightning, Tv, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import LegacyLicenseGate from './components/auth/LegacyLicenseGate';
+import { Volume2, CloudLightning, LoaderCircle } from 'lucide-react';
 import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
 import { licenseService, LicenseState } from './services/licenseService';
 import { REO_LOGOUT_STORAGE_KEY, REO_SESSION_LOGOUT_EVENT, sessionService } from './services/sessionService';
+import { identityClientConfig } from './services/auth/identityConfig';
+import {
+  identitySessionService,
+  REO_IDENTITY_LOGOUT_EVENT,
+  REO_IDENTITY_LOGOUT_STORAGE_KEY,
+} from './services/auth/identitySessionService';
+import type { IdentitySessionState, IdentityUser } from './types/auth';
 
 import { unlockAudio } from './services/audioEngine';
+
+const AuthGateway = React.lazy(() => import('./components/auth/AuthGateway'));
 
 const AudioUnlockOverlay = () => {
     const [visible, setVisible] = useState(true);
@@ -414,6 +424,11 @@ const App: React.FC = () => {
   const [showLicenseKey, setShowLicenseKey] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState('');
+  const [identitySession, setIdentitySession] = useState<IdentitySessionState>(() =>
+    identityClientConfig.enabled
+      ? { status: 'loading', user: null }
+      : { status: 'disabled', user: null }
+  );
 
   const applyLoggedOutUi = React.useCallback(() => {
     if (extractOutputId(window.location.hash)) return;
@@ -429,11 +444,31 @@ const App: React.FC = () => {
     window.history.replaceState({ route: 'home' }, '', '/');
   }, []);
 
+  const applyIdentityLoggedOutUi = React.useCallback(() => {
+    if (extractOutputId(window.location.hash)) return;
+    setIdentitySession({ status: 'signed-out', user: null });
+    setSelectedOverlayId(null);
+    setOperatorFocusId(null);
+    setRouteState('home');
+    setHashPath('');
+    window.history.replaceState({ route: 'home' }, '', '/');
+  }, []);
+
+  const handleIdentityAuthenticated = React.useCallback((user: IdentityUser) => {
+    setIdentitySession({ status: 'authenticated', user });
+    setLogoutError('');
+  }, []);
+
   const handleLogout = async () => {
     if (logoutLoading) return;
     setLogoutLoading(true);
     setLogoutError('');
     try {
+      if (identitySession.status === 'authenticated') {
+        await identitySessionService.logout();
+        applyIdentityLoggedOutUi();
+        return;
+      }
       await sessionService.logout();
       applyLoggedOutUi();
     } catch (err) {
@@ -446,6 +481,40 @@ const App: React.FC = () => {
       setLogoutLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!identityClientConfig.enabled || extractOutputId(window.location.hash)) return;
+    if (licenseService.getStored()?.valid) {
+      setIdentitySession({ status: 'signed-out', user: null });
+      return;
+    }
+
+    let active = true;
+    void identitySessionService.restore()
+      .then(user => {
+        if (!active) return;
+        setIdentitySession(user
+          ? { status: 'authenticated', user }
+          : { status: 'signed-out', user: null });
+      })
+      .catch(() => {
+        if (active) setIdentitySession({ status: 'signed-out', user: null });
+      });
+
+    const handleIdentityLogout = () => applyIdentityLoggedOutUi();
+    const handleIdentityStorageLogout = (event: StorageEvent) => {
+      if (event.key === REO_IDENTITY_LOGOUT_STORAGE_KEY && event.newValue) {
+        applyIdentityLoggedOutUi();
+      }
+    };
+    window.addEventListener(REO_IDENTITY_LOGOUT_EVENT, handleIdentityLogout);
+    window.addEventListener('storage', handleIdentityStorageLogout);
+    return () => {
+      active = false;
+      window.removeEventListener(REO_IDENTITY_LOGOUT_EVENT, handleIdentityLogout);
+      window.removeEventListener('storage', handleIdentityStorageLogout);
+    };
+  }, [applyIdentityLoggedOutUi]);
 
   const handleActivateLicense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -595,75 +664,39 @@ const App: React.FC = () => {
   // ----------------------------------------------------
   // RENDER: License Gate — للواجهة الرئيسية فقط
   // ----------------------------------------------------
-  if (!license?.valid) {
-    return (
-      <div className="fixed inset-0 bg-gray-950 flex items-center justify-center z-[200] p-4 overflow-y-auto">
-        <div className="w-full max-w-lg py-8">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-6 justify-center">
-            <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30">
-              <Tv className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">REO LIVE</h1>
-              <p className="text-blue-400 text-xs font-mono">Broadcast Studio</p>
-            </div>
-          </div>
+  const identityAuthenticated = identitySession.status === 'authenticated';
+  if (!license?.valid && !identityAuthenticated) {
+    const legacyAccess = (
+      <LegacyLicenseGate
+        embedded={identityClientConfig.enabled}
+        email={licenseEmail}
+        licenseKey={licenseKey}
+        error={licenseError}
+        loading={licenseLoading}
+        showLicenseKey={showLicenseKey}
+        onEmailChange={setLicenseEmail}
+        onLicenseKeyChange={setLicenseKey}
+        onToggleLicenseKey={() => setShowLicenseKey(previous => !previous)}
+        onSubmit={handleActivateLicense}
+      />
+    );
 
-          {/* Activate panel */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl mb-3">
-            <h2 className="text-lg font-black text-white mb-1 text-center">تفعيل الاستوديو</h2>
-            <p className="text-gray-500 text-xs text-center mb-5">أدخل البريد ومفتاح الدخول فقط</p>
-
-            <form onSubmit={handleActivateLicense} className="space-y-3" autoComplete="on">
-              <input
-                type="email"
-                name="username"
-                autoComplete="username"
-                value={licenseEmail}
-                onChange={e => setLicenseEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center"
-                dir="ltr"
-                inputMode="email"
-                required
-              />
-              <div className="relative">
-                <input
-                  type={showLicenseKey ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
-                  value={licenseKey}
-                  onChange={e => setLicenseKey(e.target.value)}
-                  placeholder="REO-XXXX-XXXX-XXXX-XXXX"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-12 py-3 text-white font-mono text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-center tracking-widest"
-                  dir="ltr"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowLicenseKey(prev => !prev)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 hover:bg-gray-700/70 hover:text-white transition-colors"
-                  aria-label={showLicenseKey ? 'إخفاء مفتاح الدخول' : 'إظهار مفتاح الدخول'}
-                >
-                  {showLicenseKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {licenseError && (
-                <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <p className="text-red-300 text-xs">{licenseError}</p>
-                </div>
-              )}
-              <button type="submit" disabled={licenseLoading || !licenseKey.trim() || !licenseEmail.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-900/30">
-                {licenseLoading ? 'جاري التحقق...' : 'دخول الاستوديو'}
-              </button>
-            </form>
-          </div>
-
+    if (!identityClientConfig.enabled) return legacyAccess;
+    if (identitySession.status === 'loading') {
+      return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950 text-white">
+          <LoaderCircle className="h-7 w-7 animate-spin text-cyan-300" aria-label="جاري فحص الجلسة" />
         </div>
-      </div>
+      );
+    }
+    return (
+      <React.Suspense fallback={(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950 text-white">
+          <LoaderCircle className="h-7 w-7 animate-spin text-cyan-300" aria-label="جاري تحميل بوابة الحساب" />
+        </div>
+      )}>
+        <AuthGateway legacyAccess={legacyAccess} onAuthenticated={handleIdentityAuthenticated} />
+      </React.Suspense>
     );
   }
 
