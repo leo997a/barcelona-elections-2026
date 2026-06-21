@@ -13,7 +13,7 @@
     "lint": "tsc --noEmit",
     "preview": "vite preview",
     "start": "node dist-server/server/server.js",
-    "test:identity": "npm run build:server && node --test tests/platform-security.test.mjs tests/trial-provisioning.test.mjs",
+    "test:identity": "npm run build:server && node --test tests/platform-security.test.mjs tests/trial-provisioning.test.mjs tests/identity-diagnostics.test.mjs",
     "sync:player-cache": "node scripts/sync-player-image-cache.mjs"
   },
   "dependencies": {

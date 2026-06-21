@@ -12,6 +12,13 @@ import {
 } from './_lib/http.js';
 import { getPlatformConfig } from './_lib/platformConfig.js';
 import {
+  createIdentityDiagnosticId,
+  inspectIdTokenClaims,
+  inspectIdentityAdminEnvironment,
+  logIdentityDiagnostic,
+  sanitizeIdentityAdminError,
+} from './_lib/identityDiagnostics.js';
+import {
   buildIdentityProfile,
   FixedWindowRateLimiter,
   getClientAddress,
@@ -40,6 +47,10 @@ const sendError = (
   error: string,
   extra: Record<string, unknown> = {},
 ) => sendJson(response, status, { ok: false, code, error, ...extra });
+
+const withDiagnosticId = (diagnosticId: string | null) => (
+  diagnosticId ? { diagnosticId } : {}
+);
 
 const getAction = (request: ServerlessRequest) => {
   try {
@@ -128,45 +139,88 @@ const getVerifiedSessionUser = async (request: ServerlessRequest) => {
   }
 };
 
-const handleCreateSession = async (request: ServerlessRequest, response: ServerlessResponse) => {
-  if (request.method !== 'POST') return sendMethodNotAllowed(response, 'POST', { ok: false, code: 'METHOD_NOT_ALLOWED' });
-  if (!requireSafeJsonPost(request, response)) return;
-  if (!enforceRateLimit(request, response, 'create-session', 10, 10 * 60_000)) return;
+const handleCreateSession = async (
+  request: ServerlessRequest,
+  response: ServerlessResponse,
+  diagnosticId: string | null = null,
+) => {
+  let stage = 'create-session-start';
+  logIdentityDiagnostic(diagnosticId, stage, inspectIdentityAdminEnvironment());
+  try {
+    if (request.method !== 'POST') return sendMethodNotAllowed(response, 'POST', { ok: false, code: 'METHOD_NOT_ALLOWED' });
+    if (!requireSafeJsonPost(request, response)) return;
+    if (!enforceRateLimit(request, response, 'create-session', 10, 10 * 60_000)) return;
 
-  const body = await readJsonBody<SessionBody>(request).catch(() => null);
-  const idToken = body?.idToken?.trim() ?? '';
-  if (!idToken || idToken.length > 16_384) {
-    return sendError(response, 400, 'ID_TOKEN_REQUIRED', 'بيانات تسجيل الدخول غير مكتملة.');
+    stage = 'read-json-body';
+    const body = await readJsonBody<SessionBody>(request).catch(() => null);
+    const idToken = body?.idToken?.trim() ?? '';
+    if (!idToken || idToken.length > 16_384) {
+      logIdentityDiagnostic(diagnosticId, 'id-token-missing-or-invalid-length', { idTokenProvided: Boolean(idToken) });
+      return sendError(response, 400, 'ID_TOKEN_REQUIRED', 'Login payload is incomplete.', withDiagnosticId(diagnosticId));
+    }
+    logIdentityDiagnostic(diagnosticId, 'id-token-received', inspectIdTokenClaims(idToken));
+
+    stage = 'admin-init';
+    logIdentityDiagnostic(diagnosticId, 'admin-init-start');
+    const { auth } = getIdentityAdminServices();
+    logIdentityDiagnostic(diagnosticId, 'admin-init-success');
+
+    stage = 'verify-id-token';
+    logIdentityDiagnostic(diagnosticId, 'verify-id-token-start');
+    const decoded = await auth.verifyIdToken(idToken, true);
+    logIdentityDiagnostic(diagnosticId, 'verify-id-token-success', {
+      tokenEmailVerified: decoded.email_verified === true,
+      tokenAuthTimeAgeSeconds: decoded.auth_time ? Math.floor(Date.now() / 1000) - decoded.auth_time : null,
+    });
+
+    stage = 'auth-time-check';
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (!decoded.auth_time || nowSeconds - decoded.auth_time > SESSION_REAUTH_MAX_AGE_SECONDS) {
+      logIdentityDiagnostic(diagnosticId, 'auth-time-check-failed', {
+        tokenAuthTimeAgeSeconds: decoded.auth_time ? nowSeconds - decoded.auth_time : null,
+      });
+      return sendError(response, 401, 'REAUTH_REQUIRED', 'Sign in again to create a secure session.', withDiagnosticId(diagnosticId));
+    }
+    logIdentityDiagnostic(diagnosticId, 'auth-time-check-success');
+
+    stage = 'get-user';
+    logIdentityDiagnostic(diagnosticId, 'get-user-start');
+    const user = await auth.getUser(decoded.uid);
+    logIdentityDiagnostic(diagnosticId, 'get-user-success', {
+      userEmailVerified: user.emailVerified,
+      userDisabled: user.disabled,
+    });
+    if (user.disabled) return sendError(response, 403, 'ACCOUNT_DISABLED', 'This account is not available.', withDiagnosticId(diagnosticId));
+    if (!user.email || !user.emailVerified) {
+      return sendError(response, 403, 'EMAIL_NOT_VERIFIED', 'Verify the email address first.', withDiagnosticId(diagnosticId));
+    }
+
+    const { sessionCookieDays } = getPlatformConfig();
+    const maxAgeSeconds = sessionCookieDays * 24 * 60 * 60;
+    stage = 'create-session-cookie';
+    logIdentityDiagnostic(diagnosticId, 'create-session-cookie-start', { sessionCookieMaxAgeSeconds: maxAgeSeconds });
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: maxAgeSeconds * 1000 });
+    logIdentityDiagnostic(diagnosticId, 'create-session-cookie-success');
+
+    stage = 'set-cookie';
+    logIdentityDiagnostic(diagnosticId, 'set-cookie-start');
+    setSessionCookie(response, sessionCookie, maxAgeSeconds);
+    logIdentityDiagnostic(diagnosticId, 'set-cookie-success');
+    return sendJson(response, 200, {
+      ok: true,
+      authenticated: true,
+      user: buildIdentityProfile({
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      }),
+    });
+  } catch (error) {
+    logIdentityDiagnostic(diagnosticId, `${stage}-failed`, sanitizeIdentityAdminError(error));
+    throw error;
   }
-
-  const { auth } = getIdentityAdminServices();
-  const decoded = await auth.verifyIdToken(idToken, true);
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  if (!decoded.auth_time || nowSeconds - decoded.auth_time > SESSION_REAUTH_MAX_AGE_SECONDS) {
-    return sendError(response, 401, 'REAUTH_REQUIRED', 'أعد تسجيل الدخول لإنشاء جلسة آمنة.');
-  }
-
-  const user = await auth.getUser(decoded.uid);
-  if (user.disabled) return sendError(response, 403, 'ACCOUNT_DISABLED', 'هذا الحساب غير متاح.');
-  if (!user.email || !user.emailVerified) {
-    return sendError(response, 403, 'EMAIL_NOT_VERIFIED', 'يجب تأكيد البريد الإلكتروني أولًا.');
-  }
-
-  const { sessionCookieDays } = getPlatformConfig();
-  const maxAgeSeconds = sessionCookieDays * 24 * 60 * 60;
-  const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: maxAgeSeconds * 1000 });
-  setSessionCookie(response, sessionCookie, maxAgeSeconds);
-  return sendJson(response, 200, {
-    ok: true,
-    authenticated: true,
-    user: buildIdentityProfile({
-      uid: user.uid,
-      email: user.email,
-      emailVerified: user.emailVerified,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-    }),
-  });
 };
 
 const handleDestroySession = async (request: ServerlessRequest, response: ServerlessResponse) => {
@@ -277,17 +331,20 @@ const handleGetStudio = async (request: ServerlessRequest, response: ServerlessR
 };
 
 export default async function handler(request: ServerlessRequest, response: ServerlessResponse) {
+  const action = getAction(request);
+  const diagnosticId = action === 'create-session' ? createIdentityDiagnosticId() : null;
   const config = getPlatformConfig();
   if (!config.identityEnabled || !config.serverSessionsEnabled) {
-    return sendError(response, 404, 'IDENTITY_DISABLED', 'نظام الحسابات غير مفعل.');
+    logIdentityDiagnostic(diagnosticId, 'identity-flags-disabled', inspectIdentityAdminEnvironment());
+    return sendError(response, 404, 'IDENTITY_DISABLED', 'نظام الحسابات غير مفعل.', withDiagnosticId(diagnosticId));
   }
   if (!config.firebaseProjectIdConfigured || !config.firebaseClientEmailConfigured || !config.firebasePrivateKeyConfigured) {
-    return sendError(response, 503, 'IDENTITY_NOT_CONFIGURED', 'إعدادات خادم الهوية غير مكتملة.');
+    logIdentityDiagnostic(diagnosticId, 'identity-env-missing', inspectIdentityAdminEnvironment());
+    return sendError(response, 503, 'IDENTITY_NOT_CONFIGURED', 'إعدادات خادم الهوية غير مكتملة.', withDiagnosticId(diagnosticId));
   }
 
-  const action = getAction(request);
   try {
-    if (action === 'create-session') return await handleCreateSession(request, response);
+    if (action === 'create-session') return await handleCreateSession(request, response, diagnosticId);
     if (action === 'destroy-session') return await handleDestroySession(request, response);
     if (action === 'me') return await handleMe(request, response);
     if (action === 'sync-user-profile') return await handleSyncUserProfile(request, response);
@@ -301,13 +358,15 @@ export default async function handler(request: ServerlessRequest, response: Serv
     return sendError(response, 404, 'ACTION_NOT_FOUND', 'إجراء الهوية غير معروف.');
   } catch (error) {
     if (error instanceof IdentityAdminConfigurationError) {
-      return sendError(response, 503, 'IDENTITY_NOT_CONFIGURED', 'إعدادات خادم الهوية غير مكتملة.');
+      logIdentityDiagnostic(diagnosticId, 'identity-admin-configuration-failed', sanitizeIdentityAdminError(error));
+      return sendError(response, 503, 'IDENTITY_NOT_CONFIGURED', 'إعدادات خادم الهوية غير مكتملة.', withDiagnosticId(diagnosticId));
     }
     if (error instanceof TrialProvisioningError) {
       return sendError(response, error.status, error.code, error.message);
     }
     if (action === 'create-session') {
-      return sendError(response, 401, 'AUTHENTICATION_FAILED', 'تعذر التحقق من جلسة الحساب.');
+      logIdentityDiagnostic(diagnosticId, 'create-session-handler-failed', sanitizeIdentityAdminError(error));
+      return sendError(response, 401, 'AUTHENTICATION_FAILED', 'تعذر التحقق من جلسة الحساب.', withDiagnosticId(diagnosticId));
     }
     if (action === 'sync-user-profile') {
       return sendError(response, 503, 'PROFILE_SYNC_FAILED', 'تعذر مزامنة ملف المستخدم.');
