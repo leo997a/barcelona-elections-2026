@@ -37,7 +37,12 @@ export const inspectIdentityAdminEnvironment = () => {
   const projectId = process.env.FIREBASE_PROJECT_ID ?? '';
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? '';
   const privateKey = process.env.FIREBASE_PRIVATE_KEY ?? '';
-  const trimmedPrivateKey = privateKey.trim();
+  const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64 ?? '';
+  const decodedPrivateKey = privateKeyBase64.trim()
+    ? Buffer.from(privateKeyBase64.trim(), 'base64').toString('utf8')
+    : '';
+  const effectivePrivateKey = decodedPrivateKey || privateKey;
+  const trimmedPrivateKey = effectivePrivateKey.trim();
   const unquotedPrivateKey = stripOuterQuotesOnce(trimmedPrivateKey).replace(/,$/, '').trim();
 
   return {
@@ -46,13 +51,15 @@ export const inspectIdentityAdminEnvironment = () => {
     serverSessionsEnabled: readFlag(process.env.REO_SERVER_SESSIONS_ENABLED),
     firebaseProjectIdConfigured: Boolean(projectId.trim()),
     firebaseClientEmailConfigured: Boolean(clientEmail.trim()),
-    firebasePrivateKeyConfigured: Boolean(privateKey.trim()),
-    firebasePrivateKeyLength: privateKey.length,
+    firebasePrivateKeyConfigured: Boolean(privateKey.trim() || privateKeyBase64.trim()),
+    firebasePrivateKeyBase64Configured: Boolean(privateKeyBase64.trim()),
+    firebasePrivateKeySource: privateKeyBase64.trim() ? 'base64' : 'plain',
+    firebasePrivateKeyLength: effectivePrivateKey.length,
     firebasePrivateKeyHasBeginMarker: unquotedPrivateKey.includes('-----BEGIN PRIVATE KEY-----'),
     firebasePrivateKeyHasEndMarker: unquotedPrivateKey.includes('-----END PRIVATE KEY-----'),
-    firebasePrivateKeyContainsLiteralBackslashN: privateKey.includes('\\n'),
-    firebasePrivateKeyContainsDoubleEscapedBackslashN: privateKey.includes('\\\\n'),
-    firebasePrivateKeyContainsRealNewline: /\r|\n/.test(privateKey),
+    firebasePrivateKeyContainsLiteralBackslashN: effectivePrivateKey.includes('\\n'),
+    firebasePrivateKeyContainsDoubleEscapedBackslashN: effectivePrivateKey.includes('\\\\n'),
+    firebasePrivateKeyContainsRealNewline: /\r|\n/.test(effectivePrivateKey),
     firebasePrivateKeyHasOuterQuotes: stripOuterQuotesOnce(trimmedPrivateKey) !== trimmedPrivateKey,
     firebaseProjectIdHashPrefix: projectId.trim() ? sha256Prefix(projectId.trim()) : '',
     firebaseClientEmailDomain: getClientEmailDomain(clientEmail),

@@ -13,12 +13,24 @@ export class IdentityAdminConfigurationError extends Error {
 
 let cachedApp: App | null = null;
 
+const readPrivateKey = () => {
+  const privateKeyFromBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64?.trim();
+  if (privateKeyFromBase64) {
+    return Buffer.from(privateKeyFromBase64, 'base64').toString('utf8').trim();
+  }
+
+  return process.env.FIREBASE_PRIVATE_KEY
+    ?.replace(/\\\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .trim();
+};
+
 const getIdentityAdminApp = () => {
   if (cachedApp) return cachedApp;
 
   const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').trim();
+  const privateKey = readPrivateKey();
   if (!projectId || !clientEmail || !privateKey) {
     throw new IdentityAdminConfigurationError();
   }

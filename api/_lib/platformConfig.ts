@@ -15,5 +15,8 @@ export const getPlatformConfig = () => ({
   sessionCookieDays: clampInteger(process.env.REO_SESSION_COOKIE_DAYS, 7, 1, 14),
   firebaseProjectIdConfigured: Boolean(process.env.FIREBASE_PROJECT_ID?.trim()),
   firebaseClientEmailConfigured: Boolean(process.env.FIREBASE_CLIENT_EMAIL?.trim()),
-  firebasePrivateKeyConfigured: Boolean(process.env.FIREBASE_PRIVATE_KEY?.trim()),
+  firebasePrivateKeyConfigured: Boolean(
+    process.env.FIREBASE_PRIVATE_KEY_BASE64?.trim()
+    || process.env.FIREBASE_PRIVATE_KEY?.trim(),
+  ),
 });
