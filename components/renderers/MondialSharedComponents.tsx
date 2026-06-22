@@ -166,7 +166,7 @@ export const clamp = (v: number, min = 0, max = 100): number =>
 // ─── CSS المدمجة ─────────────────────────────────────────────────────────────
 
 export const MONDIAL_KEYFRAMES = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Cairo:wght@400;500;700;800;900&family=Inter:wght@400;500;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap');
 
 @keyframes mondialPulse {
   0%, 100% { opacity: 1; }
@@ -196,6 +196,105 @@ export const MONDIAL_KEYFRAMES = `
   0% { transform: rotate(-1.5deg) scale(1); }
   50% { transform: rotate(1.5deg) scale(1.04); }
   100% { transform: rotate(-1.5deg) scale(1); }
+}
+@keyframes obsTickerRun {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes obsPulseGlow {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 5px rgba(190, 242, 100, 0.2); }
+  50% { opacity: 1; box-shadow: 0 0 15px rgba(190, 242, 100, 0.6); }
+}
+@keyframes obsScorebugIn {
+  from { opacity: 0; transform: translate(-50%, -100px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes obsDropIn {
+  from { opacity: 0; transform: translateY(-100px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes obsLowerThirdIn {
+  from { opacity: 0; transform: translateY(50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes obsStatsIn {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes obsPanelPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes obsSoftSweep {
+  0% { transform: translateX(-120%); opacity: 0; }
+  35% { opacity: 0.45; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+@keyframes wcLogoKick {
+  0% { opacity: 0; transform: translateY(-90px) rotate(-9deg) scale(.62); }
+  68% { opacity: 1; transform: translateY(7px) rotate(2deg) scale(1.08); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes wcBadgePop {
+  0% { opacity: 0; transform: scale(.2) rotate(-18deg); }
+  72% { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes wcScorePop {
+  0% { opacity: 0; transform: scale(.25) rotate(-4deg); }
+  68% { opacity: 1; transform: scale(1.1) rotate(1.5deg); }
+  86% { transform: scale(.97) rotate(-.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes wcTextSlice {
+  0% { opacity: 0; transform: translateX(80px) skewX(-10deg); clip-path: inset(0 100% 0 0); }
+  100% { opacity: 1; transform: translateX(0) skewX(0); clip-path: inset(0 0 0 0); }
+}
+@keyframes wcRowIn {
+  0% { opacity: 0; transform: translateX(70px) scale(.94); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes wcCardRise {
+  0% { opacity: 0; transform: translateY(130px) rotate(5deg) scale(.86); }
+  75% { opacity: 1; transform: translateY(-8px) rotate(-1deg) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes wcWipeUp {
+  0% { transform: translateY(110%); }
+  100% { transform: translateY(0); }
+}
+@keyframes wcArcSweep {
+  0% { opacity: 0; transform: translate(35%, -25%) rotate(70deg) scale(.65); }
+  100% { transform: translate(0, 0) rotate(25deg) scale(1); }
+}
+@keyframes wcPhotoReveal {
+  0% { opacity: 0; transform: scale(1.16); clip-path: inset(0 0 100% 0); }
+  100% { opacity: 1; transform: scale(1); clip-path: inset(0 0 0 0); }
+}
+@keyframes wcScorebugIn {
+  0% { opacity: 0; transform: translateY(-130px) scaleX(.72); }
+  72% { opacity: 1; transform: translateY(8px) scaleX(1.04); }
+  100% { opacity: 1; transform: translateY(0) scaleX(1); }
+}
+@keyframes wcTickerIn {
+  0% { opacity: 0; transform: translateY(100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes wcLowerThirdIn {
+  0% { opacity: 0; transform: translateX(-120%) rotate(-4deg); }
+  72% { opacity: 1; transform: translateX(12px) rotate(1deg); }
+  100% { opacity: 1; transform: translateX(0) rotate(0); }
+}
+@keyframes wcTickerRun {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes wcBarGrow {
+  0% { width: 0; }
+}
+@keyframes wcSideWipe {
+  0% { transform: scaleX(0); transform-origin: left center; }
+  100% { transform: scaleX(1); transform-origin: left center; }
 }
 `;
 

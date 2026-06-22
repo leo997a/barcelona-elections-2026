@@ -30,6 +30,14 @@ import {
   MondialFlag,
 } from './MondialSharedComponents';
 import { MondialRendererProps } from './Mondial2026Renderer';
+import {
+  ReoObsIraqDashboard,
+  ReoObsIraqFanPulse,
+  ReoObsIraqHistory,
+  ReoObsIraqPlayerSpotlight,
+  ReoObsIraqSquad,
+  ReoObsIraqTicker,
+} from './MondialObsTemplates';
 
 // ─── بيانات تجريبية للعراق ───────────────────────────────────────────────────
 
@@ -75,33 +83,19 @@ export const MondialIraqRenderer: React.FC<MondialRendererProps> = ({
       <div style={contentWrapperStyle}>
         <div
           className="w-full h-full relative"
-          style={{ background: t.bg, fontFamily: "'Tajawal', 'Inter', sans-serif" }}
+          style={{ background: variant === 'match_ticker' ? 'transparent' : t.bg, fontFamily: "'Tajawal', 'Inter', sans-serif" }}
         >
-          {/* شريط العلم العراقي في الأعلى */}
-          <IraqFlagStrip />
-
-          {variant === 'squad_card' && <IraqSquadVariant t={t} getField={getField} />}
-          {variant === 'player_spotlight' && <IraqPlayerSpotlightVariant t={t} getField={getField} />}
-          {variant === 'match_ticker' && <IraqMatchTickerVariant t={t} getField={getField} />}
-          {variant === 'history_moment' && <IraqHistoryMomentVariant t={t} getField={getField} />}
-          {variant === 'fan_pulse' && <IraqFanPulseVariant t={t} getField={getField} />}
-          {variant === 'iraq_dashboard' && <IraqDashboardVariant t={t} getField={getField} />}
+          {variant === 'squad_card' && <ReoObsIraqSquad t={t} getField={getField} />}
+          {variant === 'player_spotlight' && <ReoObsIraqPlayerSpotlight t={t} getField={getField} />}
+          {variant === 'match_ticker' && <ReoObsIraqTicker t={t} getField={getField} />}
+          {variant === 'history_moment' && <ReoObsIraqHistory t={t} getField={getField} />}
+          {variant === 'fan_pulse' && <ReoObsIraqFanPulse t={t} getField={getField} />}
+          {variant === 'iraq_dashboard' && <ReoObsIraqDashboard t={t} getField={getField} />}
         </div>
       </div>
     </div>
   );
 };
-
-// ─── شريط العلم العراقي ──────────────────────────────────────────────────────
-
-const IraqFlagStrip: React.FC = () => (
-  <div className="absolute top-0 left-0 right-0 flex" style={{ height: 4, zIndex: 10 }}>
-    <div className="flex-1" style={{ background: '#000000' }} />
-    <div className="flex-1" style={{ background: '#007A3D' }} />
-    <div className="flex-1" style={{ background: '#FFFFFF' }} />
-    <div className="flex-1" style={{ background: '#C8102E' }} />
-  </div>
-);
 
 // ─── مكون زخرفي: نجمة العراق ────────────────────────────────────────────────
 

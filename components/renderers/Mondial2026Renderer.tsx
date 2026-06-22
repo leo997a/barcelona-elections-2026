@@ -38,8 +38,25 @@ import {
   clamp,
   getFlag,
   MondialFlag,
-  MondialStadiumBackground,
 } from './MondialSharedComponents';
+import {
+  ReoObsAnalysis,
+  ReoObsGoldenBoot,
+  ReoObsGroupTable,
+  ReoObsLineup,
+  ReoObsLowerThird,
+  ReoObsMatchPreview,
+  ReoObsMatchReport,
+  ReoObsMatchResult,
+  ReoObsMatchStats,
+  ReoObsPlayerSpotlight,
+  ReoObsPrediction,
+  ReoObsQuote,
+  ReoObsScoreboard,
+  ReoObsScorebug,
+  ReoObsTicker,
+  ReoObsVarAlert,
+} from './MondialObsTemplates';
 
 // ─── نوع Props الموحد (متوافق مع المشروع الرئيسي) ───────────────────────────
 
@@ -186,59 +203,54 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
             fontFamily: "'Tajawal', 'Outfit', 'Inter', sans-serif"
           }}
         >
-          {/* Stadium Background for full-screen templates */}
-          {!['ticker', 'lower_third', 'scorebug'].includes(variant) && (
-            <MondialStadiumBackground accentColor={t.accent2} accentColor2={t.accent} />
-          )}
-
           {/* ── Variants ─────────────────────────────────────────── */}
           {variant === 'scoreboard' && (
-            <MondialScoreboardVariant t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
+            <ReoObsScoreboard t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
           )}
           {variant === 'scorebug' && (
-            <MondialScorebugVariant t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
+            <ReoObsScorebug t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
           )}
           {variant === 'match_stats' && (
-            <MondialMatchStatsVariant t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsMatchStats t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'group_table' && (
-            <MondialGroupTableVariant t={t} getField={getField} />
+            <ReoObsGroupTable t={t} getField={getField} />
           )}
           {variant === 'golden_boot' && (
-            <MondialGoldenBootVariant t={t} getField={getField} />
+            <ReoObsGoldenBoot t={t} getField={getField} />
           )}
           {variant === 'quote' && (
-            <MondialQuoteVariant t={t} getField={getField} />
+            <ReoObsQuote t={t} getField={getField} />
           )}
           {variant === 'ticker' && (
-            <MondialTickerVariant t={t} getField={getField} />
+            <ReoObsTicker t={t} getField={getField} />
           )}
           {variant === 'analysis_board' && (
-            <MondialAnalysisVariant t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsAnalysis t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'prediction' && (
-            <MondialPredictionVariant t={t} getField={getField} />
+            <ReoObsPrediction t={t} getField={getField} />
           )}
           {variant === 'var_alert' && (
-            <MondialVarAlertVariant t={t} getField={getField} />
+            <ReoObsVarAlert t={t} getField={getField} />
           )}
           {variant === 'match_report' && (
-            <MondialMatchReportVariant t={t} getField={getField} resolveField={resolveField} />
+            <ReoObsMatchReport t={t} getField={getField} resolveField={resolveField} />
           )}
           {variant === 'lower_third' && (
-            <MondialLowerThirdVariant t={t} getField={getField} />
+            <ReoObsLowerThird t={t} getField={getField} />
           )}
           {variant === 'match_preview' && (
-            <MondialMatchPreviewVariant t={t} getField={getField} />
+            <ReoObsMatchPreview t={t} getField={getField} />
           )}
           {variant === 'lineup' && (
-            <MondialLineupVariant t={t} getField={getField} />
+            <ReoObsLineup t={t} getField={getField} />
           )}
           {variant === 'match_result' && (
-            <MondialMatchResultVariant t={t} getField={getField} />
+            <ReoObsMatchResult t={t} getField={getField} />
           )}
           {variant === 'player_spotlight' && (
-            <MondialPlayerSpotlightVariant t={t} getField={getField} />
+            <ReoObsPlayerSpotlight t={t} getField={getField} />
           )}
         </div>
       </div>

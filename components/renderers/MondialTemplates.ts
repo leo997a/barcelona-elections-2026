@@ -64,6 +64,7 @@ const mondialMatchDataFields: OverlayField[] = [
   ]},
   { id: 'homeLogo', label: 'شعار المضيف (رابط)', type: 'image', value: '' },
   { id: 'awayLogo', label: 'شعار الضيف (رابط)', type: 'image', value: '' },
+  { id: 'sceneImage', label: 'صورة خلفية المباراة / الجماهير', type: 'image', value: '' },
   { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#007A3D' },
   { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#74ACDF' },
   { id: 'eventsJson', label: 'أحداث المباراة JSON', type: 'textarea', value: JSON.stringify([
@@ -176,6 +177,7 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'awayCode', label: 'رمز الضيف', type: 'text', value: 'FR' },
       { id: 'awayName', label: 'اسم الضيف', type: 'text', value: 'فرنسا' },
       { id: 'awayRank', label: 'الترتيب العالمي (ضيف)', type: 'text', value: '#2' },
+      { id: 'sceneImage', label: 'صورة المواجهة / الملعب', type: 'image', value: '' },
       { id: 'awayW', label: 'فوز (ضيف)', type: 'number', value: 1 },
       { id: 'awayD', label: 'تعادل (ضيف)', type: 'number', value: 1 },
       { id: 'awayL', label: 'خسارة (ضيف)', type: 'number', value: 1 },
@@ -247,6 +249,7 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'awayTeam', label: 'اسم الضيف', type: 'text', value: 'فرنسا' },
       { id: 'awayScore', label: 'نتيجة الضيف', type: 'number', value: 1 },
       { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#003189' },
+      { id: 'sceneImage', label: 'صورة المباراة / الاحتفال', type: 'image', value: '' },
       { id: 'stage', label: 'المرحلة / المجموعة', type: 'text', value: 'المجموعة A · الجولة 3' },
       { id: 'venue', label: 'الملعب والمدينة', type: 'text', value: 'يونيون بنك ستاديوم · لوس أنجلوس' },
       { id: 'homeGoalsJson', label: 'أهداف المضيف JSON', type: 'textarea', value: JSON.stringify([
@@ -487,6 +490,7 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
       { id: 'position', label: 'المركز', type: 'text', value: 'مهاجم صريح' },
       { id: 'team', label: 'المنتخب', type: 'text', value: 'منتخب العراق' },
       { id: 'rating', label: 'التقييم', type: 'text', value: '9.1' },
+      { id: 'playerImage', label: 'صورة اللاعب', type: 'image', value: '' },
       { id: 'statsJson', label: 'إحصائيات اللاعب JSON', type: 'textarea', value: JSON.stringify([
         { label: 'الأهداف المسجلة', value: '2' },
         { label: 'التسديدات على المرمى', value: '3 / 4' },
