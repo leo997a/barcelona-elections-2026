@@ -2,6 +2,7 @@ import React from 'react';
 
 export type MondialBroadcastStyle = 'spectrum' | 'stadium' | 'signal' | 'neon_arc' | 'score_red' | 'clean_grid';
 export type MondialBroadcastPalette = 'global' | 'reo' | 'midnight' | 'electric' | 'trophy' | 'score_red' | 'social_green';
+type MondialBroadcastLook = 'reference_pack' | 'match_night' | 'scoreboard_red' | 'social_blue_green' | 'trophy_gold' | 'clean_draw';
 
 export type WorldCupTeam = {
   id: number | string;
@@ -145,6 +146,15 @@ const PALETTES: Record<MondialBroadcastPalette, BroadcastPalette> = {
     accent3: '#b6ff00',
     accent4: '#ff1738',
   },
+};
+
+const BROADCAST_LOOKS: Record<MondialBroadcastLook, { style: MondialBroadcastStyle; palette: MondialBroadcastPalette }> = {
+  reference_pack: { style: 'neon_arc', palette: 'global' },
+  match_night: { style: 'stadium', palette: 'electric' },
+  scoreboard_red: { style: 'score_red', palette: 'score_red' },
+  social_blue_green: { style: 'spectrum', palette: 'social_green' },
+  trophy_gold: { style: 'signal', palette: 'trophy' },
+  clean_draw: { style: 'clean_grid', palette: 'midnight' },
 };
 
 export const GROUP_ACCENTS = [
@@ -436,6 +446,10 @@ export const selectPayload = (
 };
 
 export const getBroadcastStyle = (getField: MondialBroadcastProps['getField']): MondialBroadcastStyle => {
+  const look = String(getField('broadcastLook') || 'manual').toLowerCase();
+  if (look !== 'manual' && BROADCAST_LOOKS[look as MondialBroadcastLook]) {
+    return BROADCAST_LOOKS[look as MondialBroadcastLook].style;
+  }
   const value = String(getField('broadcastStyle') || 'spectrum').toLowerCase();
   return value === 'stadium' || value === 'signal' || value === 'neon_arc' || value === 'score_red' || value === 'clean_grid'
     ? value
@@ -443,6 +457,10 @@ export const getBroadcastStyle = (getField: MondialBroadcastProps['getField']): 
 };
 
 export const getBroadcastPalette = (getField: MondialBroadcastProps['getField']): MondialBroadcastPalette => {
+  const look = String(getField('broadcastLook') || 'manual').toLowerCase();
+  if (look !== 'manual' && BROADCAST_LOOKS[look as MondialBroadcastLook]) {
+    return BROADCAST_LOOKS[look as MondialBroadcastLook].palette;
+  }
   const value = String(getField('broadcastPalette') || 'global').toLowerCase();
   return value === 'reo' || value === 'midnight' || value === 'electric' || value === 'trophy' || value === 'score_red' || value === 'social_green'
     ? value

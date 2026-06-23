@@ -66,6 +66,8 @@ const OPERATOR_PRIORITY_FIELDS = new Set([
 const OPERATOR_APPEARANCE_FIELD_HINTS = [
   'theme',
   'style',
+  'look',
+  'palette',
   'variant',
   'layout',
   'color',

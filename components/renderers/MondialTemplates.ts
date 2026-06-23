@@ -304,20 +304,20 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
 // ─── مجموعة 3: النتائج والجداول ──────────────────────────────────────────────
 
 const mondialBroadcastMotionFields: OverlayField[] = [
-  { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
-  { id: 'positionY', label: 'Position Y', type: 'range', value: 0, min: -700, max: 700, step: 10 },
-  { id: 'positionX', label: 'Position X', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
-  { id: 'broadcastMotion', label: 'Internal broadcast animation', type: 'boolean', value: true },
-  { id: 'transitionSpeedMs', label: 'Transition speed (ms)', type: 'range', value: 860, min: 360, max: 1500, step: 10 },
-  { id: 'transitionIntensity', label: 'Transition intensity', type: 'range', value: 1, min: 0.2, max: 1.8, step: 0.05 },
-  { id: 'mondialMotionPreset', label: 'Motion + SFX preset', type: 'select', value: 'reference_stinger', options: [
+  { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+  { id: 'positionY', label: 'الموضع العمودي', type: 'range', value: 0, min: -700, max: 700, step: 10 },
+  { id: 'positionX', label: 'الموضع الأفقي', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
+  { id: 'broadcastMotion', label: 'تشغيل أنميشن البث الداخلي', type: 'boolean', value: true },
+  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 860, min: 360, max: 1500, step: 10 },
+  { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1, min: 0.2, max: 1.8, step: 0.05 },
+  { id: 'mondialMotionPreset', label: 'حزمة الحركة والصوت', type: 'select', value: 'reference_stinger', options: [
     { value: 'reference_stinger', label: 'Reference stinger - geometric sweep + glitch SFX' },
     { value: 'scorebug_snap', label: 'Scorebug snap - fast TV score reveal' },
     { value: 'group_wall_rush', label: 'Group wall rush - data board reveal' },
     { value: 'story_glitch', label: 'Story glitch - social vertical reveal' },
     { value: 'custom', label: 'Custom/manual fields below' },
   ]},
-  { id: 'transitionIn', label: 'IN transition', type: 'select', value: 'MONDIAL_STINGER', options: [
+  { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: 'MONDIAL_STINGER', options: [
     { value: 'MONDIAL_STINGER', label: 'Mondial reference stinger' },
     { value: 'STADIUM_SWEEP', label: 'Stadium sweep' },
     { value: 'DATA_RUSH', label: 'Data rush' },
@@ -326,7 +326,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'GLASS_SWEEP', label: 'Glass sweep' },
     { value: 'DEFAULT', label: 'Default' },
   ]},
-  { id: 'transitionOut', label: 'OUT transition', type: 'select', value: 'MONDIAL_STINGER_OUT', options: [
+  { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: 'MONDIAL_STINGER_OUT', options: [
     { value: 'MONDIAL_STINGER_OUT', label: 'Mondial reference stinger out' },
     { value: 'STADIUM_SWEEP_OUT', label: 'Stadium sweep out' },
     { value: 'DATA_RUSH_OUT', label: 'Data rush out' },
@@ -335,16 +335,16 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'BROADCAST_FADE_OUT', label: 'Broadcast fade out' },
     { value: 'DEFAULT', label: 'Default' },
   ]},
-  { id: 'soundEnabled', label: 'SFX enabled', type: 'boolean', value: true },
-  { id: 'soundVolume', label: 'SFX volume', type: 'range', value: 0.85, min: 0, max: 2, step: 0.05 },
-  { id: 'soundInStyle', label: 'SFX in', type: 'select', value: 'GLITCH_TRANSITION', options: [
+  { id: 'soundEnabled', label: 'تشغيل المؤثرات الصوتية', type: 'boolean', value: true },
+  { id: 'soundVolume', label: 'مستوى المؤثرات الصوتية', type: 'range', value: 0.85, min: 0, max: 2, step: 0.05 },
+  { id: 'soundInStyle', label: 'صوت الظهور', type: 'select', value: 'GLITCH_TRANSITION', options: [
     { value: 'DEFAULT', label: 'Default by template' },
     { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
     { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
     { value: 'DATA_SLAM', label: 'Data slam' },
   ]},
-  { id: 'soundOutStyle', label: 'SFX out', type: 'select', value: 'DIGITAL_SWEEP', options: [
+  { id: 'soundOutStyle', label: 'صوت الإخفاء', type: 'select', value: 'DIGITAL_SWEEP', options: [
     { value: 'DEFAULT', label: 'Default by template' },
     { value: 'BROADCAST_OUT', label: 'Broadcast out' },
     { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
@@ -352,18 +352,27 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'LUXURY_OUT', label: 'Luxury out' },
     { value: 'HARD_CUT', label: 'Hard cut' },
   ]},
-  { id: 'audioUpdateCue', label: 'Data update SFX', type: 'select', value: 'DIGITAL_SWEEP', options: [
+  { id: 'audioUpdateCue', label: 'صوت تحديث البيانات', type: 'select', value: 'DIGITAL_SWEEP', options: [
     { value: 'DATA_TICK', label: 'Data tick' },
     { value: 'SCOREBUG_SNAP', label: 'Score snap' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
     { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
   ]},
-  { id: 'duckSfx', label: 'Duck SFX under voice', type: 'boolean', value: true },
+  { id: 'duckSfx', label: 'خفض المؤثرات تحت الصوت', type: 'boolean', value: true },
 ];
 
 const mondialBroadcastPresentationFields: OverlayField[] = [
-  { id: 'channelName', label: 'Channel name', type: 'text', value: 'REO SHOW' },
-  { id: 'broadcastStyle', label: 'Broadcast style', type: 'select', value: 'spectrum', options: [
+  { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
+  { id: 'broadcastLook', label: 'حزمة الستايل التلفزيوني', type: 'select', value: 'reference_pack', options: [
+    { value: 'reference_pack', label: 'Reference pack - black arcs + neon bars' },
+    { value: 'match_night', label: 'Match night - stadium sweep' },
+    { value: 'scoreboard_red', label: 'Scoreboard red - full-time energy' },
+    { value: 'social_blue_green', label: 'Social blue/green - posts and stories' },
+    { value: 'trophy_gold', label: 'Trophy gold - premium package' },
+    { value: 'clean_draw', label: 'Clean draw - groups board' },
+    { value: 'manual', label: 'Manual - use style + palette below' },
+  ]},
+  { id: 'broadcastStyle', label: 'ستايل يدوي', type: 'select', value: 'spectrum', options: [
     { value: 'spectrum', label: 'Spectrum - World Cup color system' },
     { value: 'stadium', label: 'Stadium - TV match graphics' },
     { value: 'signal', label: 'Signal - international broadcast data' },
@@ -371,7 +380,7 @@ const mondialBroadcastPresentationFields: OverlayField[] = [
     { value: 'score_red', label: 'Score red - full-time scoreboard energy' },
     { value: 'clean_grid', label: 'Clean grid - final draw board' },
   ]},
-  { id: 'broadcastPalette', label: 'Theme palette', type: 'select', value: 'global', options: [
+  { id: 'broadcastPalette', label: 'ثيم ألوان يدوي', type: 'select', value: 'global', options: [
     { value: 'global', label: 'Global black / blue / neon' },
     { value: 'reo', label: 'REO red / green / yellow' },
     { value: 'midnight', label: 'Midnight purple / cyan' },
