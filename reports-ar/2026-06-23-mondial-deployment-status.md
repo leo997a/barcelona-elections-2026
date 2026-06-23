@@ -1,44 +1,71 @@
-# تقرير حالة النشر - المونديال
+# تقرير حالة النشر - المونديال على Hostinger
 
-## ملخص الحالة
+## تصحيح مهم
 
-الكود الحالي مدفوع إلى GitHub على الفرع:
+هدف الإنتاج الحالي لهذا المشروع هو Hostinger:
+
+`https://peachpuff-herring-712997.hostingersite.com/`
+
+وليست Vercel. محاولة Vercel السابقة كانت فحصًا لمسار نشر قديم، ونتيجتها لا تمثل حالة الإنتاج الحالية.
+
+## حالة GitHub الحالية
+
+فرع العمل:
 
 `codex/mondial-broadcast-batch-02`
 
-آخر commit تم دفعه:
+آخر commit قبل النشر إلى `main`:
 
-`ea7dbea318a1ee1c2d2d8249085369a08d3770bd`
+`915bc20372464347feb33d5dd275c819ee57c297`
 
-## محاولة النشر المباشر
+المقارنة مع `origin/main` أثبتت أن `origin/main` هو أساس الفرع الحالي، لذلك يمكن دفع التغييرات إلى `main` بطريقة fast-forward بدون overwrite.
 
-تمت محاولة نشر المشروع عبر Vercel CLI من نفس مجلد المشروع:
+## حالة Hostinger الحية قبل نشر دفعات المونديال
 
-`npx.cmd vercel --yes --cwd "C:\New folder\barcelona-elections-2026"`
+تم فحص الرابط الرئيسي:
+
+`https://peachpuff-herring-712997.hostingersite.com/`
 
 النتيجة:
 
-`Error: Your Team exceeded our fair use limits and has been blocked.`
+- HTTP: `200`
+- Server: `hcdn`
+- العنوان: `Reo Live Stream - نظام البث السحابي`
+- ملف JavaScript المنشور قبل دفعات المونديال:
+  - `/assets/index-W_N8qOWd.js`
+- ملف CSS المنشور قبل دفعات المونديال:
+  - `/assets/index-C0CzFJSu.css`
 
-هذا يعني أن النشر متوقف من جهة حساب/فريق Vercel، وليس من جهة الكود.
+هذا يعني أن الموقع يعمل، لكنه يحتاج وصول commit المونديال إلى `main` ثم redeploy أو auto-deploy من Hostinger حتى تظهر الحزمة الجديدة.
 
-## حالة GitHub Checks
+## التحقق المحلي قبل النشر
 
-تم فحص PR رقم 2 على GitHub:
+تم التحقق من دفعة الثيمات والستايلات محليًا:
 
-`https://github.com/leo997a/barcelona-elections-2026/pull/2`
-
-نتيجة Vercel:
-
-- `Vercel – barcelona-elections-2026`: فشل، السبب `Account is blocked`.
-- `Vercel – reo-uno-main`: فشل، السبب `Account is blocked`.
-
-## ما تم التأكد منه محليا قبل النشر
-
+- `git diff --check`: نجح، مع تحذيرات CRLF فقط.
 - `npm.cmd run build`: نجح.
-- `node --test tests\fotmob-world-cup.test.mjs`: نجح.
-- فحص المتصفح المحلي لقوالب المونديال نجح في الدفعة 8.
+- `node --test tests\fotmob-world-cup.test.mjs`: نجح، 3 اختبارات.
+- معاينة المتصفح لقالب `scoreboard_red` نجحت وأثبتت تطبيق:
+  - `effect = scorebug`
+  - `motion = on`
+  - `transitionSpeed = 1100ms`
+  - `--mondial-bg = #120003`
+  - `--mondial-panel = #7b020b`
+  - `--mondial-a1 = #ff1738`
 
-## المطلوب لحل النشر
+## خطة النشر الصحيحة
 
-يجب رفع حظر Vercel أو استخدام حساب/فريق Vercel آخر مربوط بالمشروع. بعد حل الحظر، يكفي إعادة تشغيل النشر من نفس الفرع أو إعادة دفع commit جديد.
+1. دفع الفرع إلى GitHub.
+2. fast-forward من الفرع إلى `main`.
+3. دفع `main` إلى GitHub.
+4. انتظار auto-deploy من Hostinger أو تشغيل Redeploy من hPanel إذا لم يتغير asset hash.
+5. التحقق من تغير ملفات `/assets/index-*.js` و`/assets/index-*.css` على Hostinger.
+
+## ملاحظة تشغيلية
+
+إذا بقي Hostinger يعرض نفس الملفات:
+
+- `/assets/index-W_N8qOWd.js`
+- `/assets/index-C0CzFJSu.css`
+
+بعد دفع `main`، فمعنى ذلك أن GitHub وصلته التغييرات لكن Hostinger لم يشغل redeploy بعد.
