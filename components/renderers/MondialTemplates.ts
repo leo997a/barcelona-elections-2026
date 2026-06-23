@@ -307,6 +307,9 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
   { id: 'positionY', label: 'Position Y', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'Position X', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
+  { id: 'broadcastMotion', label: 'Internal broadcast animation', type: 'boolean', value: true },
+  { id: 'transitionSpeedMs', label: 'Transition speed (ms)', type: 'range', value: 860, min: 360, max: 1500, step: 10 },
+  { id: 'transitionIntensity', label: 'Transition intensity', type: 'range', value: 1, min: 0.2, max: 1.8, step: 0.05 },
   { id: 'mondialMotionPreset', label: 'Motion + SFX preset', type: 'select', value: 'reference_stinger', options: [
     { value: 'reference_stinger', label: 'Reference stinger - geometric sweep + glitch SFX' },
     { value: 'scorebug_snap', label: 'Scorebug snap - fast TV score reveal' },

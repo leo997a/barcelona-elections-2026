@@ -66,6 +66,7 @@ import {
   ReoObsMondialSocialStory,
   ReoObsMondialTeamCodeWall,
 } from './mondial/MondialObsTemplates';
+import { MondialTransitionFrame } from './mondial/MondialTransitionLayer';
 
 // ─── نوع Props الموحد (متوافق مع المشروع الرئيسي) ───────────────────────────
 
@@ -79,6 +80,8 @@ export interface MondialRendererProps {
   containerStyle?: React.CSSProperties;
   contentWrapperStyle?: React.CSSProperties;
   playSound?: (cue: string) => void;
+  wasVisible?: boolean;
+  isEditor?: boolean;
 }
 
 // ─── بيانات تجريبية افتراضية ─────────────────────────────────────────────────
@@ -179,7 +182,10 @@ function useMondialData(
 // ─── المحرك الرئيسي ──────────────────────────────────────────────────────────
 
 export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
+  config,
   getField,
+  wasVisible = false,
+  isEditor = false,
 }) => {
   const variant = String(getField('mondialVariant') || 'scoreboard');
   const themeId = String(getField('mondialTheme') || 'MUNDIAL_MAIN');
@@ -200,6 +206,12 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   };
 
   return (
+    <MondialTransitionFrame
+      getField={getField}
+      isVisible={config?.isVisible ?? true}
+      wasVisible={wasVisible}
+      isEditor={isEditor}
+    >
     <div className="relative overflow-hidden w-full h-full">
       <style>{MONDIAL_KEYFRAMES}</style>
       <div className="w-full h-full relative">
@@ -283,6 +295,7 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
         </div>
       </div>
     </div>
+    </MondialTransitionFrame>
   );
 };
 
