@@ -57,7 +57,13 @@ import {
   ReoObsTicker,
   ReoObsVarAlert,
 } from './MondialObsTemplates';
-import { ReoObsGroupWall, ReoObsKnockoutBracket } from './mondial/MondialObsTemplates';
+import {
+  ReoObsGroupWall,
+  ReoObsKnockoutBracket,
+  ReoObsMondialFullTime,
+  ReoObsMondialMatchAnnouncement,
+  ReoObsMondialSocialStory,
+} from './mondial/MondialObsTemplates';
 
 // ─── نوع Props الموحد (متوافق مع المشروع الرئيسي) ───────────────────────────
 
@@ -220,6 +226,15 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
           )}
           {variant === 'knockout_bracket' && (
             <ReoObsKnockoutBracket getField={getField} liveData={liveData} />
+          )}
+          {variant === 'match_announcement' && (
+            <ReoObsMondialMatchAnnouncement getField={getField} liveData={liveData} />
+          )}
+          {variant === 'full_time' && (
+            <ReoObsMondialFullTime getField={getField} liveData={liveData} />
+          )}
+          {variant === 'social_story' && (
+            <ReoObsMondialSocialStory getField={getField} liveData={liveData} />
           )}
           {variant === 'golden_boot' && (
             <ReoObsGoldenBoot t={t} getField={getField} />
