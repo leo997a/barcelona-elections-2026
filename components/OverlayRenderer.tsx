@@ -77,7 +77,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep',
   [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep',
   [OverlayType.MONDIAL_STATS]: 'tv-data-rush',
-  [OverlayType.MONDIAL_RESULTS]: 'tv-slide-up',
+  [OverlayType.MONDIAL_RESULTS]: 'tv-mondial-stinger',
   [OverlayType.MONDIAL_QUOTES]: 'tv-slide-left',
   [OverlayType.MONDIAL_REPORTS]: 'tv-slide-up',
   [OverlayType.MONDIAL_ANALYSIS]: 'tv-stadium-sweep',
@@ -118,7 +118,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep-out',
   [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep-out',
   [OverlayType.MONDIAL_STATS]: 'tv-data-rush-out',
-  [OverlayType.MONDIAL_RESULTS]: 'tv-slide-down-out',
+  [OverlayType.MONDIAL_RESULTS]: 'tv-mondial-stinger-out',
   [OverlayType.MONDIAL_QUOTES]: 'tv-slide-left-out',
   [OverlayType.MONDIAL_REPORTS]: 'tv-slide-down-out',
   [OverlayType.MONDIAL_ANALYSIS]: 'tv-stadium-sweep-out',
@@ -201,6 +201,7 @@ const ENTER_BY_KEY: Record<string, string> = {
   SPOTLIGHT_POP: 'tv-spotlight-pop',
   GLASS_SWEEP: 'tv-glass-sweep',
   BROADCAST_FADE: 'tv-broadcast-fade',
+  MONDIAL_STINGER: 'tv-mondial-stinger',
 };
 
 const EXIT_BY_KEY: Record<string, string> = {
@@ -212,6 +213,7 @@ const EXIT_BY_KEY: Record<string, string> = {
   SPOTLIGHT_POP_OUT: 'tv-spotlight-pop-out',
   GLASS_SWEEP_OUT: 'tv-glass-sweep-out',
   BROADCAST_FADE_OUT: 'tv-broadcast-fade-out',
+  MONDIAL_STINGER_OUT: 'tv-mondial-stinger-out',
 };
 
 const EXIT_KEY_ALIASES: Record<string, string> = {
@@ -250,6 +252,14 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'LOWER_THIRD_WIPE',
   [OverlayType.MERCATO_UNIFIED]: 'LOWER_THIRD_WIPE',
   [OverlayType.MERCATO_MEDIA_STORY]: 'LOWER_THIRD_WIPE',
+  [OverlayType.MONDIAL_LIVE]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_STATS]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_RESULTS]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_QUOTES]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_REPORTS]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_ANALYSIS]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_STARS]: 'GLITCH_TRANSITION',
+  [OverlayType.MONDIAL_IRAQ]: 'GLITCH_TRANSITION',
 };
 
 const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
@@ -283,6 +293,64 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'SOFT_FADE',
   [OverlayType.MERCATO_UNIFIED]: 'SOFT_FADE',
   [OverlayType.MERCATO_MEDIA_STORY]: 'SOFT_FADE',
+  [OverlayType.MONDIAL_LIVE]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_STATS]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_RESULTS]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_QUOTES]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_REPORTS]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_ANALYSIS]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_STARS]: 'DIGITAL_SWEEP',
+  [OverlayType.MONDIAL_IRAQ]: 'DIGITAL_SWEEP',
+};
+
+const MONDIAL_TYPES = new Set<OverlayType>([
+  OverlayType.MONDIAL_LIVE,
+  OverlayType.MONDIAL_STATS,
+  OverlayType.MONDIAL_RESULTS,
+  OverlayType.MONDIAL_QUOTES,
+  OverlayType.MONDIAL_REPORTS,
+  OverlayType.MONDIAL_ANALYSIS,
+  OverlayType.MONDIAL_STARS,
+  OverlayType.MONDIAL_IRAQ,
+]);
+
+type MondialMotionPreset = {
+  transitionIn: string;
+  transitionOut: string;
+  soundInStyle: string;
+  soundOutStyle: string;
+  audioUpdateCue: string;
+};
+
+const MONDIAL_MOTION_PRESETS: Record<string, MondialMotionPreset> = {
+  reference_stinger: {
+    transitionIn: 'MONDIAL_STINGER',
+    transitionOut: 'MONDIAL_STINGER_OUT',
+    soundInStyle: 'GLITCH_TRANSITION',
+    soundOutStyle: 'DIGITAL_SWEEP',
+    audioUpdateCue: 'DIGITAL_SWEEP',
+  },
+  scorebug_snap: {
+    transitionIn: 'SCOREBUG_SNAP',
+    transitionOut: 'SCOREBUG_SNAP_OUT',
+    soundInStyle: 'SCOREBUG_SNAP',
+    soundOutStyle: 'DIGITAL_SWEEP',
+    audioUpdateCue: 'SCOREBUG_SNAP',
+  },
+  group_wall_rush: {
+    transitionIn: 'DATA_RUSH',
+    transitionOut: 'DATA_RUSH_OUT',
+    soundInStyle: 'DATA_SLAM',
+    soundOutStyle: 'DIGITAL_SWEEP',
+    audioUpdateCue: 'DATA_TICK',
+  },
+  story_glitch: {
+    transitionIn: 'GLASS_SWEEP',
+    transitionOut: 'GLASS_SWEEP_OUT',
+    soundInStyle: 'GLITCH_TRANSITION',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'GLITCH_TRANSITION',
+  },
 };
 
 const CSS = `
@@ -306,6 +374,9 @@ const CSS = `
   @keyframes tvSpotlightPop      { 0%{transform:scale(.82);opacity:0;filter:blur(16px) brightness(2.2)} 58%{transform:scale(1.045);opacity:1;filter:blur(0) brightness(1.35)} 100%{transform:scale(1);opacity:1;filter:brightness(1)} }
   @keyframes tvGlassSweep        { 0%{transform:translateY(28px) scale(.985);opacity:0;backdrop-filter:blur(0);filter:blur(10px)} 100%{transform:translateY(0) scale(1);opacity:1;filter:blur(0)} }
   @keyframes tvBroadcastFade     { 0%{opacity:0;filter:blur(8px)} 100%{opacity:1;filter:blur(0)} }
+  @keyframes tvMondialStinger    { 0%{clip-path:polygon(0 0,0 0,0 100%,0 100%);transform:translateX(-13%) skewX(-9deg) scale(1.04);opacity:0;filter:blur(12px) brightness(1.9) saturate(1.5)} 42%{clip-path:polygon(0 0,76% 0,100% 100%,0 100%);opacity:1;filter:blur(3px) brightness(1.35) saturate(1.35)} 72%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(1.5%) skewX(2deg) scale(1.01);filter:blur(0) brightness(1.12)} 100%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} }
+  @keyframes tvMondialStingerOut { 0%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} 36%{transform:translateX(-2%) skewX(-2deg) scale(1.01);filter:brightness(1.35) saturate(1.35)} 100%{clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%);transform:translateX(14%) skewX(9deg) scale(1.04);opacity:0;filter:blur(13px) brightness(1.8)} }
+  @keyframes tvMondialStingerBars { 0%{transform:translateX(-135%) skewX(-18deg);opacity:0} 18%{opacity:.95} 58%{opacity:.85} 100%{transform:translateX(135%) skewX(-18deg);opacity:0} }
 
   @keyframes tvScorebugSnapOut   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-40px) scale(.92);opacity:0;filter:blur(8px)} }
   @keyframes tvStadiumSweepOut   { from{transform:translateX(0);opacity:1} to{transform:translateX(-18%) skewX(8deg);opacity:0;filter:blur(10px)} }
@@ -336,6 +407,8 @@ const CSS = `
   .tv-spotlight-pop      { animation: tvSpotlightPop      .58s cubic-bezier(.18,1,.32,1) both }
   .tv-glass-sweep        { animation: tvGlassSweep        .7s cubic-bezier(.22,1,.36,1) both }
   .tv-broadcast-fade     { animation: tvBroadcastFade     .5s ease-out both }
+  .tv-mondial-stinger    { position:relative; isolation:isolate; animation: tvMondialStinger .86s cubic-bezier(.16,1,.3,1) both }
+  .tv-mondial-stinger::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 18%,rgba(255,23,56,.92) 18% 24%,transparent 24% 32%,rgba(182,255,0,.9) 32% 39%,transparent 39% 49%,rgba(12,232,207,.9) 49% 57%,transparent 57% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars .74s cubic-bezier(.16,1,.3,1) both }
 
   .tv-scorebug-snap-out      { animation: tvScorebugSnapOut      .45s ease-in both }
   .tv-stadium-sweep-out      { animation: tvStadiumSweepOut      .55s ease-in both }
@@ -345,15 +418,17 @@ const CSS = `
   .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      .48s ease-in both }
   .tv-glass-sweep-out        { animation: tvGlassSweepOut        .5s ease-in both }
   .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     .42s ease-in both }
+  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut .62s cubic-bezier(.7,0,.84,0) both }
+  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 16%,rgba(12,232,207,.88) 16% 24%,transparent 24% 34%,rgba(255,47,159,.88) 34% 42%,transparent 42% 55%,rgba(182,255,0,.82) 55% 62%,transparent 62% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars .5s cubic-bezier(.7,0,.84,0) reverse both }
 
   @media (prefers-reduced-motion: reduce) {
     .tv-drop-in, .tv-slide-left, .tv-slide-right, .tv-slide-up, .tv-zoom-flash,
     .tv-drop-out, .tv-slide-left-out, .tv-slide-right-out, .tv-slide-down-out, .tv-zoom-out,
     .tv-scorebug-snap, .tv-stadium-sweep, .tv-lower-third-wipe, .tv-data-rush,
-    .tv-vertical-reveal, .tv-spotlight-pop, .tv-glass-sweep, .tv-broadcast-fade,
+    .tv-vertical-reveal, .tv-spotlight-pop, .tv-glass-sweep, .tv-broadcast-fade, .tv-mondial-stinger,
     .tv-scorebug-snap-out, .tv-stadium-sweep-out, .tv-lower-third-wipe-out,
     .tv-data-rush-out, .tv-vertical-reveal-out, .tv-spotlight-pop-out,
-    .tv-glass-sweep-out, .tv-broadcast-fade-out {
+    .tv-glass-sweep-out, .tv-broadcast-fade-out, .tv-mondial-stinger-out {
       animation-duration: 1ms !important;
     }
   }
@@ -413,14 +488,21 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const [wasVisible, setWasVisible] = useState(isEditor || config.isVisible);
 
+  const resolveMondialMotionPreset = (): MondialMotionPreset | null => {
+      if (!MONDIAL_TYPES.has(config.type)) return null;
+      const key = String(getField('mondialMotionPreset') || 'reference_stinger');
+      if (!key || key === 'custom') return null;
+      return MONDIAL_MOTION_PRESETS[key] || MONDIAL_MOTION_PRESETS.reference_stinger;
+  };
+
   const resolveEnterClass = () => {
-      const selected = String(getField('transitionIn') || 'DEFAULT');
+      const selected = resolveMondialMotionPreset()?.transitionIn || String(getField('transitionIn') || 'DEFAULT');
       const key = selected === 'DEFAULT' ? DEFAULT_ENTER_KEY[config.type] : selected;
       return (key && ENTER_BY_KEY[key]) || ENTER[config.type] || 'tv-slide-up';
   };
 
   const resolveExitClass = () => {
-      const selected = String(getField('transitionOut') || 'DEFAULT');
+      const selected = resolveMondialMotionPreset()?.transitionOut || String(getField('transitionOut') || 'DEFAULT');
       const normalized = EXIT_KEY_ALIASES[selected] || selected;
       const key = normalized === 'DEFAULT' ? DEFAULT_EXIT_KEY[config.type] : normalized;
       return (key && EXIT_BY_KEY[key]) || EXIT[config.type] || 'tv-slide-down-out';
@@ -440,6 +522,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       }
 
       if (type === 'TRANSITION') {
+          const mondialPreset = resolveMondialMotionPreset();
+          if (mondialPreset) return mondialPreset.audioUpdateCue;
           // Phase A3 — prefer scene-level audioUpdateCue if present
           // (set by sceneToFieldUpdates), otherwise fall back to the
           // template's runtime profile updateCue.
@@ -456,6 +540,10 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           // Universal transition fallback — resolve via runtime profile
           // so every template ticks consistently.
           return resolveTemplateAudio(config).updateCue;
+      }
+      const mondialPreset = resolveMondialMotionPreset();
+      if (mondialPreset) {
+          return type === 'EXIT' ? mondialPreset.soundOutStyle : mondialPreset.soundInStyle;
       }
       const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
       if (fieldCue !== 'DEFAULT') return fieldCue;

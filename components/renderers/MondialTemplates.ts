@@ -307,7 +307,15 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
   { id: 'positionY', label: 'Position Y', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'Position X', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
-  { id: 'transitionIn', label: 'IN transition', type: 'select', value: 'STADIUM_SWEEP', options: [
+  { id: 'mondialMotionPreset', label: 'Motion + SFX preset', type: 'select', value: 'reference_stinger', options: [
+    { value: 'reference_stinger', label: 'Reference stinger - geometric sweep + glitch SFX' },
+    { value: 'scorebug_snap', label: 'Scorebug snap - fast TV score reveal' },
+    { value: 'group_wall_rush', label: 'Group wall rush - data board reveal' },
+    { value: 'story_glitch', label: 'Story glitch - social vertical reveal' },
+    { value: 'custom', label: 'Custom/manual fields below' },
+  ]},
+  { id: 'transitionIn', label: 'IN transition', type: 'select', value: 'MONDIAL_STINGER', options: [
+    { value: 'MONDIAL_STINGER', label: 'Mondial reference stinger' },
     { value: 'STADIUM_SWEEP', label: 'Stadium sweep' },
     { value: 'DATA_RUSH', label: 'Data rush' },
     { value: 'SPOTLIGHT_POP', label: 'Spotlight pop' },
@@ -315,7 +323,8 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'GLASS_SWEEP', label: 'Glass sweep' },
     { value: 'DEFAULT', label: 'Default' },
   ]},
-  { id: 'transitionOut', label: 'OUT transition', type: 'select', value: 'STADIUM_SWEEP_OUT', options: [
+  { id: 'transitionOut', label: 'OUT transition', type: 'select', value: 'MONDIAL_STINGER_OUT', options: [
+    { value: 'MONDIAL_STINGER_OUT', label: 'Mondial reference stinger out' },
     { value: 'STADIUM_SWEEP_OUT', label: 'Stadium sweep out' },
     { value: 'DATA_RUSH_OUT', label: 'Data rush out' },
     { value: 'SPOTLIGHT_POP_OUT', label: 'Spotlight pop out' },
@@ -325,21 +334,22 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   ]},
   { id: 'soundEnabled', label: 'SFX enabled', type: 'boolean', value: true },
   { id: 'soundVolume', label: 'SFX volume', type: 'range', value: 0.85, min: 0, max: 2, step: 0.05 },
-  { id: 'soundInStyle', label: 'SFX in', type: 'select', value: 'STADIUM_WHOOSH', options: [
+  { id: 'soundInStyle', label: 'SFX in', type: 'select', value: 'GLITCH_TRANSITION', options: [
     { value: 'DEFAULT', label: 'Default by template' },
     { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
     { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
     { value: 'DATA_SLAM', label: 'Data slam' },
   ]},
-  { id: 'soundOutStyle', label: 'SFX out', type: 'select', value: 'BROADCAST_OUT', options: [
+  { id: 'soundOutStyle', label: 'SFX out', type: 'select', value: 'DIGITAL_SWEEP', options: [
     { value: 'DEFAULT', label: 'Default by template' },
     { value: 'BROADCAST_OUT', label: 'Broadcast out' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
     { value: 'SOFT_FADE', label: 'Soft fade' },
     { value: 'LUXURY_OUT', label: 'Luxury out' },
     { value: 'HARD_CUT', label: 'Hard cut' },
   ]},
-  { id: 'audioUpdateCue', label: 'Data update SFX', type: 'select', value: 'DATA_TICK', options: [
+  { id: 'audioUpdateCue', label: 'Data update SFX', type: 'select', value: 'DIGITAL_SWEEP', options: [
     { value: 'DATA_TICK', label: 'Data tick' },
     { value: 'SCOREBUG_SNAP', label: 'Score snap' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
