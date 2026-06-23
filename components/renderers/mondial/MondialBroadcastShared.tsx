@@ -1,7 +1,7 @@
 import React from 'react';
 
-export type MondialBroadcastStyle = 'spectrum' | 'stadium' | 'signal';
-export type MondialBroadcastPalette = 'global' | 'reo' | 'midnight';
+export type MondialBroadcastStyle = 'spectrum' | 'stadium' | 'signal' | 'neon_arc' | 'score_red' | 'clean_grid';
+export type MondialBroadcastPalette = 'global' | 'reo' | 'midnight' | 'electric' | 'trophy' | 'score_red' | 'social_green';
 
 export type WorldCupTeam = {
   id: number | string;
@@ -100,6 +100,50 @@ const PALETTES: Record<MondialBroadcastPalette, BroadcastPalette> = {
     accent2: '#19e6e6',
     accent3: '#ff8a18',
     accent4: '#ff2f9f',
+  },
+  electric: {
+    background: '#030303',
+    panel: '#090a0f',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#b8c7cc',
+    accent: '#0ce8cf',
+    accent2: '#b6ff00',
+    accent3: '#ff2f9f',
+    accent4: '#2868ff',
+  },
+  trophy: {
+    background: '#080706',
+    panel: '#15100a',
+    paper: '#fff8e8',
+    ink: '#fff8e8',
+    muted: '#d7c18a',
+    accent: '#d7a832',
+    accent2: '#fff05a',
+    accent3: '#0ce8cf',
+    accent4: '#ff1738',
+  },
+  score_red: {
+    background: '#120003',
+    panel: '#7b020b',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#ffc1c7',
+    accent: '#ff1738',
+    accent2: '#0ce8cf',
+    accent3: '#f5ff00',
+    accent4: '#2457ff',
+  },
+  social_green: {
+    background: '#001f10',
+    panel: '#053b1d',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#b7ffd1',
+    accent: '#00d253',
+    accent2: '#2457ff',
+    accent3: '#b6ff00',
+    accent4: '#ff1738',
   },
 };
 
@@ -393,12 +437,16 @@ export const selectPayload = (
 
 export const getBroadcastStyle = (getField: MondialBroadcastProps['getField']): MondialBroadcastStyle => {
   const value = String(getField('broadcastStyle') || 'spectrum').toLowerCase();
-  return value === 'stadium' || value === 'signal' ? value : 'spectrum';
+  return value === 'stadium' || value === 'signal' || value === 'neon_arc' || value === 'score_red' || value === 'clean_grid'
+    ? value
+    : 'spectrum';
 };
 
 export const getBroadcastPalette = (getField: MondialBroadcastProps['getField']): MondialBroadcastPalette => {
   const value = String(getField('broadcastPalette') || 'global').toLowerCase();
-  return value === 'reo' || value === 'midnight' ? value : 'global';
+  return value === 'reo' || value === 'midnight' || value === 'electric' || value === 'trophy' || value === 'score_red' || value === 'social_green'
+    ? value
+    : 'global';
 };
 
 export const getBroadcastCssVars = (paletteId: MondialBroadcastPalette): React.CSSProperties => {
@@ -489,6 +537,29 @@ export const MONDIAL_BROADCAST_CSS = `
   background-image: repeating-linear-gradient(0deg, transparent 0 30px, var(--mondial-a2) 30px 32px);
   background-size: 100% 100%;
 }
+.mondial-broadcast.mondial-style-neon_arc::before {
+  opacity: .82;
+  background:
+    radial-gradient(ellipse at 108% -12%, transparent 0 36%, var(--mondial-a2) 36.2% 39%, transparent 39.2% 100%),
+    radial-gradient(ellipse at -8% 112%, transparent 0 35%, var(--mondial-a4) 35.2% 38%, transparent 38.2% 100%),
+    linear-gradient(120deg, transparent 0 62%, color-mix(in srgb, var(--mondial-a1) 58%, transparent) 62% 64%, transparent 64% 100%);
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-score_red::before {
+  opacity: .55;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,.045) 1px, transparent 1px),
+    radial-gradient(circle at 16% 18%, color-mix(in srgb, var(--mondial-a1) 68%, transparent), transparent 32%);
+  background-size: 72px 72px, 72px 72px, 100% 100%;
+}
+.mondial-broadcast.mondial-style-clean_grid::before {
+  opacity: .28;
+  background-image:
+    linear-gradient(90deg, rgba(0,0,0,.12) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(0,0,0,.12) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
 .mondial-phase-in { animation: mondialBroadcastIn .78s cubic-bezier(.16,1,.3,1) both; }
 .mondial-phase-hold { animation: mondialBroadcastHold 9s 1.2s ease-in-out infinite; }
 .mondial-phase-out-anchor { will-change: transform, opacity, clip-path; }
@@ -520,6 +591,24 @@ export const MONDIAL_BROADCAST_CSS = `
   line-height: .78;
 }
 .mondial-reo-lockup.is-compact { width: 58px; height: 40px; border-width: 3px; font-size: 12px; box-shadow: 5px 4px 0 var(--mondial-a1), 9px 8px 0 var(--mondial-a2); }
+.mondial-broadcast.mondial-style-neon_arc .mondial-reo-lockup {
+  color: var(--mondial-paper);
+  background: #050505;
+  box-shadow: 8px 0 0 var(--mondial-a1), 16px 0 0 var(--mondial-a2), 24px 0 0 var(--mondial-a4);
+  text-shadow: 3px 0 0 var(--mondial-a1), -3px 0 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-score_red .mondial-reo-lockup {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-color: #050505;
+  box-shadow: 8px 7px 0 var(--mondial-a3), 15px 13px 0 var(--mondial-a1);
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-reo-lockup {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-radius: 999px;
+  box-shadow: none;
+}
 .mondial-flag {
   width: 35px;
   height: 24px;
@@ -536,6 +625,80 @@ export const MONDIAL_BROADCAST_CSS = `
 }
 .mondial-flag.is-compact { width: 25px; height: 17px; border-width: 1px; }
 .mondial-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mondial-broadcast.mondial-style-neon_arc .mondial-group-card,
+.mondial-broadcast.mondial-style-neon_arc .mondial-match-card,
+.mondial-broadcast.mondial-style-neon_arc .mondial-side-team,
+.mondial-broadcast.mondial-style-neon_arc .mondial-story-card {
+  border-radius: 18px;
+  box-shadow: 0 0 0 2px #050505, 10px 10px 0 var(--mondial-a1), 18px 18px 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-neon_arc .mondial-group-title,
+.mondial-broadcast.mondial-style-neon_arc .mondial-bracket-title,
+.mondial-broadcast.mondial-style-neon_arc .mondial-match-title,
+.mondial-broadcast.mondial-style-neon_arc .mondial-team-short,
+.mondial-broadcast.mondial-style-neon_arc .mondial-story-team b {
+  text-shadow: 5px 0 0 var(--mondial-a1), -5px 0 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-score_red .mondial-group-header,
+.mondial-broadcast.mondial-style-score_red .mondial-bracket-header,
+.mondial-broadcast.mondial-style-score_red .mondial-match-top {
+  padding: 12px 18px;
+  background: #050505;
+  border: 6px solid var(--mondial-a1);
+  box-shadow: 10px 9px 0 var(--mondial-a3);
+}
+.mondial-broadcast.mondial-style-score_red .mondial-group-card,
+.mondial-broadcast.mondial-style-score_red .mondial-match-card,
+.mondial-broadcast.mondial-style-score_red .mondial-side-team,
+.mondial-broadcast.mondial-style-score_red .mondial-story-card {
+  border-color: #050505;
+  background: var(--mondial-panel);
+  box-shadow: 9px 9px 0 #050505, 16px 16px 0 var(--mondial-a1);
+}
+.mondial-broadcast.mondial-style-score_red .mondial-match-score,
+.mondial-broadcast.mondial-style-score_red .mondial-match-vs,
+.mondial-broadcast.mondial-style-score_red .mondial-story-score {
+  color: #050505;
+  background: var(--mondial-paper);
+  box-shadow: 8px 8px 0 var(--mondial-a3), 15px 15px 0 var(--mondial-a2);
+}
+.mondial-broadcast.mondial-style-clean_grid {
+  background: var(--mondial-paper);
+  color: #050505;
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-header,
+.mondial-broadcast.mondial-style-clean_grid .mondial-bracket-header,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-top {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-bottom: 7px solid var(--mondial-a1);
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-title,
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-kicker,
+.mondial-broadcast.mondial-style-clean_grid .mondial-bracket-title,
+.mondial-broadcast.mondial-style-clean_grid .mondial-bracket-kicker,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-title,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-kicker {
+  color: #050505;
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-card,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-card,
+.mondial-broadcast.mondial-style-clean_grid .mondial-side-team {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-color: #050505;
+  box-shadow: none;
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-team,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-team + .mondial-match-team {
+  border-color: rgba(0,0,0,.18);
+}
+.mondial-broadcast.mondial-style-clean_grid .mondial-team-stat,
+.mondial-broadcast.mondial-style-clean_grid .mondial-bracket-footer,
+.mondial-broadcast.mondial-style-clean_grid .mondial-group-footer,
+.mondial-broadcast.mondial-style-clean_grid .mondial-match-meta {
+  color: #303030;
+}
 @media (prefers-reduced-motion: reduce) {
   .mondial-broadcast *, .mondial-broadcast *::before, .mondial-broadcast *::after {
     animation-duration: .001ms !important;

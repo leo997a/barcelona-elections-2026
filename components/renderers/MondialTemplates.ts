@@ -364,11 +364,18 @@ const mondialBroadcastPresentationFields: OverlayField[] = [
     { value: 'spectrum', label: 'Spectrum - World Cup color system' },
     { value: 'stadium', label: 'Stadium - TV match graphics' },
     { value: 'signal', label: 'Signal - international broadcast data' },
+    { value: 'neon_arc', label: 'Neon arc - black reference pack arcs' },
+    { value: 'score_red', label: 'Score red - full-time scoreboard energy' },
+    { value: 'clean_grid', label: 'Clean grid - final draw board' },
   ]},
   { id: 'broadcastPalette', label: 'Theme palette', type: 'select', value: 'global', options: [
     { value: 'global', label: 'Global black / blue / neon' },
     { value: 'reo', label: 'REO red / green / yellow' },
     { value: 'midnight', label: 'Midnight purple / cyan' },
+    { value: 'electric', label: 'Electric cyan / lime / magenta' },
+    { value: 'trophy', label: 'Trophy gold / black' },
+    { value: 'score_red', label: 'Scoreboard red / white' },
+    { value: 'social_green', label: 'Social green / blue' },
   ]},
   ...mondialBroadcastMotionFields,
 ];
