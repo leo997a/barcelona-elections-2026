@@ -488,6 +488,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiError, setAiError] = useState(false);
   const [previewChroma, setPreviewChroma] = useState(false);
+  const [motionPreviewPhase, setMotionPreviewPhase] = useState<'IN' | 'OUT' | 'HOLD'>('IN');
+  const [motionPreviewKey, setMotionPreviewKey] = useState(0);
+  const [motionPreviewAudio, setMotionPreviewAudio] = useState(true);
   const [editLinkCopied, setEditLinkCopied] = useState(false);
   const [smartTokenCopied, setSmartTokenCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -534,6 +537,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const smartTokenInfo = useMemo(() => describeSmartToken(draftOverlay), [draftOverlay]);
   const smartTokenTooltip = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
   const [panelOpen, setPanelOpen] = useState(true);
+
+  const runMotionPreview = (phase: 'IN' | 'OUT' | 'HOLD') => {
+    setMotionPreviewPhase(phase);
+    setMotionPreviewKey(key => key + 1);
+  };
 
   // Player Intel V2 dock state — height is resizable, fit mode controls preview scale.
   const [piDockHeight, setPiDockHeight] = useState<number>(() => {
@@ -4817,6 +4825,40 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              </div>
              <div className="flex items-center gap-2">
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>كروما</button>
+                 <div className="hidden xl:flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+                    <button
+                      onClick={() => runMotionPreview('IN')}
+                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'IN' ? 'bg-emerald-500/25 text-emerald-200' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                      title="Preview transition in"
+                    >
+                      <FastForward className="h-3 w-3" />
+                      <span>IN</span>
+                    </button>
+                    <button
+                      onClick={() => runMotionPreview('OUT')}
+                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'OUT' ? 'bg-rose-500/25 text-rose-200' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                      title="Preview transition out"
+                    >
+                      <Rewind className="h-3 w-3" />
+                      <span>OUT</span>
+                    </button>
+                    <button
+                      onClick={() => runMotionPreview('HOLD')}
+                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'HOLD' ? 'bg-slate-500/30 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                      title="Reset preview to hold"
+                    >
+                      <Square className="h-3 w-3" />
+                      <span>HOLD</span>
+                    </button>
+                    <button
+                      onClick={() => setMotionPreviewAudio(value => !value)}
+                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewAudio ? 'bg-cyan-500/25 text-cyan-200' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}
+                      title="Toggle preview SFX"
+                    >
+                      <Zap className="h-3 w-3" />
+                      <span>SFX</span>
+                    </button>
+                 </div>
                  <button
                     onClick={copyEditLink}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 rounded-lg text-xs font-bold border border-cyan-500/30 transition-colors"
@@ -4855,11 +4897,25 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 ? (
                 /* Player Intel V2 — uses scaled editor frame so the full template stays visible */
                 <PlayerIntelV2EditorFrame fitMode={piPreviewFit}>
-                    <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                    <OverlayRenderer
+                      config={{ ...draftOverlay, isVisible: true }}
+                      chromaKey={previewChroma}
+                      isEditor={true}
+                      editorPreviewPhase={motionPreviewPhase}
+                      editorPreviewKey={motionPreviewKey}
+                      editorPreviewAudio={motionPreviewAudio}
+                    />
                 </PlayerIntelV2EditorFrame>
             ) : (
                 <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
-                     <OverlayRenderer config={{ ...draftOverlay, isVisible: true }} chromaKey={previewChroma} isEditor={true} />
+                     <OverlayRenderer
+                       config={{ ...draftOverlay, isVisible: true }}
+                       chromaKey={previewChroma}
+                       isEditor={true}
+                       editorPreviewPhase={motionPreviewPhase}
+                       editorPreviewKey={motionPreviewKey}
+                       editorPreviewAudio={motionPreviewAudio}
+                     />
                      <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
                 </div>
             )}

@@ -303,7 +303,130 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
 
 // ─── مجموعة 3: النتائج والجداول ──────────────────────────────────────────────
 
+const mondialBroadcastMotionFields: OverlayField[] = [
+  { id: 'scale', label: 'Template scale', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
+  { id: 'positionY', label: 'Position Y', type: 'range', value: 0, min: -700, max: 700, step: 10 },
+  { id: 'positionX', label: 'Position X', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
+  { id: 'transitionIn', label: 'IN transition', type: 'select', value: 'STADIUM_SWEEP', options: [
+    { value: 'STADIUM_SWEEP', label: 'Stadium sweep' },
+    { value: 'DATA_RUSH', label: 'Data rush' },
+    { value: 'SPOTLIGHT_POP', label: 'Spotlight pop' },
+    { value: 'LOWER_THIRD_WIPE', label: 'Side wipe' },
+    { value: 'GLASS_SWEEP', label: 'Glass sweep' },
+    { value: 'DEFAULT', label: 'Default' },
+  ]},
+  { id: 'transitionOut', label: 'OUT transition', type: 'select', value: 'STADIUM_SWEEP_OUT', options: [
+    { value: 'STADIUM_SWEEP_OUT', label: 'Stadium sweep out' },
+    { value: 'DATA_RUSH_OUT', label: 'Data rush out' },
+    { value: 'SPOTLIGHT_POP_OUT', label: 'Spotlight pop out' },
+    { value: 'LOWER_THIRD_WIPE_OUT', label: 'Side wipe out' },
+    { value: 'BROADCAST_FADE_OUT', label: 'Broadcast fade out' },
+    { value: 'DEFAULT', label: 'Default' },
+  ]},
+  { id: 'soundEnabled', label: 'SFX enabled', type: 'boolean', value: true },
+  { id: 'soundVolume', label: 'SFX volume', type: 'range', value: 0.85, min: 0, max: 2, step: 0.05 },
+  { id: 'soundInStyle', label: 'SFX in', type: 'select', value: 'STADIUM_WHOOSH', options: [
+    { value: 'DEFAULT', label: 'Default by template' },
+    { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
+    { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
+    { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
+    { value: 'DATA_SLAM', label: 'Data slam' },
+  ]},
+  { id: 'soundOutStyle', label: 'SFX out', type: 'select', value: 'BROADCAST_OUT', options: [
+    { value: 'DEFAULT', label: 'Default by template' },
+    { value: 'BROADCAST_OUT', label: 'Broadcast out' },
+    { value: 'SOFT_FADE', label: 'Soft fade' },
+    { value: 'LUXURY_OUT', label: 'Luxury out' },
+    { value: 'HARD_CUT', label: 'Hard cut' },
+  ]},
+  { id: 'audioUpdateCue', label: 'Data update SFX', type: 'select', value: 'DATA_TICK', options: [
+    { value: 'DATA_TICK', label: 'Data tick' },
+    { value: 'SCOREBUG_SNAP', label: 'Score snap' },
+    { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
+  ]},
+  { id: 'duckSfx', label: 'Duck SFX under voice', type: 'boolean', value: true },
+];
+
+const mondialBroadcastPresentationFields: OverlayField[] = [
+  { id: 'channelName', label: 'Channel name', type: 'text', value: 'REO SHOW' },
+  { id: 'broadcastStyle', label: 'Broadcast style', type: 'select', value: 'spectrum', options: [
+    { value: 'spectrum', label: 'Spectrum - World Cup color system' },
+    { value: 'stadium', label: 'Stadium - TV match graphics' },
+    { value: 'signal', label: 'Signal - international broadcast data' },
+  ]},
+  { id: 'broadcastPalette', label: 'Theme palette', type: 'select', value: 'global', options: [
+    { value: 'global', label: 'Global black / blue / neon' },
+    { value: 'reo', label: 'REO red / green / yellow' },
+    { value: 'midnight', label: 'Midnight purple / cyan' },
+  ]},
+  ...mondialBroadcastMotionFields,
+];
+
+const mondialWorldCupDataFields: OverlayField[] = [
+  { id: 'dataMode', label: 'World Cup data source', type: 'select', value: 'CLOUD_BRIDGE', options: [
+    { value: 'CLOUD_BRIDGE', label: 'FotMob through REO API' },
+    { value: 'BRIDGE', label: 'Custom bridge URL' },
+    { value: 'PASTE_JSON', label: 'Manual JSON' },
+    { value: 'DEMO', label: 'Demo fallback' },
+  ]},
+  { id: 'bridgeApiUrl', label: 'World Cup API URL', type: 'text', value: '/api/reo-match?action=world-cup' },
+  { id: 'manualJson', label: 'Manual World Cup JSON', type: 'textarea', value: '' },
+  { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 75, min: 15, max: 300, step: 15 },
+];
+
+export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
+  {
+    id: 'template-mondial-group-wall',
+    templateId: 'template-mondial-group-wall',
+    name: 'Mondial 2026 - Full Groups Wall',
+    type: OverlayType.MONDIAL_RESULTS,
+    isVisible: false,
+    templateIcon: 'A-L',
+    templateAccent: '#0ce8cf',
+    templateGroup: 'MONDIAL_2026_RESULTS',
+    templateDescription: 'A full 12-group World Cup broadcast wall with flags, standings and selectable international TV styles.',
+    theme: { primaryColor: '#2457ff', secondaryColor: '#0ce8cf', backgroundColor: '#050505', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      { id: 'mondialVariant', label: 'Variant', type: 'hidden', value: 'group_wall' },
+      ...mondialBroadcastPresentationFields,
+      { id: 'groupWallLayout', label: 'Groups layout', type: 'select', value: '4x3', options: [
+        { value: '4x3', label: '4 columns x 3 rows' },
+        { value: '3x4', label: '3 columns x 4 rows' },
+      ]},
+      { id: 'groupWallTitle', label: 'Screen title', type: 'text', value: 'WORLD CUP 2026 GROUPS' },
+      { id: 'groupWallSubtitle', label: 'Kicker', type: 'text', value: '48 TEAM - 12 GROUP - REO SHOW' },
+      { id: 'showGroupStats', label: 'Show played and points', type: 'boolean', value: true },
+      { id: 'groupsJson', label: 'Groups JSON fallback', type: 'textarea', value: '[]' },
+      ...mondialWorldCupDataFields,
+    ],
+  },
+  {
+    id: 'template-mondial-knockout-bracket',
+    templateId: 'template-mondial-knockout-bracket',
+    name: 'Mondial 2026 - Road To The Final',
+    type: OverlayType.MONDIAL_RESULTS,
+    isVisible: false,
+    templateIcon: 'R32',
+    templateAccent: '#ff2f9f',
+    templateGroup: 'MONDIAL_2026_RESULTS',
+    templateDescription: 'Round-of-32 knockout map through the final and third-place match, populated from FotMob when available.',
+    theme: { primaryColor: '#ff2f9f', secondaryColor: '#b6ff00', backgroundColor: '#050505', fontFamily: 'Tajawal' },
+    slots: {},
+    fields: [
+      { id: 'mondialVariant', label: 'Variant', type: 'hidden', value: 'knockout_bracket' },
+      ...mondialBroadcastPresentationFields,
+      { id: 'bracketTitle', label: 'Screen title', type: 'text', value: 'ROAD TO THE FINAL' },
+      { id: 'bracketSubtitle', label: 'Kicker', type: 'text', value: 'ROUND OF 32 - WORLD CUP 2026' },
+      { id: 'roundsJson', label: 'Knockout JSON fallback', type: 'textarea', value: '[]' },
+      ...mondialWorldCupDataFields,
+    ],
+  },
+];
+
 export const MONDIAL_RESULTS_TEMPLATES: OverlayConfig[] = [
+  ...MONDIAL_BROADCAST_TEMPLATES,
   {
     id: 'template-mondial-group-table',
     templateId: 'template-mondial-group-table',

@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
 import ElectionOverlay from './ElectionOverlay';
 import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectionStyle } from '../utils/election';
 import { THEMES } from './renderers/OverlayConstants';
-import { playCue, stopCue } from '../services/audioEngine';
+import { playCue, stopCue, setOverlayDuckGain } from '../services/audioEngine';
 import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime';
 import { shouldPlayTemplateSound, shouldPlayVoiceCue } from '../utils/templateAudioGate';
 import { resolveVoiceUrl } from '../utils/voiceLibrary';
@@ -214,6 +214,12 @@ const EXIT_BY_KEY: Record<string, string> = {
   BROADCAST_FADE_OUT: 'tv-broadcast-fade-out',
 };
 
+const EXIT_KEY_ALIASES: Record<string, string> = {
+  BROADCAST_OUT: 'STADIUM_SWEEP_OUT',
+  SOFT_FADE: 'BROADCAST_FADE_OUT',
+  DEFAULT_OUT: 'STADIUM_SWEEP_OUT',
+};
+
 const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.SCOREBOARD]: 'SCOREBUG_SNAP',
   [OverlayType.LOWER_THIRD]: 'LOWER_THIRD_WIPE',
@@ -339,15 +345,59 @@ const CSS = `
   .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      .48s ease-in both }
   .tv-glass-sweep-out        { animation: tvGlassSweepOut        .5s ease-in both }
   .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     .42s ease-in both }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tv-drop-in, .tv-slide-left, .tv-slide-right, .tv-slide-up, .tv-zoom-flash,
+    .tv-drop-out, .tv-slide-left-out, .tv-slide-right-out, .tv-slide-down-out, .tv-zoom-out,
+    .tv-scorebug-snap, .tv-stadium-sweep, .tv-lower-third-wipe, .tv-data-rush,
+    .tv-vertical-reveal, .tv-spotlight-pop, .tv-glass-sweep, .tv-broadcast-fade,
+    .tv-scorebug-snap-out, .tv-stadium-sweep-out, .tv-lower-third-wipe-out,
+    .tv-data-rush-out, .tv-vertical-reveal-out, .tv-spotlight-pop-out,
+    .tv-glass-sweep-out, .tv-broadcast-fade-out {
+      animation-duration: 1ms !important;
+    }
+  }
 `;
 
 interface OverlayRendererProps {
   config: OverlayConfig;
   chromaKey?: boolean;
   isEditor?: boolean;
+  editorPreviewPhase?: 'IN' | 'OUT' | 'HOLD';
+  editorPreviewKey?: number;
+  editorPreviewAudio?: boolean;
 }
 
-const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, isEditor = false }) => {
+const RUNTIME_UPDATE_IGNORED_FIELDS = new Set([
+  'scale',
+  'positionX',
+  'positionY',
+  'transitionIn',
+  'transitionOut',
+  'transitionEffect',
+  'soundEnabled',
+  'soundVolume',
+  'soundInStyle',
+  'soundOutStyle',
+  'audioUpdateCue',
+  'duckSfx',
+  'voiceLibraryId',
+  'voiceDirectUrl',
+  'voiceVolume',
+  'voiceTrigger',
+  'broadcastMotion',
+  'broadcastQuality',
+  'chromaKey',
+]);
+
+const OverlayRenderer: React.FC<OverlayRendererProps> = ({
+  config,
+  chromaKey,
+  isEditor = false,
+  editorPreviewPhase = 'HOLD',
+  editorPreviewKey = 0,
+  editorPreviewAudio = true,
+}) => {
   const getField = (id: string) => config.fields.find(f => f.id === id)?.value;
   
   const scale = Number(getField('scale') || 1);
@@ -371,7 +421,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
 
   const resolveExitClass = () => {
       const selected = String(getField('transitionOut') || 'DEFAULT');
-      const key = selected === 'DEFAULT' ? DEFAULT_EXIT_KEY[config.type] : selected;
+      const normalized = EXIT_KEY_ALIASES[selected] || selected;
+      const key = normalized === 'DEFAULT' ? DEFAULT_EXIT_KEY[config.type] : normalized;
       return (key && EXIT_BY_KEY[key]) || EXIT[config.type] || 'tv-slide-down-out';
   };
 
@@ -417,8 +468,9 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           : SOUND_IN_DEFAULTS[config.type] || profile.inCue;
   };
 
-  const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT') => {
-      if (isEditor) return;
+  const playSound = async (type: 'ENTRY' | 'TRANSITION' | 'EXIT', allowEditorPreview = false) => {
+      const isPreviewSound = isEditor && allowEditorPreview;
+      if (isEditor && !allowEditorPreview) return;
       // Single universal audio gate. Replaces the old `if (!soundEnabled) return`
       // check, plus consults runtime profile + volume floor + visibility.
       // Note: For EXIT we pass the *outgoing* visibility, since by the time
@@ -426,19 +478,23 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       const gateEvent = type === 'EXIT' ? 'EXIT' : type === 'TRANSITION' ? 'TRANSITION' : 'ENTRY';
       // Build a temp config view that satisfies the ENTRY visibility check.
       const gateConfig = type === 'ENTRY' ? { ...config, isVisible: true } : config;
-      const sfxAllowed = shouldPlayTemplateSound(gateConfig, gateEvent);
+      const sfxAllowed = isPreviewSound
+          ? Boolean(getField('soundEnabled') ?? true)
+          : shouldPlayTemplateSound(gateConfig, gateEvent);
       if (sfxAllowed) {
           try {
               const cue = resolveSynthCue(type);
               if (type === 'EXIT') stopCue('BEFORE_THE_KICKOFF', 120);
               await playCue(cue, {
                   volume: soundVolume,
+                  channel: isPreviewSound ? 'preview' : 'overlay',
                   loop: cue === 'BEFORE_THE_KICKOFF',
                   loopStart: cue === 'BEFORE_THE_KICKOFF' ? 19 : undefined,
                   loopEnd: cue === 'BEFORE_THE_KICKOFF' ? 79 : undefined,
               });
           } catch (e) { /* Ignore */ }
       }
+      if (isPreviewSound) return;
       // Voice cue: independent of sfx. Fires only on the configured trigger.
       if (type === 'ENTRY' || type === 'EXIT' || type === 'TRANSITION') {
           const trigger = type === 'ENTRY' ? 'on_enter' : type === 'TRANSITION' ? 'on_update' : null;
@@ -449,9 +505,17 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
               const url = resolveVoiceUrl(libraryId, directUrl);
               if (url) {
                   try {
+                      const shouldDuck = Boolean(getField('duckSfx') ?? true);
+                      if (shouldDuck) setOverlayDuckGain(0.42, 120);
                       const a = new Audio(url);
                       a.volume = Math.max(0, Math.min(1, voiceVol));
-                      void a.play();
+                      const restoreDuck = () => {
+                          if (shouldDuck) setOverlayDuckGain(1, 260);
+                      };
+                      a.addEventListener('ended', restoreDuck, { once: true });
+                      a.addEventListener('error', restoreDuck, { once: true });
+                      window.setTimeout(restoreDuck, 12000);
+                      void a.play().catch(restoreDuck);
                   } catch { /* ignore */ }
               }
           }
@@ -462,15 +526,47 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
   // Prevents double-play from React Strict Mode (dev) or rapid state changes.
   const previousVisibilityRef = useRef<boolean | null>(null);
   const lastSoundAt = useRef(0);
+  const lastDataCueAt = useRef(0);
   const lastCommandId = useRef(0);
+  const lastDataFingerprint = useRef<string | null>(null);
   const SOUND_DEBOUNCE_MS = 300;
+  const DATA_CUE_DEBOUNCE_MS = 550;
+
+  const runtimeDataFingerprint = useMemo(() => {
+      return JSON.stringify(
+          config.fields
+              .filter(field => !RUNTIME_UPDATE_IGNORED_FIELDS.has(field.id))
+              .map(field => [field.id, field.value])
+      );
+  }, [config.fields]);
 
   useEffect(() => {
-      if (isEditor) {
-          setMounted(true);
+      if (!isEditor) return;
+      clearTimeout(timer.current);
+      setMounted(true);
+      if (!editorPreviewKey || editorPreviewPhase === 'HOLD') {
           setAnimCls('');
           return;
       }
+
+      if (editorPreviewPhase === 'IN') {
+          setAnimCls('');
+          if (editorPreviewAudio) void playSound('ENTRY', true);
+          requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
+          return;
+      }
+
+      if (editorPreviewPhase === 'OUT') {
+          if (editorPreviewAudio) void playSound('EXIT', true);
+          setAnimCls(resolveExitClass());
+          timer.current = setTimeout(() => setAnimCls(''), 650);
+      }
+
+      return () => clearTimeout(timer.current);
+  }, [isEditor, editorPreviewKey, editorPreviewPhase, editorPreviewAudio, config.type]);
+
+  useEffect(() => {
+      if (isEditor) return;
 
       const isNowVisible = config.isVisible;
       const prevVisible = previousVisibilityRef.current;
@@ -485,7 +581,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
           clearTimeout(timer.current);
           if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
               lastSoundAt.current = now;
-              playSound('ENTRY');
+              void playSound('ENTRY');
           }
           setMounted(true);
           requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
@@ -493,7 +589,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       } else if (!isNowVisible && prevVisible === true) {
           if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
               lastSoundAt.current = now;
-              playSound('EXIT');
+              void playSound('EXIT');
           }
           setAnimCls(resolveExitClass());
           timer.current = setTimeout(() => {
@@ -510,6 +606,26 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({ config, chromaKey, is
       setWasVisible(isNowVisible);
       return () => clearTimeout(timer.current);
   }, [config.isVisible, isEditor, config.type]);
+
+  useEffect(() => {
+      if (isEditor || !config.isVisible) {
+          lastDataFingerprint.current = runtimeDataFingerprint;
+          return;
+      }
+      if (lastDataFingerprint.current === null) {
+          lastDataFingerprint.current = runtimeDataFingerprint;
+          return;
+      }
+      if (lastDataFingerprint.current !== runtimeDataFingerprint) {
+          const now = Date.now();
+          if (now - lastDataCueAt.current > DATA_CUE_DEBOUNCE_MS) {
+              lastDataCueAt.current = now;
+              void playSound('TRANSITION');
+              recordDiagnostic(config, 'update');
+          }
+          lastDataFingerprint.current = runtimeDataFingerprint;
+      }
+  }, [runtimeDataFingerprint, config.isVisible, isEditor, config.id, config.type]);
 
   if (!mounted && !isEditor) return null;
 

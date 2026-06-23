@@ -57,6 +57,7 @@ import {
   ReoObsTicker,
   ReoObsVarAlert,
 } from './MondialObsTemplates';
+import { ReoObsGroupWall, ReoObsKnockoutBracket } from './mondial/MondialObsTemplates';
 
 // ─── نوع Props الموحد (متوافق مع المشروع الرئيسي) ───────────────────────────
 
@@ -171,8 +172,6 @@ function useMondialData(
 
 export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   getField,
-  containerStyle,
-  contentWrapperStyle,
 }) => {
   const variant = String(getField('mondialVariant') || 'scoreboard');
   const themeId = String(getField('mondialTheme') || 'MUNDIAL_MAIN');
@@ -193,9 +192,9 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   };
 
   return (
-    <div style={containerStyle} className="relative overflow-hidden w-full h-full">
+    <div className="relative overflow-hidden w-full h-full">
       <style>{MONDIAL_KEYFRAMES}</style>
-      <div style={contentWrapperStyle} className="w-full h-full relative">
+      <div className="w-full h-full relative">
         <div
           className="w-full h-full relative overflow-hidden"
           style={{
@@ -215,6 +214,12 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
           )}
           {variant === 'group_table' && (
             <ReoObsGroupTable t={t} getField={getField} />
+          )}
+          {variant === 'group_wall' && (
+            <ReoObsGroupWall getField={getField} liveData={liveData} />
+          )}
+          {variant === 'knockout_bracket' && (
+            <ReoObsKnockoutBracket getField={getField} liveData={liveData} />
           )}
           {variant === 'golden_boot' && (
             <ReoObsGoldenBoot t={t} getField={getField} />

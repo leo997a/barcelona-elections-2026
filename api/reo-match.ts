@@ -14,6 +14,7 @@
  */
 import { proxyBridgeGet, proxyBridgePost } from './_lib/reoBridge.js';
 import { verifyAdminSession } from './_lib/adminToken.js';
+import { getWorldCupSnapshot } from './_lib/fotmobWorldCup.js';
 import {
   getBearerToken,
   sendJson,
@@ -55,8 +56,20 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     if (action === 'match') return proxyBridgeGet(res, '/api/match');
     if (action === 'status') return proxyBridgeGet(res, '/api/status');
     if (action === 'metrics-catalog') return proxyBridgeGet(res, '/api/metrics-catalog');
+    if (action === 'world-cup') {
+      try {
+        const snapshot = await getWorldCupSnapshot();
+        res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+        return sendJson(res, 200, snapshot);
+      } catch (error) {
+        return sendJson(res, 502, {
+          error: 'Unable to load the World Cup feed.',
+          detail: error instanceof Error ? error.message : 'Unknown FotMob feed error.',
+        });
+      }
+    }
     return sendJson(res, 400, {
-      error: 'Invalid action for GET. Use action=match, status, or metrics-catalog.',
+      error: 'Invalid action for GET. Use action=match, status, metrics-catalog, or world-cup.',
     });
   }
 
