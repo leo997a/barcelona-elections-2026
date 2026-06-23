@@ -6,3 +6,7 @@ export {
   MondialMatchAnnouncement as ReoObsMondialMatchAnnouncement,
   MondialSocialStory as ReoObsMondialSocialStory,
 } from './MondialMatchCards';
+export {
+  MondialFlagIdentityWall as ReoObsMondialFlagIdentityWall,
+  MondialTeamCodeWall as ReoObsMondialTeamCodeWall,
+} from './MondialTeamIdentity';
