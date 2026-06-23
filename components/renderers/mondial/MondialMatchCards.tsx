@@ -159,12 +159,13 @@ const normalizeFixtures = (input: unknown): MatchLike[] => {
         try { return JSON.parse(input) as unknown; } catch { return null; }
       })()
     : input;
-  const source = Array.isArray(parsed)
+  const parsedRecord = asRecord(parsed);
+  const source: unknown[] = Array.isArray(parsed)
     ? parsed
-    : asRecord(parsed) && Array.isArray(asRecord(parsed)?.fixtures)
-      ? asRecord(parsed)?.fixtures
+    : parsedRecord && Array.isArray(parsedRecord.fixtures)
+      ? parsedRecord.fixtures
       : [];
-  const fixtures = (source || [])
+  const fixtures = source
     .map((item, index) => normalizeFixture(item, index))
     .filter((item): item is MatchLike => Boolean(item));
   return fixtures.length ? fixtures : DEMO_MATCHES;

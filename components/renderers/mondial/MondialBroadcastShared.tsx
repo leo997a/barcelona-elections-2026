@@ -43,6 +43,10 @@ export type WorldCupMatch = {
   status?: string;
   date?: string;
   winnerId?: number | string;
+  matchNo?: number;
+  routeLabel?: string;
+  venueLabel?: string;
+  kickoffLabel?: string;
 };
 
 export type WorldCupRound = {
@@ -324,7 +328,94 @@ const ROUND_NAMES: Record<WorldCupRound['stage'], string> = {
   BRONZE: 'المركز الثالث',
 };
 
+type OfficialKnockoutRoute = {
+  matchNo: number;
+  homePlaceholder: string;
+  awayPlaceholder: string;
+  routeLabel: string;
+  venueLabel: string;
+  kickoffLabel: string;
+};
+
+const route = (
+  matchNo: number,
+  homePlaceholder: string,
+  awayPlaceholder: string,
+  venueLabel: string,
+  kickoffLabel: string
+): OfficialKnockoutRoute => ({
+  matchNo,
+  homePlaceholder,
+  awayPlaceholder,
+  routeLabel: `${homePlaceholder} vs ${awayPlaceholder}`,
+  venueLabel,
+  kickoffLabel,
+});
+
+export const OFFICIAL_WORLD_CUP_KNOCKOUT_ROUTES: Record<WorldCupRound['stage'], OfficialKnockoutRoute[]> = {
+  R32: [
+    route(73, '2A', '2B', 'Inglewood', 'Jun 28'),
+    route(74, '1E', '3 A/B/C/D/F', 'Foxborough', 'Jun 29'),
+    route(75, '1F', '2C', 'Guadalupe', 'Jun 29'),
+    route(76, '1C', '2F', 'Houston', 'Jun 29'),
+    route(77, '1I', '3 C/D/F/G/H', 'East Rutherford', 'Jun 30'),
+    route(78, '2E', '2I', 'Arlington', 'Jun 30'),
+    route(79, '1A', '3 C/E/F/H/I', 'Mexico City', 'Jun 30'),
+    route(80, '1L', '3 E/H/I/J/K', 'Atlanta', 'Jul 1'),
+    route(81, '1D', '3 B/E/F/I/J', 'Santa Clara', 'Jul 1'),
+    route(82, '1G', '3 A/E/H/I/J', 'Seattle', 'Jul 1'),
+    route(83, '2K', '2L', 'Toronto', 'Jul 2'),
+    route(84, '1H', '2J', 'Inglewood', 'Jul 2'),
+    route(85, '1B', '3 E/F/G/I/J', 'Vancouver', 'Jul 2'),
+    route(86, '1J', '2H', 'Miami Gardens', 'Jul 3'),
+    route(87, '1K', '3 D/E/I/J/L', 'Kansas City', 'Jul 3'),
+    route(88, '2D', '2G', 'Arlington', 'Jul 3'),
+  ],
+  R16: [
+    route(89, 'W74', 'W77', 'Philadelphia', 'Jul 4'),
+    route(90, 'W73', 'W75', 'Houston', 'Jul 4'),
+    route(91, 'W76', 'W78', 'East Rutherford', 'Jul 5'),
+    route(92, 'W79', 'W80', 'Mexico City', 'Jul 5'),
+    route(93, 'W83', 'W84', 'Arlington', 'Jul 6'),
+    route(94, 'W81', 'W82', 'Seattle', 'Jul 6'),
+    route(95, 'W86', 'W88', 'Atlanta', 'Jul 7'),
+    route(96, 'W85', 'W87', 'Vancouver', 'Jul 7'),
+  ],
+  QF: [
+    route(97, 'W89', 'W90', 'Foxborough', 'Jul 9'),
+    route(98, 'W93', 'W94', 'Inglewood', 'Jul 10'),
+    route(99, 'W91', 'W92', 'Miami Gardens', 'Jul 11'),
+    route(100, 'W95', 'W96', 'Kansas City', 'Jul 11'),
+  ],
+  SF: [
+    route(101, 'W97', 'W98', 'Arlington', 'Jul 14'),
+    route(102, 'W99', 'W100', 'Atlanta', 'Jul 15'),
+  ],
+  F: [
+    route(104, 'W101', 'W102', 'East Rutherford', 'Jul 19'),
+  ],
+  BRONZE: [
+    route(103, 'L101', 'L102', 'Miami Gardens', 'Jul 18'),
+  ],
+};
+
 const createPlaceholderMatch = (stage: WorldCupRound['stage'], index: number): WorldCupMatch => {
+  const officialRoute = OFFICIAL_WORLD_CUP_KNOCKOUT_ROUTES[stage]?.[index];
+  if (officialRoute) {
+    return {
+      id: `M${officialRoute.matchNo}`,
+      home: null,
+      away: null,
+      homePlaceholder: officialRoute.homePlaceholder,
+      awayPlaceholder: officialRoute.awayPlaceholder,
+      status: 'TBD',
+      matchNo: officialRoute.matchNo,
+      routeLabel: officialRoute.routeLabel,
+      venueLabel: officialRoute.venueLabel,
+      kickoffLabel: officialRoute.kickoffLabel,
+    };
+  }
+
   const previousStage = stage === 'R16' ? 'R32' : stage === 'QF' ? 'R16' : stage === 'SF' ? 'QF' : 'SF';
   const base = index * 2 + 1;
   if (stage === 'R32') {
@@ -355,17 +446,6 @@ export const DEMO_WORLD_CUP_ROUNDS: WorldCupRound[] = ([
   stage,
   nameAr: ROUND_NAMES[stage],
   matches: Array.from({ length: count }, (_, index) => {
-    if (stage === 'F') return createPlaceholderMatch('F', index);
-    if (stage === 'BRONZE') {
-      return {
-        id: 'BRONZE-1',
-        home: null,
-        away: null,
-        homePlaceholder: 'L SF-1',
-        awayPlaceholder: 'L SF-2',
-        status: 'TBD',
-      };
-    }
     return createPlaceholderMatch(stage, index);
   }),
 }));
@@ -395,6 +475,12 @@ const normalizeMatch = (value: unknown, stage: WorldCupRound['stage'], index: nu
     status: stringValue(source.status, '') || undefined,
     date: stringValue(source.date, '') || undefined,
     winnerId: source.winnerId as string | number | undefined,
+    matchNo: source.matchNo === undefined && source.matchNumber === undefined && source.number === undefined
+      ? undefined
+      : numberValue(source.matchNo ?? source.matchNumber ?? source.number),
+    routeLabel: stringValue(source.routeLabel ?? source.route, '') || undefined,
+    venueLabel: stringValue(source.venueLabel ?? source.venue, '') || undefined,
+    kickoffLabel: stringValue(source.kickoffLabel ?? source.kickoff, '') || undefined,
   };
 };
 

@@ -86,8 +86,13 @@ test('keeps the complete 2026 knockout order including bronze', () => {
   assert.deepEqual(snapshot.rounds.map((round) => round.stage), ['R32', 'R16', 'QF', 'SF', 'F', 'BRONZE']);
   assert.equal(snapshot.rounds[0].participantCount, 32);
   assert.equal(snapshot.rounds[0].matches[0].winnerId, 1);
+  assert.equal(snapshot.rounds[0].matches[0].matchNo, 73);
+  assert.equal(snapshot.rounds[0].matches[0].routeLabel, '2A vs 2B');
   assert.equal(snapshot.rounds[1].matches[0].home, null);
   assert.equal(snapshot.rounds[1].matches[0].homePlaceholder, 'Winner 1');
+  assert.equal(snapshot.rounds[1].matches[0].matchNo, 89);
+  assert.equal(snapshot.rounds[4].matches[0].matchNo, 104);
+  assert.equal(snapshot.rounds[5].matches[0].matchNo, 103);
 });
 
 test('normalizes played fixture scores without inventing scheduled scores', () => {

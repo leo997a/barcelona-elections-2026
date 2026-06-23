@@ -29,10 +29,15 @@ const KNOCKOUT_CSS = `
 .mondial-bracket-column { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .mondial-stage-label { height: 22px; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 3px solid var(--mondial-stage-color); border-radius: 5px; color: var(--mondial-ink); background: var(--mondial-panel); font-size: 9px; font-weight: 950; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mondial-match-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: space-around; padding: 2px 0; }
-.mondial-match-card { position: relative; min-width: 0; height: 48px; flex: 0 0 auto; overflow: hidden; border: 3px solid var(--mondial-stage-color); border-radius: 5px; background: var(--mondial-panel); color: var(--mondial-ink); }
+.mondial-match-card { position: relative; min-width: 0; height: 56px; flex: 0 0 auto; overflow: hidden; border: 3px solid var(--mondial-stage-color); border-radius: 5px; background: var(--mondial-panel); color: var(--mondial-ink); }
 .mondial-match-card::after { content: ''; position: absolute; z-index: -1; top: 50%; width: 9px; border-top: 2px solid var(--mondial-stage-color); }
 .mondial-bracket-column[data-side='left'] .mondial-match-card::after { right: -10px; }
 .mondial-bracket-column[data-side='right'] .mondial-match-card::after { left: -10px; }
+.mondial-match-route-meta { height: 13px; min-width: 0; display: grid; grid-template-columns: 28px minmax(0,1fr); align-items: center; gap: 3px; padding: 0 4px; background: var(--mondial-stage-color); color: #050505; font-size: 7px; font-weight: 950; line-height: 1; letter-spacing: .03em; text-transform: uppercase; }
+.mondial-match-route-meta span, .mondial-match-route-meta b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mondial-match-route-meta span { font-family: 'Courier New', monospace; }
+.mondial-match-route-meta b { font-weight: 950; }
+.mondial-match-teams { height: calc(100% - 13px); min-height: 0; }
 .mondial-match-team { height: 50%; min-width: 0; display: grid; grid-template-columns: 19px minmax(0,1fr) 20px; align-items: center; gap: 4px; padding: 1px 4px; direction: ltr; }
 .mondial-match-team + .mondial-match-team { border-top: 1px solid rgba(255,255,255,.15); }
 .mondial-match-team.is-winner { background: color-mix(in srgb, var(--mondial-stage-color) 24%, transparent); }
@@ -40,7 +45,7 @@ const KNOCKOUT_CSS = `
 .mondial-match-placeholder { color: var(--mondial-muted); font-family: 'Courier New', monospace; letter-spacing: .03em; }
 .mondial-match-score { text-align: center; font-size: 11px; font-weight: 950; }
 .mondial-center-column .mondial-stage-label { background: var(--mondial-a3); border-color: #050505; color: #050505; }
-.mondial-center-column .mondial-match-card { height: 72px; border-width: 4px; border-color: #050505; background: var(--mondial-paper); color: #050505; box-shadow: 6px 5px 0 var(--mondial-a1), 11px 9px 0 var(--mondial-a2); }
+.mondial-center-column .mondial-match-card { height: 82px; border-width: 4px; border-color: #050505; background: var(--mondial-paper); color: #050505; box-shadow: 6px 5px 0 var(--mondial-a1), 11px 9px 0 var(--mondial-a2); }
 .mondial-center-column .mondial-match-team { grid-template-columns: 23px minmax(0,1fr) 25px; padding: 3px 6px; }
 .mondial-center-column .mondial-match-team + .mondial-match-team { border-color: rgba(0,0,0,.18); }
 .mondial-center-column .mondial-match-team-name { font-size: 10px; }
@@ -48,7 +53,7 @@ const KNOCKOUT_CSS = `
 .mondial-final-block, .mondial-bronze-block { display: flex; flex-direction: column; gap: 8px; }
 .mondial-final-trophy { height: 46px; display: flex; align-items: center; justify-content: center; color: var(--mondial-a3); font-size: 38px; font-weight: 950; line-height: 1; text-shadow: 5px 3px 0 var(--mondial-a1), 9px 6px 0 var(--mondial-a2); }
 .mondial-bronze-block .mondial-stage-label { background: var(--mondial-a4); color: #050505; }
-.mondial-bronze-block .mondial-match-card { height: 62px; border-width: 4px; box-shadow: 5px 5px 0 var(--mondial-a4); }
+.mondial-bronze-block .mondial-match-card { height: 70px; border-width: 4px; box-shadow: 5px 5px 0 var(--mondial-a4); }
 .mondial-bracket-footer { height: 18px; display: flex; align-items: center; justify-content: space-between; color: var(--mondial-muted); font-size: 9px; font-weight: 900; direction: rtl; }
 .mondial-bracket-color-rail { width: 42%; height: 7px; display: flex; direction: ltr; }
 .mondial-bracket-color-rail span { flex: 1; }
@@ -85,15 +90,49 @@ const STAGE_META: Record<Exclude<Stage, 'BRONZE'>, { label: string; color: strin
 
 const expectedCount: Record<Stage, number> = { R32: 16, R16: 8, QF: 4, SF: 2, F: 1, BRONZE: 1 };
 
+const VISUAL_STAGE_ORDER: Partial<Record<Stage, number[]>> = {
+  R32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
+  R16: [89, 90, 93, 94, 91, 92, 95, 96],
+  QF: [97, 98, 99, 100],
+  SF: [101, 102],
+};
+
 const splitStage = (matches: WorldCupMatch[]): [WorldCupMatch[], WorldCupMatch[]] => {
   const midpoint = Math.ceil(matches.length / 2);
   return [matches.slice(0, midpoint), matches.slice(midpoint)];
 };
 
+const mergeMatchMetadata = (match: WorldCupMatch | undefined, fallback: WorldCupMatch | undefined): WorldCupMatch => {
+  if (!match) return fallback as WorldCupMatch;
+  if (!fallback) return match;
+  return {
+    ...fallback,
+    ...match,
+    home: match.home ?? fallback.home,
+    away: match.away ?? fallback.away,
+    homePlaceholder: match.homePlaceholder ?? fallback.homePlaceholder,
+    awayPlaceholder: match.awayPlaceholder ?? fallback.awayPlaceholder,
+    matchNo: match.matchNo ?? fallback.matchNo,
+    routeLabel: match.routeLabel ?? fallback.routeLabel,
+    venueLabel: match.venueLabel ?? fallback.venueLabel,
+    kickoffLabel: match.kickoffLabel ?? fallback.kickoffLabel,
+  };
+};
+
+const orderMatchesForBracket = (matches: WorldCupMatch[], stage: Stage): WorldCupMatch[] => {
+  const order = VISUAL_STAGE_ORDER[stage];
+  if (!order) return matches;
+  const byMatchNo = new Map(matches.filter(match => match.matchNo).map(match => [match.matchNo, match]));
+  const ordered = order.map(matchNo => byMatchNo.get(matchNo)).filter((match): match is WorldCupMatch => Boolean(match));
+  const orderedIds = new Set(ordered.map(match => match.id));
+  return [...ordered, ...matches.filter(match => !orderedIds.has(match.id))];
+};
+
 const roundMatches = (rounds: WorldCupRound[], stage: Stage): WorldCupMatch[] => {
   const live = rounds.find(round => round.stage === stage)?.matches || [];
   const fallback = DEMO_WORLD_CUP_ROUNDS.find(round => round.stage === stage)?.matches || [];
-  return Array.from({ length: expectedCount[stage] }, (_, index) => live[index] || fallback[index]);
+  const matches = Array.from({ length: expectedCount[stage] }, (_, index) => mergeMatchMetadata(live[index], fallback[index]));
+  return orderMatchesForBracket(matches, stage);
 };
 
 const isWinner = (match: WorldCupMatch, team: WorldCupTeam | null): boolean =>
@@ -117,12 +156,23 @@ const MatchTeam: React.FC<{
   );
 };
 
-const MatchCard: React.FC<{ match: WorldCupMatch }> = ({ match }) => (
-  <article className="mondial-match-card mondial-phase-out-anchor" aria-label={`Match ${match.id}`}>
-    <MatchTeam match={match} team={match.home} placeholder={match.homePlaceholder} score={match.homeScore} />
-    <MatchTeam match={match} team={match.away} placeholder={match.awayPlaceholder} score={match.awayScore} />
-  </article>
-);
+const MatchCard: React.FC<{ match: WorldCupMatch }> = ({ match }) => {
+  const matchLabel = match.matchNo ? `M${match.matchNo}` : String(match.id);
+  const routeLabel = match.routeLabel || [match.homePlaceholder, match.awayPlaceholder].filter(Boolean).join(' vs ');
+  const routeTitle = [routeLabel, match.kickoffLabel, match.venueLabel].filter(Boolean).join(' · ');
+  return (
+    <article className="mondial-match-card mondial-phase-out-anchor" aria-label={`Match ${matchLabel}`}>
+      <div className="mondial-match-route-meta" title={routeTitle || matchLabel}>
+        <span>{matchLabel}</span>
+        <b>{routeLabel || match.venueLabel || 'TBD'}</b>
+      </div>
+      <div className="mondial-match-teams">
+        <MatchTeam match={match} team={match.home} placeholder={match.homePlaceholder} score={match.homeScore} />
+        <MatchTeam match={match} team={match.away} placeholder={match.awayPlaceholder} score={match.awayScore} />
+      </div>
+    </article>
+  );
+};
 
 const StageColumn: React.FC<{
   stage: Exclude<Stage, 'F' | 'BRONZE'>;
