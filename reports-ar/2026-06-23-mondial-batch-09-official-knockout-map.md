@@ -58,18 +58,19 @@
 
 ## حالة الدفع والنشر
 
-تم إنشاء commit محلي للدفعة، لكن الدفع إلى GitHub فشل من هذا الجهاز بسبب غياب بيانات الاعتماد:
+تم حل عائق الاعتماد بتاريخ 2026-06-25، وأصبح `main` المحلي مطابقا لـ `origin/main`.
 
-- `git push origin main`: فشل برسالة `SEC_E_NO_CREDENTIALS`.
-- `gh auth status`: جلسة GitHub CLI الحالية غير صالحة.
-- `ssh -T git@github.com`: لا توجد هوية SSH صالحة.
+- commit الدفعة الأصلية: `1fed6a3 feat: add official mondial knockout routes`.
+- آخر commit منشور على `main`: `0637c96 feat: add statement intelligence templates`.
+- `gh auth status`: توجد جلسة صالحة عبر `GH_TOKEN`.
+- حالة المستودع: `main` و `origin/main` متطابقان.
 
-فحص Hostinger عبر Node/HTTPS نجح، وأكد أن النسخة الحية لا تزال تعرض أصل البناء السابق:
+فحص Hostinger عبر Node/HTTPS نجح، وأكد أن النسخة الحية تخدم أصل البناء الحالي:
 
-- الأصل الحي الحالي: `assets/index-DPHhxKHE.js`.
-- أصل هذه الدفعة المحلي: `assets/index-BCp74yJ5.js`.
+- أصل JavaScript الحي: `assets/index-COJGjCXt.js`.
+- أصل CSS الحي: `assets/index-CAT5ZSoG.css`.
 
-النتيجة: الكود جاهز محليا ومثبت باختبارات ناجحة، لكن النشر لم يصل إلى Hostinger لأن الدفع إلى GitHub محجوب ببيانات الاعتماد في البيئة الحالية.
+النتيجة: خريطة الأدوار الإقصائية الرسمية أصبحت ضمن سجل `main` المنشور، وHostinger التقط نسخة لاحقة تحتوي هذه الدفعة مع إضافات القوالب اللاحقة.
 
 ## ملاحظة جسر الإحصائيات
 
