@@ -69,6 +69,7 @@ export const SUBCATEGORIES: Record<string, SubcategoryDef> = {
   'newsroom.breaking':       { key: 'newsroom.breaking',       parent: 'newsroom', labelAr: 'خبر عاجل' },
   'newsroom.smart_news':     { key: 'newsroom.smart_news',     parent: 'newsroom', labelAr: 'أخبار ذكية' },
   'newsroom.lower_thirds':   { key: 'newsroom.lower_thirds',   parent: 'newsroom', labelAr: 'أسماء سفلية' },
+  'newsroom.statements':     { key: 'newsroom.statements',     parent: 'newsroom', labelAr: 'تصريحات ذكية' },
   // Social & Stream subgroups
   'social.sponsors':         { key: 'social.sponsors',         parent: 'social_stream', labelAr: 'رعاة' },
   'social.viewers':          { key: 'social.viewers',          parent: 'social_stream', labelAr: 'متفاعلون' },
@@ -121,6 +122,7 @@ export const TYPE_TO_TAXONOMY: Partial<Record<OverlayType, { category: CategoryK
   [OverlayType.BARCA_PREMIUM]:          { category: 'player', subcategory: 'player.profile', priority: 50 },
   // Newsroom
   [OverlayType.SMART_NEWS]:             { category: 'newsroom', subcategory: 'newsroom.smart_news',   priority: 10 },
+  [OverlayType.STATEMENT_CARDS]:        { category: 'newsroom', subcategory: 'newsroom.statements',   priority: 5 },
   [OverlayType.EXCLUSIVE_ALERT]:        { category: 'newsroom', subcategory: 'newsroom.breaking',     priority: 10 },
   [OverlayType.ALERT]:                  { category: 'newsroom', subcategory: 'newsroom.breaking',     priority: 20 },
   [OverlayType.LOWER_THIRD]:            { category: 'newsroom', subcategory: 'newsroom.lower_thirds', priority: 10 },

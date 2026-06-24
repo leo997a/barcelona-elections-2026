@@ -12,6 +12,7 @@ import { RendererProps } from './renderers/SharedComponents';
 // Renderers
 import { LeaderboardRenderer } from './renderers/LeaderboardRenderer';
 import { SmartNewsRenderer } from './renderers/SmartNewsRenderer';
+import { StatementCardsRenderer } from './renderers/StatementCardsRenderer';
 import { ScoreboardRenderer } from './renderers/ScoreboardRenderer';
 import { TickerRenderer } from './renderers/TickerRenderer';
 import { LowerThirdRenderer } from './renderers/LowerThirdRenderer';
@@ -51,6 +52,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]:           'tv-zoom-flash',
   [OverlayType.EXCLUSIVE_ALERT]: 'tv-zoom-flash',
   [OverlayType.SMART_NEWS]:      'tv-slide-up',
+  [OverlayType.STATEMENT_CARDS]: 'tv-glass-sweep',
   [OverlayType.LEADERBOARD]:     'tv-slide-right',
   [OverlayType.GUESTS]:          'tv-slide-left',
   [OverlayType.UCL_DRAW]:        'tv-zoom-flash',
@@ -92,6 +94,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]:           'tv-zoom-out',
   [OverlayType.EXCLUSIVE_ALERT]: 'tv-zoom-out',
   [OverlayType.SMART_NEWS]:      'tv-slide-down-out',
+  [OverlayType.STATEMENT_CARDS]: 'tv-glass-sweep-out',
   [OverlayType.LEADERBOARD]:     'tv-slide-right-out',
   [OverlayType.GUESTS]:          'tv-slide-left-out',
   [OverlayType.UCL_DRAW]:        'tv-zoom-out',
@@ -133,6 +136,7 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]: 'SPOTLIGHT_POP',
   [OverlayType.EXCLUSIVE_ALERT]: 'SPOTLIGHT_POP',
   [OverlayType.SMART_NEWS]: 'GLASS_SWEEP',
+  [OverlayType.STATEMENT_CARDS]: 'GLASS_SWEEP',
   [OverlayType.LEADERBOARD]: 'VERTICAL_REVEAL',
   [OverlayType.GUESTS]: 'STADIUM_SWEEP',
   [OverlayType.UCL_DRAW]: 'STADIUM_SWEEP',
@@ -166,6 +170,7 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]: 'SPOTLIGHT_POP_OUT',
   [OverlayType.EXCLUSIVE_ALERT]: 'SPOTLIGHT_POP_OUT',
   [OverlayType.SMART_NEWS]: 'GLASS_SWEEP_OUT',
+  [OverlayType.STATEMENT_CARDS]: 'GLASS_SWEEP_OUT',
   [OverlayType.LEADERBOARD]: 'VERTICAL_REVEAL_OUT',
   [OverlayType.GUESTS]: 'STADIUM_SWEEP_OUT',
   [OverlayType.UCL_DRAW]: 'STADIUM_SWEEP_OUT',
@@ -229,6 +234,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]: 'IMPORTANT_PING',
   [OverlayType.EXCLUSIVE_ALERT]: 'IMPORTANT_PING',
   [OverlayType.SMART_NEWS]: 'LOWER_THIRD_WIPE',
+  [OverlayType.STATEMENT_CARDS]: 'LOWER_THIRD_WIPE',
   [OverlayType.LEADERBOARD]: 'LOWER_THIRD_WIPE',
   [OverlayType.GUESTS]: 'LOWER_THIRD_WIPE',
   [OverlayType.UCL_DRAW]: 'LUXURY_SWEEP',
@@ -269,6 +275,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.ALERT]: 'SOFT_FADE',
   [OverlayType.EXCLUSIVE_ALERT]: 'SOFT_FADE',
   [OverlayType.SMART_NEWS]: 'SOFT_FADE',
+  [OverlayType.STATEMENT_CARDS]: 'SOFT_FADE',
   [OverlayType.LEADERBOARD]: 'SOFT_FADE',
   [OverlayType.GUESTS]: 'SOFT_FADE',
   [OverlayType.UCL_DRAW]: 'SOFT_FADE',
@@ -775,6 +782,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
               <div className="absolute inset-0 pointer-events-none" style={contentWrapperStyle}>
                   {config.type === OverlayType.LEADERBOARD && <LeaderboardRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.SMART_NEWS && <SmartNewsRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.STATEMENT_CARDS && <StatementCardsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.SCOREBOARD && <ScoreboardRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.TICKER && <TickerRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.LOWER_THIRD && <LowerThirdRenderer key={activeSlot} {...props} />}

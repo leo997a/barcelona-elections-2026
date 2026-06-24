@@ -15,6 +15,11 @@ export const THEMES: Record<string, { primary: string, secondary: string, text: 
   'PROJECTION_BLUE': { primary: '#0057ff', secondary: '#050712', text: '#ffffff', accent: '#c8aa63' },
   'PROJECTION_RED': { primary: '#ff4b3e', secondary: '#050505', text: '#ffffff', accent: '#e8eef4' },
   'PROJECTION_MONO': { primary: '#e8eef4', secondary: '#08090d', text: '#ffffff', accent: '#ff4b3e' },
+  'STATEMENT_CYAN': { primary: '#0f766e', secondary: '#071015', text: '#f8fafc', accent: '#38bdf8' },
+  'STATEMENT_GOLD': { primary: '#b45309', secondary: '#10100c', text: '#fff7ed', accent: '#facc15' },
+  'STATEMENT_CRIMSON': { primary: '#be123c', secondary: '#10070b', text: '#fff1f2', accent: '#fb7185' },
+  'STATEMENT_GREEN': { primary: '#15803d', secondary: '#06110d', text: '#ecfdf5', accent: '#4ade80' },
+  'STATEMENT_MAGENTA': { primary: '#7e22ce', secondary: '#0e0714', text: '#faf5ff', accent: '#d8b4fe' },
 };
 
 export const TRANSITIONS: Record<string, string> = {

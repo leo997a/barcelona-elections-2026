@@ -3656,9 +3656,238 @@ const MERCATO_MEDIA_STORY_TEMPLATES: OverlayConfig[] = [
   }),
 ];
 
+const STATEMENT_THEME_OPTIONS = [
+  { value: 'STATEMENT_CYAN', label: 'تصريحات — سيان تحليلي' },
+  { value: 'STATEMENT_GOLD', label: 'تصريحات — ذهبي رسمي' },
+  { value: 'STATEMENT_CRIMSON', label: 'تصريحات — أحمر جدلي' },
+  { value: 'STATEMENT_GREEN', label: 'تصريحات — أخضر مصدري' },
+  { value: 'STATEMENT_MAGENTA', label: 'تصريحات — ماجنتا ذكي' },
+];
+
+const STATEMENT_LAYOUT_OPTIONS = [
+  { value: 'press_grid', label: 'شبكة مؤتمر صحفي' },
+  { value: 'solo_authority', label: 'طرف واحد / تصريح رئيسي' },
+  { value: 'debate_split', label: 'مواجهة أطراف' },
+  { value: 'source_timeline', label: 'خط زمني للمصادر' },
+  { value: 'intel_wall', label: 'جدار رصد ذكي' },
+];
+
+const DEFAULT_STATEMENT_ITEMS = [
+  {
+    speaker: 'خوان لابورتا',
+    role: 'رئيس برشلونة',
+    party: 'إدارة النادي',
+    quote: 'الأولوية الآن هي حماية المشروع الرياضي واتخاذ قرارات واضحة في التوقيت المناسب.',
+    stance: 'رسمي',
+    tone: 'حاسم',
+    source: 'مؤتمر صحفي',
+    time: 'اليوم',
+    confidence: 92,
+    photo: '',
+    logo: '',
+  },
+  {
+    speaker: 'مصدر مقرب',
+    role: 'مصدر داخل النادي',
+    party: 'غرفة المتابعة',
+    quote: 'هناك أكثر من مسار مفتوح، لكن القرار النهائي مرتبط بالتفاصيل المالية والرياضية معا.',
+    stance: 'مصدر',
+    tone: 'حذر',
+    source: 'صندوق الذكاء',
+    time: 'قبل قليل',
+    confidence: 76,
+    photo: '',
+    logo: '',
+  },
+  {
+    speaker: 'ممثل اللاعب',
+    role: 'وكيل / محيط اللاعب',
+    party: 'طرف خارجي',
+    quote: 'المحادثات مستمرة، وكل الأطراف تريد إنهاء الملف بدون ضجيج إعلامي زائد.',
+    stance: 'رد فعل',
+    tone: 'هادئ',
+    source: 'تصريح منسوب',
+    time: 'متابعة مباشرة',
+    confidence: 68,
+    photo: '',
+    logo: '',
+  },
+];
+
+type StatementTemplateInput = {
+  id: string;
+  name: string;
+  icon: string;
+  accent: string;
+  description: string;
+  layout: string;
+  themePreset: string;
+  headline: string;
+  subtitle: string;
+  cardCount: number;
+  focusMode?: string;
+  density?: string;
+};
+
+const createStatementTemplate = (input: StatementTemplateInput): OverlayConfig => {
+  const statementsJson = JSON.stringify(DEFAULT_STATEMENT_ITEMS, null, 2);
+  const pagesData = JSON.stringify(DEFAULT_STATEMENT_ITEMS.map(item => item.quote));
+
+  return {
+    id: input.id,
+    templateId: input.id,
+    name: input.name,
+    type: OverlayType.STATEMENT_CARDS,
+    isVisible: false,
+    templateIcon: input.icon,
+    templateAccent: input.accent,
+    templateGroup: 'STATEMENT_INTELLIGENCE',
+    templateDescription: input.description,
+    theme: {
+      primaryColor: input.accent,
+      secondaryColor: '#061016',
+      backgroundColor: 'transparent',
+      fontFamily: 'Tajawal',
+    },
+    slots: {},
+    fields: [
+      ...commonFields,
+      { id: 'headline', label: 'عنوان لوحة التصريحات', type: 'text', value: input.headline },
+      { id: 'subtitle', label: 'السطر الداعم', type: 'text', value: input.subtitle },
+      { id: 'rawText', label: 'النص الخام لصندوق الذكاء', type: 'textarea', value: 'الصق هنا تصريحا واحدا أو عدة تصريحات، وسيحوّلها صندوق الذكاء إلى بطاقات منظمة.' },
+      { id: 'aiInstruction', label: 'تعليمات AI الخاصة بالتصريحات', type: 'textarea', value: 'استخرج المتحدث، الجهة، نص التصريح، درجة الحسم، المصدر، الوقت، ونبرة التصريح. لا تضف معلومة غير موجودة في النص.' },
+      { id: 'aiPageCount', label: 'عدد بطاقات التصريحات المستهدف (AI)', type: 'range', value: input.cardCount, min: 1, max: 15, step: 1 },
+      { id: 'statementCardCount', label: 'عدد البطاقات المعروضة', type: 'range', value: input.cardCount, min: 1, max: 15, step: 1 },
+      { id: 'statementsJson', label: 'JSON التصريحات', type: 'textarea', value: statementsJson },
+      { id: 'pagesData', label: 'بيانات التنقل (JSON)', type: 'hidden', value: pagesData },
+      { id: 'currentPage', label: 'التصريح النشط', type: 'number', value: 0 },
+      { id: 'statementLayout', label: 'تخطيط التصريحات', type: 'select', value: input.layout, options: STATEMENT_LAYOUT_OPTIONS },
+      { id: 'focusMode', label: 'طريقة عرض البطاقات', type: 'select', value: input.focusMode || 'ALL', options: [
+        { value: 'ALL', label: 'كل البطاقات' },
+        { value: 'CURRENT', label: 'التصريح النشط فقط' },
+        { value: 'WINDOW', label: 'نافذة حول التصريح النشط' },
+      ] },
+      { id: 'speakerMode', label: 'نوع الأطراف', type: 'select', value: 'AUTO', options: [
+        { value: 'AUTO', label: 'ذكي حسب النص' },
+        { value: 'SINGLE', label: 'طرف واحد' },
+        { value: 'MULTI', label: 'عدة أطراف' },
+        { value: 'OFFICIAL_PLUS_REACTIONS', label: 'رسمي + ردود فعل' },
+      ] },
+      { id: 'statementDensity', label: 'كثافة التصميم', type: 'select', value: input.density || 'auto', options: [
+        { value: 'auto', label: 'تلقائي' },
+        { value: 'comfortable', label: 'مريح' },
+        { value: 'compact', label: 'كثيف' },
+        { value: 'broadcast', label: 'بث كبير' },
+      ] },
+      { id: 'themePreset', label: 'ثيم التصريحات', type: 'select', value: input.themePreset, options: STATEMENT_THEME_OPTIONS },
+      { id: 'transitionEffect', label: 'حركة تبديل التصريح', type: 'select', value: 'TACTICAL_REVEAL', options: ['CINEMATIC', 'NEWS_SLIDE', 'ZOOM_IMPACT', 'GLITCH', 'TACTICAL_REVEAL', 'SCORE_FLASH'] },
+      { id: 'motionMode', label: 'حركة الخلفية', type: 'select', value: 'quote_pop', options: [
+        { value: 'quote_pop', label: 'نبض تصريح' },
+        { value: 'scan', label: 'مسح إخباري' },
+        { value: 'calm', label: 'هادئ' },
+        { value: 'none', label: 'بدون حركة' },
+      ] },
+      { id: 'statementAccentColor', label: 'لون تمييز التصريحات', type: 'color', value: input.accent },
+      { id: 'statementPanelColor', label: 'لون خلفية البطاقات', type: 'color', value: '#08131c' },
+      { id: 'images', label: 'صور خلفية أو متحدثين عامة', type: 'image-list', value: [] },
+      { id: 'sourceLabel', label: 'المصدر الافتراضي', type: 'text', value: 'صندوق الذكاء' },
+      { id: 'eventLabel', label: 'وسم أعلى اللوحة', type: 'text', value: 'statement intelligence' },
+      { id: 'footerNote', label: 'ملاحظة أسفل اللوحة', type: 'text', value: 'تصريحات متعددة الأطراف' },
+      { id: 'statementAuthor', label: 'المتحدث الافتراضي', type: 'text', value: 'مصدر التصريح' },
+      { id: 'showSpeakerImage', label: 'إظهار صورة المتحدث', type: 'boolean', value: true },
+      { id: 'showSource', label: 'إظهار المصدر', type: 'boolean', value: true },
+      { id: 'showTime', label: 'إظهار الوقت', type: 'boolean', value: true },
+      { id: 'showIndex', label: 'إظهار رقم البطاقة', type: 'boolean', value: true },
+      { id: 'showTone', label: 'إظهار نبرة التصريح', type: 'boolean', value: true },
+      { id: 'showConfidence', label: 'إظهار مؤشر الثقة', type: 'boolean', value: true },
+      { id: 'showAiLabel', label: 'إظهار عداد AI', type: 'boolean', value: true },
+      { id: 'containerWidth', label: 'عرض القالب (%)', type: 'range', value: 90, min: 40, max: 100, step: 5 },
+      { id: 'containerHeight', label: 'ارتفاع القالب (px)', type: 'range', value: 650, min: 300, max: 980, step: 10 },
+      { id: 'fontScale', label: 'تكبير النص', type: 'range', value: 1, min: 0.7, max: 1.5, step: 0.05 },
+      { id: 'cardGap', label: 'المسافة بين البطاقات', type: 'range', value: 14, min: 6, max: 34, step: 1 },
+      { id: 'panelOpacity', label: 'شفافية البطاقات', type: 'range', value: 0.86, min: 0.35, max: 1, step: 0.05 },
+      { id: 'bgOpacity', label: 'كثافة الخلفية', type: 'range', value: 0.92, min: 0.2, max: 1, step: 0.05 },
+      { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 1.8, step: 0.05 },
+      { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -700, max: 700, step: 10 },
+      { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
+      ...broadcastMotionPreset('GLASS_SWEEP', 'GLASS_SWEEP_OUT', 'LOWER_THIRD_WIPE', 'SOFT_FADE'),
+    ],
+  };
+};
+
+const STATEMENT_TEMPLATES: OverlayConfig[] = [
+  createStatementTemplate({
+    id: 'template-statements-press-grid',
+    name: 'تصريحات — شبكة المؤتمر الذكي',
+    icon: 'STMT',
+    accent: '#38bdf8',
+    description: 'قالب تصريحات عام يقسم تصريحات طرف واحد أو عدة أطراف إلى بطاقات ذكية من 1 إلى 15 بطاقة مع تحكم كامل بالمصدر والنبرة والثقة.',
+    layout: 'press_grid',
+    themePreset: 'STATEMENT_CYAN',
+    headline: 'غرفة التصريحات',
+    subtitle: 'بطاقات ذكية منسقة من النص الخام أو صندوق الذكاء',
+    cardCount: 6,
+  }),
+  createStatementTemplate({
+    id: 'template-statements-solo-authority',
+    name: 'تصريح — بطاقة طرف واحد فاخرة',
+    icon: 'SOLO',
+    accent: '#facc15',
+    description: 'قالب مخصص لتصريح واحد قوي: اقتباس كبير، بطاقة هوية للمتحدث، مصدر، مؤشر ثقة، وتحكم سريع في التركيز.',
+    layout: 'solo_authority',
+    themePreset: 'STATEMENT_GOLD',
+    headline: 'تصريح رسمي',
+    subtitle: 'طرف واحد / رسالة مركزية',
+    cardCount: 1,
+    focusMode: 'CURRENT',
+    density: 'broadcast',
+  }),
+  createStatementTemplate({
+    id: 'template-statements-debate-split',
+    name: 'تصريحات — مواجهة أطراف',
+    icon: 'DUEL',
+    accent: '#fb7185',
+    description: 'قالب يقارن تصريحات عدة أطراف في واجهة مواجهة عصرية مناسبة للجدل وردود الفعل.',
+    layout: 'debate_split',
+    themePreset: 'STATEMENT_CRIMSON',
+    headline: 'تصريحات الأطراف',
+    subtitle: 'موقف مقابل موقف — قراءة سريعة للنبرة والمصدر',
+    cardCount: 4,
+    density: 'comfortable',
+  }),
+  createStatementTemplate({
+    id: 'template-statements-source-timeline',
+    name: 'تصريحات — خط زمني للمصادر',
+    icon: 'TIME',
+    accent: '#4ade80',
+    description: 'قالب يرصد تسلسل التصريحات زمنيا مع مصدر ووقت لكل بطاقة، مناسب لمتابعة تطور القصة.',
+    layout: 'source_timeline',
+    themePreset: 'STATEMENT_GREEN',
+    headline: 'تسلسل التصريحات',
+    subtitle: 'من قال ماذا؟ ومتى؟ وبأي درجة ثقة؟',
+    cardCount: 8,
+    focusMode: 'WINDOW',
+    density: 'compact',
+  }),
+  createStatementTemplate({
+    id: 'template-statements-intel-wall',
+    name: 'تصريحات — جدار الرصد الذكي',
+    icon: 'WALL',
+    accent: '#d8b4fe',
+    description: 'جدار تصريحات كثيف يعرض حتى 15 بطاقة في لقطة واحدة، مناسب لنشرة مصادر أو ملخص ردود فعل واسع.',
+    layout: 'intel_wall',
+    themePreset: 'STATEMENT_MAGENTA',
+    headline: 'رصد التصريحات',
+    subtitle: 'لوحة استخبارات تحريرية لكل الأطراف والمصادر',
+    cardCount: 15,
+    density: 'compact',
+  }),
+];
+
 const _allTemplates: OverlayConfig[] = [
   ...INITIAL_TEMPLATE_DEFINITIONS,
   ...BARCELONA_ELECTION_TEMPLATES,
+  ...STATEMENT_TEMPLATES,
   ...FOOTBALL_BROADCAST_TEMPLATES,
   ...FOOTBALL_PROJECTION_TEMPLATES,
   ...TRANSFER_TARGETS_TEMPLATES,

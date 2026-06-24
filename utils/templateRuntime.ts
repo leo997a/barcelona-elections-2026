@@ -66,6 +66,7 @@ export const TEMPLATE_AUDIO_PROFILES: Partial<Record<OverlayType, AudioProfile>>
   [OverlayType.ALERT]:                { id: 'alert', enabled: true, volume: 0.7, inCue: 'IMPORTANT_PING',     outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
   [OverlayType.EXCLUSIVE_ALERT]:      { id: 'exclusive_alert', enabled: true, volume: 0.7, inCue: 'IMPORTANT_PING', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
   [OverlayType.SMART_NEWS]:           { id: 'smart_news', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
+  [OverlayType.STATEMENT_CARDS]:      { id: 'statement_cards', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'LIVE_UPDATE_PING' },
   [OverlayType.LEADERBOARD]:          { id: 'leaderboard', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE',     updateCue: 'DATA_TICK' },
   [OverlayType.GUESTS]:               { id: 'guests', enabled: true, volume: 0.55, inCue: 'LOWER_THIRD_WIPE', outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },
   [OverlayType.UCL_DRAW]:             { id: 'ucl_draw', enabled: true, volume: 0.6, inCue: 'LUXURY_SWEEP',    outCue: 'SOFT_FADE', updateCue: 'DATA_TICK' },

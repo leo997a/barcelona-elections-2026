@@ -22,6 +22,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#8b5cf6',
     description: 'تحويل النصوص الطويلة إلى شرائح أخبار ذكية.',
   },
+  [OverlayType.STATEMENT_CARDS]: {
+    icon: 'STMT',
+    accent: '#38bdf8',
+    description: 'قوالب تصريحات ذكية لطرف واحد أو عدة أطراف، تدعم 1 إلى 15 بطاقة وتحكم كامل بالمصدر والنبرة والثقة.',
+  },
   [OverlayType.SCOREBOARD]: {
     icon: 'SCO',
     accent: '#3b82f6',

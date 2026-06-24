@@ -132,6 +132,31 @@ const normalizeSmartNews = (payload: unknown, rawText: string, targetPages: numb
   };
 };
 
+const fallbackStatementCards = (rawText: string, targetCards: number) => {
+  const pages = fallbackSlides(rawText, targetCards);
+  return pages.map((quote, index) => ({
+    speaker: index === 0 ? 'مصدر التصريح' : `طرف ${index + 1}`,
+    role: index === 0 ? 'تصريح رئيسي' : 'تعليق مرتبط',
+    party: index === 0 ? 'الطرف الرئيسي' : 'طرف آخر',
+    quote,
+    stance: index === 0 ? 'تصريح رئيسي' : 'رد فعل',
+    tone: 'محايد',
+    source: 'AI local fallback',
+    time: '',
+    confidence: 0,
+    photo: '',
+    logo: '',
+  }));
+};
+
+const isStatementCardsRequest = (body: AiRequestBody) => {
+  const type = String(body.templateType || body.overlayType || '').toUpperCase();
+  const fields = body.currentFields || {};
+  return type === 'STATEMENT_CARDS'
+    || Object.prototype.hasOwnProperty.call(fields, 'statementsJson')
+    || Object.prototype.hasOwnProperty.call(fields, 'statementLayout');
+};
+
 const fallbackMatchData = (sport = 'football') => ({
   homeTeam: sport.toLowerCase().includes('barcelona') ? 'Barcelona' : 'Home FC',
   awayTeam: 'Away FC',
@@ -320,6 +345,35 @@ const sendLocalFallback = (
     const rawText = body.rawText?.trim();
     if (!rawText) return false;
     const title = rawText.split(/[\n.؟!?]+/).map(part => part.trim()).filter(Boolean)[0]?.slice(0, 90) || 'AI STORY';
+    if (isStatementCardsRequest(body)) {
+      const targetCards = clampInteger(
+        body.currentFields?.aiPageCount ?? body.currentFields?.statementCardCount,
+        5,
+        1,
+        15,
+      );
+      const statements = fallbackStatementCards(rawText, targetCards);
+      sendJson(response, 200, {
+        data: {
+          title,
+          subtitle: rawText.slice(0, 160),
+          fields: {
+            headline: title,
+            subtitle: rawText.slice(0, 160),
+            rawText,
+            aiPageCount: targetCards,
+            statementCardCount: targetCards,
+            statementsJson: JSON.stringify(statements, null, 2),
+            pagesData: JSON.stringify(statements.map(item => item.quote)),
+            currentPage: 0,
+          },
+          notes: ['local statement fallback'],
+        },
+        fallback: true,
+        warning,
+      });
+      return true;
+    }
     const pages = fallbackSlides(rawText, 4);
     sendJson(response, 200, {
       data: {
@@ -764,6 +818,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       const templateType = body.templateType || body.overlayType || 'broadcast overlay';
       const overlayName = body.overlayName || templateType;
       const isGlobalProbabilityMatrix = String(body.currentFields?.mercatoVariant || '') === 'global_probability_shift';
+      const isStatementCards = isStatementCardsRequest(body);
       const probabilityMatrixInstructions = isGlobalProbabilityMatrix
         ? (
             'تعليمات خاصة بقالب شبكة نسب الصفقات العالمية:\n' +
@@ -772,6 +827,18 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
             '- لا تفترض أن الوجهة برشلونة؛ استخدم الناديين المذكورين لكل صفقة مهما كانا.\n' +
             '- لا تخترع نسبة أو قيمة أو مصدرًا غير موجود في النص. اترك القيمة الحالية عند غياب المعلومة.\n' +
             '- يمكنك تحديث matrixTitle وmatrixSubtitle، لكن لا تغيّر matrixLayout أو probabilityShiftMode أو حقول الصوت.\n'
+          )
+        : '';
+      const statementCardsInstructions = isStatementCards
+        ? (
+            'تعليمات خاصة بقوالب التصريحات الذكية:\n' +
+            '- استخرج من النص من 1 إلى 15 تصريحا، حسب aiPageCount أو statementCardCount عند توفرهما.\n' +
+            '- املأ statementsJson كـ JSON string لمصفوفة عناصر، كل عنصر يحتوي: speaker, role, party, quote, stance, tone, source, time, confidence, photo, logo.\n' +
+            '- اجعل pagesData عبارة عن JSON string لمصفوفة نصوص التصريحات فقط حتى تعمل أزرار التنقل.\n' +
+            '- لو النص من طرف واحد استخدم نفس المتحدث ولا تخترع أطرافا أخرى. لو النص يذكر عدة أطراف فقسمها بوضوح حسب المتحدث أو الجهة.\n' +
+            '- confidence رقم من 0 إلى 100 يعبر عن وضوح نسبة الإسناد داخل النص، وليس صحة الخبر من خارج النص.\n' +
+            '- لا تضف صورة أو شعارا إذا لم يكن الرابط موجودا في النص أو الحقول الحالية. اترك photo و logo فارغين عند الغياب.\n' +
+            '- يمكنك تحديث headline/subtitle/rawText/currentPage/aiPageCount/statementCardCount فقط عند الحاجة.\n'
           )
         : '';
       const imageParts: GeminiPart[] = (body.images || []).slice(0, 2).map(image => ({
@@ -795,6 +862,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
                 '- إذا كان القالب ميركاتو أو بطاقة لاعب، املأ playerName/fromClub/toClub/headline/subheadline/playerStatsJson/marketItems عندما تكون مناسبة.\n' +
                 '- لا تخترع نتيجة مباراة مباشرة. لا تضع إحصائيات رقمية مؤكدة إذا لم تكن في النص؛ يمكن وضع تقديرات تحريرية كنصوص مثل \"غير متوفر\".\n' +
                 probabilityMatrixInstructions +
+                statementCardsInstructions +
                 '- أعد JSON فقط بهذا الشكل: {"fields":{"fieldId":"value"},"title":"عنوان قصير","subtitle":"سطر داعم","assetHints":{"playerName":"...","clubName":"...","fromClub":"...","toClub":"..."},"notes":["تنبيه قصير"]}\n' +
                 `الحقول الحالية:\n${fieldManifest(body.currentFields)}\n\n` +
                 `المدخل:\n${rawText}`,

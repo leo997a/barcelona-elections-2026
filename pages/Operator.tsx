@@ -60,6 +60,10 @@ const OPERATOR_PRIORITY_FIELDS = new Set([
   'homeScore',
   'awayScore',
   'currentPage',
+  'statementCardCount',
+  'statementsJson',
+  'speakerMode',
+  'focusMode',
   'sponsorsData',
   'sponsorDisplayMode',
 ]);

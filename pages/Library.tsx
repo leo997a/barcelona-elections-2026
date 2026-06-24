@@ -26,6 +26,7 @@ type SortOption = 'recent' | 'name' | 'live';
 const ACCENT: Record<string, string> = {
   [OverlayType.LEADERBOARD]:     '#f59e0b',
   [OverlayType.SMART_NEWS]:      '#8b5cf6',
+  [OverlayType.STATEMENT_CARDS]: '#38bdf8',
   [OverlayType.SCOREBOARD]:      '#3b82f6',
   [OverlayType.LOWER_THIRD]:     '#10b981',
   [OverlayType.TICKER]:          '#ef4444',

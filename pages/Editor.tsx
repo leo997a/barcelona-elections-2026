@@ -4052,7 +4052,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       else if (activeTab === 'style') { if (!isStyleField) return null; }
                   } else {
                       // UNIVERSAL SMART TABS for ALL non-election templates
-                      const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'sidebarWidth', 'itemsPerPage', 'rotationTime', 'matchPanelScale', 'playerPanelScale', 'creatorBadgeScale', 'creatorPositionX', 'creatorPositionY'];
+                      const POSITION_FIELDS = ['scale', 'positionX', 'positionY', 'containerWidth', 'containerHeight', 'sidebarWidth', 'itemsPerPage', 'rotationTime', 'matchPanelScale', 'playerPanelScale', 'creatorBadgeScale', 'creatorPositionX', 'creatorPositionY', 'cardGap', 'fontScale'];
                       const SOUND_FIELDS = [
                         'soundEnabled', 'soundVolume',
                         'useTTS', 'ttsText',
@@ -4064,7 +4064,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                         // Phase A4 — scene fields surface as audio settings
                         'audioSceneId', 'audioUpdateCue',
                       ];
-                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'sponsorDisplayMode', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'showSponsorStats', 'showGoalProgress', 'showAverageSummary', 'showTransitionBanner', 'showProbabilityTrack', 'showDealDelta', 'showDealFee', 'showDealStatus', 'showDealSource', 'showClubLabels', 'broadcastLook', 'broadcastStyle', 'broadcastPalette', 'mondialMotionPreset', 'transitionEffect', 'transitionIn', 'transitionOut', 'transitionSpeedMs', 'transitionIntensity', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
+                      const APPEARANCE_FIELDS = ['themePreset', 'designStyle', 'visualVariant', 'playerStatsVisualVariant', 'matrixLayout', 'statementLayout', 'focusMode', 'speakerMode', 'statementDensity', 'motionMode', 'statementAccentColor', 'statementPanelColor', 'sponsorDisplayMode', 'mediaTheme', 'mediaOverlayOpacity', 'mediaBlurPx', 'mediaBrightness', 'panelOpacity', 'textScale', 'bgOpacity', 'watermarkText', 'showAvatars', 'showAmounts', 'showRanks', 'showSponsorStats', 'showGoalProgress', 'showAverageSummary', 'showTransitionBanner', 'showProbabilityTrack', 'showDealDelta', 'showDealFee', 'showDealStatus', 'showDealSource', 'showClubLabels', 'showSpeakerImage', 'showSource', 'showTime', 'showIndex', 'showTone', 'showConfidence', 'showAiLabel', 'broadcastLook', 'broadcastStyle', 'broadcastPalette', 'mondialMotionPreset', 'transitionEffect', 'transitionIn', 'transitionOut', 'transitionSpeedMs', 'transitionIntensity', 'scrollSpeed', 'broadcastMotion', 'broadcastQuality', 'showCreatorBadge', 'creatorName', 'creatorHandle', 'creatorLabel'];
                       const isPositionField = POSITION_FIELDS.includes(field.id);
                       const isSoundField = SOUND_FIELDS.includes(field.id);
                       const isAppearanceField = APPEARANCE_FIELDS.includes(field.id);
