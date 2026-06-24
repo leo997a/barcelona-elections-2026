@@ -21,6 +21,10 @@ const PRESET_EFFECTS: Record<string, { in: MondialTransitionEffect; out: Mondial
   reference_stinger: { in: 'stinger', out: 'stinger' },
   scorebug_snap: { in: 'scorebug', out: 'scorebug' },
   group_wall_rush: { in: 'data', out: 'data' },
+  stadium_sweep: { in: 'stadium', out: 'stadium' },
+  glass_sweep: { in: 'glass', out: 'glass' },
+  spotlight_pop: { in: 'spotlight', out: 'spotlight' },
+  side_wipe: { in: 'side', out: 'side' },
   story_glitch: { in: 'glass', out: 'glass' },
 };
 

@@ -560,8 +560,18 @@ class SyncManager {
               soundVolume:   { label: 'مستوى الصوت', type: 'range' },
               soundInStyle:  { label: 'مؤثر الظهور', type: 'select' },
               soundOutStyle: { label: 'مؤثر الإخفاء', type: 'select' },
+              audioUpdateCue: { label: 'مؤثر تحديث البيانات', type: 'select' },
+              duckSfx: { label: 'خفض صوت المؤثرات أثناء التعليق', type: 'boolean' },
               transitionIn:  { label: 'انتقال الظهور', type: 'select' },
               transitionOut: { label: 'انتقال الإخفاء', type: 'select' },
+              broadcastLook: { label: 'هوية البث', type: 'select' },
+              broadcastStyle: { label: 'ستايل البث', type: 'select' },
+              broadcastPalette: { label: 'ألوان البث', type: 'select' },
+              mondialTheme: { label: 'ثيم المونديال', type: 'select' },
+              mondialMotionPreset: { label: 'حزمة حركة المونديال', type: 'select' },
+              transitionSpeedMs: { label: 'سرعة الانتقال', type: 'range' },
+              transitionIntensity: { label: 'قوة الانتقال', type: 'range' },
+              broadcastMotion: { label: 'تفعيل حركة البث', type: 'boolean' },
             };
             const meta = KNOWN_FIELDS[command.fieldId];
             if (meta) {

@@ -351,6 +351,34 @@ const MONDIAL_MOTION_PRESETS: Record<string, MondialMotionPreset> = {
     soundOutStyle: 'DIGITAL_SWEEP',
     audioUpdateCue: 'DATA_TICK',
   },
+  stadium_sweep: {
+    transitionIn: 'STADIUM_SWEEP',
+    transitionOut: 'STADIUM_SWEEP_OUT',
+    soundInStyle: 'STADIUM_WHOOSH',
+    soundOutStyle: 'BROADCAST_OUT',
+    audioUpdateCue: 'DATA_TICK',
+  },
+  glass_sweep: {
+    transitionIn: 'GLASS_SWEEP',
+    transitionOut: 'GLASS_SWEEP_OUT',
+    soundInStyle: 'DIGITAL_SWEEP',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'DIGITAL_SWEEP',
+  },
+  spotlight_pop: {
+    transitionIn: 'SPOTLIGHT_POP',
+    transitionOut: 'SPOTLIGHT_POP_OUT',
+    soundInStyle: 'TROPHY_FANFARE',
+    soundOutStyle: 'BROADCAST_OUT',
+    audioUpdateCue: 'SCOREBUG_SNAP',
+  },
+  side_wipe: {
+    transitionIn: 'LOWER_THIRD_WIPE',
+    transitionOut: 'LOWER_THIRD_WIPE_OUT',
+    soundInStyle: 'LOWER_THIRD_WIPE',
+    soundOutStyle: 'SOFT_FADE',
+    audioUpdateCue: 'DATA_TICK',
+  },
   story_glitch: {
     transitionIn: 'GLASS_SWEEP',
     transitionOut: 'GLASS_SWEEP_OUT',
@@ -358,6 +386,12 @@ const MONDIAL_MOTION_PRESETS: Record<string, MondialMotionPreset> = {
     soundOutStyle: 'SOFT_FADE',
     audioUpdateCue: 'GLITCH_TRANSITION',
   },
+};
+
+const clampNumber = (value: unknown, fallback: number, min: number, max: number): number => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(min, Math.min(max, parsed));
 };
 
 const CSS = `
@@ -394,39 +428,39 @@ const CSS = `
   @keyframes tvGlassSweepOut     { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(28px) scale(.985);opacity:0;filter:blur(10px)} }
   @keyframes tvBroadcastFadeOut  { from{opacity:1;filter:blur(0)} to{opacity:0;filter:blur(8px)} }
 
-  .tv-drop-in        { animation: tvDropIn        .65s cubic-bezier(.22,1,.36,1) both }
-  .tv-slide-left     { animation: tvSlideLeft     .65s cubic-bezier(.22,1,.36,1) both }
-  .tv-slide-right    { animation: tvSlideRight    .65s cubic-bezier(.22,1,.36,1) both }
-  .tv-slide-up       { animation: tvSlideUp       .65s cubic-bezier(.22,1,.36,1) both }
-  .tv-zoom-flash     { animation: tvZoomFlash     .65s cubic-bezier(.22,1,.36,1) both }
+  .tv-drop-in        { animation: tvDropIn        var(--tv-enter-speed, .65s) cubic-bezier(.22,1,.36,1) both }
+  .tv-slide-left     { animation: tvSlideLeft     var(--tv-enter-speed, .65s) cubic-bezier(.22,1,.36,1) both }
+  .tv-slide-right    { animation: tvSlideRight    var(--tv-enter-speed, .65s) cubic-bezier(.22,1,.36,1) both }
+  .tv-slide-up       { animation: tvSlideUp       var(--tv-enter-speed, .65s) cubic-bezier(.22,1,.36,1) both }
+  .tv-zoom-flash     { animation: tvZoomFlash     var(--tv-enter-speed, .65s) cubic-bezier(.22,1,.36,1) both }
 
-  .tv-drop-out       { animation: tvDropOut       .55s ease-in both }
-  .tv-slide-left-out { animation: tvSlideLeftOut  .55s ease-in both }
-  .tv-slide-right-out{ animation: tvSlideRightOut .55s ease-in both }
-  .tv-slide-down-out { animation: tvSlideDownOut  .55s ease-in both }
-  .tv-zoom-out       { animation: tvZoomOut       .55s ease-in both }
+  .tv-drop-out       { animation: tvDropOut       var(--tv-exit-speed, .55s) ease-in both }
+  .tv-slide-left-out { animation: tvSlideLeftOut  var(--tv-exit-speed, .55s) ease-in both }
+  .tv-slide-right-out{ animation: tvSlideRightOut var(--tv-exit-speed, .55s) ease-in both }
+  .tv-slide-down-out { animation: tvSlideDownOut  var(--tv-exit-speed, .55s) ease-in both }
+  .tv-zoom-out       { animation: tvZoomOut       var(--tv-exit-speed, .55s) ease-in both }
 
-  .tv-scorebug-snap      { animation: tvScorebugSnap      .52s cubic-bezier(.18,1,.32,1) both }
-  .tv-stadium-sweep      { animation: tvStadiumSweep      .72s cubic-bezier(.18,1,.32,1) both }
-  .tv-lower-third-wipe   { animation: tvLowerThirdWipe    .62s cubic-bezier(.22,1,.36,1) both }
-  .tv-data-rush          { animation: tvDataRush          .6s cubic-bezier(.22,1,.36,1) both }
-  .tv-vertical-reveal    { animation: tvVerticalReveal    .68s cubic-bezier(.22,1,.36,1) both }
-  .tv-spotlight-pop      { animation: tvSpotlightPop      .58s cubic-bezier(.18,1,.32,1) both }
-  .tv-glass-sweep        { animation: tvGlassSweep        .7s cubic-bezier(.22,1,.36,1) both }
-  .tv-broadcast-fade     { animation: tvBroadcastFade     .5s ease-out both }
-  .tv-mondial-stinger    { position:relative; isolation:isolate; animation: tvMondialStinger .86s cubic-bezier(.16,1,.3,1) both }
-  .tv-mondial-stinger::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 18%,rgba(255,23,56,.92) 18% 24%,transparent 24% 32%,rgba(182,255,0,.9) 32% 39%,transparent 39% 49%,rgba(12,232,207,.9) 49% 57%,transparent 57% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars .74s cubic-bezier(.16,1,.3,1) both }
+  .tv-scorebug-snap      { animation: tvScorebugSnap      var(--tv-enter-speed, .52s) cubic-bezier(.18,1,.32,1) both }
+  .tv-stadium-sweep      { animation: tvStadiumSweep      var(--tv-enter-speed, .72s) cubic-bezier(.18,1,.32,1) both }
+  .tv-lower-third-wipe   { animation: tvLowerThirdWipe    var(--tv-enter-speed, .62s) cubic-bezier(.22,1,.36,1) both }
+  .tv-data-rush          { animation: tvDataRush          var(--tv-enter-speed, .6s) cubic-bezier(.22,1,.36,1) both }
+  .tv-vertical-reveal    { animation: tvVerticalReveal    var(--tv-enter-speed, .68s) cubic-bezier(.22,1,.36,1) both }
+  .tv-spotlight-pop      { animation: tvSpotlightPop      var(--tv-enter-speed, .58s) cubic-bezier(.18,1,.32,1) both }
+  .tv-glass-sweep        { animation: tvGlassSweep        var(--tv-enter-speed, .7s) cubic-bezier(.22,1,.36,1) both }
+  .tv-broadcast-fade     { animation: tvBroadcastFade     var(--tv-enter-speed, .5s) ease-out both }
+  .tv-mondial-stinger    { position:relative; isolation:isolate; animation: tvMondialStinger var(--tv-enter-speed, .86s) cubic-bezier(.16,1,.3,1) both }
+  .tv-mondial-stinger::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 18%,rgba(255,23,56,.92) 18% 24%,transparent 24% 32%,rgba(182,255,0,.9) 32% 39%,transparent 39% 49%,rgba(12,232,207,.9) 49% 57%,transparent 57% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-enter-bar-speed, .74s) cubic-bezier(.16,1,.3,1) both }
 
-  .tv-scorebug-snap-out      { animation: tvScorebugSnapOut      .45s ease-in both }
-  .tv-stadium-sweep-out      { animation: tvStadiumSweepOut      .55s ease-in both }
-  .tv-lower-third-wipe-out   { animation: tvLowerThirdWipeOut    .5s ease-in both }
-  .tv-data-rush-out          { animation: tvDataRushOut          .48s ease-in both }
-  .tv-vertical-reveal-out    { animation: tvVerticalRevealOut    .5s ease-in both }
-  .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      .48s ease-in both }
-  .tv-glass-sweep-out        { animation: tvGlassSweepOut        .5s ease-in both }
-  .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     .42s ease-in both }
-  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut .62s cubic-bezier(.7,0,.84,0) both }
-  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 16%,rgba(12,232,207,.88) 16% 24%,transparent 24% 34%,rgba(255,47,159,.88) 34% 42%,transparent 42% 55%,rgba(182,255,0,.82) 55% 62%,transparent 62% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars .5s cubic-bezier(.7,0,.84,0) reverse both }
+  .tv-scorebug-snap-out      { animation: tvScorebugSnapOut      var(--tv-exit-speed, .45s) ease-in both }
+  .tv-stadium-sweep-out      { animation: tvStadiumSweepOut      var(--tv-exit-speed, .55s) ease-in both }
+  .tv-lower-third-wipe-out   { animation: tvLowerThirdWipeOut    var(--tv-exit-speed, .5s) ease-in both }
+  .tv-data-rush-out          { animation: tvDataRushOut          var(--tv-exit-speed, .48s) ease-in both }
+  .tv-vertical-reveal-out    { animation: tvVerticalRevealOut    var(--tv-exit-speed, .5s) ease-in both }
+  .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      var(--tv-exit-speed, .48s) ease-in both }
+  .tv-glass-sweep-out        { animation: tvGlassSweepOut        var(--tv-exit-speed, .5s) ease-in both }
+  .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     var(--tv-exit-speed, .42s) ease-in both }
+  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut var(--tv-exit-speed, .62s) cubic-bezier(.7,0,.84,0) both }
+  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 16%,rgba(12,232,207,.88) 16% 24%,transparent 24% 34%,rgba(255,47,159,.88) 34% 42%,transparent 42% 55%,rgba(182,255,0,.82) 55% 62%,transparent 62% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-exit-bar-speed, .5s) cubic-bezier(.7,0,.84,0) reverse both }
 
   @media (prefers-reduced-motion: reduce) {
     .tv-drop-in, .tv-slide-left, .tv-slide-right, .tv-slide-up, .tv-zoom-flash,
@@ -469,6 +503,13 @@ const RUNTIME_UPDATE_IGNORED_FIELDS = new Set([
   'voiceTrigger',
   'broadcastMotion',
   'broadcastQuality',
+  'broadcastLook',
+  'broadcastStyle',
+  'broadcastPalette',
+  'mondialTheme',
+  'mondialMotionPreset',
+  'transitionSpeedMs',
+  'transitionIntensity',
   'chromaKey',
 ]);
 
@@ -481,11 +522,23 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   editorPreviewAudio = true,
 }) => {
   const getField = (id: string) => config.fields.find(f => f.id === id)?.value;
+  const hasField = (id: string) => config.fields.some(f => f.id === id);
   
   const scale = Number(getField('scale') || 1);
   const posX = Number(getField('positionX') || 0);
   const posY = Number(getField('positionY') || 0);
   const soundVolume = Number(getField('soundVolume') ?? 0.7);
+  const isMondialTemplate = MONDIAL_TYPES.has(config.type);
+  const mondialMotionEnabled = !isMondialTemplate || Boolean(getField('broadcastMotion') ?? true);
+  const transitionSpeedMs = isMondialTemplate
+      ? clampNumber(getField('transitionSpeedMs'), 860, 360, 1500)
+      : 650;
+  const exitTransitionMs = isMondialTemplate
+      ? Math.max(260, Math.round(transitionSpeedMs * 0.72))
+      : 550;
+  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 140 : 40;
+  const editorExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 650;
+  const runtimeExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 600;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -496,19 +549,21 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const [wasVisible, setWasVisible] = useState(isEditor || config.isVisible);
 
   const resolveMondialMotionPreset = (): MondialMotionPreset | null => {
-      if (!MONDIAL_TYPES.has(config.type)) return null;
+      if (!isMondialTemplate || !hasField('mondialMotionPreset')) return null;
       const key = String(getField('mondialMotionPreset') || 'reference_stinger');
       if (!key || key === 'custom') return null;
       return MONDIAL_MOTION_PRESETS[key] || MONDIAL_MOTION_PRESETS.reference_stinger;
   };
 
   const resolveEnterClass = () => {
+      if (!mondialMotionEnabled) return '';
       const selected = resolveMondialMotionPreset()?.transitionIn || String(getField('transitionIn') || 'DEFAULT');
       const key = selected === 'DEFAULT' ? DEFAULT_ENTER_KEY[config.type] : selected;
       return (key && ENTER_BY_KEY[key]) || ENTER[config.type] || 'tv-slide-up';
   };
 
   const resolveExitClass = () => {
+      if (!mondialMotionEnabled) return '';
       const selected = resolveMondialMotionPreset()?.transitionOut || String(getField('transitionOut') || 'DEFAULT');
       const normalized = EXIT_KEY_ALIASES[selected] || selected;
       const key = normalized === 'DEFAULT' ? DEFAULT_EXIT_KEY[config.type] : normalized;
@@ -529,8 +584,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       }
 
       if (type === 'TRANSITION') {
-          const mondialPreset = resolveMondialMotionPreset();
-          if (mondialPreset) return mondialPreset.audioUpdateCue;
           // Phase A3 — prefer scene-level audioUpdateCue if present
           // (set by sceneToFieldUpdates), otherwise fall back to the
           // template's runtime profile updateCue.
@@ -543,17 +596,19 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           if (isGlobalProbabilityShift && (!sceneUpdateCue || sceneUpdateCue === 'LIVE_UPDATE_PING')) {
               return 'TARGET_REVEAL_DARK';
           }
-          if (sceneUpdateCue) return sceneUpdateCue;
+          if (sceneUpdateCue && sceneUpdateCue !== 'DEFAULT') return sceneUpdateCue;
+          const mondialPreset = resolveMondialMotionPreset();
+          if (mondialPreset) return mondialPreset.audioUpdateCue;
           // Universal transition fallback — resolve via runtime profile
           // so every template ticks consistently.
           return resolveTemplateAudio(config).updateCue;
       }
+      const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
+      if (fieldCue !== 'DEFAULT') return fieldCue;
       const mondialPreset = resolveMondialMotionPreset();
       if (mondialPreset) {
           return type === 'EXIT' ? mondialPreset.soundOutStyle : mondialPreset.soundInStyle;
       }
-      const fieldCue = String(getField(type === 'EXIT' ? 'soundOutStyle' : 'soundInStyle') || 'DEFAULT');
-      if (fieldCue !== 'DEFAULT') return fieldCue;
       // ENTRY / EXIT: prefer the per-type SOUND_*_DEFAULTS map for backward
       // compatibility, then fall back to the universal runtime profile so
       // NO template ever plays a generic STADIUM_WHOOSH by accident.
@@ -654,11 +709,11 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       if (editorPreviewPhase === 'OUT') {
           if (editorPreviewAudio) void playSound('EXIT', true);
           setAnimCls(resolveExitClass());
-          timer.current = setTimeout(() => setAnimCls(''), 650);
+          timer.current = setTimeout(() => setAnimCls(''), editorExitHoldMs);
       }
 
       return () => clearTimeout(timer.current);
-  }, [isEditor, editorPreviewKey, editorPreviewPhase, editorPreviewAudio, config.type]);
+  }, [isEditor, editorPreviewKey, editorPreviewPhase, editorPreviewAudio, config.type, editorExitHoldMs, mondialMotionEnabled, transitionSpeedMs]);
 
   useEffect(() => {
       if (isEditor) return;
@@ -693,14 +748,14 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
                   setMounted(false);
                   setAnimCls('');
               }
-          }, 600);
+          }, runtimeExitHoldMs);
           recordDiagnostic(config, 'hide');
       }
 
       previousVisibilityRef.current = isNowVisible;
       setWasVisible(isNowVisible);
       return () => clearTimeout(timer.current);
-  }, [config.isVisible, isEditor, config.type]);
+  }, [config.isVisible, isEditor, config.type, runtimeExitHoldMs, mondialMotionEnabled, transitionSpeedMs]);
 
   useEffect(() => {
       if (isEditor || !config.isVisible) {
@@ -724,6 +779,15 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
 
   if (!mounted && !isEditor) return null;
 
+  const transitionCssVars = isMondialTemplate
+      ? ({
+          '--tv-enter-speed': `${transitionSpeedMs}ms`,
+          '--tv-exit-speed': `${exitTransitionMs}ms`,
+          '--tv-enter-bar-speed': `${Math.max(220, Math.round(transitionSpeedMs * 0.86))}ms`,
+          '--tv-exit-bar-speed': `${Math.max(180, Math.round(exitTransitionMs * 0.82))}ms`,
+        } as React.CSSProperties)
+      : {};
+
   const containerStyle: React.CSSProperties = {
       backgroundColor: chromaKey ? '#00b140' : 'transparent',
       width: '100%',
@@ -737,6 +801,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       pointerEvents: 'none',
       WebkitFontSmoothing: 'antialiased',
       MozOsxFontSmoothing: 'grayscale',
+      ...transitionCssVars,
   };
 
   const contentWrapperStyle: React.CSSProperties = {
