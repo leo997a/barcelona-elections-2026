@@ -41,8 +41,15 @@ export type WorldCupMatch = {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  statusLabel?: string;
+  minute?: string | number;
   date?: string;
+  group?: string;
+  stage?: string;
+  venue?: string;
   winnerId?: number | string;
+  homePenaltyScore?: number;
+  awayPenaltyScore?: number;
   matchNo?: number;
   routeLabel?: string;
   venueLabel?: string;
@@ -473,8 +480,15 @@ const normalizeMatch = (value: unknown, stage: WorldCupRound['stage'], index: nu
     homeScore: source.homeScore === undefined ? undefined : numberValue(source.homeScore),
     awayScore: source.awayScore === undefined ? undefined : numberValue(source.awayScore),
     status: stringValue(source.status, '') || undefined,
+    statusLabel: stringValue(source.statusLabel, '') || undefined,
+    minute: source.minute as string | number | undefined,
+    group: stringValue(source.group, '') || undefined,
+    stage: stringValue(source.stage, '') || stage,
+    venue: stringValue(source.venue, '') || undefined,
     date: stringValue(source.date, '') || undefined,
     winnerId: source.winnerId as string | number | undefined,
+    homePenaltyScore: source.homePenaltyScore === undefined ? undefined : numberValue(source.homePenaltyScore),
+    awayPenaltyScore: source.awayPenaltyScore === undefined ? undefined : numberValue(source.awayPenaltyScore),
     matchNo: source.matchNo === undefined && source.matchNumber === undefined && source.number === undefined
       ? undefined
       : numberValue(source.matchNo ?? source.matchNumber ?? source.number),

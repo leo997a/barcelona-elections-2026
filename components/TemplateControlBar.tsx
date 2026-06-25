@@ -17,7 +17,7 @@
  * isVisible flips.
  */
 import React from 'react';
-import { Eye, EyeOff, Volume2, VolumeX, RotateCcw, Play, Square } from 'lucide-react';
+import { Eye, Volume2, VolumeX, RotateCcw, Play, Square, RefreshCw, Radio } from 'lucide-react';
 import type { OverlayConfig } from '../types';
 import { syncManager } from '../services/syncManager';
 import {
@@ -55,6 +55,14 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHid
   // withBroadcastControls, so this is always defined for new overlays.
   const soundEnabledField = overlay.fields.find(f => f.id === 'soundEnabled');
   const soundEnabled = soundEnabledField === undefined ? true : soundEnabledField.value !== false;
+  const hasRefreshControls = overlay.fields.some(f =>
+    f.id === 'manualRefreshNonce' ||
+    f.id === 'liveRefreshEnabled' ||
+    f.id === 'dataMode' ||
+    f.id === 'bridgeApiUrl'
+  );
+  const liveRefreshEnabledField = overlay.fields.find(f => f.id === 'liveRefreshEnabled');
+  const liveRefreshEnabled = liveRefreshEnabledField === undefined ? true : liveRefreshEnabledField.value !== false;
 
   const dispatch = (action: TemplateAction, payload?: { fieldId?: string; value?: unknown }) => {
     if (action === 'preview') {
@@ -85,6 +93,14 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHid
 
   const toggleAudio = () => {
     dispatch('update', { fieldId: 'soundEnabled', value: !soundEnabled });
+  };
+
+  const refreshNow = () => {
+    dispatch('refresh', { value: Date.now() });
+  };
+
+  const toggleLiveRefresh = () => {
+    dispatch('update', { fieldId: 'liveRefreshEnabled', value: !liveRefreshEnabled });
   };
 
   const isLive = status === 'live';
@@ -165,6 +181,34 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHid
         <Square className={`${sizeIcon} fill-current`} />
         {!compact && <span>OUT</span>}
       </button>
+
+      {/* Live data controls */}
+      {hasRefreshControls && (
+        <>
+          <button
+            onClick={refreshNow}
+            className={`bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-md flex items-center gap-1 ${sizeBtn}`}
+            title="تحديث بيانات القالب الآن من الجسر / FotMob"
+          >
+            <RefreshCw className={sizeIcon} />
+            {!compact && <span>تحديث</span>}
+          </button>
+          <button
+            onClick={toggleLiveRefresh}
+            className={[
+              'font-bold rounded-md flex items-center gap-1',
+              liveRefreshEnabled
+                ? 'bg-red-600 hover:bg-red-500 text-white'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-400',
+              sizeBtn,
+            ].join(' ')}
+            title={liveRefreshEnabled ? 'التحديث المباشر التلقائي مفعّل' : 'التحديث المباشر متوقف: استخدم زر تحديث'}
+          >
+            <Radio className={sizeIcon} />
+            {!compact && <span>{liveRefreshEnabled ? 'مباشر' : 'يدوي'}</span>}
+          </button>
+        </>
+      )}
 
       {/* Audio toggle */}
       <button

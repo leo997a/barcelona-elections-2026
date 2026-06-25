@@ -42,7 +42,10 @@ test('mondial renderer triggers one transition for each meaningful live update',
   ]);
 
   assert.match(renderer, /const applyLiveData = useCallback/);
-  assert.match(renderer, /if \(versionRef\.current === nextVersion\) \{[\s\S]*?setLiveData\(data\);[\s\S]*?return;/);
+  assert.match(renderer, /if \(versionRef\.current === nextVersion && !forceUpdate\) \{[\s\S]*?setLiveData\(data\);[\s\S]*?return;/);
+  assert.match(renderer, /manualRefreshNonce/);
+  assert.match(renderer, /liveRefreshEnabled/);
+  assert.match(renderer, /fetchFromBridge\(forceUpdate\)/);
   assert.match(renderer, /playedUpdateSequenceRef/);
   assert.match(renderer, /playedUpdateSequenceRef\.current = updateSequence;[\s\S]*?if \(isEditor \|\| !config\.isVisible\) return;/);
   assert.match(renderer, /playSound\?\.\('TRANSITION'\)/);
@@ -64,4 +67,26 @@ test('world cup API and match bridge expose the fallback contract', async () => 
   assert.match(bridgeSource, /if path == "\/api\/world-cup":/);
   assert.match(bridgeSource, /fetch_world_cup_page_props/);
   assert.match(bridgeScript, /'world-cup' \{ Invoke-ReoGet '\/api\/world-cup' \}/);
+});
+
+test('template controls expose manual refresh and live mode toggles', async () => {
+  const [controlBar, runtime, syncManager, matchCards] = await Promise.all([
+    readSource('../components/TemplateControlBar.tsx'),
+    readSource('../utils/templateRuntime.ts'),
+    readSource('../services/syncManager.ts'),
+    readSource('../components/renderers/mondial/MondialMatchCards.tsx'),
+  ]);
+
+  assert.match(controlBar, /dispatch\('refresh'/);
+  assert.match(controlBar, /تحديث/);
+  assert.match(controlBar, /مباشر/);
+  assert.match(controlBar, /liveRefreshEnabled/);
+  assert.match(runtime, /\| 'refresh'/);
+  assert.match(runtime, /increment_field[\s\S]*manualRefreshNonce/);
+  assert.match(syncManager, /liveRefreshEnabled/);
+  assert.match(syncManager, /manualRefreshNonce/);
+  assert.match(matchCards, /mondial-match-live-pill/);
+  assert.match(matchCards, /mondial-story-live-pill/);
+  assert.match(matchCards, /مباشر/);
+  assert.match(matchCards, /liveMinuteText/);
 });

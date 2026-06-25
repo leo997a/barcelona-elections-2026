@@ -55,6 +55,7 @@ export type WorldCupMatch = {
   winnerId?: string | number;
   status: 'scheduled' | 'live' | 'finished' | 'cancelled';
   statusLabel?: string;
+  minute?: string;
   date?: string;
   venue?: string;
   pageUrl?: string;
@@ -324,6 +325,54 @@ const getMatchStatus = (statusValue: unknown): WorldCupMatch['status'] => {
   return 'scheduled';
 };
 
+const cleanMinute = (value: unknown): string | undefined => {
+  const raw = typeof value === 'number'
+    ? String(value)
+    : typeof value === 'string'
+      ? value
+      : '';
+  const normalized = raw.replace(/[’′]/g, "'").trim();
+  const match = normalized.match(/(\d{1,3}(?:\+\d{1,2})?)/);
+  return match?.[1];
+};
+
+const extractLiveMinute = (statusValue: unknown, rawValue: unknown = {}): string | undefined => {
+  const status = asRecord(statusValue);
+  const raw = asRecord(rawValue);
+  const reason = asRecord(status.reason);
+  const liveTime = asRecord(status.liveTime);
+  const time = asRecord(status.time);
+  const candidates = [
+    status.liveTime,
+    liveTime.short,
+    liveTime.long,
+    liveTime.minute,
+    status.minute,
+    status.min,
+    status.matchTime,
+    status.elapsed,
+    status.liveMinute,
+    time.short,
+    time.minute,
+    reason.short,
+    reason.long,
+    raw.minute,
+    raw.liveTime,
+    raw.liveMinute,
+  ];
+  for (const candidate of candidates) {
+    const minute = cleanMinute(candidate);
+    if (minute) return minute;
+  }
+  return undefined;
+};
+
+const getStatusLabel = (statusValue: unknown, status: WorldCupMatch['status'], minute?: string): string | undefined => {
+  const reasonShort = asString(asRecord(asRecord(statusValue).reason).short);
+  if (status === 'live') return minute ? `${minute}'` : reasonShort || 'LIVE';
+  return reasonShort || undefined;
+};
+
 const getWinnerId = (home: Record<string, unknown>, away: Record<string, unknown>) => {
   if (asBoolean(home.winner)) return home.id as string | number;
   if (asBoolean(away.winner)) return away.id as string | number;
@@ -340,6 +389,7 @@ const normalizeMatchup = (rawValue: unknown, stage: WorldCupStage, index = 0): W
   const isAwayTbd = asBoolean(matchup.tbdTeam2);
   const status = getMatchStatus(match.status);
   const started = status === 'live' || status === 'finished';
+  const minute = extractLiveMinute(match.status, match);
   const venue = asRecord(match.venueInfo);
   const routeMeta = OFFICIAL_KNOCKOUT_ROUTES[stage]?.[index];
   const result: WorldCupMatch = {
@@ -348,6 +398,8 @@ const normalizeMatchup = (rawValue: unknown, stage: WorldCupStage, index = 0): W
     home: isHomeTbd ? null : makeTeam(homeRaw),
     away: isAwayTbd ? null : makeTeam(awayRaw),
     status,
+    statusLabel: getStatusLabel(match.status, status, minute),
+    minute,
     date: asString(asRecord(match.status).utcTime) || asString(match.matchDate) || undefined,
     pageUrl: asString(match.pageUrl) || undefined,
     venue: asString(venue.name) || undefined,
@@ -373,13 +425,15 @@ const normalizeFixture = (rawValue: unknown): WorldCupMatch | null => {
   const awayRaw = asRecord(raw.away);
   const statusRaw = asRecord(raw.status);
   const status = getMatchStatus(statusRaw);
+  const minute = extractLiveMinute(statusRaw, raw);
   const result: WorldCupMatch = {
     id: raw.id as string | number,
     group: asString(raw.group) || undefined,
     home: makeTeam(homeRaw),
     away: makeTeam(awayRaw),
     status,
-    statusLabel: asString(asRecord(statusRaw.reason).short) || undefined,
+    statusLabel: getStatusLabel(statusRaw, status, minute),
+    minute,
     date: asString(statusRaw.utcTime) || undefined,
     pageUrl: asString(raw.pageUrl) || undefined,
   };

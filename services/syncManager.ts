@@ -555,7 +555,7 @@ class SyncManager {
             // fields so toggling Mute (or volume / sound style) works on
             // overlays saved before withBroadcastControls injected those
             // fields. Limited whitelist to avoid arbitrary field injection.
-            const KNOWN_FIELDS: Record<string, { label: string; type: 'boolean' | 'range' | 'select' | 'text' }> = {
+            const KNOWN_FIELDS: Record<string, { label: string; type: 'boolean' | 'range' | 'select' | 'text' | 'hidden' }> = {
               soundEnabled:  { label: 'تفعيل الصوت', type: 'boolean' },
               soundVolume:   { label: 'مستوى الصوت', type: 'range' },
               soundInStyle:  { label: 'مؤثر الظهور', type: 'select' },
@@ -573,6 +573,8 @@ class SyncManager {
               transitionIntensity: { label: 'قوة الانتقال', type: 'range' },
               broadcastMotion: { label: 'تفعيل حركة البث', type: 'boolean' },
             };
+            KNOWN_FIELDS.liveRefreshEnabled = { label: 'تفعيل التحديث المباشر', type: 'boolean' };
+            KNOWN_FIELDS.manualRefreshNonce = { label: 'عداد التحديث اليدوي', type: 'hidden' };
             const meta = KNOWN_FIELDS[command.fieldId];
             if (meta) {
               const newField = {

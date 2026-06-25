@@ -44,6 +44,8 @@ const mondialMatchDataFields: OverlayField[] = [
   { id: 'bridgeApiUrl', label: 'رابط API جسر البيانات', type: 'text', value: '/api/reo-match?action=match' },
   { id: 'manualJson', label: 'JSON بيانات المباراة (يدوي)', type: 'textarea', value: '' },
   { id: 'pollIntervalSec', label: 'تحديث من الجسر كل (ثانية)', type: 'range', value: 30, min: 10, max: 120, step: 5 },
+  { id: 'liveRefreshEnabled', label: 'تحديث مباشر تلقائي', type: 'boolean', value: true },
+  { id: 'manualRefreshNonce', label: 'عداد التحديث اليدوي', type: 'hidden', value: 0 },
   // بيانات يدوية (تُستخدم في DEMO + PASTE_JSON كـ fallback)
   { id: 'competition', label: 'اسم البطولة', type: 'text', value: 'FIFA World Cup 2026 · Group Stage' },
   { id: 'homeTeam', label: 'الفريق المضيف', type: 'text', value: 'العراق' },
@@ -410,6 +412,8 @@ const mondialWorldCupDataFields: OverlayField[] = [
   { id: 'bridgeApiUrl', label: 'World Cup API URL', type: 'text', value: '/api/reo-match?action=world-cup' },
   { id: 'manualJson', label: 'Manual World Cup JSON', type: 'textarea', value: '' },
   { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 15, min: 10, max: 120, step: 5 },
+  { id: 'liveRefreshEnabled', label: 'Live auto refresh', type: 'boolean', value: true },
+  { id: 'manualRefreshNonce', label: 'Manual refresh counter', type: 'hidden', value: 0 },
 ];
 
 const mondialMatchSelectionFields: OverlayField[] = [

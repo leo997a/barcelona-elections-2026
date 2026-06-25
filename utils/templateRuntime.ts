@@ -197,6 +197,7 @@ export type TemplateAction =
   | 'show'
   | 'hide'
   | 'toggle'
+  | 'refresh'
   | 'update'
   | 'reset';
 
@@ -258,6 +259,18 @@ export function buildAction(
       return { action: 'set_visible', targetId: overlay.id, value: false };
     case 'toggle':
       return { action: 'toggle_visible', targetId: overlay.id };
+    case 'refresh': {
+      const hasRefreshField = (overlay.fields || []).some(field => field.id === 'manualRefreshNonce');
+      if (hasRefreshField) {
+        return { action: 'increment_field', targetId: overlay.id, fieldId: 'manualRefreshNonce', amount: 1 };
+      }
+      return {
+        action: 'update_field',
+        targetId: overlay.id,
+        fieldId: 'manualRefreshNonce',
+        value: payload?.value ?? Date.now(),
+      };
+    }
     case 'update':
       if (!payload?.fieldId) return null;
       return {

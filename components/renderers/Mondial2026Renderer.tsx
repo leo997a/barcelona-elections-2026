@@ -130,7 +130,9 @@ function useMondialData(
   dataMode: string,
   bridgeApiUrl: string,
   manualJson: string,
-  pollSec: number
+  pollSec: number,
+  liveRefreshEnabled: boolean,
+  manualRefreshNonce: number
 ) {
   const [liveData, setLiveData] = useState<Record<string, unknown> | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
@@ -139,10 +141,11 @@ function useMondialData(
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const versionRef = useRef<string | null>(null);
+  const refreshNonceRef = useRef(manualRefreshNonce);
 
-  const applyLiveData = useCallback((data: Record<string, unknown>) => {
+  const applyLiveData = useCallback((data: Record<string, unknown>, forceUpdate = false) => {
     const nextVersion = getWorldCupDataVersion(data);
-    if (versionRef.current === nextVersion) {
+    if (versionRef.current === nextVersion && !forceUpdate) {
       setLiveData(data);
       return;
     }
@@ -151,10 +154,10 @@ function useMondialData(
     versionRef.current = nextVersion;
     setLiveData(data);
     setDataVersion(nextVersion);
-    if (hadPreviousVersion) setUpdateSequence(sequence => sequence + 1);
+    if (hadPreviousVersion || forceUpdate) setUpdateSequence(sequence => sequence + 1);
   }, []);
 
-  const fetchFromBridge = useCallback(async () => {
+  const fetchFromBridge = useCallback(async (forceUpdate = false) => {
     if (!bridgeApiUrl || dataMode === 'DEMO' || dataMode === 'PASTE_JSON') return;
     if (!versionRef.current) setBridgeStatus('connecting');
     if (abortRef.current) abortRef.current.abort();
@@ -166,7 +169,7 @@ function useMondialData(
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as Record<string, unknown>;
-      applyLiveData(data);
+      applyLiveData(data, forceUpdate);
       setBridgeStatus('live');
     } catch (err: unknown) {
       if ((err as { name?: string }).name !== 'AbortError') setBridgeStatus('error');
@@ -176,8 +179,10 @@ function useMondialData(
   useEffect(() => {
     if (dataMode === 'PASTE_JSON') {
       const parsed = safeParse<Record<string, unknown>>(manualJson, {});
+      const forceUpdate = manualRefreshNonce !== refreshNonceRef.current;
+      refreshNonceRef.current = manualRefreshNonce;
       if (Object.keys(parsed).length) {
-        applyLiveData(parsed);
+        applyLiveData(parsed, forceUpdate);
       } else {
         versionRef.current = null;
         setLiveData(null);
@@ -195,14 +200,18 @@ function useMondialData(
       setBridgeStatus('idle');
       return;
     }
-    void fetchFromBridge();
+    const forceUpdate = manualRefreshNonce !== refreshNonceRef.current;
+    refreshNonceRef.current = manualRefreshNonce;
+    void fetchFromBridge(forceUpdate);
     if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => { void fetchFromBridge(); }, pollSec * 1000);
+    if (liveRefreshEnabled) {
+      intervalRef.current = setInterval(() => { void fetchFromBridge(false); }, pollSec * 1000);
+    }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [applyLiveData, dataMode, manualJson, pollSec, fetchFromBridge]);
+  }, [applyLiveData, dataMode, manualJson, pollSec, fetchFromBridge, liveRefreshEnabled, manualRefreshNonce]);
 
   return { liveData, bridgeStatus, dataVersion, updateSequence };
 }
@@ -228,12 +237,16 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   const pollSec = Number.isFinite(requestedPollSec)
     ? Math.max(10, Math.min(300, requestedPollSec))
     : 30;
+  const liveRefreshEnabled = getField('liveRefreshEnabled') !== false;
+  const manualRefreshNonce = Number(getField('manualRefreshNonce') || 0);
 
   const { liveData, bridgeStatus, dataVersion, updateSequence } = useMondialData(
     dataMode,
     bridgeApiUrl,
     manualJson,
-    pollSec
+    pollSec,
+    liveRefreshEnabled,
+    Number.isFinite(manualRefreshNonce) ? manualRefreshNonce : 0
   );
   const playedUpdateSequenceRef = useRef(0);
 

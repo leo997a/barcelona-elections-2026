@@ -17,6 +17,9 @@ type MatchLike = WorldCupMatch & {
   stage?: string;
   venue?: string;
   statusLabel?: string;
+  minute?: string | number;
+  liveMinute?: string | number;
+  currentMinute?: string | number;
   homePenaltyScore?: number;
   awayPenaltyScore?: number;
 };
@@ -38,9 +41,13 @@ const MATCH_CSS = `
 .mondial-match-score { width: 270px; min-height: 142px; display: grid; grid-template-columns: 1fr 36px 1fr; align-items: center; justify-items: center; border: 7px solid #050505; color: #050505; background: var(--mondial-paper); font-size: 86px; font-weight: 950; line-height: .9; box-shadow: 10px 10px 0 var(--mondial-a1), 18px 17px 0 var(--mondial-a3); }
 .mondial-match-score small { font-size: 46px; }
 .mondial-match-label { padding: 8px 15px; border-radius: 999px; background: #050505; color: var(--mondial-a3); font-size: 15px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.mondial-match-live-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border: 4px solid #050505; border-radius: 999px; color: #fff; background: #e60023; box-shadow: 6px 6px 0 var(--mondial-a2); font-size: 15px; font-weight: 950; line-height: 1; }
+.mondial-match-live-pill i, .mondial-story-live-pill i { width: 8px; height: 8px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,.9); animation: mondialLivePulse 1.08s ease-in-out infinite; }
+.mondial-match-live-pill b, .mondial-story-live-pill b { font: inherit; font-variant-numeric: tabular-nums; }
 .mondial-match-meta { height: 100%; min-width: 0; display: flex; align-items: center; justify-content: space-between; color: var(--mondial-muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
 .mondial-match-rail { width: 48%; height: 8px; display: flex; direction: ltr; }
 .mondial-match-rail span { flex: 1; }
+@keyframes mondialLivePulse { 0%, 100% { transform: scale(.76); box-shadow: 0 0 0 0 rgba(255,255,255,.78); } 50% { transform: scale(1.12); box-shadow: 0 0 0 7px rgba(255,255,255,0); } }
 .mondial-style-stadium .mondial-side-team { border-color: #050505; background: var(--team-color); }
 .mondial-style-stadium .mondial-team-name { color: #050505; background: var(--mondial-paper); padding: 7px 18px; border-radius: 999px; }
 .mondial-style-stadium .mondial-match-title { font-family: Impact, 'Arial Narrow', sans-serif; }
@@ -56,7 +63,9 @@ const MATCH_CSS = `
 .mondial-story-card::before { content: ''; position: absolute; inset: 0; opacity: .84; background: radial-gradient(circle at 18% 12%, var(--mondial-a3), transparent 28%), radial-gradient(circle at 90% 18%, var(--mondial-a4), transparent 30%), linear-gradient(155deg, var(--mondial-a1) 0 25%, transparent 25% 58%, var(--mondial-a2) 58% 75%, transparent 75% 100%); }
 .mondial-story-content { position: relative; z-index: 1; height: 100%; padding: 24px; display: grid; grid-template-rows: auto 1fr auto; color: var(--mondial-paper); }
 .mondial-story-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mondial-story-status { display: grid; justify-items: end; gap: 8px; }
 .mondial-story-date { padding: 8px 13px; border-radius: 999px; background: var(--mondial-a3); color: #050505; font-size: 13px; font-weight: 950; }
+.mondial-story-live-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 3px solid #050505; border-radius: 999px; color: #fff; background: #e60023; box-shadow: 5px 5px 0 var(--mondial-a2); font-size: 12px; font-weight: 950; line-height: 1; }
 .mondial-story-main { align-self: center; display: grid; gap: 14px; padding-bottom: 46px; }
 .mondial-story-team { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; direction: ltr; }
 .mondial-story-team .mondial-flag { flex: 0 0 auto; width: 52px; height: 36px; border-width: 2px; }
@@ -120,6 +129,9 @@ const normalizeFixture = (value: unknown, index: number): MatchLike | null => {
     winnerId: source.winnerId as string | number | undefined,
     status: asString(source.status, 'scheduled') as MatchLike['status'],
     statusLabel: asString(source.statusLabel, ''),
+    minute: source.minute as string | number | undefined,
+    liveMinute: source.liveMinute as string | number | undefined,
+    currentMinute: source.currentMinute as string | number | undefined,
     date: asString(source.date, ''),
     group: asString(source.group, ''),
     stage: asString(source.stage, ''),
@@ -186,6 +198,29 @@ const dateLabel = (match: MatchLike): string => {
   }).format(date).toUpperCase();
 };
 
+const minuteText = (value: unknown): string => {
+  const raw = typeof value === 'number'
+    ? String(value)
+    : typeof value === 'string'
+      ? value.replace(/[’′]/g, "'").trim()
+      : '';
+  const match = raw.match(/(\d{1,3}(?:\+\d{1,2})?)/);
+  return match?.[1] || '';
+};
+
+const liveMinuteText = (match: MatchLike): string =>
+  minuteText(match.minute ?? match.liveMinute ?? match.currentMinute ?? match.statusLabel);
+
+const isLiveFixture = (match: MatchLike): boolean => {
+  const status = `${match.status || ''} ${match.statusLabel || ''}`.toLowerCase();
+  return status.includes('live') || status.includes('مباشر') || match.status === 'live' || Boolean(match.minute || match.liveMinute || match.currentMinute);
+};
+
+const liveBadgeText = (match: MatchLike): string => {
+  const minute = liveMinuteText(match);
+  return minute ? `${minute}'` : '';
+};
+
 const pickMatch = (fixtures: MatchLike[], mode: string, indexValue: unknown): MatchLike => {
   if (mode === 'latest') {
     return [...fixtures].reverse().find(match => match.status === 'finished' || match.homeScore !== undefined) || fixtures[0] || DEMO_MATCHES[1];
@@ -228,7 +263,13 @@ const MatchShell: React.FC<{
   const match = pickMatch(fixtures, pickMode, getField('featuredMatchIndex'));
   const title = asString(getField(mode === 'full-time' ? 'fullTimeTitle' : 'matchCardTitle'), mode === 'full-time' ? 'FULL-TIME' : 'MATCH DAY');
   const subtitle = asString(getField('matchCardSubtitle'), match.group || match.stage || 'WORLD CUP 2026');
-  const status = mode === 'full-time' ? 'FULL-TIME' : asString(match.statusLabel || match.status, 'NEXT MATCH').toUpperCase();
+  const isLive = isLiveFixture(match);
+  const minute = liveBadgeText(match);
+  const status = mode === 'full-time'
+    ? 'FULL-TIME'
+    : isLive
+      ? `مباشر${minute ? ` ${minute}` : ''}`
+      : asString(match.statusLabel || match.status, 'NEXT MATCH').toUpperCase();
 
   return (
     <section
@@ -249,6 +290,13 @@ const MatchShell: React.FC<{
         <TeamPanel match={match} side="home" />
         <div className="mondial-match-scorehub">
           <div className="mondial-match-date">{dateLabel(match)}</div>
+          {isLive && (
+            <div className="mondial-match-live-pill" aria-label={`Live match${minute ? ` ${minute}` : ''}`}>
+              <i aria-hidden="true" />
+              <span>مباشر</span>
+              {minute ? <b>{minute}</b> : null}
+            </div>
+          )}
           {mode === 'full-time' ? (
             <div className="mondial-match-score" aria-label="score">
               <span>{scoreText(match.homeScore)}</span>
@@ -288,6 +336,8 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
   const match = pickMatch(fixtures, String(getField('matchPickMode') || 'next'), getField('featuredMatchIndex'));
   const title = asString(getField('storyTitle'), match.status === 'finished' ? 'FULL-TIME' : 'MATCH DAY');
   const scoreMode = match.homeScore !== undefined || match.awayScore !== undefined;
+  const isLive = isLiveFixture(match);
+  const minute = liveBadgeText(match);
 
   return (
     <section
@@ -300,7 +350,16 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
         <div className="mondial-story-content">
           <header className="mondial-story-head">
             <ReoShowLockup compact />
-            <span className="mondial-story-date">{dateLabel(match)}</span>
+            <div className="mondial-story-status">
+              <span className="mondial-story-date">{dateLabel(match)}</span>
+              {isLive && (
+                <span className="mondial-story-live-pill">
+                  <i aria-hidden="true" />
+                  <span>مباشر</span>
+                  {minute ? <b>{minute}</b> : null}
+                </span>
+              )}
+            </div>
           </header>
           <main className="mondial-story-main">
             <div className="mondial-story-team">

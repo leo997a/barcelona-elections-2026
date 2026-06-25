@@ -67,6 +67,19 @@ const payload = {
       home: { id: '1', name: 'Mexico', shortName: 'MEX' },
       away: { id: '2', name: 'Scotland', shortName: 'SCO' },
       status: { utcTime: '2026-06-11T19:00:00Z', started: true, finished: true, scoreStr: '3 - 1' },
+    }, {
+      id: '101',
+      group: 'B',
+      home: { id: '3', name: 'Canada', shortName: 'CAN' },
+      away: { id: '4', name: 'Bosnia and Herzegovina', shortName: 'BIH' },
+      status: {
+        utcTime: '2026-06-12T19:00:00Z',
+        started: true,
+        finished: false,
+        scoreStr: '1 - 0',
+        liveTime: { short: "67'" },
+        reason: { short: '2H' },
+      },
     }],
   },
 };
@@ -114,4 +127,15 @@ test('normalizes played fixture scores without inventing scheduled scores', () =
   assert.equal(snapshot.fixtures[0].homeScore, 3);
   assert.equal(snapshot.fixtures[0].awayScore, 1);
   assert.equal(snapshot.fixtures[0].status, 'finished');
+});
+
+test('keeps live fixture minute for template live badges', () => {
+  const snapshot = normalizeFotMobWorldCup(payload);
+  const live = snapshot.fixtures.find((fixture) => fixture.id === '101');
+  assert.ok(live);
+  assert.equal(live.status, 'live');
+  assert.equal(live.homeScore, 1);
+  assert.equal(live.awayScore, 0);
+  assert.equal(live.minute, '67');
+  assert.equal(live.statusLabel, "67'");
 });
