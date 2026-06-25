@@ -32,6 +32,7 @@ import PlayerIntelV2EditorFrame from '../components/player-intel-v2/PlayerIntelV
 import PlayerIntelV2DockResizer from '../components/player-intel-v2/PlayerIntelV2DockResizer';
 import TemplateControlBar from '../components/TemplateControlBar';
 import AudioSettingsPanel from '../components/AudioSettingsPanel';
+import MondialMatchPicker, { hasMondialMatchPickerFields } from '../components/editor/MondialMatchPicker';
 import { isManagedAudioField } from '../utils/templateAudioGate';
 import DiagnosticStrip from '../components/DiagnosticStrip';
 import {
@@ -4005,8 +4006,12 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                      )}
                    </section>
                  )}
+                 {hasMondialMatchPickerFields(draftOverlay.fields) && (
+                   <MondialMatchPicker fields={draftOverlay.fields} onChange={handleDraftFieldChanges} />
+                 )}
                  {draftOverlay.fields.map((field) => {
                   if (field.type === 'hidden' || field.id === 'currentPage') return null;
+                  if (hasMondialMatchPickerFields(draftOverlay.fields) && field.id === 'selectedMatchId') return null;
                   if (isProbabilityShiftTemplate && /^deal[1-6](OldPct|NewPct)$/.test(field.id)) return null;
 
                   // Separate Font Size controls for Typography section

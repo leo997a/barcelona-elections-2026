@@ -26,6 +26,10 @@ import {
   selectedMatchToFields,
 } from '../../utils/mondialLiveSelectors';
 import {
+  matchDetailsToFields,
+  type MondialMatchDetails,
+} from '../../utils/mondialMatchDetails';
+import {
   getMondialTheme,
   MondialTheme,
   MondialHeader,
@@ -221,6 +225,52 @@ function useMondialData(
   return { liveData, bridgeStatus, dataVersion, updateSequence };
 }
 
+function useMondialMatchDetails(
+  matchId: string,
+  dataMode: string,
+  pollSec: number,
+  liveRefreshEnabled: boolean,
+  manualRefreshNonce: number
+) {
+  const [matchDetails, setMatchDetails] = useState<MondialMatchDetails | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchDetails = useCallback(async () => {
+    if (!/^\d{4,}$/.test(matchId) || dataMode === 'DEMO' || dataMode === 'PASTE_JSON') {
+      setMatchDetails(null);
+      return;
+    }
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    try {
+      const res = await fetch(`/api/reo-match?action=match-details&matchId=${encodeURIComponent(matchId)}&_reo=${Date.now()}`, {
+        signal: abortRef.current.signal,
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as MondialMatchDetails;
+      setMatchDetails(data);
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name !== 'AbortError') setMatchDetails(null);
+    }
+  }, [dataMode, matchId]);
+
+  useEffect(() => {
+    void fetchDetails();
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (liveRefreshEnabled && /^\d{4,}$/.test(matchId) && dataMode !== 'DEMO' && dataMode !== 'PASTE_JSON') {
+      intervalRef.current = setInterval(() => { void fetchDetails(); }, pollSec * 1000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [dataMode, fetchDetails, liveRefreshEnabled, matchId, manualRefreshNonce, pollSec]);
+
+  return matchDetails;
+}
+
 // ─── المحرك الرئيسي ──────────────────────────────────────────────────────────
 
 export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
@@ -268,8 +318,20 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
     selectedMatch,
     String(liveData?.competition || getField('competition') || 'FIFA World Cup 2026')
   );
+  const matchDetails = useMondialMatchDetails(
+    selectedMatch ? String(selectedMatch.id) : '',
+    dataMode,
+    pollSec,
+    liveRefreshEnabled,
+    Number.isFinite(manualRefreshNonce) ? manualRefreshNonce : 0
+  );
+  const matchDetailFields = matchDetailsToFields(matchDetails);
   const getMatchField = (fieldId: string): unknown =>
-    selectedMatchFields[fieldId] !== undefined ? selectedMatchFields[fieldId] : getField(fieldId);
+    matchDetailFields[fieldId] !== undefined
+      ? matchDetailFields[fieldId]
+      : selectedMatchFields[fieldId] !== undefined
+        ? selectedMatchFields[fieldId]
+        : getField(fieldId);
 
   useEffect(() => {
     if (!updateSequence) {
@@ -284,6 +346,8 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
 
   // دمج: البيانات الحية تتفوق على الحقول اليدوية عند توفرها
   const resolveField = (fieldId: string, liveKey?: string): unknown => {
+    if (matchDetailFields[fieldId] !== undefined) return matchDetailFields[fieldId];
+    if (liveKey && matchDetailFields[liveKey] !== undefined) return matchDetailFields[liveKey];
     if (liveKey && selectedMatchFields[liveKey] !== undefined) return selectedMatchFields[liveKey];
     if (selectedMatchFields[fieldId] !== undefined) return selectedMatchFields[fieldId];
     if (liveData && liveKey && liveData[liveKey] !== undefined) return liveData[liveKey];
@@ -311,13 +375,13 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
         >
           {/* ── Variants ─────────────────────────────────────────── */}
           {variant === 'scoreboard' && (
-            <ReoObsScoreboard t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} />
+            <ReoObsScoreboard t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'scorebug' && (
-            <ReoObsScorebug t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} />
+            <ReoObsScorebug t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'match_stats' && (
-            <ReoObsMatchStats t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsMatchStats t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'group_table' && (
             <ReoObsGroupTable t={t} getField={getField} liveData={liveData} />
@@ -353,31 +417,31 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
             <ReoObsTicker t={t} getField={getField} />
           )}
           {variant === 'analysis_board' && (
-            <ReoObsAnalysis t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsAnalysis t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'prediction' && (
-            <ReoObsPrediction t={t} getField={getMatchField} liveData={liveData} />
+            <ReoObsPrediction t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'var_alert' && (
             <ReoObsVarAlert t={t} getField={getField} />
           )}
           {variant === 'match_report' && (
-            <ReoObsMatchReport t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsMatchReport t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'lower_third' && (
             <ReoObsLowerThird t={t} getField={getField} />
           )}
           {variant === 'match_preview' && (
-            <ReoObsMatchPreview t={t} getField={getMatchField} liveData={liveData} />
+            <ReoObsMatchPreview t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'lineup' && (
-            <ReoObsLineup t={t} getField={getMatchField} liveData={liveData} />
+            <ReoObsLineup t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'match_result' && (
-            <ReoObsMatchResult t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsMatchResult t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
           )}
           {variant === 'player_spotlight' && (
-            <ReoObsPlayerSpotlight t={t} getField={getField} />
+            <ReoObsPlayerSpotlight t={t} getField={getMatchField} matchDetails={matchDetails} />
           )}
         </div>
       </div>

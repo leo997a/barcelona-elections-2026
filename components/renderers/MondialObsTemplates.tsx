@@ -1,6 +1,12 @@
 import React from 'react';
 import { scorersFromWorldCupData } from '../../utils/mondialLiveSelectors';
 import {
+  findDetailStat,
+  lineupsToPlayersJson,
+  statValueNumber,
+  type MondialMatchDetails,
+} from '../../utils/mondialMatchDetails';
+import {
   clamp,
   MondialFlag,
   MondialTheme,
@@ -12,6 +18,7 @@ export interface ReoObsVariantProps {
   getField: (id: string) => unknown;
   resolveField?: (fieldId: string, liveKey?: string) => unknown;
   liveData?: Record<string, unknown> | null;
+  matchDetails?: MondialMatchDetails | null;
   bridgeStatus?: 'idle' | 'connecting' | 'live' | 'error';
 }
 
@@ -134,6 +141,16 @@ const resolvedNum = (
   const value = Number(resolveField ? resolveField(id, liveKey) : getField(id));
   return Number.isFinite(value) ? value : fallback;
 };
+
+const detailStatNumber = (value: number | string): number => {
+  const parsed = statValueNumber(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const detailStatText = (value: number | string): string =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? String(Number.isInteger(value) ? value : Number(value.toFixed(1)))
+    : String(value);
 
 const codeFromTeam = (value: string, fallback: string): string => {
   const key = value.trim().toLowerCase();
@@ -686,11 +703,24 @@ export const ReoObsGroupTable: React.FC<ReoObsVariantProps> = ({ getField, liveD
   );
 };
 
-export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resolveField }) => {
+export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resolveField, matchDetails }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
   const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
   const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'AR'));
+  const liveRows = [
+    { label: 'الاستحواذ', keys: ['BallPossesion', 'Ball possession'] },
+    { label: 'الأهداف المتوقعة', keys: ['expected_goals', 'Expected goals (xG)'] },
+    { label: 'التسديدات', keys: ['total_shots', 'Total shots'] },
+    { label: 'على المرمى', keys: ['ShotsOnTarget', 'Shots on target'] },
+    { label: 'الركنيات', keys: ['corners', 'Corners'] },
+    { label: 'البطاقات الصفراء', keys: ['yellow_cards', 'Yellow cards'] },
+  ].map(({ label, keys }) => {
+    const row = findDetailStat(matchDetails, keys);
+    return row
+      ? [label, detailStatNumber(row.home), detailStatNumber(row.away)] as [string, number, number]
+      : null;
+  }).filter((row): row is [string, number, number] => Boolean(row));
   const rows: Array<[string, number, number]> = [
     ['الاستحواذ', num(getField, 'statPossessionHome', 48), num(getField, 'statPossessionAway', 52)],
     ['التسديدات', num(getField, 'statShotsHome', 8), num(getField, 'statShotsAway', 14)],
@@ -714,7 +744,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resol
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
               </div>
               <div className="p-7 space-y-3">
-                {rows.map(([label, homeValue, awayValue], index) => {
+                {(liveRows.length >= 3 ? liveRows : rows).map(([label, homeValue, awayValue], index) => {
                   const total = Math.max(1, homeValue + awayValue);
                   return (
                     <div key={label} style={{ animation: `wcRowIn .5s ${.28 + index * .08}s cubic-bezier(.16,1,.3,1) both` }}>
@@ -737,11 +767,17 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resol
   );
 };
 
-export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ getField }) => {
+export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ getField, matchDetails }) => {
+  const lineupSide = text(getField, 'lineupSide', 'home') === 'away' ? 'away' : 'home';
+  const liveLineup = matchDetails?.lineups?.[lineupSide];
+  const livePlayers = lineupsToPlayersJson(matchDetails, lineupSide) as LineupPlayer[];
   const parsed = safeParse<LineupPlayer[]>(String(getField('playersJson') || '[]'), DEFAULT_PLAYERS);
-  const players = parsed.length ? parsed : DEFAULT_PLAYERS;
-  const code = text(getField, 'code', 'IQ');
+  const players = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
+  const code = liveLineup?.teamCode || text(getField, 'code', 'IQ');
   const team = text(getField, 'teamName', 'منتخب العراق');
+  const displayTeam = liveLineup?.teamName || team;
+  const formation = liveLineup?.formation || text(getField, 'formation', '4-3-3');
+  const coach = liveLineup?.coach || text(getField, 'coach', '');
   return (
     <KineticStage>
       <div className="w-full h-full p-8 flex items-center justify-center">
@@ -750,8 +786,11 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ getField }) => {
           <div className="absolute inset-0 rounded-[34px]" style={{ background: WC.green, transform: 'translate(18px,10px)' }} />
           <div className="relative w-full h-full bg-white text-black border-[6px] border-black rounded-[34px] overflow-hidden">
             <div className="h-[76px] bg-black text-white flex items-center justify-between px-8">
-              <div className="flex items-center gap-4"><MondialFlag codeOrName={code} size={44} /><span className="text-[25px] font-black">{team}</span></div>
-              <Pill color={WC.yellow}>{text(getField, 'formation', '4-3-3')}</Pill>
+              <div className="flex items-center gap-4"><MondialFlag codeOrName={code} size={44} /><span className="text-[25px] font-black">{displayTeam}</span></div>
+              <div className="flex items-center gap-3">
+                {coach && <span className="max-w-[310px] truncate text-[12px] font-black text-white/70">{coach}</span>}
+                <Pill color={WC.yellow}>{formation}</Pill>
+              </div>
             </div>
             <div className="grid grid-cols-[300px_1fr] h-[calc(100%_-_76px)]">
               <div className="p-5 border-r-[5px] border-black overflow-hidden">
@@ -792,8 +831,17 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ getField }) => {
   );
 };
 
-export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField }) => {
-  const image = text(getField, 'playerImage', '');
+export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField, matchDetails }) => {
+  const livePlayer = matchDetails?.playerOfTheMatch;
+  const image = livePlayer?.image || text(getField, 'playerImage', '');
+  const playerCode = livePlayer?.team === 'away'
+    ? matchDetails?.match.away.countryCode || matchDetails?.match.away.code
+    : matchDetails?.match.home.countryCode || matchDetails?.match.home.code;
+  const playerName = livePlayer?.name || text(getField, 'name', 'أيمن حسين');
+  const playerPosition = livePlayer?.teamName || text(getField, 'position', 'مهاجم منتخب العراق');
+  const playerRating = livePlayer?.rating !== undefined
+    ? detailStatText(livePlayer.rating)
+    : text(getField, 'rating', '9.1');
   const stats = safeParse<Array<{ label: string; value: string }>>(String(getField('statsJson') || '[]'), []);
   const shownStats = stats.length ? stats.slice(0, 4) : [
     { label: 'الأهداف', value: '2' },
@@ -807,9 +855,9 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField }
         <div className="flex flex-col justify-between">
           <KineticHeader title="نجم المباراة" tag="PLAYER SPOTLIGHT" />
           <div>
-            <TeamCode value={text(getField, 'code', 'IQ')} color={WC.green} delay={.25} />
-            <div className="text-[60px] font-black leading-[1.08] mt-5">{text(getField, 'name', 'أيمن حسين')}</div>
-            <div className="text-[20px] font-black mt-3 text-[#eeff00]">{text(getField, 'position', 'مهاجم منتخب العراق')}</div>
+            <TeamCode value={playerCode || text(getField, 'code', 'IQ')} color={WC.green} delay={.25} />
+            <div className="text-[60px] font-black leading-[1.08] mt-5">{playerName}</div>
+            <div className="text-[20px] font-black mt-3 text-[#eeff00]">{playerPosition}</div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             {shownStats.map((stat, index) => (
@@ -820,10 +868,10 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField }
           </div>
         </div>
         <div className="relative flex items-end justify-center">
-          {!image && <FlagStack code={text(getField, 'code', 'IQ')} size={260} delay={.25} />}
+          {!image && <FlagStack code={playerCode || text(getField, 'code', 'IQ')} size={260} delay={.25} />}
           <div className="absolute top-7 right-5 bg-white text-black border-[6px] border-black rounded-[32px] px-8 py-5" style={{ boxShadow: `14px 12px 0 ${WC.red}`, animation: 'wcScorePop .7s .55s both' }}>
             <div className="text-[11px] font-black">RATING</div>
-            <div className="text-[70px] leading-none font-black">{text(getField, 'rating', '9.1')}</div>
+            <div className="text-[70px] leading-none font-black">{playerRating}</div>
           </div>
         </div>
       </div>
@@ -958,10 +1006,15 @@ export const ReoObsAnalysis: React.FC<ReoObsVariantProps> = ({ getField, resolve
   );
 };
 
-export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ getField, resolveField }) => {
+export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ getField, resolveField, matchDetails }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
   const score = `${resolvedNum(getField, resolveField, 'homeScore', 'homeScore', 2)} : ${resolvedNum(getField, resolveField, 'awayScore', 'awayScore', 1)}`;
+  const livePotm = matchDetails?.playerOfTheMatch;
+  const momName = livePotm?.name || text(getField, 'momName', 'أيمن حسين');
+  const momRating = livePotm?.rating !== undefined
+    ? detailStatText(livePotm.rating)
+    : text(getField, 'momRating', '8.7');
   return (
     <KineticStage image={stageImage(getField)}>
       <div className="w-full h-full p-10 flex flex-col">
@@ -976,7 +1029,7 @@ export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ getField, reso
               <div className="text-[11px] font-black">FULL-TIME</div><div className="text-[84px] font-black leading-none">{score}</div>
             </div>
             <div className="border-[5px] border-black rounded-[25px] p-6 text-black" style={{ background: WC.yellow, animation: 'wcRowIn .55s .55s both' }}>
-              <div className="text-[11px] font-black">MAN OF THE MATCH</div><div className="text-[25px] font-black mt-2">{text(getField, 'momName', 'أيمن حسين')}</div><div className="text-[49px] font-black">{text(getField, 'momRating', '8.7')}</div>
+              <div className="text-[11px] font-black">MAN OF THE MATCH</div><div className="text-[25px] font-black mt-2">{momName}</div><div className="text-[49px] font-black">{momRating}</div>
             </div>
           </div>
         </div>

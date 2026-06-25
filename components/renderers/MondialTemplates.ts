@@ -251,6 +251,10 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'lineup' },
       ...mondialMatchSelectionFields,
       ...mondialMatchDataFields.slice(0, 6),
+      { id: 'lineupSide', label: 'الفريق المعروض في التشكيلة', type: 'select', value: 'home', options: [
+        { value: 'home', label: 'المضيف من المباراة المختارة' },
+        { value: 'away', label: 'الضيف من المباراة المختارة' },
+      ]},
       { id: 'code', label: 'رمز الدولة', type: 'text', value: 'IQ' },
       { id: 'teamName', label: 'اسم المنتخب', type: 'text', value: 'منتخب العراق' },
       { id: 'formation', label: 'التشكيلة', type: 'text', value: '4-3-3' },

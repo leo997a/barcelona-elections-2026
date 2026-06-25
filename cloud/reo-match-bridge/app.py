@@ -65,6 +65,9 @@ WORLD_CUP_URL = os.environ.get(
 WORLD_CUP_CACHE_SECONDS = max(10, int(os.environ.get("REO_WORLD_CUP_CACHE_SECONDS", "15")))
 WORLD_CUP_CACHE_LOCK = threading.RLock()
 WORLD_CUP_CACHE: dict[str, Any] = {}
+MATCH_DETAILS_CACHE_SECONDS = max(10, int(os.environ.get("REO_MATCH_DETAILS_CACHE_SECONDS", "12")))
+MATCH_DETAILS_CACHE_LOCK = threading.RLock()
+MATCH_DETAILS_CACHE: dict[str, Any] = {}
 
 FINAL_STATUS_VALUES = {
     item.strip().lower()
@@ -184,6 +187,43 @@ def fetch_world_cup_page_props() -> dict[str, Any]:
     with WORLD_CUP_CACHE_LOCK:
         WORLD_CUP_CACHE["cachedAt"] = now
         WORLD_CUP_CACHE["payload"] = payload
+    return payload
+
+
+def fetch_fotmob_match_details(match_id: str) -> dict[str, Any]:
+    if not re.match(r"^\d{4,}$", match_id or ""):
+        raise ValueError("matchId is required and must be a FotMob numeric match id")
+    now = time.time()
+    with MATCH_DETAILS_CACHE_LOCK:
+        cached = MATCH_DETAILS_CACHE.get(match_id)
+        if cached and now - float(cached.get("cachedAt") or 0) < MATCH_DETAILS_CACHE_SECONDS:
+            return cached["payload"]
+
+    source_url = f"https://www.fotmob.com/api/data/matchDetails?matchId={quote(match_id)}"
+    request = urllib.request.Request(
+        source_url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; REO-SHOW-Bridge/1.0; +https://www.fotmob.com)",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "application/json",
+            "Referer": "https://www.fotmob.com/",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    if not isinstance(payload, dict) or not payload.get("general"):
+        raise RuntimeError("FotMob match details response is missing general data")
+    payload["_reoBridge"] = {
+        "provider": "fotmob",
+        "sourceMode": "reo-match-bridge",
+        "sourceUrl": source_url,
+        "fetchedAt": now_iso(),
+    }
+    with MATCH_DETAILS_CACHE_LOCK:
+        MATCH_DETAILS_CACHE[match_id] = {
+            "cachedAt": now,
+            "payload": payload,
+        }
     return payload
 
 
@@ -653,6 +693,7 @@ class Handler(BaseHTTPRequestHandler):
                 "provider": "fotmob",
                 "cacheSeconds": WORLD_CUP_CACHE_SECONDS,
                 "endpoint": "/api/world-cup",
+                "matchDetailsEndpoint": "/api/match-details?matchId=<id>",
             }
             self._send_json(200, status)
             return
@@ -674,6 +715,16 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as error:
                 self._send_json(502, {
                     "error": "Unable to load FotMob World Cup data",
+                    "detail": str(error),
+                })
+            return
+        if path == "/api/match-details":
+            query = parse_qs(urlparse(self.path).query)
+            try:
+                self._send_json(200, fetch_fotmob_match_details((query.get("matchId") or [""])[0]))
+            except Exception as error:
+                self._send_json(502, {
+                    "error": "Unable to load FotMob match details",
                     "detail": str(error),
                 })
             return

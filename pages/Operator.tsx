@@ -5,6 +5,7 @@ import { syncManager } from '../services/syncManager';
 import { ELECTION_CANDIDATE_PROFILE_OPTIONS, ELECTION_STATEMENT_SOURCE_OPTIONS } from '../utils/election';
 import TemplateControlBar from '../components/TemplateControlBar';
 import OverlayRenderer from '../components/OverlayRenderer';
+import MondialMatchPicker, { hasMondialMatchPickerFields } from '../components/editor/MondialMatchPicker';
 import { resolveTemplateById } from '../utils/templateRegistry';
 import { getTaxonomy, listCategories, type CategoryKey } from '../utils/templateTaxonomy';
 
@@ -360,6 +361,13 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
     markOperatorAction(`SYNC: ${fieldLabel}`);
   };
 
+  const updateFields = (overlay: OverlayConfig, updates: Record<string, unknown>) => {
+    Object.entries(updates).forEach(([fieldId, value]) => {
+      syncManager.updateLiveField(overlay.id, fieldId, value);
+    });
+    markOperatorAction('SYNC: World Cup match picker');
+  };
+
   const classifyOperatorField = (field: OverlayField): OperatorFieldGroup => {
     const id = field.id.toLowerCase();
     if (OPERATOR_PRIORITY_FIELDS.has(field.id)) return 'priority';
@@ -681,8 +689,10 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
   const selectedHasProbabilityShift = hasField(selectedOverlay, 'probabilityShiftMode');
   const probabilityShiftMode = String(getFieldValue(selectedOverlay, 'probabilityShiftMode', 'old')) === 'new' ? 'new' : 'old';
   const operatorAllFieldControls = selectedOverlay.fields.filter(field => field.type !== 'hidden');
+  const selectedHasMondialMatchPicker = hasMondialMatchPickerFields(selectedOverlay.fields);
   const operatorFieldNeedle = operatorFieldSearch.trim().toLowerCase();
   const operatorFieldControls = operatorAllFieldControls
+    .filter(field => !(selectedHasMondialMatchPicker && field.id === 'selectedMatchId'))
     .filter(field => operatorFieldGroup === 'ALL' || classifyOperatorField(field) === operatorFieldGroup)
     .filter(field => {
       if (!operatorFieldNeedle) return true;
@@ -1559,6 +1569,13 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
                 </span>
               </div>
               <div className="mb-3 space-y-2">
+                {selectedHasMondialMatchPicker && (
+                  <MondialMatchPicker
+                    fields={selectedOverlay.fields}
+                    onChange={updates => updateFields(selectedOverlay, updates)}
+                    compact
+                  />
+                )}
                 <div className="relative">
                   <Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-600" />
                   <input

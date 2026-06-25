@@ -14,6 +14,7 @@
  */
 import { proxyBridgeGet, proxyBridgePost } from './_lib/reoBridge.js';
 import { verifyAdminSession } from './_lib/adminToken.js';
+import { getFotMobMatchDetails } from './_lib/fotmobMatchDetails.js';
 import { getWorldCupSnapshot } from './_lib/fotmobWorldCup.js';
 import {
   getBearerToken,
@@ -56,6 +57,21 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     if (action === 'match') return proxyBridgeGet(res, '/api/match');
     if (action === 'status') return proxyBridgeGet(res, '/api/status');
     if (action === 'metrics-catalog') return proxyBridgeGet(res, '/api/metrics-catalog');
+    if (action === 'match-details') {
+      try {
+        const details = await getFotMobMatchDetails(query.get('matchId'));
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('X-REO-Data-Version', details.dataVersion);
+        res.setHeader('X-REO-Source-Mode', details.sourceMode);
+        res.setHeader('X-REO-Source-Status', details.sourceStatus);
+        return sendJson(res, 200, details);
+      } catch (error) {
+        return sendJson(res, 502, {
+          error: 'Unable to load FotMob match details.',
+          detail: error instanceof Error ? error.message : 'Unknown FotMob match details error.',
+        });
+      }
+    }
     if (action === 'world-cup') {
       try {
         const snapshot = await getWorldCupSnapshot();
@@ -72,7 +88,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
       }
     }
     return sendJson(res, 400, {
-      error: 'Invalid action for GET. Use action=match, status, metrics-catalog, or world-cup.',
+      error: 'Invalid action for GET. Use action=match, match-details, status, metrics-catalog, or world-cup.',
     });
   }
 
