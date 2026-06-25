@@ -80,6 +80,18 @@ FotMob المباشر يفشل
 - كود `/api/world-cup` الخاص بالجسر أصبح جاهزاً ومختبراً، لكن الخدمة المنفصلة تحتاج رفع `app.py` وإعادة تشغيل `reo-match-bridge`.
 - أداة Google Cloud في هذه الجلسة استطاعت قراءة اسم المشروع فقط، ثم مُنعت من فتح قاعدة اعتماد gcloud لأن مجلد إعدادات المستخدم غير قابل للكتابة ضمن صلاحيات الجلسة. لذلك لا يجوز اعتبار نسخة Google VM منشورة قبل تنفيذ تحديث الخدمة من قناة Cloud مصادق عليها.
 
+## نتيجة نشر التطبيق الرئيسي
+
+- الالتزام البرمجي: `51673e1`.
+- تم دفعه إلى `origin/main`.
+- ملف الواجهة المنشور على Hostinger: `/assets/index-MGkQziiG.js`.
+- مسار `/api/reo-match?action=world-cup` أعاد HTTP 200.
+- `sourceMode=direct`.
+- `sourceStatus=live`.
+- `dataVersion=reo-wc-vwlua0-25az` وقت التحقق.
+- رأس `X-REO-Data-Version` طابق قيمة `dataVersion` داخل JSON.
+- جسر Google VM الحالي ما زال يعرض عقد الحالة القديم بدون قسم `worldCup`، لذلك يبقى نشر ملف `cloud/reo-match-bridge/app.py` على الخدمة المنفصلة خطوة تشغيلية مستقلة.
+
 ## الملفات الرئيسية
 
 - `utils/worldCupLiveData.ts`
