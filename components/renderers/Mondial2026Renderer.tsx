@@ -21,6 +21,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { getWorldCupDataVersion } from '../../utils/worldCupLiveData';
 import {
+  fixturesFromWorldCupData,
+  pickWorldCupMatch,
+  selectedMatchToFields,
+} from '../../utils/mondialLiveSelectors';
+import {
   getMondialTheme,
   MondialTheme,
   MondialHeader,
@@ -230,9 +235,9 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   const t = getMondialTheme(themeId);
 
   // نظام البيانات الموحد
-  const dataMode = String(getField('dataMode') || 'DEMO');
+  const dataMode = String(getField('dataMode') || 'CLOUD_BRIDGE');
   const manualJson = String(getField('manualJson') || '{}');
-  const bridgeApiUrl = String(getField('bridgeApiUrl') || '/api/reo-match?action=match');
+  const bridgeApiUrl = String(getField('bridgeApiUrl') || '/api/reo-match?action=world-cup');
   const requestedPollSec = Number(getField('pollIntervalSec') || 30);
   const pollSec = Number.isFinite(requestedPollSec)
     ? Math.max(10, Math.min(300, requestedPollSec))
@@ -249,6 +254,22 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
     Number.isFinite(manualRefreshNonce) ? manualRefreshNonce : 0
   );
   const playedUpdateSequenceRef = useRef(0);
+  const fixtures = fixturesFromWorldCupData(liveData, getField('fixturesJson'));
+  const selectedMatch = pickWorldCupMatch(fixtures, {
+    mode: getField('matchPickMode'),
+    featuredMatchIndex: getField('featuredMatchIndex'),
+    selectedMatchId: getField('selectedMatchId'),
+    teamCode: getField('matchTeamCode'),
+    groupCode: getField('matchGroupCode'),
+    roundStage: getField('matchRoundStage'),
+    statusFilter: getField('matchStatusFilter'),
+  });
+  const selectedMatchFields = selectedMatchToFields(
+    selectedMatch,
+    String(liveData?.competition || getField('competition') || 'FIFA World Cup 2026')
+  );
+  const getMatchField = (fieldId: string): unknown =>
+    selectedMatchFields[fieldId] !== undefined ? selectedMatchFields[fieldId] : getField(fieldId);
 
   useEffect(() => {
     if (!updateSequence) {
@@ -263,6 +284,8 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
 
   // دمج: البيانات الحية تتفوق على الحقول اليدوية عند توفرها
   const resolveField = (fieldId: string, liveKey?: string): unknown => {
+    if (liveKey && selectedMatchFields[liveKey] !== undefined) return selectedMatchFields[liveKey];
+    if (selectedMatchFields[fieldId] !== undefined) return selectedMatchFields[fieldId];
     if (liveData && liveKey && liveData[liveKey] !== undefined) return liveData[liveKey];
     return getField(fieldId);
   };
@@ -288,16 +311,16 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
         >
           {/* ── Variants ─────────────────────────────────────────── */}
           {variant === 'scoreboard' && (
-            <ReoObsScoreboard t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
+            <ReoObsScoreboard t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} />
           )}
           {variant === 'scorebug' && (
-            <ReoObsScorebug t={t} getField={getField} resolveField={resolveField} bridgeStatus={bridgeStatus} />
+            <ReoObsScorebug t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} />
           )}
           {variant === 'match_stats' && (
-            <ReoObsMatchStats t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsMatchStats t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'group_table' && (
-            <ReoObsGroupTable t={t} getField={getField} />
+            <ReoObsGroupTable t={t} getField={getField} liveData={liveData} />
           )}
           {variant === 'group_wall' && (
             <ReoObsGroupWall getField={getField} liveData={liveData} />
@@ -321,7 +344,7 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
             <ReoObsMondialSocialStory getField={getField} liveData={liveData} />
           )}
           {variant === 'golden_boot' && (
-            <ReoObsGoldenBoot t={t} getField={getField} />
+            <ReoObsGoldenBoot t={t} getField={getField} liveData={liveData} />
           )}
           {variant === 'quote' && (
             <ReoObsQuote t={t} getField={getField} />
@@ -330,28 +353,28 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
             <ReoObsTicker t={t} getField={getField} />
           )}
           {variant === 'analysis_board' && (
-            <ReoObsAnalysis t={t} getField={getField} resolveField={resolveField} liveData={liveData} />
+            <ReoObsAnalysis t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'prediction' && (
-            <ReoObsPrediction t={t} getField={getField} />
+            <ReoObsPrediction t={t} getField={getMatchField} liveData={liveData} />
           )}
           {variant === 'var_alert' && (
             <ReoObsVarAlert t={t} getField={getField} />
           )}
           {variant === 'match_report' && (
-            <ReoObsMatchReport t={t} getField={getField} resolveField={resolveField} />
+            <ReoObsMatchReport t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'lower_third' && (
             <ReoObsLowerThird t={t} getField={getField} />
           )}
           {variant === 'match_preview' && (
-            <ReoObsMatchPreview t={t} getField={getField} />
+            <ReoObsMatchPreview t={t} getField={getMatchField} liveData={liveData} />
           )}
           {variant === 'lineup' && (
-            <ReoObsLineup t={t} getField={getField} />
+            <ReoObsLineup t={t} getField={getMatchField} liveData={liveData} />
           )}
           {variant === 'match_result' && (
-            <ReoObsMatchResult t={t} getField={getField} />
+            <ReoObsMatchResult t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} />
           )}
           {variant === 'player_spotlight' && (
             <ReoObsPlayerSpotlight t={t} getField={getField} />

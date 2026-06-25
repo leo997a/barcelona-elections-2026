@@ -1,5 +1,9 @@
 import React from 'react';
 import {
+  fixturesFromWorldCupData,
+  pickWorldCupMatch,
+} from '../../../utils/mondialLiveSelectors';
+import {
   BroadcastFlag,
   getBroadcastCssVars,
   getBroadcastPalette,
@@ -12,7 +16,8 @@ import {
   WorldCupTeam,
 } from './MondialBroadcastShared';
 
-type MatchLike = WorldCupMatch & {
+type MatchLike = Omit<WorldCupMatch, 'status'> & {
+  status: string;
   group?: string;
   stage?: string;
   venue?: string;
@@ -183,8 +188,13 @@ const normalizeFixtures = (input: unknown): MatchLike[] => {
   return fixtures.length ? fixtures : DEMO_MATCHES;
 };
 
-const fixturesFrom = (liveData: Record<string, unknown> | null | undefined, getField: MondialBroadcastProps['getField']) =>
-  normalizeFixtures(selectPayload(liveData, getField('fixturesJson'), ['fixtures', 'matches']));
+const fixturesFrom = (liveData: Record<string, unknown> | null | undefined, getField: MondialBroadcastProps['getField']) => {
+  const fixtures = fixturesFromWorldCupData(
+    liveData,
+    selectPayload(liveData, getField('fixturesJson'), ['fixtures', 'matches'])
+  );
+  return fixtures.length ? fixtures as MatchLike[] : DEMO_MATCHES;
+};
 
 const dateLabel = (match: MatchLike): string => {
   if (!match.date) return 'DATE TBC';
@@ -221,16 +231,19 @@ const liveBadgeText = (match: MatchLike): string => {
   return minute ? `${minute}'` : '';
 };
 
-const pickMatch = (fixtures: MatchLike[], mode: string, indexValue: unknown): MatchLike => {
-  if (mode === 'latest') {
-    return [...fixtures].reverse().find(match => match.status === 'finished' || match.homeScore !== undefined) || fixtures[0] || DEMO_MATCHES[1];
-  }
-  if (mode === 'featured') {
-    const index = Math.max(0, (Number(indexValue) || 1) - 1);
-    return fixtures[index] || fixtures[0] || DEMO_MATCHES[0];
-  }
-  return fixtures.find(match => match.status === 'scheduled' || match.status === 'live') || fixtures[0] || DEMO_MATCHES[0];
-};
+const pickMatch = (
+  fixtures: MatchLike[],
+  getField: MondialBroadcastProps['getField'],
+  fallbackMode: string
+): MatchLike => pickWorldCupMatch(fixtures, {
+  mode: String(getField('matchPickMode') || fallbackMode),
+  featuredMatchIndex: getField('featuredMatchIndex'),
+  selectedMatchId: getField('selectedMatchId'),
+  teamCode: getField('matchTeamCode'),
+  groupCode: getField('matchGroupCode'),
+  roundStage: getField('matchRoundStage'),
+  statusFilter: getField('matchStatusFilter'),
+}) as MatchLike || fixtures[0] || DEMO_MATCHES[0];
 
 const scoreText = (value: number | undefined) => value === undefined ? '-' : String(value);
 
@@ -259,8 +272,7 @@ const MatchShell: React.FC<{
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
-  const pickMode = mode === 'full-time' ? 'latest' : String(getField('matchPickMode') || 'next');
-  const match = pickMatch(fixtures, pickMode, getField('featuredMatchIndex'));
+  const match = pickMatch(fixtures, getField, mode === 'full-time' ? 'latest' : 'next');
   const title = asString(getField(mode === 'full-time' ? 'fullTimeTitle' : 'matchCardTitle'), mode === 'full-time' ? 'FULL-TIME' : 'MATCH DAY');
   const subtitle = asString(getField('matchCardSubtitle'), match.group || match.stage || 'WORLD CUP 2026');
   const isLive = isLiveFixture(match);
@@ -333,7 +345,7 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
-  const match = pickMatch(fixtures, String(getField('matchPickMode') || 'next'), getField('featuredMatchIndex'));
+  const match = pickMatch(fixtures, getField, 'next');
   const title = asString(getField('storyTitle'), match.status === 'finished' ? 'FULL-TIME' : 'MATCH DAY');
   const scoreMode = match.homeScore !== undefined || match.awayScore !== undefined;
   const isLive = isLiveFixture(match);

@@ -3,6 +3,8 @@ import { createWorldCupDataVersion } from '../../utils/worldCupLiveData.js';
 const WORLD_CUP_URL = 'https://www.fotmob.com/leagues/77/overview/world-cup';
 const TEAM_LOGO_URL = (id: string | number) =>
   `https://images.fotmob.com/image_resources/logo/teamlogo/${id}.png`;
+const PLAYER_IMAGE_URL = (id: string | number) =>
+  `https://images.fotmob.com/image_resources/playerimages/${id}.png`;
 const CACHE_TTL_MS = 15_000;
 const STALE_TTL_MS = 30 * 60_000;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -73,6 +75,21 @@ export type WorldCupRound = {
   matches: WorldCupMatch[];
 };
 
+export type WorldCupScorer = {
+  id: string | number;
+  name: string;
+  teamId?: string | number;
+  teamName: string;
+  countryCode: string;
+  flagUrl: string;
+  imageUrl: string;
+  goals: number;
+  assists: number;
+  appearances?: number;
+  minutesPlayed?: number;
+  rank: number;
+};
+
 export type WorldCupSnapshot = {
   leagueId: 77;
   competition: 'World Cup';
@@ -87,6 +104,7 @@ export type WorldCupSnapshot = {
   bestThird: WorldCupStanding[];
   rounds: WorldCupRound[];
   fixtures: WorldCupMatch[];
+  topScorers: WorldCupScorer[];
 };
 
 type OfficialKnockoutRoute = {
@@ -317,6 +335,98 @@ const normalizeStanding = (rawValue: unknown): WorldCupStanding | null => {
   };
 };
 
+const normalizeTopScorer = (rawValue: unknown, index: number): WorldCupScorer | null => {
+  const raw = asRecord(rawValue);
+  const id = raw.id ?? raw.ParticiantId ?? raw.participantId;
+  const name = asString(raw.name) || asString(raw.ParticipantName) || asString(raw.participantName);
+  if (!name || (typeof id !== 'string' && typeof id !== 'number')) return null;
+  const teamName = asString(raw.teamName) || asString(raw.TeamName) || 'World Cup';
+  const identity = identityFor(teamName);
+  const participantCode = asString(raw.countryCode) || asString(raw.ParticipantCountryCode);
+  const countryCode = identity.code !== 'un' ? identity.code : participantCode.toLowerCase();
+  return {
+    id,
+    name,
+    teamId: (raw.teamId as string | number | undefined) ?? (raw.TeamId as string | number | undefined),
+    teamName,
+    countryCode,
+    flagUrl: flagUrlFor(countryCode),
+    imageUrl: PLAYER_IMAGE_URL(id),
+    goals: asNumber(raw.goals ?? raw.value ?? raw.StatValue),
+    assists: asNumber(raw.assists ?? raw.SubStatValue),
+    appearances: raw.matchesPlayed === undefined && raw.MatchesPlayed === undefined
+      ? undefined
+      : asNumber(raw.matchesPlayed ?? raw.MatchesPlayed),
+    minutesPlayed: raw.minutesPlayed === undefined && raw.MinutesPlayed === undefined
+      ? undefined
+      : asNumber(raw.minutesPlayed ?? raw.MinutesPlayed),
+    rank: asNumber(raw.rank ?? raw.Rank, index + 1),
+  };
+};
+
+const uniqueScorers = (values: unknown[]): WorldCupScorer[] => {
+  const scorers = values
+    .map(normalizeTopScorer)
+    .filter((scorer): scorer is WorldCupScorer => Boolean(scorer));
+  return [...new Map(scorers.map(scorer => [String(scorer.id), scorer])).values()]
+    .sort((a, b) => (b.goals - a.goals) || (b.assists - a.assists) || (a.rank - b.rank));
+};
+
+const topScorersFromPageProps = (pageProps: Record<string, unknown>): WorldCupScorer[] => {
+  const stats = asRecord(pageProps.stats);
+  const goalsStat = asArray(stats.players).find(value =>
+    asString(asRecord(value).name).toLowerCase() === 'goals');
+  const topThree = asArray(asRecord(goalsStat).topThree);
+  const overview = asRecord(pageProps.overview);
+  const topPlayers = asRecord(overview.topPlayers);
+  const byGoals = asRecord(topPlayers.byGoals);
+  return uniqueScorers([...topThree, ...asArray(byGoals.players)]);
+};
+
+const scorerStatsUrlFromPageProps = (pageProps: Record<string, unknown>): string => {
+  const stats = asRecord(pageProps.stats);
+  const goalsStat = asArray(stats.players).find(value =>
+    asString(asRecord(value).name).toLowerCase() === 'goals');
+  const url = asString(asRecord(goalsStat).fetchAllUrl);
+  return /^https:\/\/data\.fotmob\.com\//i.test(url) ? url : '';
+};
+
+const fetchCompleteTopScorers = async (
+  pageProps: Record<string, unknown>,
+  signal: AbortSignal
+): Promise<WorldCupScorer[]> => {
+  const url = scorerStatsUrlFromPageProps(pageProps);
+  if (!url) return [];
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; REO-SHOW/1.0; +https://www.fotmob.com)',
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+    signal,
+  });
+  if (!response.ok) throw new Error(`FotMob scorer stats responded with HTTP ${response.status}.`);
+  const payload = asRecord(await response.json());
+  const goals = asArray(payload.TopLists).find(value =>
+    asString(asRecord(value).StatName).toLowerCase() === 'goals');
+  return uniqueScorers(asArray(asRecord(goals).StatList));
+};
+
+const hydrateTopScorers = async (
+  snapshot: WorldCupSnapshot,
+  pageProps: Record<string, unknown>,
+  signal: AbortSignal
+): Promise<WorldCupSnapshot> => {
+  try {
+    const complete = await fetchCompleteTopScorers(pageProps, signal);
+    if (!complete.length) return snapshot;
+    const next = { ...snapshot, topScorers: complete };
+    return { ...next, dataVersion: createWorldCupDataVersion(next) };
+  } catch {
+    return snapshot;
+  }
+};
+
 const getMatchStatus = (statusValue: unknown): WorldCupMatch['status'] => {
   const status = asRecord(statusValue);
   if (asBoolean(status.cancelled)) return 'cancelled';
@@ -507,6 +617,7 @@ export const normalizeFotMobWorldCup = (pagePropsValue: unknown): WorldCupSnapsh
   const fixtures = asArray(fixturesRoot.allMatches)
     .map(normalizeFixture)
     .filter((match): match is WorldCupMatch => Boolean(match));
+  const topScorers = topScorersFromPageProps(pageProps);
 
   const details = asRecord(pageProps.details);
   const selectedSeason = details.selectedSeason;
@@ -534,6 +645,7 @@ export const normalizeFotMobWorldCup = (pagePropsValue: unknown): WorldCupSnapsh
     bestThird,
     rounds,
     fixtures,
+    topScorers,
   } satisfies Omit<WorldCupSnapshot, 'dataVersion'>;
 
   return {
@@ -563,7 +675,8 @@ const fetchWorldCupSnapshot = async (): Promise<WorldCupSnapshot> => {
     if (!match?.[1]) throw new Error('FotMob page did not contain __NEXT_DATA__.');
     const nextData = asRecord(JSON.parse(match[1]));
     const props = asRecord(nextData.props);
-    return normalizeFotMobWorldCup(asRecord(props.pageProps));
+    const pageProps = asRecord(props.pageProps);
+    return hydrateTopScorers(normalizeFotMobWorldCup(pageProps), pageProps, controller.signal);
   } finally {
     clearTimeout(timeout);
   }
@@ -589,7 +702,12 @@ const fetchWorldCupSnapshotFromBridge = async (): Promise<WorldCupSnapshot> => {
     const payload = asRecord(await response.json());
     const pageProps = payload.pageProps;
     if (!pageProps) throw new Error('REO match bridge World Cup response is missing pageProps.');
-    const snapshot = normalizeFotMobWorldCup(pageProps);
+    const normalizedPageProps = asRecord(pageProps);
+    const snapshot = await hydrateTopScorers(
+      normalizeFotMobWorldCup(normalizedPageProps),
+      normalizedPageProps,
+      controller.signal
+    );
     return {
       ...snapshot,
       sourceMode: 'bridge-fallback',

@@ -18,6 +18,7 @@
     "api/**/*.ts",
     "server/**/*.ts",
     "utils/playerIdentity.ts",
+    "utils/mondialLiveSelectors.ts",
     "utils/worldCupLiveData.ts"
   ],
   "exclude": [

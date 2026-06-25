@@ -35,13 +35,13 @@ const mondialCommonFields: OverlayField[] = [
 // ─── حقول بيانات المباراة (نظام dataMode الموحد) ─────────────────────────────
 
 const mondialMatchDataFields: OverlayField[] = [
-  { id: 'dataMode', label: 'مصدر بيانات المباراة', type: 'select', value: 'DEMO', options: [
+  { id: 'dataMode', label: 'مصدر بيانات المباراة', type: 'select', value: 'CLOUD_BRIDGE', options: [
     { value: 'CLOUD_BRIDGE', label: '☁️ جسر REO السحابي — Google Cloud' },
     { value: 'BRIDGE', label: '🔌 جسر محلي — localhost:3005' },
     { value: 'PASTE_JSON', label: '📋 JSON يدوي / ملف مستورد' },
     { value: 'DEMO', label: '🎮 بيانات تجريبية' },
   ]},
-  { id: 'bridgeApiUrl', label: 'رابط API جسر البيانات', type: 'text', value: '/api/reo-match?action=match' },
+  { id: 'bridgeApiUrl', label: 'رابط API جسر البيانات', type: 'text', value: '/api/reo-match?action=world-cup' },
   { id: 'manualJson', label: 'JSON بيانات المباراة (يدوي)', type: 'textarea', value: '' },
   { id: 'pollIntervalSec', label: 'تحديث من الجسر كل (ثانية)', type: 'range', value: 30, min: 10, max: 120, step: 5 },
   { id: 'liveRefreshEnabled', label: 'تحديث مباشر تلقائي', type: 'boolean', value: true },
@@ -74,6 +74,43 @@ const mondialMatchDataFields: OverlayField[] = [
   ]) },
 ];
 
+const mondialMatchSelectionFields: OverlayField[] = [
+  { id: 'matchPickMode', label: 'طريقة اختيار المباراة', type: 'select', value: 'next', options: [
+    { value: 'next', label: 'المباراة المباشرة أو القادمة' },
+    { value: 'live', label: 'المباراة المباشرة الآن' },
+    { value: 'latest', label: 'أحدث مباراة منتهية' },
+    { value: 'match_id', label: 'اختيار بواسطة Match ID' },
+    { value: 'team', label: 'اختيار بواسطة المنتخب' },
+    { value: 'group', label: 'اختيار بواسطة المجموعة' },
+    { value: 'round', label: 'اختيار بواسطة الدور' },
+    { value: 'featured', label: 'اختيار بواسطة ترتيب المباراة' },
+  ]},
+  { id: 'selectedMatchId', label: 'Match ID المحدد', type: 'text', value: '' },
+  { id: 'matchTeamCode', label: 'رمز المنتخب للاختيار', type: 'text', value: '' },
+  { id: 'matchGroupCode', label: 'المجموعة للاختيار', type: 'select', value: 'ANY', options: [
+    { value: 'ANY', label: 'كل المجموعات' },
+    ...'ABCDEFGHIJKL'.split('').map(value => ({ value, label: `المجموعة ${value}` })),
+  ]},
+  { id: 'matchRoundStage', label: 'الدور للاختيار', type: 'select', value: 'ANY', options: [
+    { value: 'ANY', label: 'كل الأدوار' },
+    { value: 'GROUP', label: 'دور المجموعات' },
+    { value: 'R32', label: 'دور 32' },
+    { value: 'R16', label: 'دور 16' },
+    { value: 'QF', label: 'ربع النهائي' },
+    { value: 'SF', label: 'نصف النهائي' },
+    { value: 'BRONZE', label: 'المركز الثالث' },
+    { value: 'F', label: 'النهائي' },
+  ]},
+  { id: 'matchStatusFilter', label: 'فلتر حالة المباراة', type: 'select', value: 'any', options: [
+    { value: 'any', label: 'كل الحالات' },
+    { value: 'scheduled', label: 'قادمة' },
+    { value: 'live', label: 'مباشر' },
+    { value: 'finished', label: 'منتهية' },
+  ]},
+  { id: 'featuredMatchIndex', label: 'ترتيب المباراة في القائمة', type: 'number', value: 1, min: 1, max: 104, step: 1 },
+  { id: 'fixturesJson', label: 'Fixtures JSON احتياطي', type: 'textarea', value: '[]' },
+];
+
 // ─── مجموعة 1: البث المباشر ──────────────────────────────────────────────────
 
 export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
@@ -92,6 +129,7 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'scoreboard' },
+      ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
     ],
   },
@@ -117,6 +155,7 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
         { value: 'BOTTOM_LEFT', label: 'أسفل يسار' },
       ]},
       { id: 'competitionShort', label: 'اختصار البطولة', type: 'text', value: 'WC26' },
+      ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
     ],
   },
@@ -164,6 +203,8 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_preview' },
+      ...mondialMatchSelectionFields,
+      ...mondialMatchDataFields.slice(0, 6),
       { id: 'matchStage', label: 'المرحلة / المجموعة', type: 'text', value: 'المرحلة الجماعية · المجموعة A' },
       { id: 'groupBadge', label: 'شارة الجولة', type: 'text', value: 'المجموعة A · الجولة 3' },
       { id: 'matchDate', label: 'تاريخ المباراة', type: 'text', value: 'الإثنين 15 يونيو 2026' },
@@ -208,6 +249,8 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'lineup' },
+      ...mondialMatchSelectionFields,
+      ...mondialMatchDataFields.slice(0, 6),
       { id: 'code', label: 'رمز الدولة', type: 'text', value: 'IQ' },
       { id: 'teamName', label: 'اسم المنتخب', type: 'text', value: 'منتخب العراق' },
       { id: 'formation', label: 'التشكيلة', type: 'text', value: '4-3-3' },
@@ -243,6 +286,9 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_result' },
+      { ...mondialMatchSelectionFields[0], value: 'latest' },
+      ...mondialMatchSelectionFields.slice(1),
+      ...mondialMatchDataFields.slice(0, 6),
       { id: 'homeCode', label: 'رمز المضيف', type: 'text', value: 'IQ' },
       { id: 'homeTeam', label: 'اسم المضيف', type: 'text', value: 'العراق' },
       { id: 'homeScore', label: 'نتيجة المضيف', type: 'number', value: 2 },
@@ -283,6 +329,7 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_stats' },
+      ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
       // حقول الإحصائيات اليدوية
       { id: 'statPossessionHome', label: 'استحواذ المضيف %', type: 'range', value: 48, min: 0, max: 100, step: 1 },
@@ -414,16 +461,6 @@ const mondialWorldCupDataFields: OverlayField[] = [
   { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 15, min: 10, max: 120, step: 5 },
   { id: 'liveRefreshEnabled', label: 'Live auto refresh', type: 'boolean', value: true },
   { id: 'manualRefreshNonce', label: 'Manual refresh counter', type: 'hidden', value: 0 },
-];
-
-const mondialMatchSelectionFields: OverlayField[] = [
-  { id: 'matchPickMode', label: 'Match selector', type: 'select', value: 'next', options: [
-    { value: 'next', label: 'Next live/scheduled match' },
-    { value: 'latest', label: 'Latest full-time match' },
-    { value: 'featured', label: 'Match by index' },
-  ]},
-  { id: 'featuredMatchIndex', label: 'Featured match index', type: 'number', value: 1, min: 1, max: 104, step: 1 },
-  { id: 'fixturesJson', label: 'Fixtures JSON fallback', type: 'textarea', value: '[]' },
 ];
 
 export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
@@ -621,7 +658,7 @@ export const MONDIAL_RESULTS_TEMPLATES: OverlayConfig[] = [
         { name: 'Australia', nameAr: 'أستراليا', flag: '🇦🇺', played: 2, won: 1, drawn: 0, lost: 1, gf: 2, ga: 3, pts: 3 },
         { name: 'China', nameAr: 'الصين', flag: '🇨🇳', played: 2, won: 0, drawn: 0, lost: 2, gf: 0, ga: 2, pts: 0 },
       ]) },
-      ...mondialMatchDataFields.slice(0, 4), // dataMode فقط
+      ...mondialMatchDataFields.slice(0, 6),
     ],
   },
   {
@@ -639,6 +676,8 @@ export const MONDIAL_RESULTS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_report' },
+      { ...mondialMatchSelectionFields[0], value: 'latest' },
+      ...mondialMatchSelectionFields.slice(1),
       ...mondialMatchDataFields,
       { id: 'reportText', label: 'نص تقرير المباراة', type: 'textarea', value: 'انتهت المباراة بفوز تاريخي للمنتخب العراقي.' },
       { id: 'momName', label: 'رجل المباراة', type: 'text', value: 'أيمن حسين' },
@@ -699,6 +738,7 @@ export const MONDIAL_ANALYSIS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'analysis_board' },
+      ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
       { id: 'homeFormation', label: 'تشكيلة المضيف', type: 'text', value: '4-3-3' },
       { id: 'awayFormation', label: 'تشكيلة الضيف', type: 'text', value: '4-2-3-1' },
@@ -729,12 +769,13 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'golden_boot' },
+      { id: 'scorerLimit', label: 'عدد الهدافين المعروض', type: 'number', value: 6, min: 3, max: 10, step: 1 },
       { id: 'scorersJson', label: 'قائمة الهدافين JSON', type: 'textarea', value: JSON.stringify([
         { name: 'Kylian Mbappé', nameAr: 'كيليان مبابي', team: 'France', flag: '🇫🇷', goals: 5 },
         { name: 'Erling Haaland', nameAr: 'إيرلينغ هالاند', team: 'Norway', flag: '🇳🇴', goals: 4 },
         { name: 'أيمن حسين', nameAr: 'أيمن حسين', team: 'Iraq', flag: '🇮🇶', goals: 3 },
       ]) },
-      ...mondialMatchDataFields.slice(0, 4),
+      ...mondialMatchDataFields.slice(0, 6),
     ],
   },
   {
@@ -752,6 +793,8 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'prediction' },
+      ...mondialMatchSelectionFields,
+      ...mondialMatchDataFields.slice(0, 6),
       { id: 'predictionTitle', label: 'عنوان التوقع', type: 'text', value: 'من سيفوز؟' },
       { id: 'homeTeam', label: 'الفريق الأول', type: 'text', value: 'العراق' },
       { id: 'awayTeam', label: 'الفريق الثاني', type: 'text', value: 'الأرجنتين' },

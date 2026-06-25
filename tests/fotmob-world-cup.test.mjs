@@ -49,6 +49,27 @@ const matchup = (matchId, homeName, awayName, homeId, awayId, tbd = false) => ({
 
 const payload = {
   details: { selectedSeason: 2026 },
+  stats: {
+    players: [{
+      name: 'goals',
+      fetchAllUrl: 'https://data.fotmob.com/stats/77/season/24254/goals.json',
+      topThree: [{
+        id: 30981,
+        name: 'Lionel Messi',
+        teamId: 6706,
+        teamName: 'Argentina',
+        value: 5,
+        rank: 1,
+      }, {
+        id: 846033,
+        name: 'Vinícius Júnior',
+        teamId: 8256,
+        teamName: 'Brazil',
+        value: 4,
+        rank: 2,
+      }],
+    }],
+  },
   table: [{ data: { tables: table } }],
   playoff: {
     rounds: [
@@ -138,4 +159,14 @@ test('keeps live fixture minute for template live badges', () => {
   assert.equal(live.awayScore, 0);
   assert.equal(live.minute, '67');
   assert.equal(live.statusLabel, "67'");
+});
+
+test('normalizes the live Golden Boot leaders from FotMob player stats', () => {
+  const snapshot = normalizeFotMobWorldCup(payload);
+  assert.equal(snapshot.topScorers.length, 2);
+  assert.equal(snapshot.topScorers[0].name, 'Lionel Messi');
+  assert.equal(snapshot.topScorers[0].teamName, 'Argentina');
+  assert.equal(snapshot.topScorers[0].countryCode, 'ar');
+  assert.equal(snapshot.topScorers[0].goals, 5);
+  assert.match(snapshot.topScorers[0].imageUrl, /30981\.png$/);
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { scorersFromWorldCupData } from '../../utils/mondialLiveSelectors';
 import {
   clamp,
   MondialFlag,
@@ -15,6 +16,11 @@ export interface ReoObsVariantProps {
 }
 
 type Getter = (id: string) => unknown;
+
+const recordOf = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 
 type GroupRow = {
   name?: string;
@@ -614,11 +620,32 @@ export const ReoObsMatchPreview: React.FC<ReoObsVariantProps> = ({ getField }) =
   );
 };
 
-export const ReoObsGroupTable: React.FC<ReoObsVariantProps> = ({ getField }) => {
+export const ReoObsGroupTable: React.FC<ReoObsVariantProps> = ({ getField, liveData }) => {
   const raw = String(getField('groupTeamsJson') || getField('standingsJson') || getField('groupJson') || '[]');
   const parsed = safeParse<GroupRow[]>(raw, DEFAULT_GROUP);
-  const rows = parsed.length ? parsed : DEFAULT_GROUP;
   const group = text(getField, 'groupName', text(getField, 'groupLetter', 'A'));
+  const liveGroup = Array.isArray(liveData?.groups)
+    ? liveData.groups.map(recordOf).find(item => String(item?.code || '').toUpperCase() === group.toUpperCase())
+    : null;
+  const liveRows = Array.isArray(liveGroup?.teams)
+    ? liveGroup.teams.map((value): GroupRow | null => {
+        const team = recordOf(value);
+        if (!team) return null;
+        return {
+          name: String(team.name || ''),
+          nameAr: String(team.nameAr || team.name || ''),
+          code: String(team.countryCode || team.shortName || ''),
+          played: Number(team.played || 0),
+          won: Number(team.wins || 0),
+          drawn: Number(team.draws || 0),
+          lost: Number(team.losses || 0),
+          gf: Number(team.goalsFor || 0),
+          ga: Number(team.goalsAgainst || 0),
+          pts: Number(team.points || 0),
+        };
+      }).filter((row): row is GroupRow => Boolean(row))
+    : [];
+  const rows = liveRows.length ? liveRows : parsed.length ? parsed : DEFAULT_GROUP;
   return (
     <KineticStage>
       <div className="w-full h-full p-10 flex flex-col">
@@ -804,13 +831,17 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField }
   );
 };
 
-export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ getField }) => {
-  const parsed = safeParse<typeof DEFAULT_SCORERS>(String(getField('scorersJson') || '[]'), DEFAULT_SCORERS);
-  const scorers = (parsed.length ? parsed : DEFAULT_SCORERS).sort((a, b) => b.goals - a.goals);
+export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ getField, liveData }) => {
+  const liveScorers = scorersFromWorldCupData(liveData, getField('scorersJson'));
+  const scorers = (liveScorers.length ? liveScorers : DEFAULT_SCORERS)
+    .slice()
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6))));
+  const sourceTag = liveData && liveScorers.length ? 'FOTMOB LIVE · REO SHOW' : 'GOLDEN BOOT · REO SHOW';
   return (
     <KineticStage>
       <div className="w-full h-full p-10 flex flex-col">
-        <KineticHeader title="سباق الحذاء الذهبي" tag="GOLDEN BOOT · REO SHOW" />
+        <KineticHeader title="سباق الحذاء الذهبي" tag={sourceTag} />
         <div className="flex-1 flex items-center justify-center">
           <div className="w-[980px] space-y-3">
             {scorers.map((player, index) => (

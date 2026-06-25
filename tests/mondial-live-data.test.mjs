@@ -50,6 +50,11 @@ test('mondial renderer triggers one transition for each meaningful live update',
   assert.match(renderer, /playedUpdateSequenceRef\.current = updateSequence;[\s\S]*?if \(isEditor \|\| !config\.isVisible\) return;/);
   assert.match(renderer, /playSound\?\.\('TRANSITION'\)/);
   assert.match(renderer, /updateKey=\{updateSequence\}/);
+  assert.match(renderer, /pickWorldCupMatch/);
+  assert.match(renderer, /selectedMatchToFields/);
+  assert.match(renderer, /ReoObsGroupTable t=\{t\} getField=\{getField\} liveData=\{liveData\}/);
+  assert.match(renderer, /ReoObsGoldenBoot t=\{t\} getField=\{getField\} liveData=\{liveData\}/);
+  assert.match(await readSource('../components/renderers/MondialObsTemplates.tsx'), /liveData\?\.groups/);
   assert.match(transitionLayer, /mondial-transition-live-update/);
   assert.match(transitionLayer, /key=\{`live-update-\$\{updateKey\}`\}/);
 });
@@ -89,4 +94,6 @@ test('template controls expose manual refresh and live mode toggles', async () =
   assert.match(matchCards, /mondial-story-live-pill/);
   assert.match(matchCards, /مباشر/);
   assert.match(matchCards, /liveMinuteText/);
+  assert.match(matchCards, /selectedMatchId/);
+  assert.match(matchCards, /matchRoundStage/);
 });
