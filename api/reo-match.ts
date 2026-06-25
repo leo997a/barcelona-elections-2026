@@ -59,7 +59,10 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     if (action === 'world-cup') {
       try {
         const snapshot = await getWorldCupSnapshot();
-        res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('X-REO-Data-Version', snapshot.dataVersion);
+        res.setHeader('X-REO-Source-Mode', snapshot.sourceMode);
+        res.setHeader('X-REO-Source-Status', snapshot.sourceStatus);
         return sendJson(res, 200, snapshot);
       } catch (error) {
         return sendJson(res, 502, {

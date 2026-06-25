@@ -17,7 +17,8 @@
   "include": [
     "api/**/*.ts",
     "server/**/*.ts",
-    "utils/playerIdentity.ts"
+    "utils/playerIdentity.ts",
+    "utils/worldCupLiveData.ts"
   ],
   "exclude": [
     "node_modules",

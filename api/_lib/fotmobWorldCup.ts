@@ -1,7 +1,9 @@
+import { createWorldCupDataVersion } from '../../utils/worldCupLiveData.js';
+
 const WORLD_CUP_URL = 'https://www.fotmob.com/leagues/77/overview/world-cup';
 const TEAM_LOGO_URL = (id: string | number) =>
   `https://images.fotmob.com/image_resources/logo/teamlogo/${id}.png`;
-const CACHE_TTL_MS = 75_000;
+const CACHE_TTL_MS = 15_000;
 const STALE_TTL_MS = 30 * 60_000;
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -74,9 +76,12 @@ export type WorldCupSnapshot = {
   leagueId: 77;
   competition: 'World Cup';
   season: string;
+  provider: 'fotmob';
+  sourceMode: 'direct' | 'bridge-fallback';
   sourceUrl: string;
   sourceStatus: 'live' | 'stale';
   fetchedAt: string;
+  dataVersion: string;
   groups: WorldCupGroup[];
   bestThird: WorldCupStanding[];
   rounds: WorldCupRound[];
@@ -462,10 +467,12 @@ export const normalizeFotMobWorldCup = (pagePropsValue: unknown): WorldCupSnapsh
     throw new Error('FotMob World Cup payload is missing the Round of 32 bracket.');
   }
 
-  return {
+  const snapshot = {
     leagueId: 77,
     competition: 'World Cup',
     season,
+    provider: 'fotmob',
+    sourceMode: 'direct',
     sourceUrl: WORLD_CUP_URL,
     sourceStatus: 'live',
     fetchedAt: new Date().toISOString(),
@@ -473,6 +480,11 @@ export const normalizeFotMobWorldCup = (pagePropsValue: unknown): WorldCupSnapsh
     bestThird,
     rounds,
     fixtures,
+  } satisfies Omit<WorldCupSnapshot, 'dataVersion'>;
+
+  return {
+    ...snapshot,
+    dataVersion: createWorldCupDataVersion(snapshot),
   };
 };
 
@@ -503,11 +515,51 @@ const fetchWorldCupSnapshot = async (): Promise<WorldCupSnapshot> => {
   }
 };
 
+const fetchWorldCupSnapshotFromBridge = async (): Promise<WorldCupSnapshot> => {
+  const baseUrl = process.env.REO_BRIDGE_URL?.trim().replace(/\/+$/, '');
+  const token = process.env.REO_BRIDGE_TOKEN?.trim();
+  if (!baseUrl || !token) throw new Error('REO match bridge fallback is not configured.');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${baseUrl}/api/world-cup`, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`REO match bridge responded with HTTP ${response.status}.`);
+    const payload = asRecord(await response.json());
+    const pageProps = payload.pageProps;
+    if (!pageProps) throw new Error('REO match bridge World Cup response is missing pageProps.');
+    const snapshot = normalizeFotMobWorldCup(pageProps);
+    return {
+      ...snapshot,
+      sourceMode: 'bridge-fallback',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 export const getWorldCupSnapshot = async (): Promise<WorldCupSnapshot> => {
   const now = Date.now();
   if (cache && cache.expiresAt > now) return cache.snapshot;
   if (!pendingRequest) {
     pendingRequest = fetchWorldCupSnapshot()
+      .catch(async (directError) => {
+        try {
+          return await fetchWorldCupSnapshotFromBridge();
+        } catch (bridgeError) {
+          throw new Error(
+            `FotMob direct failed: ${directError instanceof Error ? directError.message : 'unknown error'}; ` +
+            `bridge fallback failed: ${bridgeError instanceof Error ? bridgeError.message : 'unknown error'}.`
+          );
+        }
+      })
       .then((snapshot) => {
         const fetchedAt = Date.now();
         cache = {

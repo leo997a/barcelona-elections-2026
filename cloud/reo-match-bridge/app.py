@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html as html_lib
 import json
 import os
 import re
@@ -57,6 +58,13 @@ ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+WORLD_CUP_URL = os.environ.get(
+    "REO_WORLD_CUP_URL",
+    "https://www.fotmob.com/leagues/77/overview/world-cup",
+)
+WORLD_CUP_CACHE_SECONDS = max(10, int(os.environ.get("REO_WORLD_CUP_CACHE_SECONDS", "15")))
+WORLD_CUP_CACHE_LOCK = threading.RLock()
+WORLD_CUP_CACHE: dict[str, Any] = {}
 
 FINAL_STATUS_VALUES = {
     item.strip().lower()
@@ -133,6 +141,50 @@ METRICS_CATALOG = {
 
 def now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+
+def fetch_world_cup_page_props() -> dict[str, Any]:
+    now = time.time()
+    with WORLD_CUP_CACHE_LOCK:
+        cached_at = float(WORLD_CUP_CACHE.get("cachedAt") or 0)
+        cached_payload = WORLD_CUP_CACHE.get("payload")
+        if cached_payload and now - cached_at < WORLD_CUP_CACHE_SECONDS:
+            return cached_payload
+
+    request = urllib.request.Request(
+        WORLD_CUP_URL,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; REO-SHOW-Bridge/1.0; +https://www.fotmob.com)",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "text/html,application/xhtml+xml",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        page_html = response.read().decode("utf-8", errors="replace")
+
+    next_data_match = re.search(
+        r'<script id="__NEXT_DATA__" type="application/json">([\s\S]*?)</script>',
+        page_html,
+    )
+    if not next_data_match:
+        raise RuntimeError("FotMob page did not contain __NEXT_DATA__")
+
+    next_data = json.loads(html_lib.unescape(next_data_match.group(1)))
+    page_props = ((next_data.get("props") or {}).get("pageProps") or {})
+    if not isinstance(page_props, dict) or not page_props:
+        raise RuntimeError("FotMob __NEXT_DATA__ did not contain pageProps")
+
+    payload = {
+        "provider": "fotmob",
+        "sourceMode": "reo-match-bridge",
+        "sourceUrl": WORLD_CUP_URL,
+        "fetchedAt": now_iso(),
+        "pageProps": page_props,
+    }
+    with WORLD_CUP_CACHE_LOCK:
+        WORLD_CUP_CACHE["cachedAt"] = now
+        WORLD_CUP_CACHE["payload"] = payload
+    return payload
 
 
 def read_json(path: Path, fallback: Any) -> Any:
@@ -595,7 +647,14 @@ class Handler(BaseHTTPRequestHandler):
         if not self._require_auth():
             return
         if path == "/api/status":
-            self._send_json(200, STATE.snapshot())
+            status = STATE.snapshot()
+            status["worldCup"] = {
+                "enabled": True,
+                "provider": "fotmob",
+                "cacheSeconds": WORLD_CUP_CACHE_SECONDS,
+                "endpoint": "/api/world-cup",
+            }
+            self._send_json(200, status)
             return
         if path == "/api/match":
             with STATE.lock:
@@ -608,6 +667,15 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/metrics-catalog":
             self._send_json(200, METRICS_CATALOG)
+            return
+        if path == "/api/world-cup":
+            try:
+                self._send_json(200, fetch_world_cup_page_props())
+            except Exception as error:
+                self._send_json(502, {
+                    "error": "Unable to load FotMob World Cup data",
+                    "detail": str(error),
+                })
             return
         self._send_json(404, {"error": "Not found"})
 

@@ -409,7 +409,7 @@ const mondialWorldCupDataFields: OverlayField[] = [
   ]},
   { id: 'bridgeApiUrl', label: 'World Cup API URL', type: 'text', value: '/api/reo-match?action=world-cup' },
   { id: 'manualJson', label: 'Manual World Cup JSON', type: 'textarea', value: '' },
-  { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 75, min: 15, max: 300, step: 15 },
+  { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 15, min: 10, max: 120, step: 5 },
 ];
 
 const mondialMatchSelectionFields: OverlayField[] = [

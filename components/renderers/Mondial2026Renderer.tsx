@@ -19,6 +19,7 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { getWorldCupDataVersion } from '../../utils/worldCupLiveData';
 import {
   getMondialTheme,
   MondialTheme,
@@ -79,7 +80,7 @@ export interface MondialRendererProps {
   getField: (id: string) => unknown;
   containerStyle?: React.CSSProperties;
   contentWrapperStyle?: React.CSSProperties;
-  playSound?: (cue: string) => void;
+  playSound?: (cue: 'TRANSITION') => Promise<void>;
   wasVisible?: boolean;
   isEditor?: boolean;
 }
@@ -133,12 +134,29 @@ function useMondialData(
 ) {
   const [liveData, setLiveData] = useState<Record<string, unknown> | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
+  const [dataVersion, setDataVersion] = useState('');
+  const [updateSequence, setUpdateSequence] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const versionRef = useRef<string | null>(null);
+
+  const applyLiveData = useCallback((data: Record<string, unknown>) => {
+    const nextVersion = getWorldCupDataVersion(data);
+    if (versionRef.current === nextVersion) {
+      setLiveData(data);
+      return;
+    }
+
+    const hadPreviousVersion = versionRef.current !== null;
+    versionRef.current = nextVersion;
+    setLiveData(data);
+    setDataVersion(nextVersion);
+    if (hadPreviousVersion) setUpdateSequence(sequence => sequence + 1);
+  }, []);
 
   const fetchFromBridge = useCallback(async () => {
     if (!bridgeApiUrl || dataMode === 'DEMO' || dataMode === 'PASTE_JSON') return;
-    setBridgeStatus('connecting');
+    if (!versionRef.current) setBridgeStatus('connecting');
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
     try {
@@ -148,22 +166,32 @@ function useMondialData(
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as Record<string, unknown>;
-      setLiveData(data);
+      applyLiveData(data);
       setBridgeStatus('live');
     } catch (err: unknown) {
       if ((err as { name?: string }).name !== 'AbortError') setBridgeStatus('error');
     }
-  }, [bridgeApiUrl, dataMode]);
+  }, [applyLiveData, bridgeApiUrl, dataMode]);
 
   useEffect(() => {
     if (dataMode === 'PASTE_JSON') {
       const parsed = safeParse<Record<string, unknown>>(manualJson, {});
-      setLiveData(Object.keys(parsed).length ? parsed : null);
+      if (Object.keys(parsed).length) {
+        applyLiveData(parsed);
+      } else {
+        versionRef.current = null;
+        setLiveData(null);
+        setDataVersion('');
+        setUpdateSequence(0);
+      }
       setBridgeStatus('idle');
       return;
     }
     if (dataMode === 'DEMO') {
+      versionRef.current = null;
       setLiveData(null);
+      setDataVersion('');
+      setUpdateSequence(0);
       setBridgeStatus('idle');
       return;
     }
@@ -174,9 +202,9 @@ function useMondialData(
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [dataMode, manualJson, pollSec, fetchFromBridge]);
+  }, [applyLiveData, dataMode, manualJson, pollSec, fetchFromBridge]);
 
-  return { liveData, bridgeStatus };
+  return { liveData, bridgeStatus, dataVersion, updateSequence };
 }
 
 // ─── المحرك الرئيسي ──────────────────────────────────────────────────────────
@@ -184,6 +212,7 @@ function useMondialData(
 export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   config,
   getField,
+  playSound,
   wasVisible = false,
   isEditor = false,
 }) => {
@@ -195,9 +224,29 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   const dataMode = String(getField('dataMode') || 'DEMO');
   const manualJson = String(getField('manualJson') || '{}');
   const bridgeApiUrl = String(getField('bridgeApiUrl') || '/api/reo-match?action=match');
-  const pollSec = Number(getField('pollIntervalSec') || 30);
+  const requestedPollSec = Number(getField('pollIntervalSec') || 30);
+  const pollSec = Number.isFinite(requestedPollSec)
+    ? Math.max(10, Math.min(300, requestedPollSec))
+    : 30;
 
-  const { liveData, bridgeStatus } = useMondialData(dataMode, bridgeApiUrl, manualJson, pollSec);
+  const { liveData, bridgeStatus, dataVersion, updateSequence } = useMondialData(
+    dataMode,
+    bridgeApiUrl,
+    manualJson,
+    pollSec
+  );
+  const playedUpdateSequenceRef = useRef(0);
+
+  useEffect(() => {
+    if (!updateSequence) {
+      playedUpdateSequenceRef.current = 0;
+      return;
+    }
+    if (updateSequence <= playedUpdateSequenceRef.current) return;
+    playedUpdateSequenceRef.current = updateSequence;
+    if (isEditor || !config.isVisible) return;
+    void playSound?.('TRANSITION');
+  }, [config.isVisible, isEditor, playSound, updateSequence]);
 
   // دمج: البيانات الحية تتفوق على الحقول اليدوية عند توفرها
   const resolveField = (fieldId: string, liveKey?: string): unknown => {
@@ -211,6 +260,8 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
       isVisible={config?.isVisible ?? true}
       wasVisible={wasVisible}
       isEditor={isEditor}
+      updateKey={updateSequence}
+      dataVersion={dataVersion}
     >
     <div className="relative overflow-hidden w-full h-full">
       <style>{MONDIAL_KEYFRAMES}</style>

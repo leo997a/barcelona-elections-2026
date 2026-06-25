@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('status', 'match', 'set-match', 'start', 'stop')]
+  [ValidateSet('status', 'match', 'world-cup', 'set-match', 'start', 'stop')]
   [string] $Action,
 
   [string] $Url,
@@ -34,6 +34,7 @@ function Invoke-ReoPost([string] $Path, [hashtable] $Body) {
 switch ($Action) {
   'status' { Invoke-ReoGet '/api/status' }
   'match' { Invoke-ReoGet '/api/match' }
+  'world-cup' { Invoke-ReoGet '/api/world-cup' }
   'set-match' {
     if (-not $Url) { throw 'Use -Url with set-match.' }
     Invoke-ReoPost '/api/control/set-match' @{ url = $Url }

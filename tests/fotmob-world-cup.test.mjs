@@ -74,6 +74,9 @@ const payload = {
 test('normalizes all 12 groups, flags and standings', () => {
   const snapshot = normalizeFotMobWorldCup(payload);
   assert.equal(snapshot.groups.length, 12);
+  assert.equal(snapshot.provider, 'fotmob');
+  assert.equal(snapshot.sourceMode, 'direct');
+  assert.match(snapshot.dataVersion, /^reo-wc-/);
   assert.equal(snapshot.groups[0].teams[0].countryCode, 'mx');
   assert.equal(snapshot.groups[0].teams[1].countryCode, 'gb-sct');
   assert.equal(snapshot.groups[0].teams[0].goalsFor, 3);
@@ -93,6 +96,17 @@ test('keeps the complete 2026 knockout order including bronze', () => {
   assert.equal(snapshot.rounds[1].matches[0].matchNo, 89);
   assert.equal(snapshot.rounds[4].matches[0].matchNo, 104);
   assert.equal(snapshot.rounds[5].matches[0].matchNo, 103);
+});
+
+test('keeps a stable data version until football data changes', () => {
+  const first = normalizeFotMobWorldCup(payload);
+  const repeated = normalizeFotMobWorldCup(payload);
+  assert.equal(first.dataVersion, repeated.dataVersion);
+
+  const changedPayload = structuredClone(payload);
+  changedPayload.fixtures.allMatches[0].status.scoreStr = '4 - 1';
+  const changed = normalizeFotMobWorldCup(changedPayload);
+  assert.notEqual(first.dataVersion, changed.dataVersion);
 });
 
 test('normalizes played fixture scores without inventing scheduled scores', () => {

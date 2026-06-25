@@ -11,6 +11,7 @@ proxy.
 - `GET /health` public health check
 - `GET /api/status` authenticated status
 - `GET /api/match` authenticated latest match payload
+- `GET /api/world-cup` authenticated FotMob World Cup `pageProps` fallback
 - `GET /api/metrics-catalog` authenticated list of supported metrics
 - `POST /api/control/set-match` authenticated `{ "url": "https://www.whoscored.com/matches/.../live/..." }`
 - `POST /api/control/start` authenticated optional `{ "url": "...", "intervalSec": 60 }`
@@ -38,6 +39,7 @@ REO_DEFAULT_MATCH_URL=
 REO_AUTOSTART=0
 REO_EXTRACT_INTERVAL=60
 REO_MAX_RUNTIME_SECONDS=14400
+REO_WORLD_CUP_CACHE_SECONDS=15
 REO_ALLOWED_ORIGINS=https://barcelona-elections-2026.vercel.app
 PORT=3005
 ```

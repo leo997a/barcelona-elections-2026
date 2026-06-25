@@ -105,6 +105,17 @@ export const MONDIAL_TRANSITION_CSS = `
   38% { opacity: .92; transform: scaleX(1.04); }
   100% { opacity: 0; transform: scaleX(1.25); }
 }
+@keyframes mondialLiveUpdateSweep {
+  0% { opacity: 0; transform: translateX(-118%) skewX(-16deg); }
+  18% { opacity: .96; }
+  72% { opacity: .72; }
+  100% { opacity: 0; transform: translateX(118%) skewX(-16deg); }
+}
+@keyframes mondialLiveUpdateScan {
+  0% { opacity: 0; transform: translateY(52px) scaleX(.78); }
+  30% { opacity: .9; }
+  100% { opacity: 0; transform: translateY(-52px) scaleX(1.08); }
+}
 .mondial-transition-frame {
   --mondial-transition-speed: 860ms;
   --mondial-transition-intensity: 1;
@@ -214,6 +225,39 @@ export const MONDIAL_TRANSITION_CSS = `
 .mondial-transition-frame[data-effect='fade'] .mondial-transition-scan {
   display: none;
 }
+.mondial-transition-live-update {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.mondial-transition-live-update::before {
+  content: '';
+  position: absolute;
+  inset: -18% -28%;
+  background:
+    linear-gradient(90deg,
+      transparent 0 18%,
+      color-mix(in srgb, var(--mondial-a2) 84%, transparent) 18% 26%,
+      transparent 26% 34%,
+      color-mix(in srgb, var(--mondial-a3) 88%, transparent) 34% 43%,
+      transparent 43% 53%,
+      color-mix(in srgb, var(--mondial-a4) 82%, transparent) 53% 61%,
+      transparent 61% 100%);
+  filter: blur(2px) saturate(1.25);
+  animation: mondialLiveUpdateSweep calc(var(--mondial-transition-speed) * .82) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-live-update::after {
+  content: '';
+  position: absolute;
+  inset: 38% 8%;
+  border-top: 3px solid color-mix(in srgb, var(--mondial-paper) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mondial-a2) 62%, transparent);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--mondial-a3) 58%, transparent);
+  animation: mondialLiveUpdateScan calc(var(--mondial-transition-speed) * .7) ease-out both;
+}
 @media (prefers-reduced-motion: reduce) {
   .mondial-transition-frame[data-motion='on'] .mondial-transition-content,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-overlay,
@@ -229,6 +273,8 @@ type MondialTransitionFrameProps = {
   isVisible: boolean;
   wasVisible?: boolean;
   isEditor?: boolean;
+  updateKey?: number;
+  dataVersion?: string;
   children: React.ReactNode;
 };
 
@@ -237,6 +283,8 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
   isVisible,
   wasVisible,
   isEditor,
+  updateKey = 0,
+  dataVersion = '',
   children,
 }) => {
   const motionEnabled = fieldBoolean(getField, 'broadcastMotion', true);
@@ -266,6 +314,7 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
       data-effect={effect}
       data-motion={motionEnabled ? 'on' : 'off'}
       data-transition-speed={speed}
+      data-version={dataVersion}
     >
       <style>{MONDIAL_TRANSITION_CSS}</style>
       <div className="mondial-transition-content">{children}</div>
@@ -276,6 +325,13 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
       </div>
       <div className="mondial-transition-flash" aria-hidden="true" />
       <div className="mondial-transition-scan" aria-hidden="true" />
+      {motionEnabled && updateKey > 0 && (
+        <div
+          key={`live-update-${updateKey}`}
+          className="mondial-transition-live-update"
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 };
