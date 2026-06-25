@@ -47,4 +47,17 @@
 
 ## حالة النشر
 
-الدفعة جاهزة للدفع إلى GitHub، وسيتم تحديث هذا القسم بعد التحقق من Hostinger.
+- commit الوظيفي: `d59221f feat: bind mondial templates to live match details`.
+- تم الدفع إلى `origin/main` بنجاح.
+- تم نشر الحزمة على Hostinger.
+- حزمة الواجهة المنشورة: `assets/index-CUKT3KqS.js`.
+- endpoint الإنتاجي:
+  - الرابط: `https://peachpuff-herring-712997.hostingersite.com/api/reo-match?action=match-details&matchId=4667751`
+  - الحالة: HTTP 200.
+  - العقد: `reo-match-details-v1`.
+  - المصدر: `direct`.
+- تحقق المتصفح:
+  - عنوان الصفحة: `Reo Live Stream - نظام البث السحابي`.
+  - بوابة التفعيل العربية ظهرت بصورة صحيحة.
+  - لا توجد أخطاء console.
+  - لقطة الإثبات: `reports-ar/evidence-mondial-batch-15-hostinger.png`.
