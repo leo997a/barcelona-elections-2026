@@ -61,3 +61,23 @@
   - بوابة التفعيل العربية ظهرت بصورة صحيحة.
   - لا توجد أخطاء console.
   - لقطة الإثبات: `reports-ar/evidence-mondial-batch-15-hostinger.png`.
+
+## نشر جسر Google VM
+
+- الخادم: `openclaw-server` في المنطقة `us-west1-a`.
+- تم إنشاء نسخة احتياطية مؤرخة من `/opt/reo-match-bridge/app.py` قبل الاستبدال.
+- تم فحص الملف الجديد بواسطة `py_compile` ثم إعادة تشغيل `reo-match-bridge.service`.
+- حالة الخدمة بعد النشر: `active (running)`.
+- بصمة SHA-256 المحلية والخادم:
+  - `78c6f6aa8618cc0c149356d46126cef083f47f27f26d085d36f8980d5500e400`
+- تحقق مصادق من داخل الخادم:
+  - `/api/status`: HTTP 200 و`ok=true`.
+  - مسار تفاصيل المباراة المعلن: `/api/match-details?matchId=<id>`.
+  - `/api/match-details?matchId=4667751`: HTTP 200.
+  - المصدر: `reo-match-bridge`.
+  - المباراة: Mexico ضد South Africa.
+  - الإحصائيات: متوفرة.
+  - الأحداث: 21.
+  - التشكيلات: متوفرة للفريقين.
+  - نجم المباراة: Julián Quiñones.
+- لم تتم طباعة أو نقل قيمة `REO_BRIDGE_TOKEN` خارج الخادم أثناء التحقق.
