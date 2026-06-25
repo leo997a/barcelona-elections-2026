@@ -77,8 +77,9 @@ FotMob المباشر يفشل
 
 - التطبيق الرئيسي مرتبط بـGitHub وHostinger، لذلك تصل تعديلات TypeScript والواجهة وAPI بعد الدفع إلى `main`.
 - جسر المباريات يعمل كخدمة Google Compute Engine منفصلة في `cloud/reo-match-bridge`.
-- كود `/api/world-cup` الخاص بالجسر أصبح جاهزاً ومختبراً، لكن الخدمة المنفصلة تحتاج رفع `app.py` وإعادة تشغيل `reo-match-bridge`.
-- أداة Google Cloud في هذه الجلسة استطاعت قراءة اسم المشروع فقط، ثم مُنعت من فتح قاعدة اعتماد gcloud لأن مجلد إعدادات المستخدم غير قابل للكتابة ضمن صلاحيات الجلسة. لذلك لا يجوز اعتبار نسخة Google VM منشورة قبل تنفيذ تحديث الخدمة من قناة Cloud مصادق عليها.
+- نُشر كود `/api/world-cup` على الخدمة المنفصلة بعد تسجيل الدخول إلى Google Cloud من إعداد مستقل قابل للكتابة.
+- تم الاحتفاظ بنسخة احتياطية مؤرخة من `app.py` على الخادم قبل الاستبدال.
+- تم فحص صياغة Python من بيئة الخدمة نفسها قبل إعادة التشغيل.
 
 ## نتيجة نشر التطبيق الرئيسي
 
@@ -90,7 +91,36 @@ FotMob المباشر يفشل
 - `sourceStatus=live`.
 - `dataVersion=reo-wc-vwlua0-25az` وقت التحقق.
 - رأس `X-REO-Data-Version` طابق قيمة `dataVersion` داخل JSON.
-- جسر Google VM الحالي ما زال يعرض عقد الحالة القديم بدون قسم `worldCup`، لذلك يبقى نشر ملف `cloud/reo-match-bridge/app.py` على الخدمة المنفصلة خطوة تشغيلية مستقلة.
+
+## نتيجة نشر جسر Google VM
+
+- الحساب المستخدم: `ritchardakram1997@gmail.com`.
+- مشروع Google Cloud: `banded-setting-475000-i8`.
+- الآلة: `openclaw-server`.
+- المنطقة: `us-west1-a`.
+- العنوان العام: `34.169.68.109`.
+- الخدمة: `reo-match-bridge.service`.
+- الحالة بعد النشر: `active (running)`.
+- تطابق SHA-256 بين الملف المحلي والمنشور:
+  - `5693447e4a804060eae5e18e2583c040d0fb2bae8b38282c73d7fc27ccc1cfe4`.
+- فحص `/api/status` من داخل الخادم:
+  - `worldCup.enabled=true`.
+  - `worldCup.provider=fotmob`.
+  - `worldCup.cacheSeconds=15`.
+  - `worldCup.endpoint=/api/world-cup`.
+- فحص `/api/world-cup` من داخل الخادم:
+  - `provider=fotmob`.
+  - `sourceMode=reo-match-bridge`.
+  - `pageProps` صحيحة وتحتوي 14 مفتاحاً رئيسياً.
+  - حجم الاستجابة وقت التحقق: `749727` بايت.
+- فحص Hostinger بعد نشر الجسر:
+  - `/api/reo-match?action=status` أعاد HTTP 200 وأظهر قسم `worldCup`.
+  - `/api/reo-match?action=world-cup` أعاد HTTP 200.
+  - `sourceMode=direct`.
+  - `sourceStatus=live`.
+  - المجموعات: 12.
+  - المباريات: 104.
+  - رأس `X-REO-Data-Version` طابق `dataVersion` داخل الاستجابة.
 
 ## الملفات الرئيسية
 
