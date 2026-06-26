@@ -6,6 +6,7 @@ import {
 import {
   BroadcastFlag,
   getBroadcastCssVars,
+  getBroadcastLook,
   getBroadcastPalette,
   getBroadcastStyle,
   MondialBroadcastProps,
@@ -62,6 +63,17 @@ const MATCH_CSS = `
 .mondial-style-signal .mondial-team-short { color: #050505; text-shadow: 4px 0 0 var(--team-color); font-family: 'Courier New', monospace; }
 .mondial-style-signal .mondial-team-name { color: #050505; }
 .mondial-style-signal .mondial-match-meta { color: #050505; }
+.mondial-look-scoreboard_red .mondial-match-center { grid-template-columns: 1fr 370px 1fr; gap: 34px; }
+.mondial-look-scoreboard_red .mondial-match-score { width: 330px; min-height: 172px; border-radius: 30px; font-size: 108px; }
+.mondial-look-scoreboard_red .mondial-match-label { background: var(--mondial-a1); color: #fff; border: 4px solid #050505; box-shadow: 6px 6px 0 var(--mondial-a3); }
+.mondial-look-stadium_lights.mondial-match-shell { padding: 42px 54px; }
+.mondial-look-stadium_lights .mondial-side-team { border-radius: 30px; background: color-mix(in srgb, var(--team-color) 34%, #050505); }
+.mondial-look-stadium_lights .mondial-side-team::before { opacity: .9; filter: blur(.2px); }
+.mondial-look-mega_pack_black .mondial-side-team { border-radius: 28px 8px 28px 8px; }
+.mondial-look-mega_pack_black .mondial-team-short { font-size: 96px; }
+.mondial-look-poster_social .mondial-match-center { grid-template-columns: 1fr 250px 1fr; }
+.mondial-look-poster_social .mondial-side-team { min-height: 74%; transform: rotate(-1deg); }
+.mondial-look-poster_social .mondial-side-team:last-child { transform: rotate(1deg); }
 
 .mondial-story-shell { padding: 18px; display: grid; place-items: center; background: var(--mondial-bg); }
 .mondial-story-card { position: relative; width: min(54vh, 44%); max-width: 430px; min-width: 310px; aspect-ratio: 9 / 16; overflow: hidden; border: 7px solid #050505; background: var(--mondial-bg); box-shadow: 16px 14px 0 var(--mondial-a1), 28px 25px 0 var(--mondial-a2); }
@@ -78,6 +90,13 @@ const MATCH_CSS = `
 .mondial-story-score { display: grid; grid-template-columns: 1fr 26px 1fr; align-items: center; justify-items: center; color: #050505; background: var(--mondial-paper); border: 5px solid #050505; box-shadow: 8px 8px 0 var(--mondial-a3); font-size: 74px; font-weight: 950; line-height: .86; padding: 13px 8px; }
 .mondial-story-foot { display: grid; gap: 9px; color: var(--mondial-paper); font-size: 13px; font-weight: 950; text-transform: uppercase; }
 .mondial-story-foot span:last-child { color: var(--mondial-a3); }
+.mondial-look-poster_social.mondial-story-shell { padding: 0; background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--mondial-a1) 20%, transparent), transparent 48%), var(--mondial-bg); }
+.mondial-look-poster_social .mondial-story-card { width: min(68vh, 54%); max-width: 520px; min-width: 360px; border-width: 9px; border-radius: 0; transform: rotate(-1.6deg); box-shadow: 22px 19px 0 var(--mondial-a3), 42px 36px 0 var(--mondial-a1), -22px -18px 0 var(--mondial-a2); }
+.mondial-look-poster_social .mondial-story-card::before { opacity: .95; background: linear-gradient(150deg, var(--mondial-a1) 0 22%, transparent 22% 54%, var(--mondial-a2) 54% 70%, var(--mondial-a3) 70% 82%, transparent 82% 100%); }
+.mondial-look-poster_social .mondial-story-content { padding: 30px; }
+.mondial-look-poster_social .mondial-story-team b { font-size: clamp(54px, 10vh, 76px); }
+.mondial-look-poster_social .mondial-story-score { border-width: 7px; font-size: 88px; box-shadow: 11px 10px 0 var(--mondial-a4); }
+.mondial-look-flag_identity .mondial-story-card { border-radius: 6px; }
 `;
 
 const ACCENTS = ['#0ce8cf', '#b6ff00', '#ff8a18', '#2868ff', '#ff2f9f', '#ff1738'];
@@ -269,6 +288,7 @@ const MatchShell: React.FC<{
   liveData?: Record<string, unknown> | null;
   mode: 'announcement' | 'full-time';
 }> = ({ getField, liveData, mode }) => {
+  const lookId = getBroadcastLook(getField);
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
@@ -285,7 +305,7 @@ const MatchShell: React.FC<{
 
   return (
     <section
-      className={`mondial-broadcast mondial-match-shell mondial-style-${styleId} mondial-phase-in`}
+      className={`mondial-broadcast mondial-match-shell mondial-style-${styleId} mondial-look-${lookId} mondial-phase-in`}
       style={getBroadcastCssVars(paletteId)}
       data-template={mode}
     >
@@ -342,6 +362,7 @@ export const MondialFullTime: React.FC<MondialBroadcastProps> = props => (
 );
 
 export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, liveData }) => {
+  const lookId = getBroadcastLook(getField);
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
@@ -353,7 +374,7 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
 
   return (
     <section
-      className={`mondial-broadcast mondial-story-shell mondial-style-${styleId} mondial-phase-in`}
+      className={`mondial-broadcast mondial-story-shell mondial-style-${styleId} mondial-look-${lookId} mondial-phase-in`}
       style={getBroadcastCssVars(paletteId)}
       data-template="social_story"
     >

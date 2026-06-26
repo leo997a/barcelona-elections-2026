@@ -1,8 +1,41 @@
 import React from 'react';
 
-export type MondialBroadcastStyle = 'spectrum' | 'stadium' | 'signal' | 'neon_arc' | 'score_red' | 'clean_grid';
-export type MondialBroadcastPalette = 'global' | 'reo' | 'midnight' | 'electric' | 'trophy' | 'score_red' | 'social_green';
-type MondialBroadcastLook = 'reference_pack' | 'match_night' | 'scoreboard_red' | 'social_blue_green' | 'trophy_gold' | 'clean_draw';
+export type MondialBroadcastStyle =
+  | 'spectrum'
+  | 'mega_pack_black'
+  | 'stadium'
+  | 'stadium_lights'
+  | 'signal'
+  | 'neon_arc'
+  | 'score_red'
+  | 'poster_social'
+  | 'flag_identity'
+  | 'clean_grid';
+export type MondialBroadcastPalette =
+  | 'global'
+  | 'mega_black'
+  | 'reo'
+  | 'midnight'
+  | 'electric'
+  | 'trophy'
+  | 'score_red'
+  | 'social_green'
+  | 'poster'
+  | 'flag_identity'
+  | 'stadium_lights';
+export type MondialBroadcastLook =
+  | 'mega_pack_black'
+  | 'neon_arc'
+  | 'scoreboard_red'
+  | 'poster_social'
+  | 'flag_identity'
+  | 'stadium_lights'
+  | 'reference_pack'
+  | 'match_night'
+  | 'social_blue_green'
+  | 'trophy_gold'
+  | 'clean_draw'
+  | 'manual';
 
 export type WorldCupTeam = {
   id: number | string;
@@ -91,6 +124,17 @@ const PALETTES: Record<MondialBroadcastPalette, BroadcastPalette> = {
     accent3: '#b6ff00',
     accent4: '#ff146f',
   },
+  mega_black: {
+    background: '#020202',
+    panel: '#090909',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#c7ccd4',
+    accent: '#0ce8cf',
+    accent2: '#b6ff00',
+    accent3: '#ff1738',
+    accent4: '#7a2cff',
+  },
   reo: {
     background: '#050505',
     panel: '#111111',
@@ -157,13 +201,51 @@ const PALETTES: Record<MondialBroadcastPalette, BroadcastPalette> = {
     accent3: '#b6ff00',
     accent4: '#ff1738',
   },
+  poster: {
+    background: '#05030b',
+    panel: '#101020',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#b6c9e8',
+    accent: '#2457ff',
+    accent2: '#00d253',
+    accent3: '#ff2f9f',
+    accent4: '#ff7a00',
+  },
+  flag_identity: {
+    background: '#050505',
+    panel: '#0b0b0b',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#d3d7df',
+    accent: '#00d44b',
+    accent2: '#139ebd',
+    accent3: '#ff8416',
+    accent4: '#ff0d86',
+  },
+  stadium_lights: {
+    background: '#020711',
+    panel: '#07101f',
+    paper: '#ffffff',
+    ink: '#ffffff',
+    muted: '#bdd1ee',
+    accent: '#14b8ff',
+    accent2: '#ff8a18',
+    accent3: '#b6ff00',
+    accent4: '#ff1738',
+  },
 };
 
-const BROADCAST_LOOKS: Record<MondialBroadcastLook, { style: MondialBroadcastStyle; palette: MondialBroadcastPalette }> = {
-  reference_pack: { style: 'neon_arc', palette: 'global' },
-  match_night: { style: 'stadium', palette: 'electric' },
+const BROADCAST_LOOKS: Record<Exclude<MondialBroadcastLook, 'manual'>, { style: MondialBroadcastStyle; palette: MondialBroadcastPalette }> = {
+  mega_pack_black: { style: 'mega_pack_black', palette: 'mega_black' },
+  neon_arc: { style: 'neon_arc', palette: 'electric' },
   scoreboard_red: { style: 'score_red', palette: 'score_red' },
-  social_blue_green: { style: 'spectrum', palette: 'social_green' },
+  poster_social: { style: 'poster_social', palette: 'poster' },
+  flag_identity: { style: 'flag_identity', palette: 'flag_identity' },
+  stadium_lights: { style: 'stadium_lights', palette: 'stadium_lights' },
+  reference_pack: { style: 'mega_pack_black', palette: 'global' },
+  match_night: { style: 'stadium_lights', palette: 'electric' },
+  social_blue_green: { style: 'poster_social', palette: 'social_green' },
   trophy_gold: { style: 'signal', palette: 'trophy' },
   clean_draw: { style: 'clean_grid', palette: 'midnight' },
 };
@@ -546,25 +628,48 @@ export const selectPayload = (
 };
 
 export const getBroadcastStyle = (getField: MondialBroadcastProps['getField']): MondialBroadcastStyle => {
-  const look = String(getField('broadcastLook') || 'manual').toLowerCase();
-  if (look !== 'manual' && BROADCAST_LOOKS[look as MondialBroadcastLook]) {
-    return BROADCAST_LOOKS[look as MondialBroadcastLook].style;
+  const look = getBroadcastLook(getField);
+  if (look !== 'manual') {
+    return BROADCAST_LOOKS[look].style;
   }
   const value = String(getField('broadcastStyle') || 'spectrum').toLowerCase();
-  return value === 'stadium' || value === 'signal' || value === 'neon_arc' || value === 'score_red' || value === 'clean_grid'
+  return value === 'mega_pack_black'
+    || value === 'stadium'
+    || value === 'stadium_lights'
+    || value === 'signal'
+    || value === 'neon_arc'
+    || value === 'score_red'
+    || value === 'poster_social'
+    || value === 'flag_identity'
+    || value === 'clean_grid'
     ? value
     : 'spectrum';
 };
 
 export const getBroadcastPalette = (getField: MondialBroadcastProps['getField']): MondialBroadcastPalette => {
-  const look = String(getField('broadcastLook') || 'manual').toLowerCase();
-  if (look !== 'manual' && BROADCAST_LOOKS[look as MondialBroadcastLook]) {
-    return BROADCAST_LOOKS[look as MondialBroadcastLook].palette;
+  const look = getBroadcastLook(getField);
+  if (look !== 'manual') {
+    return BROADCAST_LOOKS[look].palette;
   }
   const value = String(getField('broadcastPalette') || 'global').toLowerCase();
-  return value === 'reo' || value === 'midnight' || value === 'electric' || value === 'trophy' || value === 'score_red' || value === 'social_green'
+  return value === 'mega_black'
+    || value === 'reo'
+    || value === 'midnight'
+    || value === 'electric'
+    || value === 'trophy'
+    || value === 'score_red'
+    || value === 'social_green'
+    || value === 'poster'
+    || value === 'flag_identity'
+    || value === 'stadium_lights'
     ? value
     : 'global';
+};
+
+export const getBroadcastLook = (getField: MondialBroadcastProps['getField']): MondialBroadcastLook => {
+  const look = String(getField('broadcastLook') || 'manual').toLowerCase();
+  if (look === 'manual') return 'manual';
+  return look in BROADCAST_LOOKS ? look as Exclude<MondialBroadcastLook, 'manual'> : 'mega_pack_black';
 };
 
 export const getBroadcastCssVars = (paletteId: MondialBroadcastPalette): React.CSSProperties => {
@@ -645,10 +750,54 @@ export const MONDIAL_BROADCAST_CSS = `
   background-image: linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.25) 50%, transparent 50.2%), linear-gradient(transparent 49.8%, rgba(255,255,255,.18) 50%, transparent 50.2%);
   background-size: 240px 240px;
 }
+.mondial-broadcast::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.mondial-broadcast.mondial-style-spectrum::before {
+  opacity: .38;
+  background:
+    linear-gradient(115deg, transparent 0 22%, var(--mondial-a1) 22% 24%, transparent 24% 52%, var(--mondial-a3) 52% 55%, transparent 55% 100%),
+    radial-gradient(ellipse at 112% -10%, color-mix(in srgb, var(--mondial-a2) 36%, transparent), transparent 42%),
+    radial-gradient(ellipse at -8% 108%, color-mix(in srgb, var(--mondial-a4) 32%, transparent), transparent 44%);
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-mega_pack_black::before {
+  opacity: .98;
+  background:
+    radial-gradient(ellipse at 105% -18%, transparent 0 36%, var(--mondial-a2) 36.2% 44%, transparent 44.2% 100%),
+    radial-gradient(ellipse at -11% 112%, transparent 0 38%, var(--mondial-a1) 38.2% 45%, transparent 45.2% 100%),
+    linear-gradient(116deg, transparent 0 17%, var(--mondial-a4) 17% 21%, transparent 21% 57%, var(--mondial-a3) 57% 63%, transparent 63% 100%),
+    #020202;
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-mega_pack_black::after {
+  opacity: .36;
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(255,255,255,.18) 7.2% 7.6%, transparent 7.8% 100%),
+    radial-gradient(ellipse at 50% 114%, rgba(255,255,255,.13), transparent 52%);
+  mix-blend-mode: screen;
+}
 .mondial-broadcast.mondial-style-stadium::before {
   opacity: .36;
   background-image: linear-gradient(118deg, transparent 0 20%, var(--mondial-a1) 20% 23%, transparent 23% 61%, var(--mondial-a3) 61% 65%, transparent 65% 100%);
   background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-stadium_lights::before {
+  opacity: .85;
+  background:
+    radial-gradient(ellipse at 50% 118%, color-mix(in srgb, var(--mondial-a2) 42%, transparent), transparent 45%),
+    conic-gradient(from 206deg at 50% 112%, transparent 0 18deg, color-mix(in srgb, var(--mondial-a1) 44%, transparent) 18deg 24deg, transparent 24deg 55deg, color-mix(in srgb, var(--mondial-a2) 36%, transparent) 55deg 61deg, transparent 61deg 100deg),
+    linear-gradient(120deg, transparent 0 42%, color-mix(in srgb, var(--mondial-a4) 72%, transparent) 42% 45%, transparent 45% 100%);
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-stadium_lights::after {
+  opacity: .34;
+  background-image: repeating-linear-gradient(90deg, transparent 0 66px, rgba(255,255,255,.18) 68px, transparent 70px);
+  transform: skewX(-18deg);
 }
 .mondial-broadcast.mondial-style-signal::before {
   opacity: .18;
@@ -670,6 +819,35 @@ export const MONDIAL_BROADCAST_CSS = `
     linear-gradient(0deg, rgba(255,255,255,.045) 1px, transparent 1px),
     radial-gradient(circle at 16% 18%, color-mix(in srgb, var(--mondial-a1) 68%, transparent), transparent 32%);
   background-size: 72px 72px, 72px 72px, 100% 100%;
+}
+.mondial-broadcast.mondial-style-poster_social::before {
+  opacity: .95;
+  background:
+    radial-gradient(circle at 18% 9%, var(--mondial-a3), transparent 25%),
+    radial-gradient(circle at 85% 16%, var(--mondial-a4), transparent 26%),
+    linear-gradient(145deg, var(--mondial-a1) 0 24%, transparent 24% 58%, var(--mondial-a2) 58% 76%, transparent 76% 100%),
+    #05030b;
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-poster_social::after {
+  opacity: .22;
+  background-image: linear-gradient(0deg, rgba(255,255,255,.22) 1px, transparent 1px);
+  background-size: 100% 12px;
+}
+.mondial-broadcast.mondial-style-flag_identity::before {
+  opacity: .82;
+  background:
+    linear-gradient(90deg, var(--mondial-a1) 0 14%, transparent 14% 21%, var(--mondial-a2) 21% 35%, transparent 35% 44%, var(--mondial-a3) 44% 58%, transparent 58% 70%, var(--mondial-a4) 70% 86%, transparent 86% 100%),
+    radial-gradient(ellipse at 50% 50%, transparent 0 52%, rgba(0,0,0,.72) 53% 100%),
+    #050505;
+  background-size: 100% 100%;
+}
+.mondial-broadcast.mondial-style-flag_identity::after {
+  opacity: .26;
+  background-image:
+    linear-gradient(90deg, transparent 49%, rgba(255,255,255,.25) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(255,255,255,.2) 50%, transparent 51%);
+  background-size: 180px 180px;
 }
 .mondial-broadcast.mondial-style-clean_grid::before {
   opacity: .28;
@@ -715,6 +893,25 @@ export const MONDIAL_BROADCAST_CSS = `
   box-shadow: 8px 0 0 var(--mondial-a1), 16px 0 0 var(--mondial-a2), 24px 0 0 var(--mondial-a4);
   text-shadow: 3px 0 0 var(--mondial-a1), -3px 0 0 var(--mondial-a4);
 }
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-reo-lockup,
+.mondial-broadcast.mondial-style-flag_identity .mondial-reo-lockup {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-color: #050505;
+  box-shadow: 9px 8px 0 var(--mondial-a3), 18px 15px 0 var(--mondial-a2), 27px 22px 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-poster_social .mondial-reo-lockup {
+  color: #050505;
+  background: var(--mondial-paper);
+  border-color: #050505;
+  transform: rotate(-3deg);
+  box-shadow: 8px 7px 0 var(--mondial-a3), 15px 13px 0 var(--mondial-a1);
+}
+.mondial-broadcast.mondial-style-stadium_lights .mondial-reo-lockup {
+  color: #050505;
+  background: var(--mondial-paper);
+  box-shadow: 8px 7px 0 var(--mondial-a2), 15px 13px 0 var(--mondial-a1);
+}
 .mondial-broadcast.mondial-style-score_red .mondial-reo-lockup {
   color: #050505;
   background: var(--mondial-paper);
@@ -743,6 +940,24 @@ export const MONDIAL_BROADCAST_CSS = `
 }
 .mondial-flag.is-compact { width: 25px; height: 17px; border-width: 1px; }
 .mondial-flag img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mondial-broadcast.mondial-style-flag_identity .mondial-flag {
+  border-radius: 0;
+  border-width: 3px;
+  box-shadow: 4px 4px 0 #050505;
+}
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-flag,
+.mondial-broadcast.mondial-style-poster_social .mondial-flag {
+  border-color: #050505;
+  box-shadow: 5px 4px 0 var(--mondial-a1), 10px 8px 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-group-card,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-match-card,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-side-team,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-story-card {
+  border-color: #050505;
+  border-radius: 18px;
+  box-shadow: 0 0 0 3px #050505, 12px 12px 0 var(--mondial-a1), 23px 22px 0 var(--mondial-a3);
+}
 .mondial-broadcast.mondial-style-neon_arc .mondial-group-card,
 .mondial-broadcast.mondial-style-neon_arc .mondial-match-card,
 .mondial-broadcast.mondial-style-neon_arc .mondial-side-team,
@@ -750,12 +965,63 @@ export const MONDIAL_BROADCAST_CSS = `
   border-radius: 18px;
   box-shadow: 0 0 0 2px #050505, 10px 10px 0 var(--mondial-a1), 18px 18px 0 var(--mondial-a4);
 }
+.mondial-broadcast.mondial-style-poster_social .mondial-group-card,
+.mondial-broadcast.mondial-style-poster_social .mondial-match-card,
+.mondial-broadcast.mondial-style-poster_social .mondial-side-team,
+.mondial-broadcast.mondial-style-poster_social .mondial-story-card {
+  border-color: #050505;
+  border-radius: 0;
+  box-shadow: 11px 10px 0 var(--mondial-a3), 22px 20px 0 var(--mondial-a1);
+}
+.mondial-broadcast.mondial-style-flag_identity .mondial-group-card,
+.mondial-broadcast.mondial-style-flag_identity .mondial-match-card,
+.mondial-broadcast.mondial-style-flag_identity .mondial-side-team,
+.mondial-broadcast.mondial-style-flag_identity .mondial-story-card {
+  border-color: #050505;
+  border-radius: 7px;
+  box-shadow: 7px 7px 0 var(--mondial-a2), 14px 14px 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-stadium_lights .mondial-group-card,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-match-card,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-side-team,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-story-card {
+  border-color: color-mix(in srgb, var(--mondial-a1) 70%, #ffffff);
+  box-shadow: 0 0 0 2px rgba(255,255,255,.18), 0 0 42px color-mix(in srgb, var(--mondial-a1) 42%, transparent);
+}
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-group-title,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-bracket-title,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-match-title,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-team-short,
+.mondial-broadcast.mondial-style-mega_pack_black .mondial-story-team b {
+  text-shadow: 7px 0 0 var(--mondial-a1), -7px 0 0 var(--mondial-a3), 0 8px 0 #050505;
+}
 .mondial-broadcast.mondial-style-neon_arc .mondial-group-title,
 .mondial-broadcast.mondial-style-neon_arc .mondial-bracket-title,
 .mondial-broadcast.mondial-style-neon_arc .mondial-match-title,
 .mondial-broadcast.mondial-style-neon_arc .mondial-team-short,
 .mondial-broadcast.mondial-style-neon_arc .mondial-story-team b {
   text-shadow: 5px 0 0 var(--mondial-a1), -5px 0 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-poster_social .mondial-group-title,
+.mondial-broadcast.mondial-style-poster_social .mondial-bracket-title,
+.mondial-broadcast.mondial-style-poster_social .mondial-match-title,
+.mondial-broadcast.mondial-style-poster_social .mondial-team-short,
+.mondial-broadcast.mondial-style-poster_social .mondial-story-team b {
+  text-shadow: 6px 5px 0 var(--mondial-a3), 12px 10px 0 #050505;
+}
+.mondial-broadcast.mondial-style-flag_identity .mondial-group-title,
+.mondial-broadcast.mondial-style-flag_identity .mondial-bracket-title,
+.mondial-broadcast.mondial-style-flag_identity .mondial-match-title,
+.mondial-broadcast.mondial-style-flag_identity .mondial-team-short,
+.mondial-broadcast.mondial-style-flag_identity .mondial-story-team b {
+  text-shadow: 5px 0 0 var(--mondial-a1), 10px 0 0 var(--mondial-a2), 15px 0 0 var(--mondial-a4);
+}
+.mondial-broadcast.mondial-style-stadium_lights .mondial-group-title,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-bracket-title,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-match-title,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-team-short,
+.mondial-broadcast.mondial-style-stadium_lights .mondial-story-team b {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--mondial-a1) 66%, transparent), 0 8px 0 #050505;
 }
 .mondial-broadcast.mondial-style-score_red .mondial-group-header,
 .mondial-broadcast.mondial-style-score_red .mondial-bracket-header,

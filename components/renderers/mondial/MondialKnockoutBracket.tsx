@@ -3,6 +3,7 @@ import {
   BroadcastFlag,
   DEMO_WORLD_CUP_ROUNDS,
   getBroadcastCssVars,
+  getBroadcastLook,
   getBroadcastPalette,
   getBroadcastStyle,
   GROUP_ACCENTS,
@@ -76,6 +77,17 @@ const KNOCKOUT_CSS = `
 .mondial-style-signal .mondial-match-team-name, .mondial-style-signal .mondial-match-score { font-family: 'Courier New', monospace; }
 .mondial-style-signal .mondial-match-placeholder { color: #555; }
 .mondial-style-signal .mondial-bracket-footer { color: #050505; }
+.mondial-look-mega_pack_black.mondial-bracket-shell { padding: 22px 28px 16px; }
+.mondial-look-mega_pack_black .mondial-bracket-header { min-height: 82px; align-items: flex-start; }
+.mondial-look-mega_pack_black .mondial-bracket-title { font-size: 42px; line-height: .84; }
+.mondial-look-mega_pack_black .mondial-bracket-route { gap: 8px; }
+.mondial-look-mega_pack_black .mondial-match-card { border-radius: 14px; }
+.mondial-look-scoreboard_red .mondial-center-column .mondial-match-card { height: 96px; border-radius: 16px; }
+.mondial-look-scoreboard_red .mondial-final-trophy { height: 58px; font-size: 48px; color: var(--mondial-a3); }
+.mondial-look-flag_identity .mondial-stage-label { border-radius: 0 12px 0 12px; }
+.mondial-look-flag_identity .mondial-match-card { border-radius: 3px 12px 3px 12px; }
+.mondial-look-stadium_lights .mondial-bracket-header { padding: 10px 16px; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.52); box-shadow: 0 0 38px color-mix(in srgb, var(--mondial-a1) 30%, transparent); }
+.mondial-look-stadium_lights .mondial-match-card { background: rgba(4, 12, 26, .78); }
 `;
 
 type Stage = WorldCupRound['stage'];
@@ -200,6 +212,7 @@ const fieldText = (getField: MondialBroadcastProps['getField'], id: string, fall
 };
 
 export const MondialKnockoutBracket: React.FC<MondialBroadcastProps> = ({ getField, liveData }) => {
+  const lookId = getBroadcastLook(getField);
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const payload = selectPayload(liveData, getField('roundsJson'), ['rounds', 'worldCupRounds']);
@@ -217,7 +230,7 @@ export const MondialKnockoutBracket: React.FC<MondialBroadcastProps> = ({ getFie
 
   return (
     <section
-      className={`mondial-broadcast mondial-bracket-shell mondial-style-${styleId} mondial-phase-in`}
+      className={`mondial-broadcast mondial-bracket-shell mondial-style-${styleId} mondial-look-${lookId} mondial-phase-in`}
       style={getBroadcastCssVars(paletteId)}
       data-template="knockout_bracket"
       data-motion-phase="in-hold-out"

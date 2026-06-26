@@ -92,6 +92,35 @@ test('Mondial visual surfaces do not expose the upstream data provider brand', a
   assert.doesNotMatch(combined, /fotmob(?:\s+live)?/i);
 });
 
+test('Mondial broadcast look presets are selectable and drive renderer classes', async () => {
+  const [templates, shared, groupWall, matchCards, identity, bracket] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/mondial/MondialBroadcastShared.tsx'),
+    readSource('../components/renderers/mondial/MondialGroupWall.tsx'),
+    readSource('../components/renderers/mondial/MondialMatchCards.tsx'),
+    readSource('../components/renderers/mondial/MondialTeamIdentity.tsx'),
+    readSource('../components/renderers/mondial/MondialKnockoutBracket.tsx'),
+  ]);
+
+  assert.match(templates, /id: 'broadcastLook'[\s\S]*?value: 'mega_pack_black'/);
+  for (const preset of ['mega_pack_black', 'neon_arc', 'scoreboard_red', 'poster_social', 'flag_identity', 'stadium_lights']) {
+    assert.match(templates, new RegExp(`value: '${preset}'`), `${preset} is not selectable`);
+    assert.match(shared, new RegExp(`${preset}: \\{ style:`), `${preset} has no style mapping`);
+  }
+
+  assert.match(shared, /mega_pack_black: \{ style: 'mega_pack_black', palette: 'mega_black' \}/);
+  assert.match(shared, /poster_social: \{ style: 'poster_social', palette: 'poster' \}/);
+  assert.match(shared, /flag_identity: \{ style: 'flag_identity', palette: 'flag_identity' \}/);
+  assert.match(shared, /stadium_lights: \{ style: 'stadium_lights', palette: 'stadium_lights' \}/);
+  assert.match(matchCards, /mondial-look-poster_social\.mondial-story-shell/);
+  assert.match(identity, /mondial-look-flag_identity \.mondial-flag-wall/);
+
+  for (const source of [groupWall, matchCards, identity, bracket]) {
+    assert.match(source, /const lookId = getBroadcastLook\(getField\)/);
+    assert.match(source, /mondial-look-\$\{lookId\}/);
+  }
+});
+
 test('match status comes from the selected fixture, not bridge connectivity', async () => {
   const [renderer, obs] = await Promise.all([
     readSource('../components/renderers/Mondial2026Renderer.tsx'),
@@ -142,4 +171,36 @@ test('selected match details are propagated to broadcast cards and player spotli
   );
   assert.match(obs, /matchDetails\?\.playerOfTheMatch/);
   assert.match(obs, /livePlayer\?\.stats/);
+});
+
+test('broadcast look settings drive reference-pack style and palette rendering', async () => {
+  const [templates, shared, groupWall, matchCards, identityWall] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/mondial/MondialBroadcastShared.tsx'),
+    readSource('../components/renderers/mondial/MondialGroupWall.tsx'),
+    readSource('../components/renderers/mondial/MondialMatchCards.tsx'),
+    readSource('../components/renderers/mondial/MondialTeamIdentity.tsx'),
+  ]);
+
+  for (const look of ['reference_pack', 'match_night', 'scoreboard_red', 'social_blue_green', 'trophy_gold', 'clean_draw']) {
+    assert.match(templates, new RegExp(`value: '${look}'`), `${look} is missing from broadcastLook settings`);
+    assert.match(shared, new RegExp(`${look}: \\{ style: '[^']+', palette: '[^']+' \\}`), `${look} does not map to style and palette`);
+  }
+
+  for (const style of ['spectrum', 'stadium', 'signal', 'neon_arc', 'score_red', 'clean_grid']) {
+    assert.match(templates, new RegExp(`value: '${style}'`), `${style} is missing from manual style settings`);
+    assert.match(shared, new RegExp(`mondial-style-${style}`), `${style} has no base CSS treatment`);
+  }
+
+  for (const palette of ['global', 'reo', 'midnight', 'electric', 'trophy', 'score_red', 'social_green']) {
+    assert.match(templates, new RegExp(`value: '${palette}'`), `${palette} is missing from manual palette settings`);
+    assert.match(shared, new RegExp(`${palette}: \\{`), `${palette} has no palette definition`);
+  }
+
+  for (const rendererSource of [groupWall, matchCards, identityWall]) {
+    assert.match(rendererSource, /getBroadcastStyle\(getField\)/);
+    assert.match(rendererSource, /getBroadcastPalette\(getField\)/);
+    assert.match(rendererSource, /mondial-style-\$\{styleId\}/);
+    assert.match(rendererSource, /getBroadcastCssVars\(paletteId\)/);
+  }
 });

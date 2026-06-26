@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BroadcastFlag,
   getBroadcastCssVars,
+  getBroadcastLook,
   getBroadcastPalette,
   getBroadcastStyle,
   GROUP_ACCENTS,
@@ -40,6 +41,19 @@ const TEAM_IDENTITY_CSS = `
 
 .mondial-style-score_red .mondial-identity-title { text-shadow: 6px 5px 0 var(--mondial-a3), 11px 10px 0 #050505; }
 .mondial-style-score_red .mondial-identity-stage { border-color: #050505; background: color-mix(in srgb, var(--mondial-panel) 78%, #050505); box-shadow: 12px 12px 0 var(--mondial-a1); }
+.mondial-look-flag_identity .mondial-identity-header { min-height: 116px; }
+.mondial-look-flag_identity .mondial-identity-title { font-size: 68px; line-height: .78; }
+.mondial-look-flag_identity .mondial-identity-stage { border: 0; border-radius: 0; background: color-mix(in srgb, var(--mondial-panel) 70%, #050505); box-shadow: inset 0 0 0 7px #050505, inset 0 0 0 12px var(--mondial-a2); }
+.mondial-look-flag_identity .mondial-identity-sweep { opacity: .96; background: linear-gradient(103deg, transparent 0 13%, var(--mondial-a1) 13% 17%, transparent 17% 31%, var(--mondial-a3) 31% 35%, transparent 35% 52%, var(--mondial-a4) 52% 56%, transparent 56% 100%); }
+.mondial-look-flag_identity .mondial-flag-wall { gap: 9px 13px; padding: 20px 30px; }
+.mondial-look-flag_identity .mondial-flag-tile { border-radius: 4px 18px 4px 18px; padding: 5px; }
+.mondial-look-flag_identity .mondial-flag-tile-name { font-size: 24px; }
+.mondial-look-flag_identity .mondial-code-wall { gap: 32px; padding: 14px 60px; }
+.mondial-look-flag_identity .mondial-code-text { font-size: 42px; text-shadow: -8px 0 0 var(--team-accent), 8px 0 0 var(--mondial-a4), 16px 0 0 var(--mondial-a1); }
+.mondial-look-mega_pack_black .mondial-identity-title { font-size: 72px; line-height: .75; }
+.mondial-look-mega_pack_black .mondial-identity-stage { border-color: #050505; border-width: 6px; border-radius: 28px; }
+.mondial-look-poster_social .mondial-identity-stage { transform: rotate(-.55deg); border-color: #050505; border-width: 6px; }
+.mondial-look-stadium_lights .mondial-identity-stage { border-color: color-mix(in srgb, var(--mondial-a1) 58%, #ffffff); background: rgba(0,0,0,.48); box-shadow: 0 0 54px color-mix(in srgb, var(--mondial-a1) 36%, transparent); }
 .mondial-style-clean_grid .mondial-identity-stage { background: var(--mondial-paper); border-color: #050505; box-shadow: none; }
 .mondial-style-clean_grid .mondial-identity-title { color: #050505; text-shadow: none; }
 .mondial-style-clean_grid .mondial-code-text { color: #050505; text-shadow: none; filter: none; }
@@ -99,6 +113,7 @@ const IdentityFrame: React.FC<{
   modeLabel: string;
   children: React.ReactNode;
 }> = ({ getField, teamsCount, modeLabel, children }) => {
+  const lookId = getBroadcastLook(getField);
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const title = fieldText(getField, 'identityTitle', 'WORLD CUP 2026 TEAM IDENTITY');
@@ -106,7 +121,7 @@ const IdentityFrame: React.FC<{
 
   return (
     <section
-      className={`mondial-broadcast mondial-identity-shell mondial-style-${styleId} mondial-phase-in`}
+      className={`mondial-broadcast mondial-identity-shell mondial-style-${styleId} mondial-look-${lookId} mondial-phase-in`}
       style={getBroadcastCssVars(paletteId)}
       data-template={modeLabel}
       data-motion-phase="in-hold-out"

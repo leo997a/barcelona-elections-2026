@@ -2,6 +2,7 @@ import React from 'react';
 import {
   BroadcastFlag,
   getBroadcastCssVars,
+  getBroadcastLook,
   getBroadcastPalette,
   getBroadcastStyle,
   GROUP_ACCENTS,
@@ -67,6 +68,20 @@ const GROUP_WALL_CSS = `
 .mondial-style-signal .mondial-team-stat { color: #555; font-family: 'Courier New', monospace; }
 .mondial-style-signal .mondial-team-points { border: 2px solid #050505; }
 .mondial-style-signal .mondial-group-footer { color: #050505; }
+.mondial-look-mega_pack_black .mondial-group-header { min-height: 104px; align-items: flex-start; }
+.mondial-look-mega_pack_black .mondial-group-title { font-size: 58px; line-height: .82; letter-spacing: 0; color: #fff; }
+.mondial-look-mega_pack_black .mondial-group-grid { gap: 18px 22px; }
+.mondial-look-mega_pack_black .mondial-group-card:nth-child(3n+1) { transform: translateY(-5px); }
+.mondial-look-mega_pack_black .mondial-group-card:nth-child(3n+2) { transform: translateY(4px); }
+.mondial-look-mega_pack_black .mondial-group-code { font-size: 24px; }
+.mondial-look-flag_identity .mondial-group-card { border-radius: 18px 18px 22px 6px; background: var(--mondial-paper); color: #050505; }
+.mondial-look-flag_identity .mondial-group-team { border-color: rgba(0,0,0,.18); }
+.mondial-look-flag_identity .mondial-team-stat { color: #555; }
+.mondial-look-flag_identity .mondial-group-code { color: #050505; background: var(--group-accent); }
+.mondial-look-stadium_lights .mondial-group-header { padding: 12px 18px; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.56); box-shadow: 0 0 38px color-mix(in srgb, var(--mondial-a1) 30%, transparent); }
+.mondial-look-stadium_lights .mondial-group-card { background: rgba(4, 12, 26, .78); backdrop-filter: blur(3px); }
+.mondial-look-poster_social .mondial-group-card { transform: rotate(-.35deg); }
+.mondial-look-poster_social .mondial-group-card:nth-child(even) { transform: rotate(.35deg); }
 `;
 
 const fieldText = (getField: MondialBroadcastProps['getField'], id: string, fallback: string): string => {
@@ -114,6 +129,7 @@ const GroupCard: React.FC<{
 );
 
 export const MondialGroupWall: React.FC<MondialBroadcastProps> = ({ getField, liveData }) => {
+  const lookId = getBroadcastLook(getField);
   const styleId = getBroadcastStyle(getField);
   const paletteId = getBroadcastPalette(getField);
   const layout = String(getField('groupWallLayout') || '4x3') === '3x4' ? '3x4' : '4x3';
@@ -126,7 +142,7 @@ export const MondialGroupWall: React.FC<MondialBroadcastProps> = ({ getField, li
 
   return (
     <section
-      className={`mondial-broadcast mondial-group-shell mondial-style-${styleId} mondial-layout-${layout} mondial-phase-in`}
+      className={`mondial-broadcast mondial-group-shell mondial-style-${styleId} mondial-look-${lookId} mondial-layout-${layout} mondial-phase-in`}
       style={getBroadcastCssVars(paletteId)}
       data-template="group_wall"
       data-motion-phase="in-hold-out"
