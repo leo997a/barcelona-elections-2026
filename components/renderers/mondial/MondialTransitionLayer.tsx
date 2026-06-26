@@ -108,6 +108,34 @@ export const MONDIAL_TRANSITION_CSS = `
   50% { opacity: .78; transform: scale(.98) rotate(0deg); }
   100% { opacity: 0; transform: scale(.78) rotate(-3deg); }
 }
+@keyframes mondialTransitionArcStingerIn {
+  0% { opacity: 0; transform: scale(.22); filter: blur(10px) brightness(1.4); }
+  14% { opacity: 1; transform: scale(.38); filter: blur(2px) brightness(1.25); }
+  38% { opacity: 1; transform: scale(.98); filter: blur(0) brightness(1.12); }
+  68% { opacity: .98; transform: scale(1.08); filter: blur(0) brightness(1.18); }
+  100% { opacity: 0; transform: scale(1.32); filter: blur(8px) brightness(1.35); }
+}
+@keyframes mondialTransitionArcStingerOut {
+  0% { opacity: 0; transform: scale(1.24); filter: blur(8px) brightness(1.32); }
+  18% { opacity: .96; transform: scale(1.06); filter: blur(0) brightness(1.2); }
+  58% { opacity: 1; transform: scale(.82); filter: blur(0) brightness(1.1); }
+  100% { opacity: 0; transform: scale(.24); filter: blur(12px) brightness(1.45); }
+}
+@keyframes mondialTransitionArcBandTopIn {
+  0% { transform: translate3d(-50%, -112%, 0) rotate(var(--rotation)) scale(.72); }
+  44% { transform: translate3d(-50%, -54%, 0) rotate(var(--rotation)) scale(1); }
+  100% { transform: translate3d(-50%, -118%, 0) rotate(var(--rotation)) scale(1.12); }
+}
+@keyframes mondialTransitionArcBandBottomIn {
+  0% { transform: translate3d(-50%, 12%, 0) rotate(var(--rotation)) scale(.72); }
+  44% { transform: translate3d(-50%, -46%, 0) rotate(var(--rotation)) scale(1); }
+  100% { transform: translate3d(-50%, 18%, 0) rotate(var(--rotation)) scale(1.12); }
+}
+@keyframes mondialTransitionArcBugIn {
+  0%, 10% { opacity: 0; transform: translate(-50%, -50%) scale(.56); filter: blur(8px); }
+  32%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.22); filter: blur(8px); }
+}
 @keyframes mondialTransitionStackIn {
   0% { opacity: 0; transform: translateX(-135%) skewX(-18deg); }
   16% { opacity: .95; }
@@ -172,7 +200,9 @@ export const MONDIAL_TRANSITION_CSS = `
 .mondial-transition-mask,
 .mondial-transition-rings,
 .mondial-transition-flash,
-.mondial-transition-scan {
+.mondial-transition-scan,
+.mondial-transition-arc-stinger,
+.mondial-transition-bug {
   position: absolute;
   inset: -12%;
   z-index: 20;
@@ -280,6 +310,116 @@ export const MONDIAL_TRANSITION_CSS = `
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-rings {
   animation: mondialTransitionReferencePulseOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
 }
+.mondial-transition-arc-stinger {
+  inset: -18%;
+  z-index: 31;
+  opacity: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(0,0,0,.95) 0 13%, transparent 14% 100%);
+  mix-blend-mode: normal;
+  transform-origin: center;
+}
+.mondial-transition-arc-stinger::before,
+.mondial-transition-arc-stinger::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  background: color-mix(in srgb, var(--mondial-paper) 76%, transparent);
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--mondial-a2) 70%, transparent),
+    0 0 42px color-mix(in srgb, var(--mondial-a3) 44%, transparent);
+  transform: translateY(-50%);
+}
+.mondial-transition-arc-stinger::after {
+  height: 1px;
+  opacity: .6;
+  transform: translateY(16px);
+}
+.mondial-transition-arc-stinger span {
+  --size: calc(34vw + (var(--band-index) * 6.2vw));
+  --stroke: clamp(18px, 3.8vw, 58px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--size);
+  height: var(--size);
+  border: var(--stroke) solid var(--stripe);
+  border-radius: 36% 0 36% 0;
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--stripe) 44%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--mondial-paper) 22%, transparent);
+  filter: saturate(1.26);
+  opacity: .96;
+}
+.mondial-transition-arc-stinger span[data-arc='top'] {
+  clip-path: inset(0 0 50% 0);
+  transform: translate3d(-50%, -54%, 0) rotate(var(--rotation)) scale(1);
+}
+.mondial-transition-arc-stinger span[data-arc='bottom'] {
+  clip-path: inset(50% 0 0 0);
+  transform: translate3d(-50%, -46%, 0) rotate(var(--rotation)) scale(1);
+}
+.mondial-transition-bug {
+  inset: auto;
+  z-index: 33;
+  left: 50%;
+  top: 50%;
+  width: clamp(86px, 14vw, 190px);
+  height: clamp(86px, 14vw, 190px);
+  border-radius: 30% 30% 42% 42%;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.8);
+  background:
+    linear-gradient(180deg, #fff 0 58%, color-mix(in srgb, var(--mondial-paper) 82%, #e8eefb) 58% 100%);
+  color: #03040a;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--mondial-ink) 72%, transparent),
+    0 18px 80px rgba(0,0,0,.55),
+    0 0 42px color-mix(in srgb, var(--mondial-a2) 52%, transparent);
+  text-align: center;
+  font-family: Impact, Arial Black, sans-serif;
+  letter-spacing: .02em;
+}
+.mondial-transition-bug span {
+  display: block;
+  font-size: clamp(28px, 4.4vw, 74px);
+  line-height: .8;
+  font-weight: 950;
+}
+.mondial-transition-bug b {
+  display: block;
+  margin-top: -2px;
+  font-size: clamp(13px, 1.65vw, 27px);
+  line-height: 1;
+  font-weight: 950;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-arc-stinger {
+  animation: mondialTransitionArcStingerIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger {
+  animation: mondialTransitionArcStingerOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='top'] {
+  animation: mondialTransitionArcBandTopIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='bottom'] {
+  animation: mondialTransitionArcBandBottomIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='top'] {
+  animation: mondialTransitionArcBandBottomIn calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) reverse both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='bottom'] {
+  animation: mondialTransitionArcBandTopIn calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) reverse both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-bug,
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-bug {
+  animation: mondialTransitionArcBugIn calc(var(--mondial-transition-speed) * .86) cubic-bezier(.16,1,.3,1) both;
+}
 .mondial-transition-flash {
   opacity: 0;
   background:
@@ -386,7 +526,9 @@ export const MONDIAL_TRANSITION_CSS = `
   .mondial-transition-frame[data-motion='on'] .mondial-transition-mask,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-rings,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-flash,
-  .mondial-transition-frame[data-motion='on'] .mondial-transition-scan {
+  .mondial-transition-frame[data-motion='on'] .mondial-transition-scan,
+  .mondial-transition-frame[data-motion='on'] .mondial-transition-arc-stinger,
+  .mondial-transition-frame[data-motion='on'] .mondial-transition-bug {
     animation-duration: 1ms !important;
   }
 }
@@ -429,6 +571,15 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
     '--mondial-transition-intensity': intensity,
   } as React.CSSProperties;
   const stripes = ['var(--mondial-a1)', 'var(--mondial-a3)', 'var(--mondial-a2)', 'var(--mondial-a4)', 'var(--mondial-paper)', 'var(--mondial-a1)', 'var(--mondial-a2)'];
+  const arcStripes = [
+    'var(--mondial-a2)',
+    'var(--mondial-a3)',
+    'var(--mondial-a4)',
+    'var(--mondial-a1)',
+    'var(--mondial-paper)',
+    'var(--mondial-a2)',
+    'var(--mondial-a3)',
+  ];
 
   return (
     <div
@@ -442,6 +593,23 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
     >
       <style>{MONDIAL_TRANSITION_CSS}</style>
       <div className="mondial-transition-content">{children}</div>
+      <div className="mondial-transition-arc-stinger" aria-hidden="true">
+        {[...arcStripes, ...arcStripes].map((color, index) => (
+          <span
+            key={`arc-${color}-${index}`}
+            data-arc={index < arcStripes.length ? 'top' : 'bottom'}
+            style={{
+              '--stripe': color,
+              '--band-index': index % arcStripes.length,
+              '--rotation': `${(index % arcStripes.length) % 2 === 0 ? -18 : -12}deg`,
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="mondial-transition-bug" aria-hidden="true">
+        <span>REO</span>
+        <b>SHOW</b>
+      </div>
       <div className="mondial-transition-mask" aria-hidden="true">
         {stripes.slice(0, 4).map((color, index) => (
           <span key={`mask-${color}-${index}`} style={{ '--stripe': color } as React.CSSProperties} />

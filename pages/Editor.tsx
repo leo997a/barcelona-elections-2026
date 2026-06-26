@@ -4886,7 +4886,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </span>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
-                    const url = await syncManager.prepareOutputUrl(liveOverlay.id, liveOverlay);
+                    const outputSnapshot = normalizeElectionOverlay({
+                      ...draftOverlay,
+                      isVisible: liveOverlay.isVisible,
+                    });
+                    const url = await syncManager.prepareOutputUrl(outputSnapshot.id, outputSnapshot);
                     if (popup) popup.location.href = url;
                     else window.open(url, '_blank', 'width=1280,height=720');
                  }} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-bold border border-blue-600/30 transition-colors" title="فتح رابط القالب">

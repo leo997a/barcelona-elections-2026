@@ -35,8 +35,13 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /getField\('transitionIntensity'\)/);
   assert.match(transitionLayer, /mondialTransitionReferenceCoverIn/);
   assert.match(transitionLayer, /mondialTransitionReferenceCoverOut/);
+  assert.match(transitionLayer, /mondialTransitionArcStingerIn/);
+  assert.match(transitionLayer, /mondialTransitionArcStingerOut/);
+  assert.match(transitionLayer, /mondialTransitionArcBandTopIn/);
   assert.match(transitionLayer, /className="mondial-transition-mask"/);
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
+  assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
+  assert.match(transitionLayer, /className="mondial-transition-bug"/);
 });
 
 test('all selectable mondial motion presets have runtime transition effects', async () => {
@@ -94,4 +99,25 @@ test('remote controls can create the complete mondial broadcast settings', async
   ]) {
     assert.match(source, new RegExp(`\\b${field}:`));
   }
+});
+
+test('output visibility controls publish immediately and editor links use the latest draft snapshot', async () => {
+  const [syncManager, editor] = await Promise.all([
+    readSource('../services/syncManager.ts'),
+    readSource('../pages/Editor.tsx'),
+  ]);
+
+  assert.match(
+    syncManager,
+    /const isVisibilityCommand = command\.action === 'set_visible' \|\| command\.action === 'toggle_visible';/
+  );
+  assert.match(syncManager, /publishOverlaySnapshotWithRetry\(overlay/);
+  assert.match(syncManager, /publishProgramSnapshotWithRetry\(Boolean\(options\.keepalive\)\)/);
+  assert.match(
+    syncManager,
+    /this\.pushToLiveApi\(command\.targetId, changedOverlay \?\? undefined, \{[\s\S]*?immediate: isVisibilityCommand,[\s\S]*?retry: isVisibilityCommand,[\s\S]*?\}\);/
+  );
+  assert.match(editor, /const outputSnapshot = normalizeElectionOverlay\(\{[\s\S]*?\.\.\.draftOverlay,[\s\S]*?isVisible: liveOverlay\.isVisible,[\s\S]*?\}\);/);
+  assert.match(editor, /prepareOutputUrl\(outputSnapshot\.id, outputSnapshot\)/);
+  assert.doesNotMatch(editor, /prepareOutputUrl\(liveOverlay\.id, liveOverlay\)/);
 });

@@ -500,18 +500,47 @@ class SyncManager {
     });
   }
 
-  private flushPendingLiveApi() {
+  private publishOverlaySnapshotWithRetry(overlay: OverlayConfig, keepalive = false) {
+    this.publishOverlaySnapshot(overlay, keepalive).catch(() => {
+      setTimeout(() => {
+        this.publishOverlaySnapshot(overlay, false).catch(() => { /* silent */ });
+      }, 450);
+    });
+  }
+
+  private publishProgramSnapshotWithRetry(keepalive = false) {
+    this.publishProgramSnapshot(keepalive).catch(() => {
+      setTimeout(() => {
+        this.publishProgramSnapshot(false).catch(() => { /* silent */ });
+      }, 450);
+    });
+  }
+
+  private flushPendingLiveApi(options: { keepalive?: boolean; retry?: boolean } = {}) {
     const snapshots = [...this.pendingLiveSnapshots.values()];
     this.pendingLiveSnapshots.clear();
     this.liveApiDebounceTimer = null;
 
     for (const overlay of snapshots) {
-      this.publishOverlaySnapshot(overlay, false).catch(() => { /* silent */ });
+      if (options.retry) {
+        this.publishOverlaySnapshotWithRetry(overlay, Boolean(options.keepalive));
+      } else {
+        this.publishOverlaySnapshot(overlay, Boolean(options.keepalive)).catch(() => { /* silent */ });
+      }
     }
-    this.publishProgramSnapshot(false).catch(() => { /* silent */ });
+
+    if (options.retry) {
+      this.publishProgramSnapshotWithRetry(Boolean(options.keepalive));
+    } else {
+      this.publishProgramSnapshot(Boolean(options.keepalive)).catch(() => { /* silent */ });
+    }
   }
 
-  private pushToLiveApi(specificOverlayId?: string, explicitOverlay?: OverlayConfig) {
+  private pushToLiveApi(
+    specificOverlayId?: string,
+    explicitOverlay?: OverlayConfig,
+    options: { immediate?: boolean; keepalive?: boolean; retry?: boolean } = {}
+  ) {
     const snapshotsToSend = explicitOverlay
       ? [explicitOverlay]
       : specificOverlayId
@@ -524,6 +553,11 @@ class SyncManager {
 
     if (this.liveApiDebounceTimer) clearTimeout(this.liveApiDebounceTimer);
 
+    if (options.immediate) {
+      this.flushPendingLiveApi({ keepalive: options.keepalive, retry: options.retry });
+      return;
+    }
+
     this.liveApiDebounceTimer = setTimeout(() => {
       this.flushPendingLiveApi();
     }, 80);
@@ -532,6 +566,7 @@ class SyncManager {
   private processAction(command: ActionCommand, shouldBroadcast = true) {
     let modified = false;
     let changedOverlay: OverlayConfig | null = null;
+    const isVisibilityCommand = command.action === 'set_visible' || command.action === 'toggle_visible';
 
     this.currentState = this.currentState.map(overlay => {
       if (overlay.id !== command.targetId) return overlay;
@@ -671,7 +706,10 @@ class SyncManager {
 
     if (modified) {
       this.persist(shouldBroadcast);
-      this.pushToLiveApi(command.targetId, changedOverlay ?? undefined);
+      this.pushToLiveApi(command.targetId, changedOverlay ?? undefined, {
+        immediate: isVisibilityCommand,
+        retry: isVisibilityCommand,
+      });
       if (this.canWriteSecureState()) {
         void this.pushToSecureState().catch(error => {
           if (!this.disableSecureWrites(error, 'Firebase command state write denied')) {
