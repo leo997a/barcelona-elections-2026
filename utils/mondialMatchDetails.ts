@@ -54,6 +54,12 @@ export type MondialMatchDetailPotm = {
   team: 'home' | 'away' | 'neutral';
   rating?: number;
   image?: string;
+  stats?: Array<{
+    key: string;
+    label: string;
+    value: number | string;
+    total?: number;
+  }>;
 };
 
 export type MondialMatchDetails = {
@@ -440,6 +446,33 @@ const statRows = (statsSource: unknown): MondialMatchDetailStat[] => {
   return rows;
 };
 
+const playerStatRows = (statsSource: unknown): NonNullable<MondialMatchDetailPotm['stats']> => {
+  const groups = Array.isArray(statsSource) ? statsSource : [];
+  const rows: NonNullable<MondialMatchDetailPotm['stats']> = [];
+  const seen = new Set<string>();
+  groups.forEach(groupValue => {
+    const group = recordOf(groupValue);
+    const stats = recordOf(group?.stats);
+    if (!stats) return;
+    Object.entries(stats).forEach(([rawLabel, statValue]) => {
+      const item = recordOf(statValue);
+      const stat = recordOf(item?.stat);
+      const key = stringValue(item?.key, rawLabel).toLowerCase();
+      if (!stat || !key || seen.has(key)) return;
+      const value = stat.value;
+      if (typeof value !== 'number' && typeof value !== 'string') return;
+      seen.add(key);
+      rows.push({
+        key,
+        label: key === 'rating_title' ? 'Rating' : rawLabel.replace(/^FotMob\s+/i, ''),
+        value,
+        total: optionalNumber(stat.total),
+      });
+    });
+  });
+  return rows;
+};
+
 const normalizePotm = (
   value: unknown,
   homeTeamId: string,
@@ -457,6 +490,7 @@ const normalizePotm = (
     team: teamId === homeTeamId ? 'home' : teamId === awayTeamId ? 'away' : 'neutral',
     rating: optionalNumber(rating?.num ?? source.playerRatingRounded ?? source.playerRating),
     image: id ? PLAYER_IMAGE_URL(id) : undefined,
+    stats: playerStatRows(source.stats),
   };
 };
 
@@ -601,6 +635,33 @@ export const matchDetailsToFields = (
   const home = details.match.home;
   const away = details.match.away;
   const player = details.playerOfTheMatch;
+  const playerStats = player?.stats ?? [];
+  const playerStatLabels: Record<string, string> = {
+    goals: 'الأهداف',
+    assists: 'التمريرات الحاسمة',
+    expected_goals: 'الأهداف المتوقعة',
+    total_shots: 'التسديدات',
+    shotsontarget: 'على المرمى',
+    accurate_passes: 'التمريرات الدقيقة',
+    chances_created: 'الفرص المصنوعة',
+    minutes_played: 'الدقائق',
+  };
+  const featuredPlayerStats = playerStats
+    .filter(stat => [
+      'goals',
+      'assists',
+      'expected_goals',
+      'total_shots',
+      'shotsonTarget'.toLowerCase(),
+      'accurate_passes',
+      'chances_created',
+      'minutes_played',
+    ].includes(stat.key.toLowerCase()))
+    .slice(0, 6)
+    .map(stat => ({
+      label: playerStatLabels[stat.key.toLowerCase()] ?? stat.label,
+      value: stat.total === undefined ? stat.value : `${stat.value}/${stat.total}`,
+    }));
   return {
     selectedMatchId: details.match.id,
     competition: details.match.competition,
@@ -639,10 +700,12 @@ export const matchDetailsToFields = (
     rating: player?.rating ?? '',
     playerImage: player?.image ?? '',
     statsJson: JSON.stringify(
-      details.teamStats.slice(0, 4).map(stat => ({
-        label: stat.label,
-        value: `${stat.home} / ${stat.away}`,
-      }))
+      featuredPlayerStats.length
+        ? featuredPlayerStats
+        : details.teamStats.slice(0, 4).map(stat => ({
+            label: stat.label,
+            value: `${stat.home} / ${stat.away}`,
+          }))
     ),
   };
 };

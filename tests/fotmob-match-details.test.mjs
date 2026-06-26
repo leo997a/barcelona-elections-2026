@@ -46,6 +46,24 @@ const rawMatchDetails = {
         teamName: 'Mexico',
         name: 'Santiago Gimenez',
         playerRatingRounded: 8.7,
+        stats: [{
+          title: 'Top stats',
+          key: 'top_stats',
+          stats: {
+            'FotMob rating': {
+              key: 'rating_title',
+              stat: { value: 8.7, type: 'double' },
+            },
+            Goals: {
+              key: 'goals',
+              stat: { value: 2, type: 'integer' },
+            },
+            'Accurate passes': {
+              key: 'accurate_passes',
+              stat: { value: 21, total: 25, type: 'fractionWithPercentage' },
+            },
+          },
+        }],
       },
       topPlayers: {
         homeTopPlayers: [],
@@ -119,6 +137,8 @@ test('normalizes current FotMob match details into the REO contract', () => {
   assert.equal(details.lineups.away.coach, 'Hugo Broos');
   assert.equal(details.teamStats.length, 3);
   assert.equal(details.playerOfTheMatch.rating, 8.7);
+  assert.equal(details.playerOfTheMatch.stats[0].label, 'Rating');
+  assert.equal(details.playerOfTheMatch.stats[1].key, 'goals');
   assert.equal(details.availability.lineups, true);
   assert.equal(details.availability.teamStats, true);
 });
@@ -132,6 +152,10 @@ test('maps match details to legacy fields consumed by existing templates', () =>
   assert.equal(fields.awayTeam, 'South Africa');
   assert.equal(fields.homeScore, 2);
   assert.equal(fields.momName, 'Santiago Gimenez');
+  assert.deepEqual(JSON.parse(fields.statsJson).slice(0, 2), [
+    { label: 'الأهداف', value: 2 },
+    { label: 'التمريرات الدقيقة', value: '21/25' },
+  ]);
   assert.equal(JSON.parse(fields.playersJson)[0].name, 'Santiago Gimenez');
   assert.equal(lineupsToPlayersJson(details, 'away')[0].name, 'Ronwen Williams');
 });

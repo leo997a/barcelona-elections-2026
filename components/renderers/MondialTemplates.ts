@@ -338,6 +338,8 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
       // حقول الإحصائيات اليدوية
       { id: 'statPossessionHome', label: 'استحواذ المضيف %', type: 'range', value: 48, min: 0, max: 100, step: 1 },
       { id: 'statPossessionAway', label: 'استحواذ الضيف %', type: 'range', value: 52, min: 0, max: 100, step: 1 },
+      { id: 'statXgHome', label: 'الأهداف المتوقعة للمضيف', type: 'number', value: 0.8, min: 0, max: 10, step: 0.1 },
+      { id: 'statXgAway', label: 'الأهداف المتوقعة للضيف', type: 'number', value: 1.2, min: 0, max: 10, step: 0.1 },
       { id: 'statShotsHome', label: 'تسديدات المضيف', type: 'number', value: 8 },
       { id: 'statShotsAway', label: 'تسديدات الضيف', type: 'number', value: 14 },
       { id: 'statOnTargetHome', label: 'على المرمى (مضيف)', type: 'number', value: 4 },
@@ -455,7 +457,7 @@ const mondialBroadcastPresentationFields: OverlayField[] = [
 
 const mondialWorldCupDataFields: OverlayField[] = [
   { id: 'dataMode', label: 'World Cup data source', type: 'select', value: 'CLOUD_BRIDGE', options: [
-    { value: 'CLOUD_BRIDGE', label: 'FotMob through REO API' },
+    { value: 'CLOUD_BRIDGE', label: 'REO data bridge' },
     { value: 'BRIDGE', label: 'Custom bridge URL' },
     { value: 'PASTE_JSON', label: 'Manual JSON' },
     { value: 'DEMO', label: 'Demo fallback' },
@@ -580,7 +582,7 @@ export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     templateIcon: 'FT',
     templateAccent: '#ff1738',
     templateGroup: 'MONDIAL_2026_RESULTS',
-    templateDescription: 'Full-time result card using the latest finished FotMob fixture with bold broadcast score treatment.',
+    templateDescription: 'Full-time result card using the latest finished live-data fixture with bold broadcast score treatment.',
     theme: { primaryColor: '#ff1738', secondaryColor: '#2457ff', backgroundColor: '#050505', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -622,7 +624,7 @@ export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     templateIcon: 'R32',
     templateAccent: '#ff2f9f',
     templateGroup: 'MONDIAL_2026_RESULTS',
-    templateDescription: 'Round-of-32 knockout map through the final and third-place match, populated from FotMob when available.',
+    templateDescription: 'Round-of-32 knockout map through the final and third-place match, populated from live data when available.',
     theme: { primaryColor: '#ff2f9f', secondaryColor: '#b6ff00', backgroundColor: '#050505', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -825,6 +827,8 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'player_spotlight' },
+      ...mondialMatchSelectionFields,
+      ...mondialMatchDataFields.slice(0, 6),
       { id: 'name', label: 'اسم اللاعب', type: 'text', value: 'أيمن حسين' },
       { id: 'code', label: 'رمز الدولة', type: 'text', value: 'IQ' },
       { id: 'position', label: 'المركز', type: 'text', value: 'مهاجم صريح' },

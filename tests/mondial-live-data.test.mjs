@@ -52,8 +52,10 @@ test('mondial renderer triggers one transition for each meaningful live update',
   assert.match(renderer, /updateKey=\{updateSequence\}/);
   assert.match(renderer, /pickWorldCupMatch/);
   assert.match(renderer, /selectedMatchToFields/);
-  assert.match(renderer, /ReoObsGroupTable t=\{t\} getField=\{getField\} liveData=\{liveData\}/);
-  assert.match(renderer, /ReoObsGoldenBoot t=\{t\} getField=\{getField\} liveData=\{liveData\}/);
+  assert.match(renderer, /const templateLiveData = buildTemplateLiveData/);
+  assert.match(renderer, /selectedMatch: selectedFixture/);
+  assert.match(renderer, /ReoObsGroupTable t=\{t\} getField=\{getField\} liveData=\{templateLiveData\}/);
+  assert.match(renderer, /ReoObsGoldenBoot t=\{t\} getField=\{getField\} liveData=\{templateLiveData\}/);
   assert.match(await readSource('../components/renderers/MondialObsTemplates.tsx'), /liveData\?\.groups/);
   assert.match(transitionLayer, /mondial-transition-live-update/);
   assert.match(transitionLayer, /key=\{`live-update-\$\{updateKey\}`\}/);

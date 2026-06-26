@@ -188,7 +188,7 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHid
           <button
             onClick={refreshNow}
             className={`bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-md flex items-center gap-1 ${sizeBtn}`}
-            title="تحديث بيانات القالب الآن من الجسر / FotMob"
+            title="تحديث بيانات القالب الآن من جسر بيانات REO"
           >
             <RefreshCw className={sizeIcon} />
             {!compact && <span>تحديث</span>}

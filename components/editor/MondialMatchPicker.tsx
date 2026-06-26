@@ -162,7 +162,7 @@ export const MondialMatchPicker: React.FC<MondialMatchPickerProps> = ({ fields, 
             <h3 className="text-sm font-black">اختيار مباراة المونديال</h3>
           </div>
           <p className="mt-1 text-[11px] leading-5 text-slate-400">
-            اختر مباراة حقيقية من FotMob. سيتم تثبيت Match ID وربط القوالب بالتفاصيل المباشرة.
+            اختر مباراة من جسر بيانات REO. سيتم تثبيت Match ID وربط القوالب بالتفاصيل المباشرة.
           </p>
         </div>
         <button

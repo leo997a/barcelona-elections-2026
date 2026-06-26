@@ -24,6 +24,7 @@ import {
   fixturesFromWorldCupData,
   pickWorldCupMatch,
   selectedMatchToFields,
+  type MondialLiveMatch,
 } from '../../utils/mondialLiveSelectors';
 import {
   matchDetailsToFields,
@@ -132,6 +133,99 @@ const DEMO_SCORERS = [
   { name: 'أيمن حسين', nameAr: 'أيمن حسين', team: 'Iraq', flag: '🇮🇶', goals: 3, image: '' },
   { name: 'Lamine Yamal', nameAr: 'لامين يامال', team: 'Spain', flag: '🇪🇸', goals: 3, image: '' },
 ];
+
+const mergeSelectedMatchDetails = (
+  selectedMatch: MondialLiveMatch | undefined,
+  matchDetails: MondialMatchDetails | null
+): MondialLiveMatch | undefined => {
+  if (!selectedMatch || !matchDetails || String(selectedMatch.id) !== String(matchDetails.match.id)) {
+    return selectedMatch;
+  }
+
+  const detailMatch = matchDetails.match;
+  const homeFallback = selectedMatch.home ?? {
+    id: detailMatch.home.id,
+    name: detailMatch.home.name,
+    shortName: detailMatch.home.code,
+    countryCode: detailMatch.home.countryCode,
+    flagUrl: detailMatch.home.logoUrl,
+    logoUrl: detailMatch.home.logoUrl,
+  };
+  const awayFallback = selectedMatch.away ?? {
+    id: detailMatch.away.id,
+    name: detailMatch.away.name,
+    shortName: detailMatch.away.code,
+    countryCode: detailMatch.away.countryCode,
+    flagUrl: detailMatch.away.logoUrl,
+    logoUrl: detailMatch.away.logoUrl,
+  };
+
+  return {
+    ...selectedMatch,
+    home: {
+      ...homeFallback,
+      id: detailMatch.home.id,
+      name: detailMatch.home.name,
+      shortName: detailMatch.home.code,
+      countryCode: detailMatch.home.countryCode,
+      flagUrl: selectedMatch.home?.flagUrl || detailMatch.home.logoUrl,
+      logoUrl: detailMatch.home.logoUrl,
+    },
+    away: {
+      ...awayFallback,
+      id: detailMatch.away.id,
+      name: detailMatch.away.name,
+      shortName: detailMatch.away.code,
+      countryCode: detailMatch.away.countryCode,
+      flagUrl: selectedMatch.away?.flagUrl || detailMatch.away.logoUrl,
+      logoUrl: detailMatch.away.logoUrl,
+    },
+    homeScore: detailMatch.homeScore,
+    awayScore: detailMatch.awayScore,
+    status: detailMatch.status,
+    statusLabel: detailMatch.statusLabel,
+    minute: detailMatch.minute,
+    date: detailMatch.date || selectedMatch.date,
+    stage: detailMatch.stage || selectedMatch.stage,
+    venue: detailMatch.venue || selectedMatch.venue,
+  };
+};
+
+const buildTemplateLiveData = (
+  liveData: Record<string, unknown> | null,
+  selectedMatch: MondialLiveMatch | undefined,
+  matchDetails: MondialMatchDetails | null,
+  bridgeStatus: 'idle' | 'connecting' | 'live' | 'error'
+): Record<string, unknown> | null => {
+  if (!liveData) return null;
+
+  const selectedFixture = mergeSelectedMatchDetails(selectedMatch, matchDetails);
+  const fixtures = Array.isArray(liveData.fixtures) ? liveData.fixtures : [];
+  const mergedFixtures = selectedFixture
+    ? [
+        selectedFixture,
+        ...fixtures.filter(value => {
+          const fixture = value !== null && typeof value === 'object'
+            ? value as Record<string, unknown>
+            : null;
+          return String(fixture?.id ?? '') !== String(selectedFixture.id);
+        }),
+      ]
+    : fixtures;
+  const sourceStatus = String(liveData.sourceStatus || '').toLowerCase() === 'stale' || bridgeStatus === 'error'
+    ? 'stale'
+    : 'updated';
+
+  return {
+    ...liveData,
+    provider: undefined,
+    sourceMode: undefined,
+    sourceUrl: undefined,
+    sourceStatus,
+    fixtures: mergedFixtures,
+    selectedMatch: selectedFixture,
+  };
+};
 
 // ─── Hook: جلب بيانات مباشرة (مثل Match Stats الموجود) ───────────────────────
 
@@ -326,6 +420,12 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
     Number.isFinite(manualRefreshNonce) ? manualRefreshNonce : 0
   );
   const matchDetailFields = matchDetailsToFields(matchDetails);
+  const templateLiveData = buildTemplateLiveData(
+    liveData,
+    selectedMatch,
+    matchDetails,
+    bridgeStatus
+  );
   const getMatchField = (fieldId: string): unknown =>
     matchDetailFields[fieldId] !== undefined
       ? matchDetailFields[fieldId]
@@ -375,40 +475,40 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
         >
           {/* ── Variants ─────────────────────────────────────────── */}
           {variant === 'scoreboard' && (
-            <ReoObsScoreboard t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsScoreboard t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'scorebug' && (
-            <ReoObsScorebug t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsScorebug t={t} getField={getMatchField} resolveField={resolveField} bridgeStatus={bridgeStatus} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'match_stats' && (
-            <ReoObsMatchStats t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsMatchStats t={t} getField={getMatchField} resolveField={resolveField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'group_table' && (
-            <ReoObsGroupTable t={t} getField={getField} liveData={liveData} />
+            <ReoObsGroupTable t={t} getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'group_wall' && (
-            <ReoObsGroupWall getField={getField} liveData={liveData} />
+            <ReoObsGroupWall getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'flag_wall' && (
-            <ReoObsMondialFlagIdentityWall getField={getField} liveData={liveData} />
+            <ReoObsMondialFlagIdentityWall getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'team_code_wall' && (
-            <ReoObsMondialTeamCodeWall getField={getField} liveData={liveData} />
+            <ReoObsMondialTeamCodeWall getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'knockout_bracket' && (
-            <ReoObsKnockoutBracket getField={getField} liveData={liveData} />
+            <ReoObsKnockoutBracket getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'match_announcement' && (
-            <ReoObsMondialMatchAnnouncement getField={getField} liveData={liveData} />
+            <ReoObsMondialMatchAnnouncement getField={getMatchField} liveData={templateLiveData} />
           )}
           {variant === 'full_time' && (
-            <ReoObsMondialFullTime getField={getField} liveData={liveData} />
+            <ReoObsMondialFullTime getField={getMatchField} liveData={templateLiveData} />
           )}
           {variant === 'social_story' && (
-            <ReoObsMondialSocialStory getField={getField} liveData={liveData} />
+            <ReoObsMondialSocialStory getField={getMatchField} liveData={templateLiveData} />
           )}
           {variant === 'golden_boot' && (
-            <ReoObsGoldenBoot t={t} getField={getField} liveData={liveData} />
+            <ReoObsGoldenBoot t={t} getField={getField} liveData={templateLiveData} />
           )}
           {variant === 'quote' && (
             <ReoObsQuote t={t} getField={getField} />
@@ -417,28 +517,28 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
             <ReoObsTicker t={t} getField={getField} />
           )}
           {variant === 'analysis_board' && (
-            <ReoObsAnalysis t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsAnalysis t={t} getField={getMatchField} resolveField={resolveField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'prediction' && (
-            <ReoObsPrediction t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsPrediction t={t} getField={getMatchField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'var_alert' && (
             <ReoObsVarAlert t={t} getField={getField} />
           )}
           {variant === 'match_report' && (
-            <ReoObsMatchReport t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsMatchReport t={t} getField={getMatchField} resolveField={resolveField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'lower_third' && (
             <ReoObsLowerThird t={t} getField={getField} />
           )}
           {variant === 'match_preview' && (
-            <ReoObsMatchPreview t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsMatchPreview t={t} getField={getMatchField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'lineup' && (
-            <ReoObsLineup t={t} getField={getMatchField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsLineup t={t} getField={getMatchField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'match_result' && (
-            <ReoObsMatchResult t={t} getField={getMatchField} resolveField={resolveField} liveData={liveData} matchDetails={matchDetails} />
+            <ReoObsMatchResult t={t} getField={getMatchField} resolveField={resolveField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'player_spotlight' && (
             <ReoObsPlayerSpotlight t={t} getField={getMatchField} matchDetails={matchDetails} />
@@ -472,14 +572,14 @@ const MondialScoreboardVariant: React.FC<VariantProps> = ({
   const awayScore = Number(resolveField('awayScore', 'awayScore') ?? DEMO_MATCH.awayScore);
   const minute = String(resolveField('minute', 'minute') || DEMO_MATCH.minute);
   const period = String(resolveField('period', 'period') || DEMO_MATCH.period);
-  const status = String(resolveField('matchStatus', 'status') || 'LIVE');
+  const status = String(resolveField('matchStatus', 'status') || 'PRE').toUpperCase();
   const homeLogo = String(getField('homeLogo') || '');
   const awayLogo = String(getField('awayLogo') || '');
   const homeShort = String(getField('homeShort') || homeTeam.slice(0, 3).toUpperCase());
   const awayShort = String(getField('awayShort') || awayTeam.slice(0, 3).toUpperCase());
   const homeColor = String(getField('homeColor') || t.accent);
   const awayColor = String(getField('awayColor') || t.accent2);
-  const isLive = status === 'LIVE' || bridgeStatus === 'live';
+  const isLive = status === 'LIVE';
 
   // أحداث المباراة
   const eventsRaw = String(getField('eventsJson') || '[]');
@@ -646,7 +746,7 @@ const MondialScorebugVariant: React.FC<VariantProps> = ({
   const competition = String(getField('competitionShort') || 'WC26');
   const homeColor = String(getField('homeColor') || t.accent);
   const awayColor = String(getField('awayColor') || t.accent2);
-  const isLive = bridgeStatus === 'live' || String(getField('matchStatus')) === 'LIVE';
+  const isLive = String(resolveField('matchStatus', 'status') || 'PRE').toUpperCase() === 'LIVE';
   const position = String(getField('scorebugPosition') || 'TOP_RIGHT');
 
   const posStyle: React.CSSProperties =

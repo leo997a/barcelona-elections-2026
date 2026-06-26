@@ -40,11 +40,15 @@ export type MondialMatchSelection = {
 export type MondialLiveScorer = {
   id?: string | number;
   name: string;
+  nameAr?: string;
   team: string;
   code: string;
   countryCode: string;
+  flagUrl?: string;
   goals: number;
   assists?: number;
+  appearances?: number;
+  minutesPlayed?: number;
   rank?: number;
   image?: string;
 };
@@ -333,11 +337,15 @@ const normalizeScorer = (value: unknown, index: number): MondialLiveScorer | nul
   return {
     id: source.id as string | number | undefined ?? source.ParticiantId as string | number | undefined,
     name,
+    nameAr: stringValue(source.nameAr, '') || undefined,
     team: stringValue(source.team ?? source.teamName ?? source.TeamName, 'World Cup'),
     code: countryCode || stringValue(source.code, ''),
     countryCode,
+    flagUrl: stringValue(source.flagUrl, '') || undefined,
     goals: optionalNumber(source.goals ?? source.value ?? source.StatValue) ?? 0,
     assists: optionalNumber(source.assists ?? source.SubStatValue),
+    appearances: optionalNumber(source.appearances ?? source.matchesPlayed ?? source.MatchesPlayed),
+    minutesPlayed: optionalNumber(source.minutesPlayed ?? source.MinutesPlayed),
     rank: optionalNumber(source.rank ?? source.Rank) ?? index + 1,
     image: stringValue(source.image ?? source.imageUrl, '') || undefined,
   };
@@ -347,7 +355,12 @@ export const normalizeWorldCupScorers = (input: unknown): MondialLiveScorer[] =>
   listFrom(input, ['topScorers', 'scorers'])
     .map(normalizeScorer)
     .filter((scorer): scorer is MondialLiveScorer => Boolean(scorer))
-    .sort((a, b) => (b.goals - a.goals) || ((a.rank ?? 999) - (b.rank ?? 999)));
+    .sort((a, b) =>
+      (b.goals - a.goals)
+      || ((b.assists ?? 0) - (a.assists ?? 0))
+      || ((a.minutesPlayed ?? Number.MAX_SAFE_INTEGER) - (b.minutesPlayed ?? Number.MAX_SAFE_INTEGER))
+      || ((a.rank ?? 999) - (b.rank ?? 999))
+    );
 
 export const scorersFromWorldCupData = (
   liveData: Record<string, unknown> | null | undefined,

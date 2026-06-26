@@ -1,5 +1,9 @@
 import React from 'react';
-import { scorersFromWorldCupData } from '../../utils/mondialLiveSelectors';
+import {
+  normalizeWorldCupScorers,
+  scorersFromWorldCupData,
+  type MondialLiveScorer,
+} from '../../utils/mondialLiveSelectors';
 import {
   findDetailStat,
   lineupsToPlayersJson,
@@ -103,11 +107,11 @@ const DEFAULT_PLAYERS: LineupPlayer[] = [
   { num: 10, name: 'مهند علي', pos: 'FW', x: 78, y: 20 },
 ];
 
-const DEFAULT_SCORERS = [
-  { name: 'كيليان مبابي', team: 'فرنسا', code: 'FR', goals: 5 },
-  { name: 'إيرلينغ هالاند', team: 'النرويج', code: 'NO', goals: 4 },
-  { name: 'فينيسيوس جونيور', team: 'البرازيل', code: 'BR', goals: 4 },
-  { name: 'أيمن حسين', team: 'العراق', code: 'IQ', goals: 3 },
+const DEFAULT_SCORERS: MondialLiveScorer[] = [
+  { name: 'كيليان مبابي', team: 'فرنسا', code: 'FR', countryCode: 'fr', goals: 5 },
+  { name: 'إيرلينغ هالاند', team: 'النرويج', code: 'NO', countryCode: 'no', goals: 4 },
+  { name: 'فينيسيوس جونيور', team: 'البرازيل', code: 'BR', countryCode: 'br', goals: 4 },
+  { name: 'أيمن حسين', team: 'العراق', code: 'IQ', countryCode: 'iq', goals: 3 },
 ];
 
 const text = (getField: Getter, id: string, fallback: string): string => {
@@ -151,6 +155,42 @@ const detailStatText = (value: number | string): string =>
   typeof value === 'number' && Number.isFinite(value)
     ? String(Number.isInteger(value) ? value : Number(value.toFixed(1)))
     : String(value);
+
+type MatchStatusPresentation = {
+  code: string;
+  label: string;
+  isLive: boolean;
+};
+
+const matchStatusPresentation = (
+  getField: Getter,
+  resolveField?: ReoObsVariantProps['resolveField']
+): MatchStatusPresentation => {
+  const rawValue = resolveField
+    ? resolveField('matchStatus', 'status')
+    : getField('matchStatus') ?? getField('status');
+  const raw = String(rawValue || 'PRE').trim();
+  const token = raw.toLowerCase();
+  const statusLabel = text(getField, 'statusLabel', text(getField, 'period', ''));
+
+  if (token === 'live' || token.includes('playing') || token.includes('inprogress')) {
+    return { code: 'LIVE', label: 'LIVE', isLive: true };
+  }
+  if (token === 'ht' || token.includes('half')) {
+    return { code: 'HT', label: statusLabel || 'HT', isLive: false };
+  }
+  if (token === 'ft' || token === 'aet' || token === 'pen' || token.includes('finish')) {
+    const code = token === 'aet' ? 'AET' : token === 'pen' ? 'PEN' : 'FT';
+    return { code, label: statusLabel || code, isLive: false };
+  }
+  if (token.includes('cancel')) {
+    return { code: 'CANCELLED', label: statusLabel || 'CANCELLED', isLive: false };
+  }
+  if (token === 'pre' || token.includes('schedule') || token.includes('notstarted')) {
+    return { code: 'PRE', label: statusLabel || 'NEXT MATCH', isLive: false };
+  }
+  return { code: raw.toUpperCase(), label: statusLabel || raw.toUpperCase(), isLive: false };
+};
 
 const codeFromTeam = (value: string, fallback: string): string => {
   const key = value.trim().toLowerCase();
@@ -451,7 +491,6 @@ const stageImage = (getField: Getter): string =>
 export const ReoObsScoreboard: React.FC<ReoObsVariantProps> = ({
   getField,
   resolveField,
-  bridgeStatus,
 }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
@@ -462,7 +501,8 @@ export const ReoObsScoreboard: React.FC<ReoObsVariantProps> = ({
   const homeScore = resolvedNum(getField, resolveField, 'homeScore', 'homeScore', 1);
   const awayScore = resolvedNum(getField, resolveField, 'awayScore', 'awayScore', 0);
   const minute = resolvedText(getField, resolveField, 'minute', 'minute', '67');
-  const status = bridgeStatus === 'live' ? `LIVE ${minute}'` : text(getField, 'matchStatus', 'MATCH');
+  const matchStatus = matchStatusPresentation(getField, resolveField);
+  const status = matchStatus.isLive && minute ? `LIVE ${minute}'` : matchStatus.label;
   const competition = resolvedText(getField, resolveField, 'competition', 'competition', 'FIFA WORLD CUP 2026');
   const stage = text(getField, 'stage', text(getField, 'matchStage', 'GROUP STAGE'));
   return (
@@ -497,7 +537,7 @@ export const ReoObsMatchResult: React.FC<ReoObsVariantProps> = props => {
   return <ReoObsScoreboard {...props} getField={proxy} bridgeStatus="idle" />;
 };
 
-export const ReoObsScorebug: React.FC<ReoObsVariantProps> = ({ getField, resolveField, bridgeStatus }) => {
+export const ReoObsScorebug: React.FC<ReoObsVariantProps> = ({ getField, resolveField }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
   const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
@@ -506,6 +546,12 @@ export const ReoObsScorebug: React.FC<ReoObsVariantProps> = ({ getField, resolve
   const awayImage = text(getField, 'awayLogo', '');
   const score = `${resolvedNum(getField, resolveField, 'homeScore', 'homeScore', 1)} : ${resolvedNum(getField, resolveField, 'awayScore', 'awayScore', 0)}`;
   const minute = resolvedText(getField, resolveField, 'minute', 'minute', '67');
+  const matchStatus = matchStatusPresentation(getField, resolveField);
+  const statusDetail = matchStatus.isLive
+    ? (minute ? `${minute}'` : 'NOW')
+    : matchStatus.code === 'PRE'
+      ? text(getField, 'matchTime', '--:--')
+      : matchStatus.label;
   return (
     <KineticStage transparent>
       <div className="absolute top-7 left-1/2 -translate-x-1/2" dir="ltr">
@@ -529,8 +575,8 @@ export const ReoObsScorebug: React.FC<ReoObsVariantProps> = ({ getField, resolve
               <FlagOrImage code={awayCode} image={awayImage} size={42} /><span className="text-[20px] font-black">{away}</span>
             </div>
             <div className="px-5 flex flex-col items-center justify-center" style={{ background: WC.yellow }}>
-              <span className="text-[10px] font-black">{bridgeStatus === 'live' ? 'LIVE' : 'TIME'}</span>
-              <span className="text-[22px] font-black">{minute}'</span>
+              <span className="text-[10px] font-black">{matchStatus.code}</span>
+              <span className="text-[22px] font-black">{statusDetail}</span>
             </div>
           </div>
         </div>
@@ -708,27 +754,83 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resol
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
   const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
   const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'AR'));
-  const liveRows = [
-    { label: 'الاستحواذ', keys: ['BallPossesion', 'Ball possession'] },
-    { label: 'الأهداف المتوقعة', keys: ['expected_goals', 'Expected goals (xG)'] },
-    { label: 'التسديدات', keys: ['total_shots', 'Total shots'] },
-    { label: 'على المرمى', keys: ['ShotsOnTarget', 'Shots on target'] },
-    { label: 'الركنيات', keys: ['corners', 'Corners'] },
-    { label: 'البطاقات الصفراء', keys: ['yellow_cards', 'Yellow cards'] },
-  ].map(({ label, keys }) => {
-    const row = findDetailStat(matchDetails, keys);
-    return row
-      ? [label, detailStatNumber(row.home), detailStatNumber(row.away)] as [string, number, number]
-      : null;
-  }).filter((row): row is [string, number, number] => Boolean(row));
-  const rows: Array<[string, number, number]> = [
-    ['الاستحواذ', num(getField, 'statPossessionHome', 48), num(getField, 'statPossessionAway', 52)],
-    ['التسديدات', num(getField, 'statShotsHome', 8), num(getField, 'statShotsAway', 14)],
-    ['على المرمى', num(getField, 'statOnTargetHome', 4), num(getField, 'statOnTargetAway', 7)],
-    ['الركنيات', num(getField, 'statCornersHome', 3), num(getField, 'statCornersAway', 6)],
-    ['المخالفات', num(getField, 'statFoulsHome', 12), num(getField, 'statFoulsAway', 9)],
-    ['دقة التمرير', num(getField, 'statPassHome', 78), num(getField, 'statPassAway', 88)],
-  ];
+  const rows = [
+    {
+      label: 'الاستحواذ',
+      keys: ['BallPossesion', 'Ball possession', 'Possession'],
+      homeField: 'statPossessionHome',
+      awayField: 'statPossessionAway',
+      homeFallback: 48,
+      awayFallback: 52,
+    },
+    {
+      label: 'الأهداف المتوقعة',
+      keys: ['expected_goals', 'Expected goals (xG)', 'Expected goals'],
+      homeField: 'statXgHome',
+      awayField: 'statXgAway',
+      homeFallback: 0.8,
+      awayFallback: 1.2,
+    },
+    {
+      label: 'التسديدات',
+      keys: ['total_shots', 'Total shots'],
+      homeField: 'statShotsHome',
+      awayField: 'statShotsAway',
+      homeFallback: 8,
+      awayFallback: 14,
+    },
+    {
+      label: 'على المرمى',
+      keys: ['ShotsOnTarget', 'Shots on target'],
+      homeField: 'statOnTargetHome',
+      awayField: 'statOnTargetAway',
+      homeFallback: 4,
+      awayFallback: 7,
+    },
+    {
+      label: 'الركنيات',
+      keys: ['corners', 'Corners'],
+      homeField: 'statCornersHome',
+      awayField: 'statCornersAway',
+      homeFallback: 3,
+      awayFallback: 6,
+    },
+    {
+      label: 'المخالفات',
+      keys: ['fouls', 'Fouls', 'Fouls committed'],
+      homeField: 'statFoulsHome',
+      awayField: 'statFoulsAway',
+      homeFallback: 12,
+      awayFallback: 9,
+    },
+    {
+      label: 'البطاقات الصفراء',
+      keys: ['yellow_cards', 'Yellow cards'],
+      homeField: 'statYellowHome',
+      awayField: 'statYellowAway',
+      homeFallback: 2,
+      awayFallback: 1,
+    },
+    {
+      label: 'دقة التمرير',
+      keys: ['AccuratePasses', 'Accurate passes', 'Pass accuracy'],
+      homeField: 'statPassHome',
+      awayField: 'statPassAway',
+      homeFallback: 78,
+      awayFallback: 88,
+    },
+  ].map(definition => {
+    const liveRow = findDetailStat(matchDetails, definition.keys);
+    const homeValue = liveRow?.home ?? num(getField, definition.homeField, definition.homeFallback);
+    const awayValue = liveRow?.away ?? num(getField, definition.awayField, definition.awayFallback);
+    return {
+      label: definition.label,
+      homeValue,
+      awayValue,
+      homeBar: detailStatNumber(homeValue),
+      awayBar: detailStatNumber(awayValue),
+    };
+  });
   return (
     <KineticStage>
       <div className="w-full h-full p-9 flex flex-col">
@@ -744,16 +846,16 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ getField, resol
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
               </div>
               <div className="p-7 space-y-3">
-                {(liveRows.length >= 3 ? liveRows : rows).map(([label, homeValue, awayValue], index) => {
-                  const total = Math.max(1, homeValue + awayValue);
+                {rows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                  const total = Math.max(1, homeBar + awayBar);
                   return (
                     <div key={label} style={{ animation: `wcRowIn .5s ${.28 + index * .08}s cubic-bezier(.16,1,.3,1) both` }}>
                       <div className="grid grid-cols-[72px_1fr_150px_1fr_72px] items-center gap-4 font-black">
-                        <span className="text-[23px]">{homeValue}</span>
-                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full" dir="rtl"><div className="h-full bg-[#304fff]" style={{ width: `${homeValue / total * 100}%` }} /></div>
+                        <span className="text-[23px]">{detailStatText(homeValue)}</span>
+                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full" dir="rtl"><div className="h-full bg-[#304fff]" style={{ width: `${homeBar / total * 100}%` }} /></div>
                         <span className="text-center text-[14px]">{label}</span>
-                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full"><div className="h-full bg-[#ff1738]" style={{ width: `${awayValue / total * 100}%` }} /></div>
-                        <span className="text-[23px] text-left">{awayValue}</span>
+                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full"><div className="h-full bg-[#ff1738]" style={{ width: `${awayBar / total * 100}%` }} /></div>
+                        <span className="text-[23px] text-left">{detailStatText(awayValue)}</span>
                       </div>
                     </div>
                   );
@@ -833,22 +935,44 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ getField, matchDeta
 
 export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField, matchDetails }) => {
   const livePlayer = matchDetails?.playerOfTheMatch;
-  const image = livePlayer?.image || text(getField, 'playerImage', '');
-  const playerCode = livePlayer?.team === 'away'
+  const detailPlayer = matchDetails?.players.find(player =>
+    (livePlayer?.id && player.id && String(player.id) === String(livePlayer.id))
+    || Boolean(livePlayer?.name && player.name === livePlayer.name)
+  );
+  const playerSide = livePlayer?.team || detailPlayer?.team || 'neutral';
+  const image = livePlayer?.image || detailPlayer?.image || text(getField, 'playerImage', '');
+  const playerCode = playerSide === 'away'
     ? matchDetails?.match.away.countryCode || matchDetails?.match.away.code
     : matchDetails?.match.home.countryCode || matchDetails?.match.home.code;
   const playerName = livePlayer?.name || text(getField, 'name', 'أيمن حسين');
-  const playerPosition = livePlayer?.teamName || text(getField, 'position', 'مهاجم منتخب العراق');
-  const playerRating = livePlayer?.rating !== undefined
-    ? detailStatText(livePlayer.rating)
+  const playerPosition = detailPlayer?.pos || livePlayer?.teamName || text(getField, 'position', 'مهاجم منتخب العراق');
+  const ratingValue = livePlayer?.rating ?? detailPlayer?.rating;
+  const playerRating = ratingValue !== undefined
+    ? detailStatText(ratingValue)
     : text(getField, 'rating', '9.1');
-  const stats = safeParse<Array<{ label: string; value: string }>>(String(getField('statsJson') || '[]'), []);
-  const shownStats = stats.length ? stats.slice(0, 4) : [
+  const manualStats = safeParse<Array<{ label: string; value: string }>>(String(getField('statsJson') || '[]'), []);
+  const performanceStats = (livePlayer?.stats ?? []).map(stat => ({
+    label: stat.label,
+    value: stat.total === undefined ? detailStatText(stat.value) : `${detailStatText(stat.value)}/${stat.total}`,
+  }));
+  const identityStats = [
+    detailPlayer?.number !== undefined ? { label: 'رقم القميص', value: String(detailPlayer.number) } : null,
+    detailPlayer?.pos ? { label: 'المركز', value: detailPlayer.pos } : null,
+    livePlayer?.teamName ? { label: 'المنتخب', value: livePlayer.teamName } : null,
+    ratingValue !== undefined ? { label: 'التقييم', value: detailStatText(ratingValue) } : null,
+  ].filter((stat): stat is { label: string; value: string } => Boolean(stat));
+  const liveStats = [...performanceStats, ...identityStats]
+    .filter((stat, index, values) => values.findIndex(value => value.label === stat.label) === index);
+  const shownStats = liveStats.length
+    ? [...liveStats, ...manualStats].slice(0, 4)
+    : manualStats.length
+      ? manualStats.slice(0, 4)
+      : [
     { label: 'الأهداف', value: '2' },
     { label: 'على المرمى', value: '3/4' },
     { label: 'دقة التمرير', value: '79%' },
     { label: 'المسافة', value: '9.4 KM' },
-  ];
+      ];
   return (
     <KineticStage image={image}>
       <div className="w-full h-full p-10 grid grid-cols-[1fr_47%] gap-8">
@@ -880,26 +1004,50 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ getField, 
 };
 
 export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ getField, liveData }) => {
-  const liveScorers = scorersFromWorldCupData(liveData, getField('scorersJson'));
-  const scorers = (liveScorers.length ? liveScorers : DEFAULT_SCORERS)
-    .slice()
-    .sort((a, b) => b.goals - a.goals)
+  const liveScorers = normalizeWorldCupScorers(liveData);
+  const manualScorers = scorersFromWorldCupData(null, getField('scorersJson'));
+  const scorers = (liveScorers.length ? liveScorers : manualScorers.length ? manualScorers : DEFAULT_SCORERS)
     .slice(0, Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6))));
-  const sourceTag = liveData && liveScorers.length ? 'FOTMOB LIVE · REO SHOW' : 'GOLDEN BOOT · REO SHOW';
+  const sourceTag = liveScorers.length ? 'UPDATED DATA · REO SHOW' : 'GOLDEN BOOT · REO SHOW';
   return (
     <KineticStage>
       <div className="w-full h-full p-10 flex flex-col">
         <KineticHeader title="سباق الحذاء الذهبي" tag={sourceTag} />
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-[980px] space-y-3">
+          <div className="w-[1080px] space-y-3">
             {scorers.map((player, index) => (
               <div
-                key={`${player.name}-${index}`}
-                className="grid grid-cols-[95px_1fr_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
+                key={`${player.id ?? player.name}-${index}`}
+                className="grid grid-cols-[86px_82px_1fr_250px_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
                 style={{ boxShadow: `12px 10px 0 ${COLORS[index % COLORS.length]}`, animation: `wcRowIn .55s ${.2 + index * .11}s both` }}
               >
-                <div className="h-full min-h-[86px] flex items-center justify-center text-[46px] font-black bg-black text-white">{index + 1}</div>
-                <div className="px-6 flex items-center gap-5"><MondialFlag codeOrName={player.code} size={48} /><div><div className="text-[23px] font-black">{player.name}</div><div className="text-[12px] font-black">{player.team}</div></div></div>
+                <div className="h-full min-h-[86px] flex items-center justify-center text-[42px] font-black bg-black text-white">{player.rank ?? index + 1}</div>
+                <div className="flex items-center justify-center">
+                  <div className="relative w-16 h-16 overflow-hidden rounded-[18px] border-[4px] border-black bg-white">
+                    <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={64} />
+                    {player.image && (
+                      <img
+                        src={player.image}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={event => { event.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="px-5">
+                  <div className="text-[22px] font-black">{player.nameAr || player.name}</div>
+                  <div className="text-[12px] font-black">{player.team}</div>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 px-4 text-[10px] font-black">
+                  <span className="rounded-full border-2 border-black px-3 py-1">أسيست {player.assists ?? 0}</span>
+                  {player.appearances !== undefined && (
+                    <span className="rounded-full border-2 border-black px-3 py-1">مشاركة {player.appearances}</span>
+                  )}
+                  {player.minutesPlayed !== undefined && (
+                    <span className="rounded-full border-2 border-black px-3 py-1">دقيقة {player.minutesPlayed}</span>
+                  )}
+                </div>
                 <div className="h-full flex flex-col items-center justify-center" style={{ background: WC.yellow }}><div className="text-[43px] font-black">{player.goals}</div><div className="text-[10px] font-black">GOALS</div></div>
               </div>
             ))}

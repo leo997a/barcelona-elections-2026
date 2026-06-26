@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   fixturesFromWorldCupData,
+  normalizeWorldCupScorers,
   pickWorldCupMatch,
   scorersFromWorldCupData,
   selectedMatchToFields,
@@ -93,7 +94,7 @@ test('maps the selected fixture to legacy template fields', () => {
   assert.equal(fields.groupBadge, 'المجموعة B');
 });
 
-test('uses live FotMob scorers before manual fallback data', () => {
+test('uses live scorer data before manual fallback data', () => {
   const scorers = scorersFromWorldCupData(payload, JSON.stringify([{
     name: 'Manual Player',
     team: 'Manual Team',
@@ -103,4 +104,84 @@ test('uses live FotMob scorers before manual fallback data', () => {
   assert.equal(scorers.length, 1);
   assert.equal(scorers[0].name, 'Lionel Messi');
   assert.equal(scorers[0].goals, 5);
+});
+
+test('keeps scorer metadata and resolves equal goals by assists then minutes', () => {
+  const scorers = normalizeWorldCupScorers({
+    topScorers: [{
+      id: 1,
+      name: 'Player A',
+      teamName: 'Alpha',
+      countryCode: 'aa',
+      imageUrl: 'https://example.com/a.png',
+      flagUrl: 'https://example.com/aa.png',
+      goals: 4,
+      assists: 1,
+      appearances: 3,
+      minutesPlayed: 210,
+      rank: 2,
+    }, {
+      id: 2,
+      name: 'Player B',
+      teamName: 'Beta',
+      countryCode: 'bb',
+      goals: 4,
+      assists: 2,
+      appearances: 3,
+      minutesPlayed: 250,
+      rank: 1,
+    }],
+  });
+
+  assert.equal(scorers[0].name, 'Player B');
+  assert.equal(scorers[1].appearances, 3);
+  assert.equal(scorers[1].minutesPlayed, 210);
+  assert.equal(scorers[1].image, 'https://example.com/a.png');
+  assert.equal(scorers[1].flagUrl, 'https://example.com/aa.png');
+});
+
+test('preserves rich live scorer fields and tie-breaks equal goal totals', () => {
+  const scorers = scorersFromWorldCupData({
+    topScorers: [{
+      id: 1,
+      name: 'Player A',
+      nameAr: 'اللاعب أ',
+      teamName: 'Team A',
+      countryCode: 'aa',
+      flagUrl: 'https://example.com/aa.svg',
+      imageUrl: 'https://example.com/a.png',
+      goals: 4,
+      assists: 1,
+      appearances: 5,
+      minutesPlayed: 360,
+      rank: 2,
+    }, {
+      id: 2,
+      name: 'Player B',
+      teamName: 'Team B',
+      countryCode: 'bb',
+      goals: 4,
+      assists: 2,
+      appearances: 4,
+      minutesPlayed: 400,
+      rank: 1,
+    }, {
+      id: 3,
+      name: 'Player C',
+      teamName: 'Team C',
+      countryCode: 'cc',
+      goals: 4,
+      assists: 1,
+      appearances: 5,
+      minutesPlayed: 320,
+      rank: 3,
+    }],
+  }, []);
+
+  assert.deepEqual(scorers.map(scorer => scorer.name), ['Player B', 'Player C', 'Player A']);
+  assert.equal(scorers[2].nameAr, 'اللاعب أ');
+  assert.equal(scorers[2].flagUrl, 'https://example.com/aa.svg');
+  assert.equal(scorers[2].appearances, 5);
+  assert.equal(scorers[2].minutesPlayed, 360);
+  assert.equal(scorers[2].image, 'https://example.com/a.png');
 });
