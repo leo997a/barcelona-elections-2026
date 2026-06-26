@@ -42,9 +42,9 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
   assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
   assert.match(transitionLayer, /className="mondial-transition-bug"/);
-  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 650, 360, 980\)/);
-  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 650, 360, 980\)/);
-  assert.match(transitionLayer, /--mondial-transition-speed: 650ms;/);
+  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 760, 420, 1200\)/);
+  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 760, 420, 1200\)/);
+  assert.match(transitionLayer, /--mondial-transition-speed: 760ms;/);
 });
 
 test('mondial reference stinger exit keeps the same arc direction instead of reversing top and bottom bands', async () => {
