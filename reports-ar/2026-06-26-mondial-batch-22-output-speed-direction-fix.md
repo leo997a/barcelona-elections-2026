@@ -49,3 +49,48 @@
 ## ملاحظة مهمة
 
 الرابط القديم الذي ضاعت حالته قبل وجود التخزين الدائم لن تعود له بياناته القديمة تلقائيا من السيرفر، لكن بعد هذه الدفعة لن يقف على شاشة اتصال فارغة إذا كان `templateId` واضحا في الرابط. وعند ضغط إظهار/إخفاء من الأداة سيتم نشر الحالة إلى `/api/live` بسرعة أكبر وبمسار دائم.
+
+## تحقق Hostinger بعد النشر
+
+تم دفع commit:
+
+`d61551f fix: speed up mondial output transitions`
+
+ثم التقط Hostinger الحزمة الجديدة:
+
+`https://peachpuff-herring-712997.hostingersite.com/assets/index-DIJAj21q.js`
+
+فحص محتوى الحزمة المنشورة أعاد:
+
+- `public-output-fallback`: موجود.
+- polling السريع `400 / 800`: موجود.
+- سرعة `520`: موجودة.
+- swap/reverse القديم للأقواس: غير موجود.
+- خروج القوس العلوي يستخدم `mondialTransitionArcBandTopIn` مع `.62`: موجود.
+
+## تحقق Playwright على الرابط العام
+
+تم فتح رابط المستخدم القديم:
+
+`https://peachpuff-herring-712997.hostingersite.com/output/instance-studio-2c7379d9fc98a752-template-mondial-group-wall-mqueo02i-0c2f818f?obs=1&rgev=obs-live-v3`
+
+نتيجة DOM:
+
+- `Connecting to RGE Cloud`: غير ظاهر.
+- `.mondial-transition-frame`: ظاهر.
+- `data-phase`: `in`.
+- `data-effect`: `stinger`.
+- `data-motion`: `on`.
+- `data-transition-speed`: `520`.
+- حركة القوس العلوي: `mondialTransitionArcBandTopIn`.
+- حركة القوس السفلي: `mondialTransitionArcBandBottomIn`.
+
+## اختبار إظهار/إخفاء حي
+
+تم إنشاء رابط اختبار على Hostinger ونشر الحالة عبر `/api/live`:
+
+- `POST /api/live`: أعاد `200`.
+- `X-Live-Store`: `file`.
+- زمن التقاط الإخفاء في صفحة العرض: `473ms`.
+- زمن التقاط الإظهار في صفحة العرض: `19ms`.
+- الحالة النهائية: `phase=in`, `effect=stinger`, `speed=520`.
