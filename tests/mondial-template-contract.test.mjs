@@ -113,6 +113,12 @@ test('Mondial broadcast look presets are selectable and drive renderer classes',
   assert.match(shared, /flag_identity: \{ style: 'flag_identity', palette: 'flag_identity' \}/);
   assert.match(shared, /stadium_lights: \{ style: 'stadium_lights', palette: 'stadium_lights' \}/);
   assert.match(matchCards, /mondial-look-poster_social\.mondial-story-shell/);
+  assert.match(matchCards, /matchStatusLabel\(match, 'قادمة'\)/);
+  assert.match(matchCards, /aria-label=\{`مباراة مباشرة/);
+  assert.doesNotMatch(matchCards, /Live match/);
+  assert.doesNotMatch(matchCards, /NEXT MATCH/);
+  assert.doesNotMatch(matchCards, /FULL-TIME/);
+  assert.doesNotMatch(matchCards, /MATCH DAY/);
   assert.match(identity, /mondial-look-flag_identity \.mondial-flag-wall/);
 
   for (const source of [groupWall, matchCards, identity, bracket]) {
@@ -128,7 +134,12 @@ test('match status comes from the selected fixture, not bridge connectivity', as
   ]);
 
   assert.match(obs, /const matchStatus = matchStatusPresentation\(getField, resolveField\)/);
-  assert.match(obs, /const status = matchStatus\.isLive && minute/);
+  assert.match(obs, /const status = matchStatus\.isLive \? liveStatusText\(minute\) : matchStatus\.label/);
+  assert.match(obs, /statusLabelAr/);
+  assert.match(obs, /label: 'مباشر'/);
+  assert.doesNotMatch(obs, /`LIVE \$\{minute\}'`/);
+  assert.doesNotMatch(obs, /label: 'LIVE'/);
+  assert.doesNotMatch(obs, /'NOW'/);
   assert.doesNotMatch(obs, /bridgeStatus === 'live'\s*\?\s*`LIVE/);
   assert.match(renderer, /const isLive = status === 'LIVE';/);
   assert.match(renderer, /resolveField\('matchStatus', 'status'\)[\s\S]*?=== 'LIVE'/);
@@ -150,6 +161,10 @@ test('partial live stats fall back per row and scorer cards use the richer live 
   for (const field of ['nameAr', 'flagUrl', 'assists', 'appearances', 'minutesPlayed', 'image']) {
     assert.match(obs, new RegExp(`player\\.${field}`));
   }
+  assert.match(obs, /const boundScorers = scorersFromWorldCupData\(liveData, getField\('scorersJson'\)\)/);
+  assert.doesNotMatch(obs, /UPDATED DATA/);
+  assert.doesNotMatch(obs, /GOLDEN BOOT · REO SHOW/);
+  assert.doesNotMatch(obs, />GOALS</);
   assert.doesNotMatch(obs, /\.sort\(\(a, b\) => b\.goals - a\.goals\)/);
 });
 

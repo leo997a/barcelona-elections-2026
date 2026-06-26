@@ -250,6 +250,17 @@ const liveBadgeText = (match: MatchLike): string => {
   return minute ? `${minute}'` : '';
 };
 
+const matchStatusLabel = (match: MatchLike, fallback: string): string => {
+  const raw = asString(match.statusLabel || match.status, fallback);
+  const token = raw.toLowerCase();
+  if (token.includes('live') || token.includes('playing') || token.includes('inprogress') || token.includes('مباشر')) return 'مباشر';
+  if (token === 'ft' || token === 'full-time' || token === 'full time' || token.includes('finish')) return 'انتهت';
+  if (token === 'ht' || token.includes('half')) return 'استراحة';
+  if (token.includes('cancel')) return 'ملغاة';
+  if (token === 'pre' || token.includes('schedule') || token.includes('notstarted') || token.includes('next match')) return 'قادمة';
+  return raw;
+};
+
 const pickMatch = (
   fixtures: MatchLike[],
   getField: MondialBroadcastProps['getField'],
@@ -293,15 +304,15 @@ const MatchShell: React.FC<{
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
   const match = pickMatch(fixtures, getField, mode === 'full-time' ? 'latest' : 'next');
-  const title = asString(getField(mode === 'full-time' ? 'fullTimeTitle' : 'matchCardTitle'), mode === 'full-time' ? 'FULL-TIME' : 'MATCH DAY');
-  const subtitle = asString(getField('matchCardSubtitle'), match.group || match.stage || 'WORLD CUP 2026');
+  const title = asString(getField(mode === 'full-time' ? 'fullTimeTitle' : 'matchCardTitle'), mode === 'full-time' ? 'انتهت المباراة' : 'يوم المباراة');
+  const subtitle = asString(getField('matchCardSubtitle'), match.group || match.stage || 'مونديال 2026');
   const isLive = isLiveFixture(match);
   const minute = liveBadgeText(match);
   const status = mode === 'full-time'
-    ? 'FULL-TIME'
+    ? 'انتهت'
     : isLive
       ? `مباشر${minute ? ` ${minute}` : ''}`
-      : asString(match.statusLabel || match.status, 'NEXT MATCH').toUpperCase();
+      : matchStatusLabel(match, 'قادمة');
 
   return (
     <section
@@ -323,7 +334,7 @@ const MatchShell: React.FC<{
         <div className="mondial-match-scorehub">
           <div className="mondial-match-date">{dateLabel(match)}</div>
           {isLive && (
-            <div className="mondial-match-live-pill" aria-label={`Live match${minute ? ` ${minute}` : ''}`}>
+            <div className="mondial-match-live-pill" aria-label={`مباراة مباشرة${minute ? ` ${minute}` : ''}`}>
               <i aria-hidden="true" />
               <span>مباشر</span>
               {minute ? <b>{minute}</b> : null}
@@ -347,7 +358,7 @@ const MatchShell: React.FC<{
         <div className="mondial-match-rail" aria-hidden="true">
           {ACCENTS.map(color => <span key={color} style={{ background: color }} />)}
         </div>
-        <span>REO SHOW - WORLD CUP 2026</span>
+        <span>REO SHOW - مونديال 2026</span>
       </footer>
     </section>
   );
@@ -367,7 +378,7 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
   const paletteId = getBroadcastPalette(getField);
   const fixtures = fixturesFrom(liveData, getField);
   const match = pickMatch(fixtures, getField, 'next');
-  const title = asString(getField('storyTitle'), match.status === 'finished' ? 'FULL-TIME' : 'MATCH DAY');
+  const title = asString(getField('storyTitle'), match.status === 'finished' ? 'انتهت المباراة' : 'يوم المباراة');
   const scoreMode = match.homeScore !== undefined || match.awayScore !== undefined;
   const isLive = isLiveFixture(match);
   const minute = liveBadgeText(match);
@@ -413,7 +424,7 @@ export const MondialSocialStory: React.FC<MondialBroadcastProps> = ({ getField, 
           </main>
           <footer className="mondial-story-foot">
             <span>{title}</span>
-            <span>{match.group || match.stage || 'WORLD CUP 2026'} - REO SHOW</span>
+            <span>{match.group || match.stage || 'مونديال 2026'} - REO SHOW</span>
           </footer>
         </div>
       </div>

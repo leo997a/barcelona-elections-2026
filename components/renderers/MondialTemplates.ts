@@ -585,8 +585,8 @@ export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     fields: [
       { id: 'mondialVariant', label: 'Variant', type: 'hidden', value: 'match_announcement' },
       ...mondialBroadcastPresentationFields,
-      { id: 'matchCardTitle', label: 'Screen title', type: 'text', value: 'MATCH DAY' },
-      { id: 'matchCardSubtitle', label: 'Kicker', type: 'text', value: 'WORLD CUP 2026' },
+      { id: 'matchCardTitle', label: 'Screen title', type: 'text', value: 'يوم المباراة' },
+      { id: 'matchCardSubtitle', label: 'Kicker', type: 'text', value: 'مونديال 2026' },
       ...mondialMatchSelectionFields,
       ...mondialWorldCupDataFields,
     ],
@@ -606,8 +606,8 @@ export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     fields: [
       { id: 'mondialVariant', label: 'Variant', type: 'hidden', value: 'full_time' },
       ...mondialBroadcastPresentationFields,
-      { id: 'fullTimeTitle', label: 'Screen title', type: 'text', value: 'FULL-TIME' },
-      { id: 'matchCardSubtitle', label: 'Kicker', type: 'text', value: 'WORLD CUP 2026' },
+      { id: 'fullTimeTitle', label: 'Screen title', type: 'text', value: 'انتهت المباراة' },
+      { id: 'matchCardSubtitle', label: 'Kicker', type: 'text', value: 'مونديال 2026' },
       { ...mondialMatchSelectionFields[0], value: 'latest' },
       ...mondialMatchSelectionFields.slice(1),
       ...mondialWorldCupDataFields,
@@ -628,7 +628,7 @@ export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     fields: [
       { id: 'mondialVariant', label: 'Variant', type: 'hidden', value: 'social_story' },
       ...mondialBroadcastPresentationFields,
-      { id: 'storyTitle', label: 'Story title', type: 'text', value: 'MATCH DAY' },
+      { id: 'storyTitle', label: 'Story title', type: 'text', value: 'يوم المباراة' },
       ...mondialMatchSelectionFields,
       ...mondialWorldCupDataFields,
     ],
