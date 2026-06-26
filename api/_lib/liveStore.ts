@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
 const CACHE_NAMESPACE = 'rge-live-output-v2';
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
@@ -11,6 +15,8 @@ export interface LiveStateEntry {
 
 const fallbackStore = new Map<string, LiveStateEntry>();
 const listeners = new Map<string, Set<(entry: LiveStateEntry) => void>>();
+const fileStoreDisabled = () => Boolean(process.env.VERCEL) || process.env.REO_LIVE_STATE_FILE_STORE === 'off';
+const fileStoreDir = () => process.env.REO_LIVE_STATE_DIR?.trim() || resolve(process.cwd(), 'data', 'live-state');
 
 type RuntimeCache = {
   get: (key: string) => Promise<unknown>;
@@ -37,11 +43,41 @@ const getRuntimeCache = () => {
 };
 
 const keyFor = (id: string) => `overlay:${id}`;
+const fileKeyFor = (id: string) => `${createHash('sha256').update(id).digest('hex').slice(0, 48)}.json`;
 
 const isLiveEntry = (value: unknown): value is LiveStateEntry => {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<LiveStateEntry>;
   return typeof candidate.id === 'string' && typeof candidate.updatedAt === 'number';
+};
+
+const readFileStoreEntry = async (id: string): Promise<LiveStateEntry | null> => {
+  if (fileStoreDisabled()) return null;
+  try {
+    const raw = await readFile(resolve(fileStoreDir(), fileKeyFor(id)), 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (isLiveEntry(parsed) && parsed.id === id) return parsed;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== 'ENOENT') {
+      console.warn('Persistent live state read failed, using memory fallback', error);
+    }
+  }
+  return null;
+};
+
+const writeFileStoreEntry = async (entry: LiveStateEntry) => {
+  if (fileStoreDisabled()) return;
+  try {
+    const dir = fileStoreDir();
+    await mkdir(dir, { recursive: true });
+    const target = resolve(dir, fileKeyFor(entry.id));
+    const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(tmp, JSON.stringify(entry), 'utf8');
+    await rename(tmp, target);
+  } catch (error) {
+    console.warn('Persistent live state write failed, using memory fallback', error);
+  }
 };
 
 export const getLiveState = async (id: string): Promise<LiveStateEntry | null> => {
@@ -56,7 +92,16 @@ export const getLiveState = async (id: string): Promise<LiveStateEntry | null> =
     console.warn('Runtime cache read failed, using local fallback', error);
   }
 
-  return fallbackStore.get(id) ?? null;
+  const localEntry = fallbackStore.get(id);
+  if (localEntry) return localEntry;
+
+  const persisted = await readFileStoreEntry(id);
+  if (persisted) {
+    fallbackStore.set(id, persisted);
+    return persisted;
+  }
+
+  return null;
 };
 
 export const setLiveState = async (
@@ -92,6 +137,8 @@ export const setLiveState = async (
   } catch (error) {
     console.warn('Runtime cache write failed, using local fallback', error);
   }
+
+  await writeFileStoreEntry(entry);
 
   return entry;
 };

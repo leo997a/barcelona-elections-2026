@@ -121,3 +121,15 @@ test('output visibility controls publish immediately and editor links use the la
   assert.match(editor, /prepareOutputUrl\(outputSnapshot\.id, outputSnapshot\)/);
   assert.doesNotMatch(editor, /prepareOutputUrl\(liveOverlay\.id, liveOverlay\)/);
 });
+
+test('hostinger live output state has a persistent file-store fallback', async () => {
+  const liveStore = await readSource('../api/_lib/liveStore.ts');
+
+  assert.match(liveStore, /process\.env\.REO_LIVE_STATE_DIR/);
+  assert.match(liveStore, /resolve\(process\.cwd\(\), 'data', 'live-state'\)/);
+  assert.match(liveStore, /const readFileStoreEntry = async \(id: string\)/);
+  assert.match(liveStore, /const writeFileStoreEntry = async \(entry: LiveStateEntry\)/);
+  assert.match(liveStore, /const persisted = await readFileStoreEntry\(id\)/);
+  assert.match(liveStore, /await writeFileStoreEntry\(entry\)/);
+  assert.match(liveStore, /const fileStoreDisabled = \(\) => Boolean\(process\.env\.VERCEL\)/);
+});
