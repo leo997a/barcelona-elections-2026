@@ -113,7 +113,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
 
   const startedAt = Date.now();
   const maxConnectionMs = process.env.VERCEL ? 55_000 : 6 * 60 * 60 * 1000;
-  const refreshMs = process.env.VERCEL ? 1_000 : 12_000;
+  const refreshMs = process.env.VERCEL ? 1_000 : 600;
   while (!closed && Date.now() - startedAt < maxConnectionMs) {
     emitEntry(await getLiveState(id));
 

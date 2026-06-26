@@ -535,12 +535,12 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const isMondialTemplate = MONDIAL_TYPES.has(config.type);
   const mondialMotionEnabled = !isMondialTemplate || Boolean(getField('broadcastMotion') ?? true);
   const transitionSpeedMs = isMondialTemplate
-      ? clampNumber(getField('transitionSpeedMs'), 520, 240, 780)
+      ? clampNumber(getField('transitionSpeedMs'), 650, 360, 980)
       : 650;
   const exitTransitionMs = isMondialTemplate
-      ? Math.max(180, Math.round(transitionSpeedMs * 0.56))
+      ? Math.max(220, Math.round(transitionSpeedMs * 0.6))
       : 550;
-  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 90 : 40;
+  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 100 : 40;
   const editorExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 650;
   const runtimeExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 600;
 

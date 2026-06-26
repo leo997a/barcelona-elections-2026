@@ -204,8 +204,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     const isObsBrowser = Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
       || pageParams.get('obs') === '1'
       || hashParams.get('obs') === '1';
-    const pollIntervalMs = isObsBrowser ? 400 : 800;
-    const staleFullFetchMs = isObsBrowser ? 1200 : 1800;
+    const pollIntervalMs = isObsBrowser ? 250 : 600;
+    const staleFullFetchMs = isObsBrowser ? 900 : 1400;
     const noCacheHeaders = {
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',

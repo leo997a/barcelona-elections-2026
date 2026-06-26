@@ -368,7 +368,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   { id: 'positionY', label: 'الموضع العمودي', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'الموضع الأفقي', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
   { id: 'broadcastMotion', label: 'تشغيل أنميشن البث الداخلي', type: 'boolean', value: true },
-  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 520, min: 240, max: 780, step: 10 },
+  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 650, min: 360, max: 980, step: 10 },
   { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1.15, min: 0.2, max: 1.8, step: 0.05 },
   { id: 'mondialMotionPreset', label: 'حزمة الحركة والصوت', type: 'select', value: 'reference_stinger', options: [
     { value: 'reference_stinger', label: 'Reference stinger - full-screen TV mask + sweep SFX' },

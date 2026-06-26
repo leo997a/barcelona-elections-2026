@@ -42,9 +42,9 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
   assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
   assert.match(transitionLayer, /className="mondial-transition-bug"/);
-  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 520, 240, 780\)/);
-  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 520, 240, 780\)/);
-  assert.match(transitionLayer, /--mondial-transition-speed: 520ms;/);
+  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 650, 360, 980\)/);
+  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 650, 360, 980\)/);
+  assert.match(transitionLayer, /--mondial-transition-speed: 650ms;/);
 });
 
 test('mondial reference stinger exit keeps the same arc direction instead of reversing top and bottom bands', async () => {
@@ -153,11 +153,17 @@ test('public output links have fast fallback polling and template reconstruction
   assert.match(app, /const buildOutputFallbackState = \(id: string \| null\): OutputState \| null => \{/);
   assert.match(app, /createOverlayFromTemplate\(templateId, \[\], 'public-output-fallback'\)/);
   assert.match(app, /const initialOutputState = embeddedOverlay \?\? cachedOutputState \?\? fallbackOutputState;/);
-  assert.match(app, /const pollIntervalMs = isObsBrowser \? 400 : 800;/);
-  assert.match(app, /const staleFullFetchMs = isObsBrowser \? 1200 : 1800;/);
+  assert.match(app, /const pollIntervalMs = isObsBrowser \? 250 : 600;/);
+  assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
   assert.match(app, /startFallback\(\);\s*connectSSE\(\);/);
   assert.match(app, /es\.onopen = \(\) => \{\s*setConnStatus\('live'\);\s*\};/);
   assert.doesNotMatch(app, /es\.onopen = \(\) => \{[^}]*stopFallback\(\);[^}]*\};/);
+});
+
+test('stream fallback refresh is fast enough for hostinger live output', async () => {
+  const streamApi = await readSource('../api/stream.ts');
+
+  assert.match(streamApi, /const refreshMs = process\.env\.VERCEL \? 1_000 : 600;/);
 });
 
 test('hostinger live output state has a persistent file-store fallback', async () => {
