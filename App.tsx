@@ -1,18 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { OverlayConfig } from './types';
-import Sidebar from './components/Sidebar';
-import Home from './pages/Home';
-import Library from './pages/Library';
-import Operator from './pages/Operator';
-import Editor from './pages/Editor';
-import Integrations from './pages/Integrations'; 
-import Settings from './pages/Settings';
-import BroadcastControl from './pages/BroadcastControl';
-import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
 import { INITIAL_TEMPLATES } from './constants';
-import LegacyLicenseGate from './components/auth/LegacyLicenseGate';
 import { Volume2, CloudLightning, LoaderCircle } from 'lucide-react';
 import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
 import { createOverlayFromTemplate } from './utils/templateRegistry';
@@ -28,20 +18,36 @@ import type { IdentitySessionState, IdentityUser } from './types/auth';
 
 import { unlockAudio } from './services/audioEngine';
 
+const Sidebar = React.lazy(() => import('./components/Sidebar'));
+const Home = React.lazy(() => import('./pages/Home'));
+const Library = React.lazy(() => import('./pages/Library'));
+const Operator = React.lazy(() => import('./pages/Operator'));
+const Editor = React.lazy(() => import('./pages/Editor'));
+const Integrations = React.lazy(() => import('./pages/Integrations'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const BroadcastControl = React.lazy(() => import('./pages/BroadcastControl'));
+const PlayerIntelV2PreviewPage = React.lazy(() => import('./pages/player-intel-v2-preview'));
+const LegacyLicenseGate = React.lazy(() => import('./components/auth/LegacyLicenseGate'));
 const AuthGateway = React.lazy(() => import('./components/auth/AuthGateway'));
+
+const AppRouteFallback: React.FC<{ label?: string }> = ({ label = 'جاري تحميل الواجهة' }) => (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950 text-white">
+    <LoaderCircle className="h-7 w-7 animate-spin text-cyan-300" aria-label={label} />
+  </div>
+);
 
 const AudioUnlockOverlay = () => {
     const [visible, setVisible] = useState(true);
-    
+
     const handleUnlock = () => {
         unlockAudio().finally(() => setVisible(false));
     };
-    
+
     if (!visible) return null;
-    
+
     return (
-        <div 
-            onClick={handleUnlock} 
+        <div
+            onClick={handleUnlock}
             className="fixed inset-0 z-[100] flex items-center justify-center cursor-pointer group hover:bg-black/10 transition-colors"
             title="انقر لتفعيل الصوت"
         >
@@ -583,7 +589,7 @@ const App: React.FC = () => {
       return next;
     });
   };
-  
+
   // Handle Hash Routing (Output Window) + URL popstate
   useEffect(() => {
     const handleHashChange = () => setHashPath(window.location.hash);
@@ -667,7 +673,7 @@ const App: React.FC = () => {
       setSelectedOverlayId(null);
     }
   }, [hashPath, overlays, selectedOverlayId]);
-  
+
   // Actions delegated to SyncManager
   const handleCreateOverlay = (templateId: string) => {
     const nextOverlay = createOverlayFromTemplate(templateId, overlays, syncManager.getStudioId());
@@ -697,7 +703,11 @@ const App: React.FC = () => {
   // legacy Player Stats Lab or any production overlay code.
   // ----------------------------------------------------
   if (hashPath.startsWith('#/player-intel-v2-preview')) {
-    return <PlayerIntelV2PreviewPage />;
+    return (
+      <React.Suspense fallback={<AppRouteFallback label="جاري تحميل مختبر الإحصائيات" />}>
+        <PlayerIntelV2PreviewPage />
+      </React.Suspense>
+    );
   }
 
   // ----------------------------------------------------
@@ -706,18 +716,20 @@ const App: React.FC = () => {
   const identityAuthenticated = identitySession.status === 'authenticated';
   if (!license?.valid && !identityAuthenticated) {
     const legacyAccess = (
-      <LegacyLicenseGate
-        embedded={identityClientConfig.enabled}
-        email={licenseEmail}
-        licenseKey={licenseKey}
-        error={licenseError}
-        loading={licenseLoading}
-        showLicenseKey={showLicenseKey}
-        onEmailChange={setLicenseEmail}
-        onLicenseKeyChange={setLicenseKey}
-        onToggleLicenseKey={() => setShowLicenseKey(previous => !previous)}
-        onSubmit={handleActivateLicense}
-      />
+      <React.Suspense fallback={<AppRouteFallback label="جاري تحميل بوابة الدخول" />}>
+        <LegacyLicenseGate
+          embedded={identityClientConfig.enabled}
+          email={licenseEmail}
+          licenseKey={licenseKey}
+          error={licenseError}
+          loading={licenseLoading}
+          showLicenseKey={showLicenseKey}
+          onEmailChange={setLicenseEmail}
+          onLicenseKeyChange={setLicenseKey}
+          onToggleLicenseKey={() => setShowLicenseKey(previous => !previous)}
+          onSubmit={handleActivateLicense}
+        />
+      </React.Suspense>
     );
 
     if (!identityClientConfig.enabled) return legacyAccess;
@@ -729,11 +741,7 @@ const App: React.FC = () => {
       );
     }
     return (
-      <React.Suspense fallback={(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950 text-white">
-          <LoaderCircle className="h-7 w-7 animate-spin text-cyan-300" aria-label="جاري تحميل بوابة الحساب" />
-        </div>
-      )}>
+      <React.Suspense fallback={<AppRouteFallback label="جاري تحميل بوابة الحساب" />}>
         <AuthGateway legacyAccess={legacyAccess} onAuthenticated={handleIdentityAuthenticated} />
       </React.Suspense>
     );
@@ -749,71 +757,73 @@ const App: React.FC = () => {
     : null;
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white font-sans overflow-hidden" dir="rtl">
-      {selectedOverlayId && selectedOverlay ? (
-        <div className="w-full h-full">
-           <Editor 
-             overlay={selectedOverlay} 
-             onBack={closeEditor}
-           />
-        </div>
-      ) : (
-        <>
-          <Sidebar
-            activePage={route}
-            onNavigate={setRoute}
-            favoriteCount={favoriteIds.length}
-            onLogout={handleLogout}
-            logoutLoading={logoutLoading}
-            logoutError={logoutError}
-          />
-          
-          <main className="flex-1 overflow-y-auto bg-gray-950 relative">
-             <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
-             
-             <div className="relative z-10 h-full">
-               {route === 'home' && (
-                  <Home 
-                    overlays={overlays}
-                    onNavigate={setRoute}
-                    onCreate={handleCreateOverlay}
-                  />
-               )}
+    <React.Suspense fallback={<AppRouteFallback />}>
+      <div className="flex h-screen bg-gray-950 text-white font-sans overflow-hidden" dir="rtl">
+        {selectedOverlayId && selectedOverlay ? (
+          <div className="w-full h-full">
+             <Editor
+               overlay={selectedOverlay}
+               onBack={closeEditor}
+             />
+          </div>
+        ) : (
+          <>
+            <Sidebar
+              activePage={route}
+              onNavigate={setRoute}
+              favoriteCount={favoriteIds.length}
+              onLogout={handleLogout}
+              logoutLoading={logoutLoading}
+              logoutError={logoutError}
+            />
 
-               {route === 'library' && (
-                 <Library 
-                   overlays={overlays} 
-                   onSelect={openEditorById}
-                   onDelete={handleDeleteOverlay}
-                   onRename={(overlay) => syncManager.updateOverlay(overlay)}
-                   onCreate={handleCreateOverlay}
-                   onNavigateOperator={openOperatorById}
-                   favoriteIds={favoriteIds}
-                   onToggleFavorite={handleToggleFavorite}
-                   missingEditOverlayId={missingEditOverlayId}
-                 />
-               )}
-               
-               {route === 'operator' && (
-                   <Operator
+            <main className="flex-1 overflow-y-auto bg-gray-950 relative">
+               <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
+
+               <div className="relative z-10 h-full">
+                 {route === 'home' && (
+                    <Home
+                      overlays={overlays}
+                      onNavigate={setRoute}
+                      onCreate={handleCreateOverlay}
+                    />
+                 )}
+
+                 {route === 'library' && (
+                   <Library
                      overlays={overlays}
-                     focusedOverlayId={operatorFocusId}
+                     onSelect={openEditorById}
+                     onDelete={handleDeleteOverlay}
+                     onRename={(overlay) => syncManager.updateOverlay(overlay)}
+                     onCreate={handleCreateOverlay}
+                     onNavigateOperator={openOperatorById}
                      favoriteIds={favoriteIds}
                      onToggleFavorite={handleToggleFavorite}
-                     onUpdate={(o) => syncManager.updateOverlay(o)}
+                     missingEditOverlayId={missingEditOverlayId}
                    />
-               )}
+                 )}
 
-               {route === 'integrations' && <Integrations overlays={overlays} />}
+                 {route === 'operator' && (
+                     <Operator
+                       overlays={overlays}
+                       focusedOverlayId={operatorFocusId}
+                       favoriteIds={favoriteIds}
+                       onToggleFavorite={handleToggleFavorite}
+                       onUpdate={(o) => syncManager.updateOverlay(o)}
+                     />
+                 )}
 
-               {route === 'broadcastcontrol' && <BroadcastControl />}
+                 {route === 'integrations' && <Integrations overlays={overlays} />}
 
-               {route === 'settings' && <Settings />}
-             </div>
-          </main>
-        </>
-      )}
-    </div>
+                 {route === 'broadcastcontrol' && <BroadcastControl />}
+
+                 {route === 'settings' && <Settings />}
+               </div>
+            </main>
+          </>
+        )}
+      </div>
+    </React.Suspense>
   );
 };
 
