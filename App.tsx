@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import BroadcastControl from './pages/BroadcastControl';
 import PlayerIntelV2PreviewPage from './pages/player-intel-v2-preview';
 import OverlayRenderer from './components/OverlayRenderer';
+import { INITIAL_TEMPLATES } from './constants';
 import LegacyLicenseGate from './components/auth/LegacyLicenseGate';
 import { Volume2, CloudLightning, LoaderCircle } from 'lucide-react';
 import { PROGRAM_OUTPUT_ID, syncManager } from './services/syncManager';
@@ -107,6 +108,38 @@ const writeCachedOutputState = (id: string | null, state: OutputState) => {
   }
 };
 
+const OUTPUT_TEMPLATE_IDS = INITIAL_TEMPLATES
+  .map(template => template.templateId || template.id)
+  .filter(Boolean)
+  .sort((a, b) => b.length - a.length);
+
+const extractOutputTemplateId = (id: string | null) => {
+  if (!id) return null;
+  const normalized = id.toLowerCase();
+  return OUTPUT_TEMPLATE_IDS.find(templateId => {
+    const lowerTemplateId = templateId.toLowerCase();
+    return (
+      normalized.includes(`template-${lowerTemplateId}-`) ||
+      normalized.includes(`template-${lowerTemplateId}`) ||
+      normalized.includes(lowerTemplateId)
+    );
+  }) ?? null;
+};
+
+const buildOutputFallbackState = (id: string | null): OutputState | null => {
+  if (!id || id === PROGRAM_OUTPUT_ID) return null;
+  const templateId = extractOutputTemplateId(id);
+  if (!templateId) return null;
+
+  const overlay = createOverlayFromTemplate(templateId, [], 'public-output-fallback');
+  return {
+    ...overlay,
+    id,
+    templateId,
+    isVisible: true,
+  };
+};
+
 const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   const id = extractOutputId(hashPath);
   const isProgramOutput = id === PROGRAM_OUTPUT_ID;
@@ -115,12 +148,18 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     [hashPath]
   );
   const cachedOutputState = React.useMemo(() => readCachedOutputState(id), [id]);
-  const initialOutputState = embeddedOverlay ?? cachedOutputState;
+  const fallbackOutputState = React.useMemo(() => buildOutputFallbackState(id), [id]);
+  const initialOutputState = embeddedOverlay ?? cachedOutputState ?? fallbackOutputState;
 
   // آخر حالة معروفة — لا تُمسح أبداً حتى عند انقطاع الاتصال
   const lastGoodState = React.useRef<OutputState | null>(initialOutputState);
   const [outputState, setOutputState] = useState<OutputState | null>(initialOutputState);
   const [connStatus, setConnStatus] = useState<'connecting' | 'live' | 'fallback'>('connecting');
+
+  useEffect(() => {
+    lastGoodState.current = initialOutputState;
+    setOutputState(initialOutputState);
+  }, [id, initialOutputState]);
 
   useEffect(() => {
     const previousHtmlBackground = document.documentElement.style.background;
@@ -157,7 +196,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     let requestCounter = 0;
     let pollInFlight = false;
     let lastAppliedVersion = 0;
-    let lastAppliedFingerprint = embeddedOverlay ? JSON.stringify(embeddedOverlay) : '';
+    let lastAppliedFingerprint = initialOutputState ? JSON.stringify(initialOutputState) : '';
     let lastFullFetchAt = 0;
 
     const pageParams = new URLSearchParams(window.location.search);
@@ -165,8 +204,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     const isObsBrowser = Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
       || pageParams.get('obs') === '1'
       || hashParams.get('obs') === '1';
-    const pollIntervalMs = isObsBrowser ? 2500 : 3000;
-    const staleFullFetchMs = isObsBrowser ? 10000 : 15000;
+    const pollIntervalMs = isObsBrowser ? 400 : 800;
+    const staleFullFetchMs = isObsBrowser ? 1200 : 1800;
     const noCacheHeaders = {
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
@@ -294,7 +333,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
         es.onopen = () => {
           setConnStatus('live');
-          stopFallback();
         };
 
         es.onmessage = (event) => {
@@ -323,7 +361,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       }
     };
 
-    // ── Official output sync: SSE + light polling fallback over /api/live ──
+    // ── Official output sync: SSE + fast polling fallback over /api/live ──
+    startFallback();
     connectSSE();
 
     return () => {
@@ -332,7 +371,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       stopFallback();
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, [id, hashPath, embeddedOverlay, isProgramOutput]);
+  }, [id, hashPath, embeddedOverlay, isProgramOutput, initialOutputState]);
 
   // عرض آخر حالة معروفة — لا يُعرض "Connecting..." إلا إذا لم يُستلم أي شيء قط
   if (!outputState) return (

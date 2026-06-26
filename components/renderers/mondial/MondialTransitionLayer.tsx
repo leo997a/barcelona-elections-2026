@@ -173,7 +173,7 @@ export const MONDIAL_TRANSITION_CSS = `
   100% { opacity: 0; transform: translateY(-52px) scaleX(1.08); }
 }
 .mondial-transition-frame {
-  --mondial-transition-speed: 980ms;
+  --mondial-transition-speed: 520ms;
   --mondial-transition-intensity: 1;
   position: relative;
   width: 100%;
@@ -194,7 +194,7 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionContentIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-phase='out'][data-motion='on'] .mondial-transition-content {
-  animation: mondialTransitionContentOut calc(var(--mondial-transition-speed) * .72) cubic-bezier(.7,0,.84,0) both;
+  animation: mondialTransitionContentOut calc(var(--mondial-transition-speed) * .56) cubic-bezier(.7,0,.84,0) both;
 }
 .mondial-transition-overlay,
 .mondial-transition-mask,
@@ -225,7 +225,7 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionStackIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-phase='out'][data-motion='on'] .mondial-transition-overlay {
-  animation: mondialTransitionStackOut calc(var(--mondial-transition-speed) * .72) cubic-bezier(.7,0,.84,0) both;
+  animation: mondialTransitionStackOut calc(var(--mondial-transition-speed) * .56) cubic-bezier(.7,0,.84,0) both;
 }
 .mondial-transition-mask {
   inset: -18% -24%;
@@ -302,13 +302,13 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionReferenceCoverIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-mask {
-  animation: mondialTransitionReferenceCoverOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
+  animation: mondialTransitionReferenceCoverIn calc(var(--mondial-transition-speed) * .62) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-rings {
   animation: mondialTransitionReferencePulseIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-rings {
-  animation: mondialTransitionReferencePulseOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
+  animation: mondialTransitionReferencePulseIn calc(var(--mondial-transition-speed) * .62) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-arc-stinger {
   inset: -18%;
@@ -402,7 +402,7 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionArcStingerIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger {
-  animation: mondialTransitionArcStingerOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
+  animation: mondialTransitionArcStingerIn calc(var(--mondial-transition-speed) * .62) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='top'] {
   animation: mondialTransitionArcBandTopIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
@@ -411,10 +411,10 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionArcBandBottomIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='top'] {
-  animation: mondialTransitionArcBandBottomIn calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) reverse both;
+  animation: mondialTransitionArcBandTopIn calc(var(--mondial-transition-speed) * .62) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-arc-stinger span[data-arc='bottom'] {
-  animation: mondialTransitionArcBandTopIn calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) reverse both;
+  animation: mondialTransitionArcBandBottomIn calc(var(--mondial-transition-speed) * .62) cubic-bezier(.16,1,.3,1) both;
 }
 .mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-bug,
 .mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-bug {
@@ -562,7 +562,7 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
         ? 'out'
         : 'hold';
   const effect = normalizeEffect(getField, phase === 'out' ? 'out' : 'in');
-  const speed = clampNumber(getField('transitionSpeedMs'), 980, 360, 1500);
+  const speed = clampNumber(getField('transitionSpeedMs'), 520, 240, 780);
   const intensity = clampNumber(getField('transitionIntensity'), 1.15, 0.2, 1.8);
   const paletteId = getBroadcastPalette(getField);
   const cssVars = {

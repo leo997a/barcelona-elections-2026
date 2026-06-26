@@ -535,12 +535,12 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const isMondialTemplate = MONDIAL_TYPES.has(config.type);
   const mondialMotionEnabled = !isMondialTemplate || Boolean(getField('broadcastMotion') ?? true);
   const transitionSpeedMs = isMondialTemplate
-      ? clampNumber(getField('transitionSpeedMs'), 980, 360, 1500)
+      ? clampNumber(getField('transitionSpeedMs'), 520, 240, 780)
       : 650;
   const exitTransitionMs = isMondialTemplate
-      ? Math.max(260, Math.round(transitionSpeedMs * 0.72))
+      ? Math.max(180, Math.round(transitionSpeedMs * 0.56))
       : 550;
-  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 140 : 40;
+  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 90 : 40;
   const editorExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 650;
   const runtimeExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 600;
 
@@ -787,8 +787,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       ? ({
           '--tv-enter-speed': `${transitionSpeedMs}ms`,
           '--tv-exit-speed': `${exitTransitionMs}ms`,
-          '--tv-enter-bar-speed': `${Math.max(220, Math.round(transitionSpeedMs * 0.86))}ms`,
-          '--tv-exit-bar-speed': `${Math.max(180, Math.round(exitTransitionMs * 0.82))}ms`,
+          '--tv-enter-bar-speed': `${Math.max(140, Math.round(transitionSpeedMs * 0.62))}ms`,
+          '--tv-exit-bar-speed': `${Math.max(120, Math.round(exitTransitionMs * 0.72))}ms`,
         } as React.CSSProperties)
       : {};
 

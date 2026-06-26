@@ -42,6 +42,30 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
   assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
   assert.match(transitionLayer, /className="mondial-transition-bug"/);
+  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 520, 240, 780\)/);
+  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 520, 240, 780\)/);
+  assert.match(transitionLayer, /--mondial-transition-speed: 520ms;/);
+});
+
+test('mondial reference stinger exit keeps the same arc direction instead of reversing top and bottom bands', async () => {
+  const transitionLayer = await readSource('../components/renderers/mondial/MondialTransitionLayer.tsx');
+
+  assert.match(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='top'\][\s\S]*?mondialTransitionArcBandTopIn[\s\S]*?\.62/
+  );
+  assert.match(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='bottom'\][\s\S]*?mondialTransitionArcBandBottomIn[\s\S]*?\.62/
+  );
+  assert.doesNotMatch(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='top'\][\s\S]*?mondialTransitionArcBandBottomIn[\s\S]*?reverse/
+  );
+  assert.doesNotMatch(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='bottom'\][\s\S]*?mondialTransitionArcBandTopIn[\s\S]*?reverse/
+  );
 });
 
 test('all selectable mondial motion presets have runtime transition effects', async () => {
@@ -120,6 +144,20 @@ test('output visibility controls publish immediately and editor links use the la
   assert.match(editor, /const outputSnapshot = normalizeElectionOverlay\(\{[\s\S]*?\.\.\.draftOverlay,[\s\S]*?isVisible: liveOverlay\.isVisible,[\s\S]*?\}\);/);
   assert.match(editor, /prepareOutputUrl\(outputSnapshot\.id, outputSnapshot\)/);
   assert.doesNotMatch(editor, /prepareOutputUrl\(liveOverlay\.id, liveOverlay\)/);
+});
+
+test('public output links have fast fallback polling and template reconstruction', async () => {
+  const app = await readSource('../App.tsx');
+
+  assert.match(app, /const OUTPUT_TEMPLATE_IDS = INITIAL_TEMPLATES/);
+  assert.match(app, /const buildOutputFallbackState = \(id: string \| null\): OutputState \| null => \{/);
+  assert.match(app, /createOverlayFromTemplate\(templateId, \[\], 'public-output-fallback'\)/);
+  assert.match(app, /const initialOutputState = embeddedOverlay \?\? cachedOutputState \?\? fallbackOutputState;/);
+  assert.match(app, /const pollIntervalMs = isObsBrowser \? 400 : 800;/);
+  assert.match(app, /const staleFullFetchMs = isObsBrowser \? 1200 : 1800;/);
+  assert.match(app, /startFallback\(\);\s*connectSSE\(\);/);
+  assert.match(app, /es\.onopen = \(\) => \{\s*setConnStatus\('live'\);\s*\};/);
+  assert.doesNotMatch(app, /es\.onopen = \(\) => \{[^}]*stopFallback\(\);[^}]*\};/);
 });
 
 test('hostinger live output state has a persistent file-store fallback', async () => {
