@@ -68,6 +68,16 @@ test('mondial reference stinger exit keeps the same arc direction instead of rev
   );
 });
 
+test('mondial exit phase stays active until the exit hold completes', async () => {
+  const renderer = await readSource('../components/OverlayRenderer.tsx');
+
+  assert.match(
+    renderer,
+    /else if \(!isNowVisible && prevVisible === true\) \{[\s\S]*?setWasVisible\(true\);[\s\S]*?setAnimCls\(resolveExitClass\(\)\);[\s\S]*?setMounted\(false\);[\s\S]*?setAnimCls\(''\);[\s\S]*?setWasVisible\(false\);[\s\S]*?\}, runtimeExitHoldMs\);/
+  );
+  assert.doesNotMatch(renderer, /previousVisibilityRef\.current = isNowVisible;\s*setWasVisible\(isNowVisible\);/);
+});
+
 test('all selectable mondial motion presets have runtime transition effects', async () => {
   const [templates, renderer, transitionLayer] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),

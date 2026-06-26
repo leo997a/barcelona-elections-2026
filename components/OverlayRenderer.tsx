@@ -737,6 +737,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
               lastSoundAt.current = now;
               void playSound('ENTRY');
           }
+          setWasVisible(true);
           setMounted(true);
           requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
           recordDiagnostic(config, 'show');
@@ -745,19 +746,24 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
               lastSoundAt.current = now;
               void playSound('EXIT');
           }
+          setWasVisible(true);
           setAnimCls(resolveExitClass());
           timer.current = setTimeout(() => {
               // Ensure this is still the latest command
               if (commandId === lastCommandId.current) {
                   setMounted(false);
                   setAnimCls('');
+                  setWasVisible(false);
               }
           }, runtimeExitHoldMs);
           recordDiagnostic(config, 'hide');
+      } else if (!isNowVisible) {
+          setWasVisible(false);
+      } else {
+          setWasVisible(true);
       }
 
       previousVisibilityRef.current = isNowVisible;
-      setWasVisible(isNowVisible);
       return () => clearTimeout(timer.current);
   }, [config.isVisible, isEditor, config.type, runtimeExitHoldMs, mondialMotionEnabled, transitionSpeedMs]);
 
