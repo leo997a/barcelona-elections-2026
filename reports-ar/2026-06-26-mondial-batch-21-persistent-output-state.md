@@ -46,3 +46,31 @@
 ```json
 {"id":"codex-file-store-test","ok":true,"version":1,"clientVersion":1000}
 ```
+
+## تحقق Hostinger بعد النشر
+
+تم نشر إصلاح التخزين الدائم إلى Hostinger، ثم تشغيل سموك مباشر على:
+
+`https://peachpuff-herring-712997.hostingersite.com/api/live`
+
+نتيجة فحص وضع التخزين:
+
+```json
+{"post":200,"get":200,"store":"file","visible":false,"version":1}
+```
+
+نتيجة فحص تبديل الظهور/الإخفاء:
+
+```json
+{"store1":"file","afterShow":true,"versionAfterShow":2,"store2":"file","afterHide":false,"versionAfterHide":3}
+```
+
+هذا يثبت أن `/api/live` على Hostinger لم يعد يعتمد على ذاكرة العملية فقط، وأن أوامر الظهور/الإخفاء الجديدة تصل إلى الحالة المقروءة من رابط الإخراج.
+
+## ملاحظة على الرابط القديم الذي كان مكسوراً
+
+الرابط القديم:
+
+`/output/instance-studio-2c7379d9fc98a752-template-mondial-group-wall-mqueo02i-0c2f818f`
+
+أعاد `404` عند فحص `/api/live` بعد النشر، وهذا متوقع لأن حالته كانت محفوظة في الذاكرة القديمة وضاعت أثناء redeploy قبل وجود التخزين الدائم. بعد فتح/تحديث نفس القالب من الأداة مرة واحدة، ستُنشر الحالة من جديد إلى التخزين الملفي وتبقى مرتبطة بنفس الرابط.
