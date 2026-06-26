@@ -333,8 +333,8 @@ const MONDIAL_MOTION_PRESETS: Record<string, MondialMotionPreset> = {
   reference_stinger: {
     transitionIn: 'MONDIAL_STINGER',
     transitionOut: 'MONDIAL_STINGER_OUT',
-    soundInStyle: 'GLITCH_TRANSITION',
-    soundOutStyle: 'DIGITAL_SWEEP',
+    soundInStyle: 'DIGITAL_SWEEP',
+    soundOutStyle: 'BROADCAST_OUT',
     audioUpdateCue: 'DIGITAL_SWEEP',
   },
   scorebug_snap: {
@@ -415,8 +415,10 @@ const CSS = `
   @keyframes tvSpotlightPop      { 0%{transform:scale(.82);opacity:0;filter:blur(16px) brightness(2.2)} 58%{transform:scale(1.045);opacity:1;filter:blur(0) brightness(1.35)} 100%{transform:scale(1);opacity:1;filter:brightness(1)} }
   @keyframes tvGlassSweep        { 0%{transform:translateY(28px) scale(.985);opacity:0;backdrop-filter:blur(0);filter:blur(10px)} 100%{transform:translateY(0) scale(1);opacity:1;filter:blur(0)} }
   @keyframes tvBroadcastFade     { 0%{opacity:0;filter:blur(8px)} 100%{opacity:1;filter:blur(0)} }
-  @keyframes tvMondialStinger    { 0%{clip-path:polygon(0 0,0 0,0 100%,0 100%);transform:translateX(-13%) skewX(-9deg) scale(1.04);opacity:0;filter:blur(12px) brightness(1.9) saturate(1.5)} 42%{clip-path:polygon(0 0,76% 0,100% 100%,0 100%);opacity:1;filter:blur(3px) brightness(1.35) saturate(1.35)} 72%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(1.5%) skewX(2deg) scale(1.01);filter:blur(0) brightness(1.12)} 100%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} }
-  @keyframes tvMondialStingerOut { 0%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} 36%{transform:translateX(-2%) skewX(-2deg) scale(1.01);filter:brightness(1.35) saturate(1.35)} 100%{clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%);transform:translateX(14%) skewX(9deg) scale(1.04);opacity:0;filter:blur(13px) brightness(1.8)} }
+  @keyframes tvMondialStinger    { 0%,26%{clip-path:polygon(0 0,0 0,0 100%,0 100%);transform:translateX(-5%) skewX(-4deg) scale(1.035);opacity:0;filter:blur(14px) brightness(1.8) saturate(1.45)} 50%{clip-path:polygon(0 0,46% 0,68% 100%,0 100%);opacity:.55;filter:blur(7px) brightness(1.45) saturate(1.34)} 74%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(1.5%) skewX(1deg) scale(1.012);opacity:1;filter:blur(0) brightness(1.14)} 100%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} }
+  @keyframes tvMondialStingerOut { 0%,26%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translateX(0) skewX(0) scale(1);opacity:1;filter:brightness(1)} 56%{clip-path:polygon(16% 0,100% 0,100% 100%,0 100%);transform:translateX(-1.5%) skewX(-2deg) scale(1.015);opacity:.72;filter:brightness(1.35) saturate(1.34)} 100%{clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%);transform:translateX(8%) skewX(7deg) scale(1.04);opacity:0;filter:blur(14px) brightness(1.75)} }
+  @keyframes tvMondialReferenceCoverIn { 0%{transform:translateX(-126%) skewX(-14deg) scaleX(1.08);opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)} 14%{opacity:1} 34%{transform:translateX(-18%) skewX(-10deg) scaleX(1.12);clip-path:polygon(0 0,100% 0,90% 100%,0 100%)} 56%{transform:translateX(0) skewX(-2deg) scaleX(1.06);clip-path:polygon(-8% 0,108% 0,100% 100%,0 100%)} 80%{transform:translateX(72%) skewX(-10deg) scaleX(1.12);opacity:1;clip-path:polygon(14% 0,100% 0,100% 100%,0 100%)} 100%{transform:translateX(126%) skewX(-14deg) scaleX(1.08);opacity:0;clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)} }
+  @keyframes tvMondialReferenceCoverOut { 0%{transform:translateX(126%) skewX(14deg) scaleX(1.08);opacity:0;clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)} 16%{opacity:1} 42%{transform:translateX(16%) skewX(10deg) scaleX(1.12);clip-path:polygon(0 0,100% 0,100% 100%,10% 100%)} 64%{transform:translateX(0) skewX(2deg) scaleX(1.06);clip-path:polygon(-8% 0,108% 0,100% 100%,0 100%)} 84%{transform:translateX(-72%) skewX(10deg) scaleX(1.12);opacity:1;clip-path:polygon(0 0,86% 0,100% 100%,0 100%)} 100%{transform:translateX(-126%) skewX(14deg) scaleX(1.08);opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)} }
   @keyframes tvMondialStingerBars { 0%{transform:translateX(-135%) skewX(-18deg);opacity:0} 18%{opacity:.95} 58%{opacity:.85} 100%{transform:translateX(135%) skewX(-18deg);opacity:0} }
 
   @keyframes tvScorebugSnapOut   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-40px) scale(.92);opacity:0;filter:blur(8px)} }
@@ -448,8 +450,9 @@ const CSS = `
   .tv-spotlight-pop      { animation: tvSpotlightPop      var(--tv-enter-speed, .58s) cubic-bezier(.18,1,.32,1) both }
   .tv-glass-sweep        { animation: tvGlassSweep        var(--tv-enter-speed, .7s) cubic-bezier(.22,1,.36,1) both }
   .tv-broadcast-fade     { animation: tvBroadcastFade     var(--tv-enter-speed, .5s) ease-out both }
-  .tv-mondial-stinger    { position:relative; isolation:isolate; animation: tvMondialStinger var(--tv-enter-speed, .86s) cubic-bezier(.16,1,.3,1) both }
-  .tv-mondial-stinger::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 18%,rgba(255,23,56,.92) 18% 24%,transparent 24% 32%,rgba(182,255,0,.9) 32% 39%,transparent 39% 49%,rgba(12,232,207,.9) 49% 57%,transparent 57% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-enter-bar-speed, .74s) cubic-bezier(.16,1,.3,1) both }
+  .tv-mondial-stinger    { position:relative; isolation:isolate; animation: tvMondialStinger var(--tv-enter-speed, .98s) cubic-bezier(.16,1,.3,1) both }
+  .tv-mondial-stinger::before { content:''; position:absolute; inset:-18% -24%; z-index:5; pointer-events:none; background:linear-gradient(90deg,#03040a 0 18%,rgba(5,6,14,.98) 18% 100%),radial-gradient(circle at 30% 52%,rgba(255,255,255,.16),transparent 34%); box-shadow:inset 0 0 90px rgba(255,255,255,.12); animation:tvMondialReferenceCoverIn var(--tv-enter-speed, .98s) cubic-bezier(.16,1,.3,1) both }
+  .tv-mondial-stinger::after { content:''; position:absolute; inset:-14%; z-index:6; pointer-events:none; background:linear-gradient(90deg,transparent 0 16%,rgba(255,23,56,.94) 16% 24%,transparent 24% 32%,rgba(182,255,0,.9) 32% 43%,transparent 43% 52%,rgba(12,232,207,.9) 52% 63%,transparent 63% 100%),repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.13) 34px 36px); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-enter-bar-speed, .84s) cubic-bezier(.16,1,.3,1) both }
 
   .tv-scorebug-snap-out      { animation: tvScorebugSnapOut      var(--tv-exit-speed, .45s) ease-in both }
   .tv-stadium-sweep-out      { animation: tvStadiumSweepOut      var(--tv-exit-speed, .55s) ease-in both }
@@ -459,8 +462,9 @@ const CSS = `
   .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      var(--tv-exit-speed, .48s) ease-in both }
   .tv-glass-sweep-out        { animation: tvGlassSweepOut        var(--tv-exit-speed, .5s) ease-in both }
   .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     var(--tv-exit-speed, .42s) ease-in both }
-  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut var(--tv-exit-speed, .62s) cubic-bezier(.7,0,.84,0) both }
-  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-12%; z-index:5; pointer-events:none; background:linear-gradient(90deg,transparent 0 16%,rgba(12,232,207,.88) 16% 24%,transparent 24% 34%,rgba(255,47,159,.88) 34% 42%,transparent 42% 55%,rgba(182,255,0,.82) 55% 62%,transparent 62% 100%); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-exit-bar-speed, .5s) cubic-bezier(.7,0,.84,0) reverse both }
+  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut var(--tv-exit-speed, .72s) cubic-bezier(.7,0,.84,0) both }
+  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-18% -24%; z-index:5; pointer-events:none; background:linear-gradient(90deg,#03040a 0 18%,rgba(5,6,14,.98) 18% 100%),radial-gradient(circle at 70% 50%,rgba(255,255,255,.16),transparent 34%); box-shadow:inset 0 0 90px rgba(255,255,255,.12); animation:tvMondialReferenceCoverOut var(--tv-exit-speed, .72s) cubic-bezier(.7,0,.84,0) both }
+  .tv-mondial-stinger-out::after { content:''; position:absolute; inset:-14%; z-index:6; pointer-events:none; background:linear-gradient(90deg,transparent 0 14%,rgba(12,232,207,.9) 14% 24%,transparent 24% 34%,rgba(255,47,159,.9) 34% 45%,transparent 45% 56%,rgba(182,255,0,.86) 56% 66%,transparent 66% 100%),repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.13) 34px 36px); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-exit-bar-speed, .58s) cubic-bezier(.7,0,.84,0) reverse both }
 
   @media (prefers-reduced-motion: reduce) {
     .tv-drop-in, .tv-slide-left, .tv-slide-right, .tv-slide-up, .tv-zoom-flash,
@@ -531,7 +535,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const isMondialTemplate = MONDIAL_TYPES.has(config.type);
   const mondialMotionEnabled = !isMondialTemplate || Boolean(getField('broadcastMotion') ?? true);
   const transitionSpeedMs = isMondialTemplate
-      ? clampNumber(getField('transitionSpeedMs'), 860, 360, 1500)
+      ? clampNumber(getField('transitionSpeedMs'), 980, 360, 1500)
       : 650;
   const exitTransitionMs = isMondialTemplate
       ? Math.max(260, Math.round(transitionSpeedMs * 0.72))

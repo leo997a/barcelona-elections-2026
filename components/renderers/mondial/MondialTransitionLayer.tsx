@@ -72,13 +72,41 @@ const normalizeEffect = (
 
 export const MONDIAL_TRANSITION_CSS = `
 @keyframes mondialTransitionContentIn {
-  0% { opacity: 0; transform: translate3d(calc(var(--mondial-transition-intensity) * -34px), 0, 0) skewX(-4deg) scale(1.035); filter: blur(12px) brightness(1.5) saturate(1.35); clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
-  44% { opacity: 1; filter: blur(3px) brightness(1.3) saturate(1.2); clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%); }
+  0%, 28% { opacity: 0; transform: translate3d(calc(var(--mondial-transition-intensity) * -42px), 0, 0) skewX(-5deg) scale(1.045); filter: blur(14px) brightness(1.7) saturate(1.45); clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+  48% { opacity: .35; filter: blur(8px) brightness(1.45) saturate(1.35); clip-path: polygon(0 0, 42% 0, 64% 100%, 0 100%); }
+  70% { opacity: 1; transform: translate3d(calc(var(--mondial-transition-intensity) * 8px), 0, 0) skewX(1.6deg) scale(1.012); filter: blur(1px) brightness(1.18) saturate(1.16); clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
   100% { opacity: 1; transform: translate3d(0, 0, 0) skewX(0) scale(1); filter: none; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
 }
 @keyframes mondialTransitionContentOut {
-  0% { opacity: 1; transform: translate3d(0, 0, 0) skewX(0) scale(1); filter: none; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
-  100% { opacity: 0; transform: translate3d(calc(var(--mondial-transition-intensity) * 46px), 0, 0) skewX(5deg) scale(1.035); filter: blur(12px) brightness(1.45) saturate(1.35); clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); }
+  0%, 28% { opacity: 1; transform: translate3d(0, 0, 0) skewX(0) scale(1); filter: none; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+  54% { opacity: .72; transform: translate3d(calc(var(--mondial-transition-intensity) * -12px), 0, 0) skewX(-2deg) scale(1.016); filter: blur(2px) brightness(1.28) saturate(1.22); clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%); }
+  100% { opacity: 0; transform: translate3d(calc(var(--mondial-transition-intensity) * 58px), 0, 0) skewX(7deg) scale(1.045); filter: blur(14px) brightness(1.65) saturate(1.45); clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); }
+}
+@keyframes mondialTransitionReferenceCoverIn {
+  0% { opacity: 0; transform: translateX(-124%) skewX(-14deg) scaleX(1.08); clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+  12% { opacity: 1; }
+  32% { opacity: 1; transform: translateX(-18%) skewX(-10deg) scaleX(1.12); clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); }
+  52% { opacity: 1; transform: translateX(0) skewX(-2deg) scaleX(1.06); clip-path: polygon(-8% 0, 108% 0, 100% 100%, 0 100%); }
+  76% { opacity: 1; transform: translateX(72%) skewX(-10deg) scaleX(1.12); clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%); }
+  100% { opacity: 0; transform: translateX(124%) skewX(-14deg) scaleX(1.08); clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); }
+}
+@keyframes mondialTransitionReferenceCoverOut {
+  0% { opacity: 0; transform: translateX(124%) skewX(14deg) scaleX(1.08); clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); }
+  14% { opacity: 1; }
+  40% { opacity: 1; transform: translateX(16%) skewX(10deg) scaleX(1.12); clip-path: polygon(0 0, 100% 0, 100% 100%, 10% 100%); }
+  62% { opacity: 1; transform: translateX(0) skewX(2deg) scaleX(1.06); clip-path: polygon(-8% 0, 108% 0, 100% 100%, 0 100%); }
+  84% { opacity: 1; transform: translateX(-74%) skewX(10deg) scaleX(1.12); clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%); }
+  100% { opacity: 0; transform: translateX(-124%) skewX(14deg) scaleX(1.08); clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+}
+@keyframes mondialTransitionReferencePulseIn {
+  0%, 18% { opacity: 0; transform: scale(.82) rotate(-4deg); }
+  46% { opacity: .88; transform: scale(1.02) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.18) rotate(2deg); }
+}
+@keyframes mondialTransitionReferencePulseOut {
+  0%, 18% { opacity: 0; transform: scale(1.12) rotate(3deg); }
+  50% { opacity: .78; transform: scale(.98) rotate(0deg); }
+  100% { opacity: 0; transform: scale(.78) rotate(-3deg); }
 }
 @keyframes mondialTransitionStackIn {
   0% { opacity: 0; transform: translateX(-135%) skewX(-18deg); }
@@ -117,7 +145,7 @@ export const MONDIAL_TRANSITION_CSS = `
   100% { opacity: 0; transform: translateY(-52px) scaleX(1.08); }
 }
 .mondial-transition-frame {
-  --mondial-transition-speed: 860ms;
+  --mondial-transition-speed: 980ms;
   --mondial-transition-intensity: 1;
   position: relative;
   width: 100%;
@@ -141,6 +169,8 @@ export const MONDIAL_TRANSITION_CSS = `
   animation: mondialTransitionContentOut calc(var(--mondial-transition-speed) * .72) cubic-bezier(.7,0,.84,0) both;
 }
 .mondial-transition-overlay,
+.mondial-transition-mask,
+.mondial-transition-rings,
 .mondial-transition-flash,
 .mondial-transition-scan {
   position: absolute;
@@ -166,6 +196,89 @@ export const MONDIAL_TRANSITION_CSS = `
 }
 .mondial-transition-frame[data-phase='out'][data-motion='on'] .mondial-transition-overlay {
   animation: mondialTransitionStackOut calc(var(--mondial-transition-speed) * .72) cubic-bezier(.7,0,.84,0) both;
+}
+.mondial-transition-mask {
+  inset: -18% -24%;
+  z-index: 26;
+  opacity: 0;
+  overflow: hidden;
+  transform-origin: center;
+  background:
+    linear-gradient(90deg, #03040a 0 18%, color-mix(in srgb, var(--mondial-ink) 92%, #05050b) 18% 100%),
+    radial-gradient(circle at 28% 50%, color-mix(in srgb, var(--mondial-a1) 42%, transparent), transparent 38%);
+  box-shadow: inset 0 0 92px color-mix(in srgb, var(--mondial-paper) 12%, transparent);
+}
+.mondial-transition-mask::before,
+.mondial-transition-mask::after {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  pointer-events: none;
+}
+.mondial-transition-mask::before {
+  background:
+    linear-gradient(90deg,
+      transparent 0 14%,
+      color-mix(in srgb, var(--mondial-a3) 94%, transparent) 14% 24%,
+      transparent 24% 32%,
+      color-mix(in srgb, var(--mondial-a2) 92%, transparent) 32% 44%,
+      transparent 44% 53%,
+      color-mix(in srgb, var(--mondial-a4) 92%, transparent) 53% 64%,
+      transparent 64% 100%);
+  mix-blend-mode: screen;
+  filter: saturate(1.25);
+}
+.mondial-transition-mask::after {
+  background:
+    radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--mondial-paper) 32%, transparent), transparent 18%),
+    repeating-linear-gradient(90deg, transparent 0 32px, color-mix(in srgb, var(--mondial-paper) 14%, transparent) 32px 34px);
+  mix-blend-mode: screen;
+  opacity: .62;
+}
+.mondial-transition-mask span {
+  position: absolute;
+  min-width: 0;
+  border-radius: 999px 0 999px 0;
+  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--stripe) 42%, transparent));
+}
+.mondial-transition-mask span:nth-child(1) {
+  inset: -4% 62% 55% -10%;
+  background: var(--mondial-a3);
+}
+.mondial-transition-mask span:nth-child(2) {
+  inset: 58% -8% -6% 58%;
+  background: var(--mondial-a2);
+}
+.mondial-transition-mask span:nth-child(3) {
+  inset: 8% 18% 64% 28%;
+  background: var(--mondial-a4);
+  border-radius: 0 999px 999px 0;
+}
+.mondial-transition-mask span:nth-child(4) {
+  inset: 58% 24% 8% 18%;
+  background: var(--mondial-paper);
+  opacity: .94;
+}
+.mondial-transition-rings {
+  z-index: 27;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 0 22%, color-mix(in srgb, var(--mondial-paper) 26%, transparent) 23% 24%, transparent 25%),
+    radial-gradient(ellipse at 50% 50%, transparent 0 38%, color-mix(in srgb, var(--mondial-a2) 28%, transparent) 39% 40%, transparent 41%),
+    linear-gradient(90deg, transparent 0 45%, color-mix(in srgb, var(--mondial-paper) 44%, transparent) 45% 46%, transparent 46% 100%);
+  mix-blend-mode: screen;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-mask {
+  animation: mondialTransitionReferenceCoverIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-mask {
+  animation: mondialTransitionReferenceCoverOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-rings {
+  animation: mondialTransitionReferencePulseIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-effect='stinger'][data-phase='out'][data-motion='on'] .mondial-transition-rings {
+  animation: mondialTransitionReferencePulseOut calc(var(--mondial-transition-speed) * .86) cubic-bezier(.7,0,.84,0) both;
 }
 .mondial-transition-flash {
   opacity: 0;
@@ -198,6 +311,15 @@ export const MONDIAL_TRANSITION_CSS = `
 .mondial-transition-frame[data-effect='scorebug'][data-phase='in'][data-motion='on'] .mondial-transition-overlay,
 .mondial-transition-frame[data-effect='scorebug'][data-phase='out'][data-motion='on'] .mondial-transition-overlay {
   animation-name: mondialTransitionScoreBars;
+}
+.mondial-transition-frame[data-effect='stinger'] .mondial-transition-overlay {
+  z-index: 28;
+  grid-template-columns: 16% 8% 14% 10% 20% 12% 18%;
+  gap: 16px;
+  mix-blend-mode: screen;
+}
+.mondial-transition-frame[data-effect='stinger'] .mondial-transition-overlay span {
+  border-radius: 0 32px 0 32px;
 }
 .mondial-transition-frame[data-effect='data'] .mondial-transition-overlay span,
 .mondial-transition-frame[data-effect='data'] .mondial-transition-scan {
@@ -261,6 +383,8 @@ export const MONDIAL_TRANSITION_CSS = `
 @media (prefers-reduced-motion: reduce) {
   .mondial-transition-frame[data-motion='on'] .mondial-transition-content,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-overlay,
+  .mondial-transition-frame[data-motion='on'] .mondial-transition-mask,
+  .mondial-transition-frame[data-motion='on'] .mondial-transition-rings,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-flash,
   .mondial-transition-frame[data-motion='on'] .mondial-transition-scan {
     animation-duration: 1ms !important;
@@ -296,8 +420,8 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
         ? 'out'
         : 'hold';
   const effect = normalizeEffect(getField, phase === 'out' ? 'out' : 'in');
-  const speed = clampNumber(getField('transitionSpeedMs'), 860, 360, 1500);
-  const intensity = clampNumber(getField('transitionIntensity'), 1, 0.2, 1.8);
+  const speed = clampNumber(getField('transitionSpeedMs'), 980, 360, 1500);
+  const intensity = clampNumber(getField('transitionIntensity'), 1.15, 0.2, 1.8);
   const paletteId = getBroadcastPalette(getField);
   const cssVars = {
     ...getBroadcastCssVars(paletteId),
@@ -318,6 +442,12 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
     >
       <style>{MONDIAL_TRANSITION_CSS}</style>
       <div className="mondial-transition-content">{children}</div>
+      <div className="mondial-transition-mask" aria-hidden="true">
+        {stripes.slice(0, 4).map((color, index) => (
+          <span key={`mask-${color}-${index}`} style={{ '--stripe': color } as React.CSSProperties} />
+        ))}
+      </div>
+      <div className="mondial-transition-rings" aria-hidden="true" />
       <div className="mondial-transition-overlay" aria-hidden="true">
         {stripes.map((color, index) => (
           <span key={`${color}-${index}`} style={{ '--stripe': color } as React.CSSProperties} />

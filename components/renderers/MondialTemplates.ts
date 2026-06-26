@@ -16,15 +16,20 @@ const mondialCommonFields: OverlayField[] = [
   { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
   { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
-  { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: 'STADIUM_SWEEP', options: [
+  { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: 'MONDIAL_STINGER', options: [
+    { value: 'MONDIAL_STINGER', label: 'ستينغر مونديالي كامل الشاشة' },
     { value: 'STADIUM_SWEEP', label: 'كشف الملعب' },
     { value: 'SPOTLIGHT_POP', label: 'بروجكتور' },
     { value: 'LOWER_THIRD_WIPE', label: 'مسح جانبي' },
     { value: 'DATA_RUSH', label: 'دفق بيانات' },
+    { value: 'GLASS_SWEEP', label: 'مسح زجاجي' },
     { value: 'DEFAULT', label: 'افتراضي' },
   ]},
-  { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: 'STADIUM_SWEEP_OUT', options: [
+  { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: 'MONDIAL_STINGER_OUT', options: [
+    { value: 'MONDIAL_STINGER_OUT', label: 'ستينغر مونديالي عكسي' },
     { value: 'STADIUM_SWEEP_OUT', label: 'كشف الملعب عكسي' },
+    { value: 'DATA_RUSH_OUT', label: 'دفق بيانات عكسي' },
+    { value: 'GLASS_SWEEP_OUT', label: 'مسح زجاجي عكسي' },
     { value: 'BROADCAST_OUT', label: 'بث خروج' },
     { value: 'SOFT_FADE', label: 'تلاشي ناعم' },
   ]},
@@ -363,10 +368,10 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   { id: 'positionY', label: 'الموضع العمودي', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'الموضع الأفقي', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
   { id: 'broadcastMotion', label: 'تشغيل أنميشن البث الداخلي', type: 'boolean', value: true },
-  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 860, min: 360, max: 1500, step: 10 },
-  { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1, min: 0.2, max: 1.8, step: 0.05 },
+  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 980, min: 360, max: 1500, step: 10 },
+  { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1.15, min: 0.2, max: 1.8, step: 0.05 },
   { id: 'mondialMotionPreset', label: 'حزمة الحركة والصوت', type: 'select', value: 'reference_stinger', options: [
-    { value: 'reference_stinger', label: 'Reference stinger - geometric sweep + glitch SFX' },
+    { value: 'reference_stinger', label: 'Reference stinger - full-screen TV mask + sweep SFX' },
     { value: 'scorebug_snap', label: 'Scorebug snap - fast TV score reveal' },
     { value: 'group_wall_rush', label: 'Group wall rush - data board reveal' },
     { value: 'stadium_sweep', label: 'Stadium sweep - international match open' },
@@ -377,7 +382,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'custom', label: 'Custom/manual fields below' },
   ]},
   { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: 'MONDIAL_STINGER', options: [
-    { value: 'MONDIAL_STINGER', label: 'Mondial reference stinger' },
+    { value: 'MONDIAL_STINGER', label: 'Mondial reference stinger - full-screen mask' },
     { value: 'STADIUM_SWEEP', label: 'Stadium sweep' },
     { value: 'DATA_RUSH', label: 'Data rush' },
     { value: 'SPOTLIGHT_POP', label: 'Spotlight pop' },
@@ -386,7 +391,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'DEFAULT', label: 'Default' },
   ]},
   { id: 'transitionOut', label: 'انتقال الإخفاء', type: 'select', value: 'MONDIAL_STINGER_OUT', options: [
-    { value: 'MONDIAL_STINGER_OUT', label: 'Mondial reference stinger out' },
+    { value: 'MONDIAL_STINGER_OUT', label: 'Mondial reference stinger out - reverse mask' },
     { value: 'STADIUM_SWEEP_OUT', label: 'Stadium sweep out' },
     { value: 'DATA_RUSH_OUT', label: 'Data rush out' },
     { value: 'SPOTLIGHT_POP_OUT', label: 'Spotlight pop out' },
