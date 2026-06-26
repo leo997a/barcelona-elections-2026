@@ -5,6 +5,7 @@ import {
   type ServerlessResponse,
 } from './_lib/http.js';
 import {
+  describeLiveStoreMode,
   getLiveState,
   setLiveState,
   subscribeLiveState,
@@ -46,6 +47,7 @@ export default async function handler(req: StreamRequest, res: StreamResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Live-Store', describeLiveStoreMode());
   applyNoCacheHeaders(res);
 
   if (req.method === 'OPTIONS') {

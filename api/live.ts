@@ -4,7 +4,7 @@ import {
   type ServerlessRequest,
   type ServerlessResponse,
 } from './_lib/http.js';
-import { getLiveState, setLiveState } from './_lib/liveStore.js';
+import { describeLiveStoreMode, getLiveState, setLiveState } from './_lib/liveStore.js';
 
 const getQuery = (req: ServerlessRequest) => {
   const rawUrl = (req as unknown as { url?: string }).url ?? '';
@@ -24,6 +24,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Live-Store', describeLiveStoreMode());
   applyNoCacheHeaders(res);
 
   if (req.method === 'OPTIONS') {

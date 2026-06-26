@@ -18,6 +18,11 @@ const listeners = new Map<string, Set<(entry: LiveStateEntry) => void>>();
 const fileStoreDisabled = () => Boolean(process.env.VERCEL) || process.env.REO_LIVE_STATE_FILE_STORE === 'off';
 const fileStoreDir = () => process.env.REO_LIVE_STATE_DIR?.trim() || resolve(process.cwd(), 'data', 'live-state');
 
+export const describeLiveStoreMode = () => {
+  if (process.env.VERCEL) return 'runtime-cache';
+  return fileStoreDisabled() ? 'memory' : 'file';
+};
+
 type RuntimeCache = {
   get: (key: string) => Promise<unknown>;
   set: (

@@ -123,7 +123,11 @@ test('output visibility controls publish immediately and editor links use the la
 });
 
 test('hostinger live output state has a persistent file-store fallback', async () => {
-  const liveStore = await readSource('../api/_lib/liveStore.ts');
+  const [liveStore, liveApi, streamApi] = await Promise.all([
+    readSource('../api/_lib/liveStore.ts'),
+    readSource('../api/live.ts'),
+    readSource('../api/stream.ts'),
+  ]);
 
   assert.match(liveStore, /process\.env\.REO_LIVE_STATE_DIR/);
   assert.match(liveStore, /resolve\(process\.cwd\(\), 'data', 'live-state'\)/);
@@ -132,4 +136,8 @@ test('hostinger live output state has a persistent file-store fallback', async (
   assert.match(liveStore, /const persisted = await readFileStoreEntry\(id\)/);
   assert.match(liveStore, /await writeFileStoreEntry\(entry\)/);
   assert.match(liveStore, /const fileStoreDisabled = \(\) => Boolean\(process\.env\.VERCEL\)/);
+  assert.match(liveStore, /export const describeLiveStoreMode = \(\) => \{/);
+  assert.match(liveStore, /return fileStoreDisabled\(\) \? 'memory' : 'file';/);
+  assert.match(liveApi, /res\.setHeader\('X-Live-Store', describeLiveStoreMode\(\)\)/);
+  assert.match(streamApi, /res\.setHeader\('X-Live-Store', describeLiveStoreMode\(\)\)/);
 });
