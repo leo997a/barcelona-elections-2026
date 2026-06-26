@@ -38,3 +38,38 @@
 
 - JavaScript: `dist/assets/index-DJRvYgSA.js`.
 - CSS: `dist/assets/index-UpsMsbSw.css`.
+
+## تحقق Hostinger
+
+- الموقع العام خدم الحزمة الجديدة بعد المحاولة الثالثة:
+  - `assets/index-DJRvYgSA.js`.
+- فحص الحزمة المنشورة أكد:
+  - fallback روابط العرض العامة موجود.
+  - تسريع OBS/fallback موجود.
+  - سرعة الانتقال `760ms` موجودة.
+  - مدى الإعدادات `420-1200ms` موجود.
+  - لا يوجد عكس خاطئ لاتجاه شريط الخروج القديم.
+  - stream fallback بسرعة `600ms`.
+
+## تحقق متصفح مباشر
+
+تم فتح رابط العرض القديم:
+
+`/output/instance-studio-2c7379d9fc98a752-template-mondial-group-wall-mqueo02i-0c2f818f?obs=1&rgev=obs-live-v3`
+
+النتيجة:
+
+- لا تظهر عبارة `Connecting to RGE Cloud`.
+- القالب يظهر من fallback العام.
+- `data-transition-speed="760"`.
+- `data-effect="stinger"`.
+- `data-motion="on"`.
+- بيانات المجموعات ظاهرة في الصفحة.
+
+كما تم فحص رابط دخان مستقل:
+
+- POST إخفاء إلى `/api/live`: حوالي `104ms`.
+- التقاط الإخفاء في صفحة العرض: حوالي `593ms`.
+- POST إظهار إلى `/api/live`: حوالي `96ms`.
+- التقاط الإظهار في صفحة العرض: حوالي `24ms`.
+- مخزن الحالة: `file`.
