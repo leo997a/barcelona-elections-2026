@@ -50,6 +50,40 @@
 
 ما زلنا محافظين على مكسب تقسيم الحزمة من دفعة 25، مع إصلاح سلوك الخروج.
 
+## تحقق Hostinger
+
+- تم دفع التحديث إلى GitHub في commit:
+  - `4b8f58c fix: keep mondial exit phase active`
+- Hostinger خدم الحزمة الجديدة بعد المحاولة الرابعة:
+  - `assets/index-B6tpzRX9.js`
+- فحص الحزمة المنشورة أكد:
+  - fallback روابط العرض العامة موجود.
+  - lazy chunks موجودة.
+  - سرعة الانتقال `760ms` موجودة.
+  - لا يوجد عكس خاطئ لاتجاه أقواس stinger.
+
+## تحقق متصفح مباشر
+
+تم فتح الرابط القديم نفسه:
+
+`/output/instance-studio-2c7379d9fc98a752-template-mondial-group-wall-mqueo02i-0c2f818f?obs=1&rgev=obs-live-v3`
+
+النتيجة:
+
+- لا تظهر `Connecting to RGE Cloud`.
+- القالب يعرض المجموعات.
+- `data-phase="in"`.
+- `data-effect="stinger"`.
+- `data-transition-speed="760"`.
+
+ثم تم إنشاء رابط دخان مستقل ونشر حالته عبر `/api/live`:
+
+- `POST` الإخفاء: `123ms`.
+- أول ظهور لـ `data-phase="out"`: حوالي `225ms`.
+- اختفاء القالب بعد الخروج: حوالي `800ms`.
+- `POST` الإظهار: `112ms`.
+- الحالة النهائية: `phase=in`, `effect=stinger`, `speed=760`.
+
 ## النتيجة المطلوبة
 
 عند ضغط إخفاء:
