@@ -78,6 +78,18 @@ test('mondial exit phase stays active until the exit hold completes', async () =
   assert.doesNotMatch(renderer, /previousVisibilityRef\.current = isNowVisible;\s*setWasVisible\(isNowVisible\);/);
 });
 
+test('public output keeps mondial renderers eager and defers inactive template families', async () => {
+  const renderer = await readSource('../components/OverlayRenderer.tsx');
+
+  assert.match(renderer, /const ScoreboardRenderer = React\.lazy/);
+  assert.match(renderer, /const MercatoUnifiedRenderer = React\.lazy/);
+  assert.match(renderer, /const PlayerIntelV2Renderer = React\.lazy/);
+  assert.match(renderer, /<React\.Suspense fallback=\{null\}>/);
+  assert.match(renderer, /import \{ Mondial2026Renderer \} from '\.\/renderers\/Mondial2026Renderer';/);
+  assert.doesNotMatch(renderer, /import \{ ScoreboardRenderer \} from '\.\/renderers\/ScoreboardRenderer';/);
+  assert.doesNotMatch(renderer, /import MercatoUnifiedRenderer from '\.\/renderers\/MercatoUnifiedRenderer';/);
+});
+
 test('all selectable mondial motion presets have runtime transition effects', async () => {
   const [templates, renderer, transitionLayer] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),

@@ -1,46 +1,98 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { OverlayConfig, OverlayType } from '../types';
-import ElectionOverlay from './ElectionOverlay';
 import { ELECTION_SOUND_IN_DEFAULTS, ELECTION_SOUND_OUT_DEFAULTS, resolveElectionStyle } from '../utils/election';
 import { THEMES } from './renderers/OverlayConstants';
 import { playCue, stopCue, setOverlayDuckGain } from '../services/audioEngine';
 import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime';
 import { shouldPlayTemplateSound, shouldPlayVoiceCue } from '../utils/templateAudioGate';
 import { resolveVoiceUrl } from '../utils/voiceLibrary';
-import { RendererProps } from './renderers/SharedComponents';
+import type { RendererProps } from './renderers/SharedComponents';
 
-// Renderers
-import { LeaderboardRenderer } from './renderers/LeaderboardRenderer';
-import { SmartNewsRenderer } from './renderers/SmartNewsRenderer';
-import { StatementCardsRenderer } from './renderers/StatementCardsRenderer';
-import { ScoreboardRenderer } from './renderers/ScoreboardRenderer';
-import { TickerRenderer } from './renderers/TickerRenderer';
-import { LowerThirdRenderer } from './renderers/LowerThirdRenderer';
-import { ExclusiveAlertRenderer } from './renderers/ExclusiveAlertRenderer';
-import { GuestsRenderer } from './renderers/GuestsRenderer';
-import { SocialMediaRenderer } from './renderers/SocialMediaRenderer';
-import { UclDrawRenderer } from './renderers/UclDrawRenderer';
-import { TodaysEpisodeRenderer } from './renderers/TodaysEpisodeRenderer';
-import { PlayerProfileRenderer } from './renderers/PlayerProfileRenderer';
-import { TopViewersRenderer } from './renderers/TopViewersRenderer';
-import { FootballPackageRenderer } from './renderers/FootballPackageRenderer';
-import { H2HStatsRenderer } from './renderers/H2HStatsRenderer';
-import { TransferNewsRenderer } from './renderers/TransferNewsRenderer';
-import { BarcaPremiumRenderer } from './renderers/BarcaPremiumRenderer';
-import { MatchStatsRenderer } from './renderers/MatchStatsRenderer';
-import { PlayerStatsRenderer } from './renderers/PlayerStatsRenderer';
-import { TransferTargetsRenderer } from './renderers/TransferTargetsRenderer';
-import { BreakingHereWeGoRenderer } from './renderers/BreakingHereWeGoRenderer';
-import {
-  MercatoAgentCallRenderer,
-  MercatoDealTimelineRenderer,
-  MercatoBudgetTrackerRenderer,
-  MercatoDeadlineDayRenderer,
-  MercatoXRayRenderer,
-} from './renderers/MercatoInnovativeRenderers';
-import MercatoUnifiedRenderer from './renderers/MercatoUnifiedRenderer';
-import MercatoMediaStoryRenderer from './renderers/MercatoMediaStoryRenderer';
-import { PlayerIntelV2Renderer } from './renderers/PlayerIntelV2Renderer';
+// Lazy-load non-Mondial renderers so public /output links do not boot every template family.
+const ElectionOverlay = React.lazy(() => import('./ElectionOverlay'));
+const LeaderboardRenderer = React.lazy(() =>
+  import('./renderers/LeaderboardRenderer').then(({ LeaderboardRenderer }) => ({ default: LeaderboardRenderer }))
+);
+const SmartNewsRenderer = React.lazy(() =>
+  import('./renderers/SmartNewsRenderer').then(({ SmartNewsRenderer }) => ({ default: SmartNewsRenderer }))
+);
+const StatementCardsRenderer = React.lazy(() =>
+  import('./renderers/StatementCardsRenderer').then(({ StatementCardsRenderer }) => ({ default: StatementCardsRenderer }))
+);
+const ScoreboardRenderer = React.lazy(() =>
+  import('./renderers/ScoreboardRenderer').then(({ ScoreboardRenderer }) => ({ default: ScoreboardRenderer }))
+);
+const TickerRenderer = React.lazy(() =>
+  import('./renderers/TickerRenderer').then(({ TickerRenderer }) => ({ default: TickerRenderer }))
+);
+const LowerThirdRenderer = React.lazy(() =>
+  import('./renderers/LowerThirdRenderer').then(({ LowerThirdRenderer }) => ({ default: LowerThirdRenderer }))
+);
+const ExclusiveAlertRenderer = React.lazy(() =>
+  import('./renderers/ExclusiveAlertRenderer').then(({ ExclusiveAlertRenderer }) => ({ default: ExclusiveAlertRenderer }))
+);
+const GuestsRenderer = React.lazy(() =>
+  import('./renderers/GuestsRenderer').then(({ GuestsRenderer }) => ({ default: GuestsRenderer }))
+);
+const SocialMediaRenderer = React.lazy(() =>
+  import('./renderers/SocialMediaRenderer').then(({ SocialMediaRenderer }) => ({ default: SocialMediaRenderer }))
+);
+const UclDrawRenderer = React.lazy(() =>
+  import('./renderers/UclDrawRenderer').then(({ UclDrawRenderer }) => ({ default: UclDrawRenderer }))
+);
+const TodaysEpisodeRenderer = React.lazy(() =>
+  import('./renderers/TodaysEpisodeRenderer').then(({ TodaysEpisodeRenderer }) => ({ default: TodaysEpisodeRenderer }))
+);
+const PlayerProfileRenderer = React.lazy(() =>
+  import('./renderers/PlayerProfileRenderer').then(({ PlayerProfileRenderer }) => ({ default: PlayerProfileRenderer }))
+);
+const TopViewersRenderer = React.lazy(() =>
+  import('./renderers/TopViewersRenderer').then(({ TopViewersRenderer }) => ({ default: TopViewersRenderer }))
+);
+const FootballPackageRenderer = React.lazy(() =>
+  import('./renderers/FootballPackageRenderer').then(({ FootballPackageRenderer }) => ({ default: FootballPackageRenderer }))
+);
+const H2HStatsRenderer = React.lazy(() =>
+  import('./renderers/H2HStatsRenderer').then(({ H2HStatsRenderer }) => ({ default: H2HStatsRenderer }))
+);
+const TransferNewsRenderer = React.lazy(() =>
+  import('./renderers/TransferNewsRenderer').then(({ TransferNewsRenderer }) => ({ default: TransferNewsRenderer }))
+);
+const BarcaPremiumRenderer = React.lazy(() =>
+  import('./renderers/BarcaPremiumRenderer').then(({ BarcaPremiumRenderer }) => ({ default: BarcaPremiumRenderer }))
+);
+const MatchStatsRenderer = React.lazy(() =>
+  import('./renderers/MatchStatsRenderer').then(({ MatchStatsRenderer }) => ({ default: MatchStatsRenderer }))
+);
+const PlayerStatsRenderer = React.lazy(() =>
+  import('./renderers/PlayerStatsRenderer').then(({ PlayerStatsRenderer }) => ({ default: PlayerStatsRenderer }))
+);
+const TransferTargetsRenderer = React.lazy(() =>
+  import('./renderers/TransferTargetsRenderer').then(({ TransferTargetsRenderer }) => ({ default: TransferTargetsRenderer }))
+);
+const BreakingHereWeGoRenderer = React.lazy(() =>
+  import('./renderers/BreakingHereWeGoRenderer').then(({ BreakingHereWeGoRenderer }) => ({ default: BreakingHereWeGoRenderer }))
+);
+const MercatoAgentCallRenderer = React.lazy(() =>
+  import('./renderers/MercatoInnovativeRenderers').then(({ MercatoAgentCallRenderer }) => ({ default: MercatoAgentCallRenderer }))
+);
+const MercatoDealTimelineRenderer = React.lazy(() =>
+  import('./renderers/MercatoInnovativeRenderers').then(({ MercatoDealTimelineRenderer }) => ({ default: MercatoDealTimelineRenderer }))
+);
+const MercatoBudgetTrackerRenderer = React.lazy(() =>
+  import('./renderers/MercatoInnovativeRenderers').then(({ MercatoBudgetTrackerRenderer }) => ({ default: MercatoBudgetTrackerRenderer }))
+);
+const MercatoDeadlineDayRenderer = React.lazy(() =>
+  import('./renderers/MercatoInnovativeRenderers').then(({ MercatoDeadlineDayRenderer }) => ({ default: MercatoDeadlineDayRenderer }))
+);
+const MercatoXRayRenderer = React.lazy(() =>
+  import('./renderers/MercatoInnovativeRenderers').then(({ MercatoXRayRenderer }) => ({ default: MercatoXRayRenderer }))
+);
+const MercatoUnifiedRenderer = React.lazy(() => import('./renderers/MercatoUnifiedRenderer'));
+const MercatoMediaStoryRenderer = React.lazy(() => import('./renderers/MercatoMediaStoryRenderer'));
+const PlayerIntelV2Renderer = React.lazy(() =>
+  import('./renderers/PlayerIntelV2Renderer').then(({ PlayerIntelV2Renderer }) => ({ default: PlayerIntelV2Renderer }))
+);
 import { Mondial2026Renderer } from './renderers/Mondial2026Renderer';
 import { MondialIraqRenderer } from './renderers/MondialIraqRenderer';
 
@@ -855,6 +907,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
               {!isEditor && <audio ref={audioRef} style={{ display: 'none' }} />}
               
               <div className="absolute inset-0 pointer-events-none" style={contentWrapperStyle}>
+                <React.Suspense fallback={null}>
                   {config.type === OverlayType.LEADERBOARD && <LeaderboardRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.SMART_NEWS && <SmartNewsRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.STATEMENT_CARDS && <StatementCardsRenderer key={activeSlot} {...props} />}
@@ -902,6 +955,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
                           themes={THEMES}
                       />
                   )}
+                </React.Suspense>
               </div>
           </div>
       </>
