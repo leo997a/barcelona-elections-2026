@@ -41,8 +41,8 @@ const mondialCommonFields: OverlayField[] = [
 
 const mondialMatchDataFields: OverlayField[] = [
   { id: 'dataMode', label: 'مصدر بيانات المباراة', type: 'select', value: 'CLOUD_BRIDGE', options: [
-    { value: 'CLOUD_BRIDGE', label: '☁️ جسر REO السحابي — Google Cloud' },
-    { value: 'BRIDGE', label: '🔌 جسر محلي — localhost:3005' },
+    { value: 'CLOUD_BRIDGE', label: 'بيانات REO المباشرة' },
+    { value: 'BRIDGE', label: 'جسر مخصص' },
     { value: 'PASTE_JSON', label: '📋 JSON يدوي / ملف مستورد' },
     { value: 'DEMO', label: '🎮 بيانات تجريبية' },
   ]},
@@ -474,17 +474,17 @@ const mondialBroadcastPresentationFields: OverlayField[] = [
 ];
 
 const mondialWorldCupDataFields: OverlayField[] = [
-  { id: 'dataMode', label: 'World Cup data source', type: 'select', value: 'CLOUD_BRIDGE', options: [
-    { value: 'CLOUD_BRIDGE', label: 'REO data bridge' },
-    { value: 'BRIDGE', label: 'Custom bridge URL' },
-    { value: 'PASTE_JSON', label: 'Manual JSON' },
-    { value: 'DEMO', label: 'Demo fallback' },
+  { id: 'dataMode', label: 'مصدر بيانات كأس العالم', type: 'select', value: 'CLOUD_BRIDGE', options: [
+    { value: 'CLOUD_BRIDGE', label: 'بيانات REO المباشرة' },
+    { value: 'BRIDGE', label: 'جسر مخصص' },
+    { value: 'PASTE_JSON', label: 'JSON يدوي' },
+    { value: 'DEMO', label: 'بيانات تجريبية' },
   ]},
-  { id: 'bridgeApiUrl', label: 'World Cup API URL', type: 'text', value: '/api/reo-match?action=world-cup' },
-  { id: 'manualJson', label: 'Manual World Cup JSON', type: 'textarea', value: '' },
-  { id: 'pollIntervalSec', label: 'Refresh seconds', type: 'range', value: 15, min: 10, max: 120, step: 5 },
-  { id: 'liveRefreshEnabled', label: 'Live auto refresh', type: 'boolean', value: true },
-  { id: 'manualRefreshNonce', label: 'Manual refresh counter', type: 'hidden', value: 0 },
+  { id: 'bridgeApiUrl', label: 'رابط بيانات كأس العالم', type: 'text', value: '/api/reo-match?action=world-cup' },
+  { id: 'manualJson', label: 'JSON كأس العالم اليدوي', type: 'textarea', value: '' },
+  { id: 'pollIntervalSec', label: 'ثواني التحديث', type: 'range', value: 15, min: 10, max: 120, step: 5 },
+  { id: 'liveRefreshEnabled', label: 'تحديث مباشر تلقائي', type: 'boolean', value: true },
+  { id: 'manualRefreshNonce', label: 'عداد التحديث اليدوي', type: 'hidden', value: 0 },
 ];
 
 export const MONDIAL_BROADCAST_TEMPLATES: OverlayConfig[] = [

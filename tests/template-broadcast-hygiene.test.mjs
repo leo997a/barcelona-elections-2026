@@ -59,3 +59,27 @@ test('public broadcast renderers do not expose raw provider or bridge labels', a
   assert.match(combined, /cleanBroadcastSourceName/);
   assert.match(combined, /coverageLabel\(sourceCoverage\)/);
 });
+
+test('template settings avoid legacy bridge wording in visible labels', async () => {
+  const sources = await Promise.all([
+    readSource('../pages/Editor.tsx'),
+    readSource('../utils/election.ts'),
+    readSource('../constants.ts'),
+    readSource('../utils/templateRegistry.ts'),
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/MondialSharedComponents.tsx'),
+  ]);
+  const combined = sources.join('\n');
+  const legacyWords = [
+    'REO Cloud Bridge',
+    'Live Bridge',
+    'Local Bridge',
+    'REO Player Cloud Bridge',
+    'REO data bridge',
+    'Custom bridge URL',
+    'Visible data source name',
+    'World Cup data source',
+  ];
+
+  assert.doesNotMatch(combined, new RegExp(legacyWords.join('|'), 'i'));
+});

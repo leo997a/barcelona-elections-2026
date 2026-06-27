@@ -340,10 +340,10 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
       type: 'select',
       value,
       options: [
-        { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
-        { value: 'BRIDGE', label: 'Live Bridge - localhost:3005' },
-        { value: 'PASTE_JSON', label: 'JSON / extractor' },
-        { value: 'DEMO', label: 'Field' },
+        { value: 'CLOUD_BRIDGE', label: 'بيانات REO المباشرة' },
+        { value: 'BRIDGE', label: 'جسر مخصص' },
+        { value: 'PASTE_JSON', label: 'JSON مستورد' },
+        { value: 'DEMO', label: 'بيانات تجريبية' },
       ],
     };
   }
@@ -2360,7 +2360,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
       }
 
       const parsed = await response.json();
-      applyMatchStatsJson(parsed, 'Live Bridge .');
+      applyMatchStatsJson(parsed, 'بيانات REO المباشرة');
     } catch (error) {
       setMatchStatsImportMessage({
         type: 'error',
@@ -3360,7 +3360,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       disabled={isBridgeActionRunning}
                       className="bg-slate-800 hover:bg-slate-700 disabled:bg-gray-700 disabled:text-gray-400 text-gray-100 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <RefreshCw className="w-3 h-3" />   Google Cloud
+                        <RefreshCw className="w-3 h-3" /> تحديث مباشر
                     </button>
                     <button
                       type="button"
@@ -3394,7 +3394,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       }}
                       className="hidden"
                     >
-                        <Monitor className="w-3 h-3" />  Live Bridge 
+                        <Monitor className="w-3 h-3" /> بيانات REO المباشرة
                     </button>
                 </div>
                 {matchStatsImportMessage && (

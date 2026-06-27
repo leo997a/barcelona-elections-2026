@@ -597,8 +597,8 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     slots: {},
     fields: [
       { id: 'dataMode', label: 'مصدر بيانات المباراة', type: 'select', value: 'CLOUD_BRIDGE', options: [
-        { value: 'CLOUD_BRIDGE', label: 'جسر REO السحابي — Google Cloud' },
-        { value: 'BRIDGE', label: 'جسر محلي — localhost:3005' },
+        { value: 'CLOUD_BRIDGE', label: 'بيانات REO المباشرة' },
+        { value: 'BRIDGE', label: 'جسر مخصص' },
         { value: 'PASTE_JSON', label: 'JSON يدوي / ملف الاستخراج' },
         { value: 'DEMO', label: 'بيانات تجريبية للاختبار' },
       ] },
@@ -695,7 +695,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       ...commonFields,
       { id: 'playerStatsDataMode', label: 'مصدر بيانات اللاعب', type: 'select', value: 'MANUAL', options: [
         { value: 'MANUAL', label: 'يدوي / من صندوق الذكاء' },
-        { value: 'CLOUD_BRIDGE', label: 'جسر REO السحابي للاعبين' },
+        { value: 'CLOUD_BRIDGE', label: 'بيانات REO للاعبين' },
       ] },
       { id: 'playerStatsMode', label: 'وضع القالب', type: 'select', value: 'SINGLE', options: [
         { value: 'SINGLE', label: 'لاعب واحد' },

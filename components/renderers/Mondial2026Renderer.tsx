@@ -5,7 +5,7 @@
  *
  * نظام dataMode الذكي (مثل Match Stats الموجود):
  *   CLOUD_BRIDGE → جسر REO السحابي (نفس نظام المشروع الرئيسي)
- *   BRIDGE       → جسر محلي localhost:3005
+ *   BRIDGE       → جسر مخصص
  *   PASTE_JSON   → إدخال يدوي JSON
  *   DEMO         → بيانات تجريبية داخلية
  *

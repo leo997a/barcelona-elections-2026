@@ -219,19 +219,19 @@ const ensureElectionSmartFields = (fields: OverlayField[]) => {
 const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
   {
     id: 'dataMode',
-    label: 'REO data source',
+    label: 'مصدر بيانات REO',
     type: 'select',
     value: 'CLOUD_BRIDGE',
     options: [
-      { value: 'CLOUD_BRIDGE', label: 'REO Cloud Bridge - Google Cloud' },
-      { value: 'BRIDGE', label: 'Local Bridge - localhost:3005' },
-      { value: 'PASTE_JSON', label: 'Imported JSON' },
-      { value: 'DEMO', label: 'Demo data' },
+      { value: 'CLOUD_BRIDGE', label: 'بيانات REO المباشرة' },
+      { value: 'BRIDGE', label: 'جسر مخصص' },
+      { value: 'PASTE_JSON', label: 'JSON مستورد' },
+      { value: 'DEMO', label: 'بيانات تجريبية' },
     ],
   },
   {
     id: 'manualJson',
-    label: 'Imported match JSON',
+    label: 'JSON المباراة المستورد',
     type: 'textarea',
     value: '',
   },
@@ -494,9 +494,9 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
   },
   {
     id: 'dataSourceName',
-    label: 'Visible data source name',
+    label: 'اسم مصدر البيانات الظاهر',
     type: 'text',
-    value: 'REO Cloud Bridge',
+    value: 'بيانات REO المباشرة',
   },
   {
     id: 'sourceMatchUrl',

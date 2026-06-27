@@ -110,7 +110,7 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
   [OverlayType.MATCH_STATS]: {
     icon: 'DATA',
     accent: '#3b82f6',
-    description: 'استوديو إحصائيات مباراة مباشر يعتمد على بيانات Live Bridge ويعرض الهيمنة، رجل المباراة، وأفضل الأرقام.',
+    description: 'استوديو إحصائيات مباراة مباشر يعتمد على بيانات REO المباشرة ويعرض الهيمنة، رجل المباراة، وأفضل الأرقام.',
   },
   [OverlayType.PLAYER_STATS]: {
     icon: 'PLYR',

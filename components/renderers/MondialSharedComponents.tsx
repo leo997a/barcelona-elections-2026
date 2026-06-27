@@ -864,8 +864,8 @@ export const MondialRating: React.FC<{
 // ─── نص: وضع البيانات ─────────────────────────────────────────────────────────
 
 export const DATA_MODE_LABELS: Record<string, string> = {
-  CLOUD_BRIDGE: '☁️ جسر REO السحابي',
-  BRIDGE: '🔌 جسر محلي',
+  CLOUD_BRIDGE: 'بيانات REO المباشرة',
+  BRIDGE: 'جسر مخصص',
   PASTE_JSON: '📋 JSON يدوي',
   DEMO: '🎮 بيانات تجريبية',
 };
