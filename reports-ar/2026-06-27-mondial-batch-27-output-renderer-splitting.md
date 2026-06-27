@@ -72,8 +72,24 @@
 
 ## النشر
 
-سيتم دفع هذه الدفعة إلى GitHub، ثم التحقق من أن Hostinger التقط الحزمة الجديدة:
+تم دفع هذه الدفعة إلى GitHub في commit:
+
+- `2785123 fix: lazy load inactive overlay renderers`
+
+ثم التقط Hostinger النشر وأصبح يخدم الحزمة الجديدة:
 
 - `assets/index-CNg0muHb.js`
 
-إذا بقي Hostinger يعرض الحزمة السابقة، فالمشكلة تكون في تأخر auto-deploy وليس في البناء المحلي.
+## تحقق Hostinger
+
+تم فحص الصفحة العامة مباشرة من:
+
+`https://peachpuff-herring-712997.hostingersite.com/`
+
+النتيجة:
+
+- أصل الواجهة المنشور: `assets/index-CNg0muHb.js`.
+- الحزمة المنشورة تحتوي lazy chunks للقوالب غير النشطة مثل `ScoreboardRenderer` و`MercatoUnifiedRenderer`.
+- الحزمة المنشورة ما زالت تحتوي عارض المونديال المباشر حتى يبقى رابط OBS سريع الظهور.
+
+هذا يعني أن الدفعة ليست محلية فقط، بل وصلت فعليا إلى النسخة الحية على Hostinger.
