@@ -94,6 +94,13 @@ const PLAYER_IMG_FALLBACK: Record<string, string> = {
   'cole-palmer': 'https://images.fotmob.com/image_resources/playerimages/1096353.png',
 };
 
+const coverageLabel = (sourceCoverage: { fotmob: boolean; fbref: boolean }): string | null => {
+  if (sourceCoverage.fotmob && sourceCoverage.fbref) return 'تغطية مكتملة';
+  if (sourceCoverage.fotmob) return 'بيانات مباشرة';
+  if (sourceCoverage.fbref) return 'بيانات موسمية';
+  return null;
+};
+
 async function loadBroadcast(slug: string): Promise<PlayerIntelMasterFull | null> {
   // First, check localStorage dynamic store (FotMob on-demand profiles)
   try {
@@ -334,9 +341,7 @@ export const PlayerIntelV2Renderer: React.FC<RendererProps> = ({ config, getFiel
   const baseLabel = dataScope?.label || (dataScope?.competitionName && dataScope?.season
     ? `${dataScope.competitionName} · ${dataScope.season}`
     : null);
-  const sourcePrefix = (sourceA?.sourceCoverage?.fbref && sourceA?.sourceCoverage?.fotmob)
-    ? 'FBref + FotMob'
-    : sourceA?.sourceCoverage?.fbref ? 'FBref' : sourceA?.sourceCoverage?.fotmob ? 'FotMob' : null;
+  const sourcePrefix = coverageLabel(sourceCoverage);
   const scopeLabel = baseLabel
     ? (sourcePrefix ? `${sourcePrefix} · ${baseLabel}` : baseLabel)
     : (sourcePrefix ? `${sourcePrefix} · ${metaA.season || ''}` : null);
@@ -742,8 +747,7 @@ const CompactTVVariant: React.FC<VariantProps> = ({
 
           {showSources && (
             <div className="flex flex-col items-end justify-center px-3 gap-1 border-l" style={{ borderColor: t.border }}>
-              {sourceCoverage.fotmob && <span className="text-[9px] font-bold" style={{ color: '#22c55e' }}>FotMob ✓</span>}
-              {sourceCoverage.fbref && <span className="text-[9px] font-bold" style={{ color: '#3b82f6' }}>FBref ✓</span>}
+              {coverageLabel(sourceCoverage) && <span className="text-[9px] font-bold" style={{ color: '#22c55e' }}>{coverageLabel(sourceCoverage)}</span>}
             </div>
           )}
         </div>
@@ -1069,15 +1073,10 @@ const SourceBadges: React.FC<{ sourceCoverage: { fotmob: boolean; fbref: boolean
   sourceCoverage, mt,
 }) => (
   <div className={`flex items-center gap-2 ${mt ? 'mt-auto pt-2' : ''}`}>
-    {sourceCoverage.fotmob && (
+    {coverageLabel(sourceCoverage) && (
       <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{
         background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.3)',
-      }}>FotMob ✓</span>
-    )}
-    {sourceCoverage.fbref && (
-      <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{
-        background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)',
-      }}>FBref ✓</span>
+      }}>{coverageLabel(sourceCoverage)}</span>
     )}
   </div>
 );

@@ -26,6 +26,16 @@ import { PLAYER_PORTRAIT_CACHE_URLS, fetchAssetCaches, parseAssetMap, splitAsset
 
 const DEFAULT_PLAYER_IMAGE_CACHE_URL = PLAYER_PORTRAIT_CACHE_URLS.join(';');
 
+const cleanBroadcastSourceName = (value: string, mode: string) => {
+  const raw = value.trim();
+  const fallback = mode === 'CLOUD_BRIDGE' ? 'بيانات REO المباشرة' : 'بيانات REO';
+  if (!raw) return fallback;
+  if (/(bridge|provider|cache|fotmob|fbref|whoscored|sportmonks|localhost|127\.0\.0\.1)/i.test(raw)) {
+    return fallback;
+  }
+  return raw;
+};
+
 type TeamStats = {
   possession: number;
   shots: number;
@@ -1158,7 +1168,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const creatorPositionY = clamp(toNumber(getField('creatorPositionY'), 0), -450, 450);
   const playerImageMapJson = String(getField('playerImageMapJson') || '{}');
   const playerImageCacheUrl = String(getField('playerImageCacheUrl') || DEFAULT_PLAYER_IMAGE_CACHE_URL).trim();
-  const dataSourceName = String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'REO Cloud Bridge' : 'REO Live Bridge'));
+  const dataSourceName = cleanBroadcastSourceName(
+    String(getField('dataSourceName') || (dataMode === 'CLOUD_BRIDGE' ? 'بيانات REO المباشرة' : 'بيانات REO')),
+    dataMode,
+  );
   const [remotePlayerImageMap, setRemotePlayerImageMap] = useState<Record<string, string>>({});
   const manualPlayerImageMap = useMemo(() => parsePlayerImageMap(playerImageMapJson), [playerImageMapJson]);
   const playerImageMap = useMemo(() => ({ ...remotePlayerImageMap, ...manualPlayerImageMap }), [manualPlayerImageMap, remotePlayerImageMap]);
@@ -1619,7 +1632,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
         </div>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">SOURCE</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">المصدر</div>
             <div className="truncate text-xs font-black text-white/70">{dataSourceName}</div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">

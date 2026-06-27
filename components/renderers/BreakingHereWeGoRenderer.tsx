@@ -565,7 +565,7 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
                         className="text-[10px] font-black uppercase tracking-[0.28em]"
                         style={{ color: theme.textSecondary }}
                       >
-                        SOURCE
+                        المصدر
                       </div>
                       <div
                         className="font-['Barlow_Condensed'] text-2xl font-black"
@@ -582,7 +582,7 @@ export const BreakingHereWeGoRenderer: React.FC<RendererProps> = ({
                           className="text-[10px] font-black uppercase tracking-[0.28em]"
                           style={{ color: theme.textSecondary }}
                         >
-                          LIVE
+                          مباشر
                         </div>
                         <div
                           className="font-['Barlow_Condensed'] text-2xl font-black"

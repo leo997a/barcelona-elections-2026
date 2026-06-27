@@ -91,6 +91,21 @@ const parseJson = <T,>(value: unknown): T | null => {
   }
 };
 
+const cleanBroadcastSourceName = (value: string, lang: 'ar' | 'en') => {
+  const raw = value.trim();
+  if (!raw) return '';
+  const normalized = raw.toLowerCase();
+  if (
+    normalized === 'demo' ||
+    normalized === 'demoprovider' ||
+    normalized === 'legacy'
+  ) return '';
+  if (/(fbref|fotmob|whoscored|sportmonks|bridge|cache|provider)/i.test(raw)) {
+    return lang === 'ar' ? 'بيانات REO المباشرة' : 'REO live data';
+  }
+  return raw;
+};
+
 const DEFAULT_METRICS: Record<string, PlayerMetricValue> = {
   goals: { status: 'available', value: '25', source: 'fbref', statGroup: 'standard' },
   shots_per90: { status: 'available', value: '3.8', source: 'fbref', statGroup: 'shooting' },
@@ -243,7 +258,7 @@ const buildFallbackPayload = (getField: RendererProps['getField']): PlayerStatsP
 
   return {
     mode,
-    source: String(getField('dataSourceName') || 'REO Player Data Bridge'),
+    source: String(getField('dataSourceName') || 'بيانات REO للاعبين'),
     updatedAt: new Date().toISOString(),
     season: String(getField('seasonLabel') || '2025/26'),
     coverage: { status: 'partial', availableStatGroups: ['standard'], missingStatGroups: ['advanced'] },
@@ -504,12 +519,10 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
 
   // Clean source label (hide demo/legacy artifacts)
   const rawSource = String(payload.source || '').trim();
-  const isDemoSource = !rawSource || rawSource === 'demo' || rawSource === 'demoProvider' || rawSource === 'legacy';
-  const cleanSourceLabel = isDemoSource
+  const safeSourceName = cleanBroadcastSourceName(rawSource, lang);
+  const cleanSourceLabel = !safeSourceName
     ? ''
-    : (rawSource.toLowerCase().includes('fbref')
-        ? `${LABELS.renderer.available[lang]}: FBref Cache / Standard`
-        : `${LABELS.renderer.available[lang]}: ${rawSource}`);
+    : `${LABELS.renderer.available[lang]}: ${safeSourceName}`;
   
   const activeHeroMetrics = payload.presentation?.heroMetrics?.length ? payload.presentation.heroMetrics : heroMetrics;
   const activeSecondaryMetrics = payload.presentation?.secondaryMetrics?.length ? payload.presentation.secondaryMetrics : secondaryMetrics;

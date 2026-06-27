@@ -352,9 +352,9 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
   const leagueLogo = String(getField('leagueLogo') || '');
   const dealValue = String(getField('dealValue') || '58M EUR');
   const confidence = clampPercent(getField('confidence'), 78);
-  const headline = String(getField('headline') || 'Mercato Intelligence');
-  const subheadline = String(getField('subheadline') || 'Live transfer desk tracking probability, completed deals and market signals.');
-  const source = String(getField('source') || 'Reo Show Mercato Desk');
+  const headline = String(getField('headline') || 'غرفة الميركاتو');
+  const subheadline = String(getField('subheadline') || 'متابعة احتمالات الصفقة وإشارات السوق من مكتب REO SHOW.');
+  const source = String(getField('source') || 'مكتب ميركاتو REO SHOW');
   const accentColor = String(getField('accentColor') || '#00F5D4');
   const fromColor = String(getField('fromColor') || '#A50044');
   const toColor = String(getField('toColor') || '#004D98');
@@ -472,7 +472,7 @@ export const TransferNewsRenderer: React.FC<RendererProps> = ({
               <span className="h-2 w-2" style={{ background: isUrgent ? '#fb3b52' : accentColor, animation: 'mercatoPulse 1.2s ease-in-out infinite' }} />
               <Sparkles className="h-4 w-4 text-white/42" strokeWidth={2.4} />
               {leagueLogo && <img src={leagueLogo} alt="" className="h-7 w-7 object-contain opacity-85" referrerPolicy="no-referrer" />}
-              <span className="text-[11px] tracking-[0.36em] text-white/54">REO MERCATO INTELLIGENCE</span>
+              <span className="text-[11px] tracking-[0.36em] text-white/54">REO SHOW MERCATO</span>
             </div>
             <div className="text-[11px] tracking-[0.28em]" style={{ color: accentColor }}>{source}</div>
           </div>

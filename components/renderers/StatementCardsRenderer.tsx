@@ -176,6 +176,7 @@ export const StatementCardsRenderer: React.FC<RendererProps> = ({
   const showTone = boolValue(getField('showTone'), true);
   const showConfidence = boolValue(getField('showConfidence'), true);
   const showAiLabel = boolValue(getField('showAiLabel'), true);
+  const sourceTimelineLabel = String(getField('sourceTimelineLabel') || 'شبكة المصادر');
   const rawImages = getField('images');
   const backgroundImage = Array.isArray(rawImages) ? String(rawImages[0] || '') : '';
 
@@ -322,7 +323,7 @@ export const StatementCardsRenderer: React.FC<RendererProps> = ({
         <div className="grid h-full min-h-0 grid-cols-[290px_minmax(0,1fr)] gap-5">
           <aside className="rounded-lg border border-white/10 bg-black/30 p-5">
             <Radio className="mb-4 h-8 w-8" style={{ color: accentColor }} />
-            <div className="text-[11px] font-black uppercase tracking-[0.28em] text-white/45">source monitor</div>
+            <div className="text-[11px] font-black uppercase tracking-[0.28em] text-white/45">{sourceTimelineLabel}</div>
             <div className="mt-3 text-3xl font-black text-white">{statements.length}</div>
             <div className="mt-1 text-sm font-bold text-white/55">تصريح قابل للتنقل</div>
           </aside>

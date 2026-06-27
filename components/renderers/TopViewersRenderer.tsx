@@ -187,7 +187,7 @@ export const TopViewersRenderer: React.FC<RendererProps> = ({
               {/* Live dot */}
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} />
-                <span className="text-[9px] font-black" style={{ color: theme.accent }}>LIVE</span>
+                <span className="text-[9px] font-black" style={{ color: theme.accent }}>مباشر</span>
               </div>
             </div>
 

@@ -705,7 +705,7 @@ const DealRadarVariant: React.FC<VariantProps> = ({ t, getField }) => {
           <FieldCard t={t} label="متوسط المصادر" value={`${averageReliability}%`} accent={t.accent} />
           <FieldCard t={t} label="مصادر ذهبية" value={`${eliteSources}`} accent={t.success} />
           <div className="mt-auto rounded-lg p-3" style={{ background: t.surfaceDeep, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: `1px solid ${t.border}` }}>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>TOP SOURCE</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: t.dim }}>أقوى مصدر</div>
             <div className="mt-1 truncate text-[13px] font-black" style={{ color: t.text }}>
               {sortedSources[0]?.name || 'لا يوجد مصدر'}
             </div>
@@ -945,7 +945,7 @@ const SourceConfidenceVariant: React.FC<VariantProps> = ({ t, getField }) => {
     <div className="w-full h-full p-5 flex flex-col gap-3" dir="rtl">
       <Header
         t={t}
-        eyebrow="SOURCE CONFIDENCE BOARD"
+        eyebrow="لوحة ثقة المصادر"
         title="لوحة ثقة المصادر"
         subtitle={total === 0 ? 'بانتظار رصد المصادر' : `${total} مصدر · ${supportPct}% تأييد إجمالي`}
         accent={decisionColor}

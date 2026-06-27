@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import test from 'node:test';
+
+const readSource = async relativePath =>
+  fs.readFile(new URL(relativePath, import.meta.url), 'utf8');
+
+test('all templates inherit normalized broadcast control ordering', async () => {
+  const constants = await readSource('../constants.ts');
+
+  assert.match(
+    constants,
+    /fields:\s*normalizeTemplateFields\(\[\.\.\.template\.fields,\s*\.\.\.createBroadcastControlFields\(template\.fields\)\]\)/,
+  );
+  assert.match(constants, /export const INITIAL_TEMPLATES:[\s\S]*?\.map\(withBroadcastControls\)/);
+});
+
+test('statement source timeline has an editable broadcast label', async () => {
+  const [constants, renderer] = await Promise.all([
+    readSource('../constants.ts'),
+    readSource('../components/renderers/StatementCardsRenderer.tsx'),
+  ]);
+
+  assert.match(constants, /id: 'sourceTimelineLabel'/);
+  assert.match(renderer, /const sourceTimelineLabel = String\(getField\('sourceTimelineLabel'\)/);
+  assert.doesNotMatch(renderer, /source monitor/i);
+});
+
+test('public broadcast renderers do not expose raw provider or bridge labels', async () => {
+  const sources = await Promise.all([
+    readSource('../components/renderers/StatementCardsRenderer.tsx'),
+    readSource('../components/renderers/PlayerIntelV2Renderer.tsx'),
+    readSource('../components/renderers/PlayerStatsRenderer.tsx'),
+    readSource('../components/renderers/MatchStatsRenderer.tsx'),
+    readSource('../components/renderers/TransferNewsRenderer.tsx'),
+    readSource('../components/renderers/BreakingHereWeGoRenderer.tsx'),
+    readSource('../components/renderers/MercatoUnifiedRenderer.tsx'),
+    readSource('../components/renderers/TopViewersRenderer.tsx'),
+  ]);
+  const combined = sources.join('\n');
+
+  for (const pattern of [
+    />\s*FotMob\s*[✓â]/i,
+    />\s*FBref\s*[✓â]/i,
+    /FBref \+ FotMob/i,
+    /REO Player Data Bridge/i,
+    /REO Cloud Bridge/i,
+    /REO Live Bridge/i,
+    /Reo Show Mercato Desk/i,
+    /Live transfer desk/i,
+    />\s*SOURCE\s*</,
+    />\s*LIVE\s*</,
+    /SOURCE CONFIDENCE BOARD/i,
+    /TOP SOURCE/i,
+  ]) {
+    assert.doesNotMatch(combined, pattern);
+  }
+
+  assert.match(combined, /cleanBroadcastSourceName/);
+  assert.match(combined, /coverageLabel\(sourceCoverage\)/);
+});

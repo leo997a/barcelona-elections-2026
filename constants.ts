@@ -228,7 +228,7 @@ export const normalizeTemplateFields = (fields: OverlayField[]): OverlayField[] 
 
 const withBroadcastControls = (template: OverlayConfig): OverlayConfig => ({
   ...template,
-  fields: dedupeFields([...template.fields, ...createBroadcastControlFields(template.fields)]),
+  fields: normalizeTemplateFields([...template.fields, ...createBroadcastControlFields(template.fields)]),
 });
 
 const broadcastMotionPreset = (
@@ -666,7 +666,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'creatorPositionY', label: 'إزاحة مربع صانع المحتوى Y', type: 'range', value: 0, min: -420, max: 420, step: 10 },
       { id: 'playerImageMapJson', label: 'روابط صور اللاعبين JSON', type: 'textarea', value: '{}' },
       { id: 'playerImageCacheUrl', label: 'رابط كاش صور اللاعبين JSON', type: 'text', value: '/player-image-cache/barcelona.json?v=20260515;/player-image-cache/chelsea.json?v=20260515' },
-      { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'جسر REO السحابي' },
+      { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'بيانات REO المباشرة' },
       { id: 'sourceMatchUrl', label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
       { id: 'apiUrl', label: 'رابط API بيانات المباراة', type: 'text', value: '/api/reo-match?action=match' },
       { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },
@@ -776,7 +776,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'playerCClubLogo', label: 'شعار نادي اللاعب الثالث', type: 'image', value: 'https://raw.githubusercontent.com/leo997a/graphicsplayer2026/main/La%20Liga/%D9%84%D9%88%D8%BA%D9%88%20%D8%A7%D9%84%D8%AF%D9%88%D8%B1%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%A8%D8%A7%D9%86%D9%8A/Barcelona.png' },
       { id: 'playerStatsJson', label: 'إحصائيات اللاعب الأساسية JSON', type: 'textarea', value: '[{"label":"الأهداف","value":"25","hint":"إجمالي الموسم","category":"attack"},{"label":"التسديدات / 90","value":"3.8","hint":"كثافة التسديد","category":"attack"},{"label":"تمريرات مفتاحية","value":"41","hint":"صناعة الفرص","category":"passing"},{"label":"تمريرات تقدمية","value":"68","hint":"البناء للأمام","category":"passing"},{"label":"استرجاع الكرة","value":"132","hint":"افتكاك واستعادة","category":"defense"},{"label":"الدقائق","value":"2,640","hint":"حمل الموسم","category":"season"}]' },
       { id: 'playerStatsSourceJson', label: 'JSON كامل من جسر إحصائيات اللاعبين', type: 'textarea', value: '' },
-      { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'جسر بيانات لاعبي REO' },
+      { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'بيانات REO للاعبين' },
       { id: 'accentColor', label: 'لون اللاعب/الجانب الأول', type: 'color', value: '#22d3ee' },
       { id: 'secondaryAccentColor', label: 'لون اللاعب/الجانب الثاني', type: 'color', value: '#fb7185' },
       ...broadcastMotionPreset('DATA_RUSH', 'DATA_RUSH_OUT', 'DATA_SLAM', 'BROADCAST_OUT'),
@@ -3791,6 +3791,7 @@ const createStatementTemplate = (input: StatementTemplateInput): OverlayConfig =
       { id: 'statementPanelColor', label: 'لون خلفية البطاقات', type: 'color', value: '#08131c' },
       { id: 'images', label: 'صور خلفية أو متحدثين عامة', type: 'image-list', value: [] },
       { id: 'sourceLabel', label: 'المصدر الافتراضي', type: 'text', value: 'صندوق الذكاء' },
+      { id: 'sourceTimelineLabel', label: 'عنوان لوحة المصادر', type: 'text', value: 'شبكة المصادر' },
       { id: 'eventLabel', label: 'وسم أعلى اللوحة', type: 'text', value: 'statement intelligence' },
       { id: 'footerNote', label: 'ملاحظة أسفل اللوحة', type: 'text', value: 'تصريحات متعددة الأطراف' },
       { id: 'statementAuthor', label: 'المتحدث الافتراضي', type: 'text', value: 'مصدر التصريح' },
