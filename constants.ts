@@ -196,7 +196,29 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'musicEnabled' || id === 'musicTrackUrl' ||
     id === 'musicVolume' || id === 'musicLoop'
   ) return 'audio';
-  if (id === 'scale' || id === 'positionX' || id === 'positionY' || id === 'themePreset') return 'display';
+  if (
+    id === 'scale' || id === 'positionX' || id === 'positionY' ||
+    id === 'containerWidth' || id === 'sidebarWidth' ||
+    id === 'themePreset' || id === 'visualTheme' || id === 'mediaTheme' ||
+    id === 'designStyle' || id === 'visualStyle' || id === 'visualVariant' ||
+    id === 'playerStatsVisualVariant' || id === 'broadcastLook' ||
+    id === 'broadcastStyle' || id === 'broadcastPalette' ||
+    id === 'mondialTheme' || id === 'displayMode' || id === 'position' ||
+    id === 'panelSide' || id === 'playerPanelSide' || id === 'scorebugPosition' ||
+    id === 'varPosition' || id === 'lineupSide' || id === 'groupWallLayout' ||
+    id === 'identityColumns' || id === 'matrixLayout' || id === 'badgeMode' ||
+    id === 'activePosition' || id === 'focusMode' || id === 'speakerMode' ||
+    id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode'
+  ) return 'display';
+  if (
+    id === 'manualJson' || id === 'apiUrl' || id === 'bridgeApiUrl' ||
+    id === 'sourceMatchUrl' || id === 'playerImageMapJson' ||
+    id === 'playerImageCacheUrl' || id === 'manualRefreshNonce' ||
+    id === 'pollIntervalSec' || id === 'liveRefreshEnabled' ||
+    id === 'dataSourceName' || id === 'dataMode' || id === 'providerPolicy' ||
+    id === 'matchPickMode' || id === 'matchGroupCode' || id === 'matchRoundStage' ||
+    id === 'matchStatusFilter' || id === 'selectedMatchId'
+  ) return 'advanced';
   return 'content';
 };
 

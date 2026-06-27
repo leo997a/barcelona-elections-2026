@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
-import { INITIAL_TEMPLATES } from '../constants';
+import { INITIAL_TEMPLATES, normalizeTemplateFields } from '../constants';
 import OverlayRenderer from '../components/OverlayRenderer';
 import { Save, Monitor, Sparkles, ChevronRight, ChevronLeft, Plus, X, RotateCcw, AlertTriangle, Lock, Unlock, DollarSign, Trash2, ArrowDownUp, Image as ImageIcon, History, Edit3, Calendar, Zap, Rewind, FastForward, Layers, Check, Copy, RefreshCw, Square, AlertCircle, Info, Download, Upload, Search, Key } from 'lucide-react';
 import { assistPlayerStatsQuery, assistPlayerTransferCard, assistTemplateFields, processSmartText, generateMatchData, generateViewerBadges, extractViewersFromScreenshots } from '../services/geminiService';
@@ -769,6 +769,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   };
 
   const getDraftValue = (id: string) => draftOverlay.fields.find(f => f.id === id)?.value;
+  const orderedDraftFields = useMemo(
+    () => normalizeTemplateFields(draftOverlay.fields),
+    [draftOverlay.fields]
+  );
   const mercadoVariant = String(getDraftValue('mercatoVariant') || '');
   const isGlobalProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED && mercadoVariant === 'global_probability_shift';
   const isProbabilityShiftTemplate = draftOverlay.type === OverlayType.MERCATO_UNIFIED &&
@@ -4019,7 +4023,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  {hasMondialMatchPickerFields(draftOverlay.fields) && (
                    <MondialMatchPicker fields={draftOverlay.fields} onChange={handleDraftFieldChanges} />
                  )}
-                 {draftOverlay.fields.map((field) => {
+                 {orderedDraftFields.map((field) => {
                   if (field.type === 'hidden' || field.id === 'currentPage') return null;
                   if (hasMondialMatchPickerFields(draftOverlay.fields) && field.id === 'selectedMatchId') return null;
                   if (isProbabilityShiftTemplate && /^deal[1-6](OldPct|NewPct)$/.test(field.id)) return null;

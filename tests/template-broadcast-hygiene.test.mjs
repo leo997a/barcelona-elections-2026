@@ -6,13 +6,19 @@ const readSource = async relativePath =>
   fs.readFile(new URL(relativePath, import.meta.url), 'utf8');
 
 test('all templates inherit normalized broadcast control ordering', async () => {
-  const constants = await readSource('../constants.ts');
+  const [constants, editor] = await Promise.all([
+    readSource('../constants.ts'),
+    readSource('../pages/Editor.tsx'),
+  ]);
 
   assert.match(
     constants,
     /fields:\s*normalizeTemplateFields\(\[\.\.\.template\.fields,\s*\.\.\.createBroadcastControlFields\(template\.fields\)\]\)/,
   );
   assert.match(constants, /export const INITIAL_TEMPLATES:[\s\S]*?\.map\(withBroadcastControls\)/);
+  assert.match(editor, /import \{ INITIAL_TEMPLATES, normalizeTemplateFields \} from '\.\.\/constants'/);
+  assert.match(editor, /const orderedDraftFields = useMemo\([\s\S]*?normalizeTemplateFields\(draftOverlay\.fields\)/);
+  assert.match(editor, /orderedDraftFields\.map\(\(field\) =>/);
 });
 
 test('statement source timeline has an editable broadcast label', async () => {
