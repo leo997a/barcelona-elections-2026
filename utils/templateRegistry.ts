@@ -155,7 +155,7 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
   [OverlayType.PLAYER_INTEL_V2]: {
     icon: '🧠',
     accent: '#22d3ee',
-    description: 'قالب بث احترافي يدمج بيانات FotMob و FBref في بطاقة تحليل لاعب متقدمة.',
+    description: 'قالب بث احترافي يدمج البيانات المباشرة والموسمية في بطاقة تحليل لاعب متقدمة.',
   },
   [OverlayType.MERCATO_UNIFIED]: {
     icon: '📦',

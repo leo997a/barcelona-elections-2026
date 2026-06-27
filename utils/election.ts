@@ -500,7 +500,7 @@ const MATCH_STATS_DEFAULT_FIELDS: OverlayField[] = [
   },
   {
     id: 'sourceMatchUrl',
-    label: 'رابط مباراة WhoScored للتشغيل المباشر',
+    label: 'رابط مصدر المباراة للتشغيل المباشر',
     type: 'text',
     value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla',
   },

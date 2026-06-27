@@ -592,7 +592,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
     templateIcon: '📊',
     templateAccent: '#3b82f6',
     templateGroup: 'FOOTBALL_WORLD_FEED',
-    templateDescription: 'استوديو بيانات ذكي يعتمد على JSON من WhoScored، يحسب تلقائياً مؤشر الهيمنة، اللاعب المؤثر والمواجهات الثنائية.',
+    templateDescription: 'استوديو بيانات ذكي يعتمد على مصدر مباراة مباشر، يحسب تلقائياً مؤشر الهيمنة، اللاعب المؤثر والمواجهات الثنائية.',
     theme: { primaryColor: '#3b82f6', secondaryColor: '#ef4444', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
@@ -667,7 +667,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'playerImageMapJson', label: 'روابط صور اللاعبين JSON', type: 'textarea', value: '{}' },
       { id: 'playerImageCacheUrl', label: 'رابط كاش صور اللاعبين JSON', type: 'text', value: '/player-image-cache/barcelona.json?v=20260515;/player-image-cache/chelsea.json?v=20260515' },
       { id: 'dataSourceName', label: 'اسم مصدر البيانات الظاهر', type: 'text', value: 'بيانات REO المباشرة' },
-      { id: 'sourceMatchUrl', label: 'رابط مباراة WhoScored للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
+      { id: 'sourceMatchUrl', label: 'رابط مصدر المباراة للتشغيل المباشر', type: 'text', value: 'https://www.whoscored.com/matches/1914233/live/spain-laliga-2025-2026-villarreal-sevilla' },
       { id: 'apiUrl', label: 'رابط API بيانات المباراة', type: 'text', value: '/api/reo-match?action=match' },
       { id: 'homeColor', label: 'لون المضيف', type: 'color', value: '#3b82f6' },
       { id: 'awayColor', label: 'لون الضيف', type: 'color', value: '#ef4444' },
@@ -704,8 +704,8 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       ] },
       { id: 'providerPolicy', label: 'سياسة المصدر', type: 'select', value: 'auto', options: [
         { value: 'auto', label: 'موجِّه تلقائي' },
-        { value: 'fbref', label: 'موسم FBref أولًا' },
-        { value: 'matchBridge', label: 'جسر المباريات أولًا' },
+        { value: 'fbref', label: 'بيانات الموسم أولًا' },
+        { value: 'matchBridge', label: 'بيانات المباراة أولًا' },
         { value: 'demo', label: 'وضع تجريبي آمن' },
       ] },
       { id: 'metricPreset', label: 'القالب الذكي', type: 'select', value: 'Attacker Profile', options: [
@@ -2702,7 +2702,7 @@ const PLAYER_INTEL_V2_TEMPLATES: OverlayConfig[] = [
     name: 'استخبارات اللاعب — الإصدار الثاني',
     type: OverlayType.PLAYER_INTEL_V2,
     templateId: 'template-player-intel-v2',
-    templateDescription: 'قالب بث احترافي يدمج بيانات FotMob و FBref في بطاقة تحليل لاعب متقدمة.',
+    templateDescription: 'قالب بث احترافي يدمج البيانات المباشرة والموسمية في بطاقة تحليل لاعب متقدمة.',
     templateIcon: '🧠',
     templateAccent: '#22d3ee',
     templateGroup: 'PLAYER_INTEL',

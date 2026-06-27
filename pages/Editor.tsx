@@ -336,7 +336,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'dataMode') {
     return {
       id,
-      label: 'Field',
+      label: 'مصدر البيانات',
       type: 'select',
       value,
       options: [
@@ -349,21 +349,21 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   }
 
   if (id === 'manualJson') {
-    return { id, label: 'JSON', type: 'textarea', value };
+    return { id, label: 'JSON مستورد', type: 'textarea', value };
   }
 
   if (id === 'sourceMatchUrl') {
-    return { id, label: 'WhoScored', type: 'text', value };
+    return { id, label: 'رابط مصدر المباراة', type: 'text', value };
   }
 
   if (id === 'apiUrl') {
-    return { id, label: 'Field', type: 'text', value };
+    return { id, label: 'رابط بيانات المباراة', type: 'text', value };
   }
 
   if (id === 'matchMetricPreset') {
     return {
       id,
-      label: 'Field',
+      label: 'تركيز إحصائيات المباراة',
       type: 'select',
       value,
       options: MATCH_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -373,7 +373,7 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'playerMetricPreset') {
     return {
       id,
-      label: 'Field',
+      label: 'تركيز إحصائيات اللاعب',
       type: 'select',
       value,
       options: PLAYER_STAT_PRESET_QUICK.map(option => ({ value: option.value, label: option.label })),
@@ -383,12 +383,12 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'teamStatsSide') {
     return {
       id,
-      label: 'Field',
+      label: 'ترتيب الفريقين',
       type: 'select',
       value,
       options: [
-        { value: 'HOME_LEFT', label: 'Field' },
-        { value: 'AWAY_LEFT', label: 'Field' },
+        { value: 'HOME_LEFT', label: 'المضيف يسار / الضيف يمين' },
+        { value: 'AWAY_LEFT', label: 'الضيف يسار / المضيف يمين' },
       ],
     };
   }
@@ -401,8 +401,8 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
       value,
       options: [
         { value: 'auto', label: 'موجِّه تلقائي' },
-        { value: 'fbref', label: 'موسم FBref أولًا' },
-        { value: 'matchBridge', label: 'جسر المباريات أولًا' },
+        { value: 'fbref', label: 'بيانات الموسم أولًا' },
+        { value: 'matchBridge', label: 'بيانات المباراة أولًا' },
         { value: 'demo', label: 'وضع تجريبي آمن' },
       ],
     };
@@ -415,14 +415,14 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
       type: 'select',
       value,
       options: [
-        'Attacker Profile',
-        'Playmaker Profile',
-        'Defensive Profile',
-        'Goalkeeper Profile',
-        'Transfer Scout',
-        'Barcelona Fit',
-        'Head-to-Head Comparison',
-        'Full Season Report',
+        { value: 'Attacker Profile', label: 'ملف هجومي' },
+        { value: 'Playmaker Profile', label: 'ملف صانع لعب' },
+        { value: 'Defensive Profile', label: 'ملف دفاعي' },
+        { value: 'Goalkeeper Profile', label: 'ملف حارس مرمى' },
+        { value: 'Transfer Scout', label: 'استكشاف انتقالات' },
+        { value: 'Barcelona Fit', label: 'ملاءمة برشلونة' },
+        { value: 'Head-to-Head Comparison', label: 'مقارنة مباشرة' },
+        { value: 'Full Season Report', label: 'تقرير موسم كامل' },
       ],
     };
   }
@@ -434,20 +434,30 @@ const createFallbackDraftField = (id: string, value: any): OverlayField => {
   if (id === 'playerStatsVisualVariant') {
     return {
       id,
-      label: 'Player Stats look',
+      label: 'ستايل إحصائيات اللاعب',
       type: 'select',
       value,
-      options: ['ULTRA_LAB', 'GLASS_SCOUT', 'BARCA_RADAR', 'MINIMAL_CAST'],
+      options: [
+        { value: 'ULTRA_LAB', label: 'مختبر متقدم' },
+        { value: 'GLASS_SCOUT', label: 'زجاج استكشافي' },
+        { value: 'BARCA_RADAR', label: 'رادار برشلونة' },
+        { value: 'MINIMAL_CAST', label: 'بث مينيمال' },
+      ],
     };
   }
 
   if (id === 'visualVariant') {
     return {
       id,
-      label: 'Look variant',
+      label: 'ستايل العرض',
       type: 'select',
       value,
-      options: ['NEON_GLASS', 'TACTICAL_DARK', 'LUXE_STUDIO', 'CLEAN_BROADCAST'],
+      options: [
+        { value: 'NEON_GLASS', label: 'زجاج نيون' },
+        { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
+        { value: 'LUXE_STUDIO', label: 'استوديو فاخر' },
+        { value: 'CLEAN_BROADCAST', label: 'بث نظيف' },
+      ],
     };
   }
 
@@ -2879,8 +2889,8 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                                           dir="rtl"
                                         >
                                             <option value="auto">موجِّه تلقائي</option>
-                                            <option value="fbref">موسم FBref أولًا</option>
-                                            <option value="matchBridge">جسر المباريات أولًا</option>
+                                            <option value="fbref">بيانات الموسم أولًا</option>
+                                            <option value="matchBridge">بيانات المباراة أولًا</option>
                                             <option value="demo">وضع تجريبي آمن</option>
                                         </select>
                                     </div>

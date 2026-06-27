@@ -79,7 +79,15 @@ test('template settings avoid legacy bridge wording in visible labels', async ()
     'Custom bridge URL',
     'Visible data source name',
     'World Cup data source',
+    'Player Stats look',
+    'Look variant',
+    'موسم FBref',
+    'جسر المباريات أولًا',
+    'رابط مباراة WhoScored',
+    'قالب بث احترافي يدمج بيانات FotMob',
+    'JSON من WhoScored',
   ];
 
   assert.doesNotMatch(combined, new RegExp(legacyWords.join('|'), 'i'));
+  assert.doesNotMatch(combined, /label:\s*['"]Field['"]/);
 });
