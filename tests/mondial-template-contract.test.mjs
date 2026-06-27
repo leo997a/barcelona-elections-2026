@@ -219,3 +219,19 @@ test('broadcast look settings drive reference-pack style and palette rendering',
     assert.match(rendererSource, /getBroadcastCssVars\(paletteId\)/);
   }
 });
+
+test('mondial OBS templates consume selected kinetic theme colors', async () => {
+  const obs = await readSource('../components/renderers/MondialObsTemplates.tsx');
+
+  assert.match(obs, /const themedColors = \(theme\?: MondialTheme\)/);
+  assert.match(obs, /const paletteAt = \(theme: MondialTheme \| undefined, index: number\)/);
+  assert.match(obs, /theme\?: MondialTheme/);
+  assert.match(obs, /<KineticStage image=\{stageImage\(getField\)\} theme=\{t\}>/);
+  assert.match(obs, /<KineticStage transparent theme=\{t\}>/);
+  assert.match(obs, /<KineticHeader title="سباق الحذاء الذهبي" tag=\{sourceTag\} theme=\{t\}/);
+  assert.match(obs, /export const ReoObsGoldenBoot[\s\S]*?const c = themedColors\(t\)/);
+  assert.match(obs, /boxShadow: `12px 10px 0 \$\{paletteAt\(t, index\)\}`/);
+  assert.match(obs, /background: c\.gold/);
+  assert.match(obs, /ColorRail theme=\{t\}/);
+  assert.doesNotMatch(obs, /ReoObsGoldenBoot[\s\S]*?COLORS\[index % COLORS\.length\]/);
+});
