@@ -18,6 +18,26 @@ const commonFields: OverlayField[] = [
   { id: 'channelName', label: 'اسم القناة (الحقوق)', type: 'text', value: 'REO LIVE' },
 ];
 
+const ELECTION_DESIGN_STYLE_OPTIONS = [
+  { value: 'RESULTS_HUB', label: 'نتائج / مركز بث' },
+  { value: 'SPLIT_BAR_LEFT', label: 'مواجهة مرشحين' },
+  { value: 'COUNTDOWN_TOP', label: 'عد تنازلي' },
+  { value: 'LEAKS_FULL', label: 'خبر عاجل' },
+  { value: 'STATEMENT_FULL', label: 'تصريح كامل' },
+  { value: 'LIVE_TRANSITION', label: 'انتقال مباشر' },
+  { value: 'STUDIO_BACKGROUND', label: 'خلفية استوديو' },
+  { value: 'VOTER_TURNOUT', label: 'نسبة مشاركة' },
+];
+
+const MERCATO_DESIGN_STYLE_OPTIONS = [
+  { value: 'DEAL_BREAKER', label: 'إعلان صفقة رئيسي' },
+  { value: 'MARKET_COMMAND_CENTER', label: 'غرفة قيادة السوق' },
+  { value: 'RUMOUR_RADAR', label: 'رادار الشائعات' },
+  { value: 'DONE_DEALS_WALL', label: 'جدار الصفقات المحسومة' },
+  { value: 'PLAYER_SEASON_CARD', label: 'بطاقة موسم اللاعب' },
+  { value: 'PLAYER_IMPACT_CARD', label: 'توقع تأثير اللاعب' },
+];
+
 const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayField[] => {
   const hasField = (id: string) => existingFields.some(field => field.id === id);
   const additions: OverlayField[] = [];
@@ -184,7 +204,12 @@ export const dedupeFields = (fields: OverlayField[]): OverlayField[] => {
  * 'content' for unknown ids, keeping current behavior intact.
  */
 export const fieldGroup = (id: string): FieldGroup => {
-  if (id === 'transitionIn' || id === 'transitionOut') return 'transitions';
+  if (
+    id === 'transitionIn' || id === 'transitionOut' ||
+    id === 'transitionEffect' || id === 'transitionSpeedMs' ||
+    id === 'transitionIntensity' || id === 'broadcastMotion' ||
+    id === 'mondialMotionPreset'
+  ) return 'transitions';
   if (
     id === 'soundEnabled' || id === 'soundVolume' ||
     id === 'soundInStyle' || id === 'soundOutStyle' ||
@@ -344,7 +369,7 @@ const createElectionTemplate = ({
     { id: 'phaseLabel', label: 'مرحلة التغطية', type: 'text', value: phaseLabel },
     { id: 'sourceLabel', label: 'المصدر', type: 'text', value: sourceLabel },
     { id: 'lastUpdated', label: 'آخر تحديث', type: 'text', value: 'آخر تحديث 20:45' },
-    { id: 'designStyle', label: 'النمط', type: 'hidden', value: designStyle },
+    { id: 'designStyle', label: 'التصميم (الستايل)', type: 'select', value: designStyle, options: ELECTION_DESIGN_STYLE_OPTIONS },
     { id: 'themePreset', label: 'اللون الأساسي', type: 'select', value: themePreset, options: ['BARCA_RED', 'BARCA_BLUE', 'ROYAL_GOLD', 'DARK_MATTER'] },
     { id: 'barcaLogo', label: 'شعار برشلونة', type: 'image', value: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png' },
     { id: 'scale', label: 'حجم القالب', type: 'range', value: scale, min: 0.5, max: 1.8, step: 0.05 },
@@ -1813,7 +1838,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'MARKET_COMMAND_CENTER' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'MARKET_COMMAND_CENTER', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'NEON_GLASS', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -1860,7 +1885,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'RUMOUR_RADAR' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'RUMOUR_RADAR', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'NEON_GLASS', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -1903,7 +1928,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'DONE_DEALS_WALL' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'DONE_DEALS_WALL', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'CLEAN_BROADCAST', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -1946,7 +1971,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'PLAYER_SEASON_CARD' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'PLAYER_SEASON_CARD', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'LUXE_STUDIO', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -1999,7 +2024,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'PLAYER_IMPACT_CARD' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'PLAYER_IMPACT_CARD', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'TACTICAL_DARK', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -2052,7 +2077,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'DEAL_BREAKER' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'DEAL_BREAKER', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'NEON_GLASS', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },
@@ -2105,7 +2130,7 @@ const INITIAL_TEMPLATE_DEFINITIONS: OverlayConfig[] = [
     slots: {},
     fields: [
       ...commonFields,
-      { id: 'designStyle', label: 'نمط التصميم', type: 'hidden', value: 'MARKET_COMMAND_CENTER' },
+      { id: 'designStyle', label: 'نمط التصميم', type: 'select', value: 'MARKET_COMMAND_CENTER', options: MERCATO_DESIGN_STYLE_OPTIONS },
       { id: 'visualVariant', label: 'النمط البصري', type: 'select', value: 'NEON_GLASS', options: [
         { value: 'NEON_GLASS', label: 'زجاج نيون' },
         { value: 'TACTICAL_DARK', label: 'تكتيكي داكن' },

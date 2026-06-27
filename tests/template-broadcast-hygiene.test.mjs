@@ -109,3 +109,20 @@ test('template settings avoid legacy bridge wording in visible labels', async ()
   assert.doesNotMatch(combined, new RegExp(legacyWords.join('|'), 'i'));
   assert.doesNotMatch(combined, /label:\s*['"]Field['"]/);
 });
+
+test('template style controls are editable and drive their renderer style', async () => {
+  const [constants, electionOverlay] = await Promise.all([
+    readSource('../constants.ts'),
+    readSource('../components/ElectionOverlay.tsx'),
+  ]);
+
+  assert.match(constants, /const ELECTION_DESIGN_STYLE_OPTIONS = \[/);
+  assert.match(constants, /const MERCATO_DESIGN_STYLE_OPTIONS = \[/);
+  assert.doesNotMatch(constants, /id:\s*'designStyle'[\s\S]{0,120}type:\s*'hidden'/);
+  assert.match(constants, /id: 'designStyle'[\s\S]*?type: 'select'[\s\S]*?options: ELECTION_DESIGN_STYLE_OPTIONS/);
+  assert.match(constants, /id: 'designStyle'[\s\S]*?type: 'select'[\s\S]*?options: MERCATO_DESIGN_STYLE_OPTIONS/);
+  assert.match(
+    electionOverlay,
+    /const designStyle = rawDesignStyle[\s\S]*?resolveElectionStyle\(rawDesignStyle\)[\s\S]*?: templateVariantMap/
+  );
+});

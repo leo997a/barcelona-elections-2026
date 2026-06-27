@@ -278,6 +278,14 @@ test('Iraq Mondial templates use shared controls and dedicated renderer variants
     assert.match(templates, new RegExp(`id:\\s*'${id}'`), `${id} is not registered`);
   }
   assert.match(templates, /const mondialIraqControlFields/);
+  assert.match(templates, /const mondialIraqControlFieldIds = new Set\(\[/);
+  for (const field of ['transitionSpeedMs', 'mondialMotionPreset', 'soundInStyle', 'soundOutStyle', 'audioUpdateCue']) {
+    assert.match(
+      templates,
+      new RegExp(`const mondialIraqControlFieldIds[\\s\\S]*?'${field}'`),
+      `${field} is not inherited by Iraq templates`
+    );
+  }
   assert.match(templates, /MONDIAL_IRAQ_TEMPLATES\.map\(withIraqControls\)/);
   assert.match(renderer, /getField\('mondialVariant'\) \|\| getField\('iraqVariant'\)/);
   assert.match(renderer, /rawVariant === 'player_spotlight'[\s\S]*?'iraq_player_spotlight'/);

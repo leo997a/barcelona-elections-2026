@@ -173,7 +173,7 @@ export const MONDIAL_TRANSITION_CSS = `
   100% { opacity: 0; transform: translateY(-52px) scaleX(1.08); }
 }
 .mondial-transition-frame {
-  --mondial-transition-speed: 760ms;
+  --mondial-transition-speed: 920ms;
   --mondial-transition-intensity: 1;
   position: relative;
   width: 100%;
@@ -562,7 +562,7 @@ export const MondialTransitionFrame: React.FC<MondialTransitionFrameProps> = ({
         ? 'out'
         : 'hold';
   const effect = normalizeEffect(getField, phase === 'out' ? 'out' : 'in');
-  const speed = clampNumber(getField('transitionSpeedMs'), 760, 420, 1200);
+  const speed = clampNumber(getField('transitionSpeedMs'), 920, 420, 1600);
   const intensity = clampNumber(getField('transitionIntensity'), 1.15, 0.2, 1.8);
   const paletteId = getBroadcastPalette(getField);
   const cssVars = {

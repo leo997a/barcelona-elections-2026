@@ -16,6 +16,20 @@ const mondialCommonFields: OverlayField[] = [
   { id: 'scale', label: 'حجم القالب', type: 'range', value: 1.0, min: 0.5, max: 2.0, step: 0.05 },
   { id: 'positionY', label: 'إزاحة عمودية (Y)', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'إزاحة أفقية (X)', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
+  { id: 'broadcastMotion', label: 'تشغيل حركة البث', type: 'boolean', value: true },
+  { id: 'transitionSpeedMs', label: 'سرعة الظهور والإخفاء (ms)', type: 'range', value: 920, min: 420, max: 1600, step: 10 },
+  { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1.15, min: 0.2, max: 1.8, step: 0.05 },
+  { id: 'mondialMotionPreset', label: 'حزمة حركة المونديال', type: 'select', value: 'reference_stinger', options: [
+    { value: 'reference_stinger', label: 'Reference stinger - full-screen TV mask + sweep SFX' },
+    { value: 'scorebug_snap', label: 'Scorebug snap - fast TV score reveal' },
+    { value: 'group_wall_rush', label: 'Group wall rush - data board reveal' },
+    { value: 'stadium_sweep', label: 'Stadium sweep - international match open' },
+    { value: 'glass_sweep', label: 'Glass sweep - premium broadcast panels' },
+    { value: 'spotlight_pop', label: 'Spotlight pop - trophy / headline reveal' },
+    { value: 'side_wipe', label: 'Side wipe - lower-third style reveal' },
+    { value: 'story_glitch', label: 'Story glitch - social vertical reveal' },
+    { value: 'custom', label: 'Custom/manual fields below' },
+  ]},
   { id: 'transitionIn', label: 'انتقال الظهور', type: 'select', value: 'MONDIAL_STINGER', options: [
     { value: 'MONDIAL_STINGER', label: 'ستينغر مونديالي كامل الشاشة' },
     { value: 'STADIUM_SWEEP', label: 'كشف الملعب' },
@@ -35,6 +49,31 @@ const mondialCommonFields: OverlayField[] = [
   ]},
   { id: 'soundEnabled', label: 'تفعيل الصوت', type: 'boolean', value: true },
   { id: 'soundVolume', label: 'مستوى الصوت', type: 'range', value: 0.75, min: 0, max: 2, step: 0.05 },
+  { id: 'soundInStyle', label: 'صوت الظهور', type: 'select', value: 'DEFAULT', options: [
+    { value: 'DEFAULT', label: 'Default by motion preset' },
+    { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
+    { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
+    { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
+    { value: 'LOWER_THIRD_WIPE', label: 'Lower third wipe' },
+    { value: 'DATA_SLAM', label: 'Data slam' },
+  ]},
+  { id: 'soundOutStyle', label: 'صوت الإخفاء', type: 'select', value: 'DEFAULT', options: [
+    { value: 'DEFAULT', label: 'Default by motion preset' },
+    { value: 'BROADCAST_OUT', label: 'Broadcast out' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
+    { value: 'SOFT_FADE', label: 'Soft fade' },
+    { value: 'LUXURY_OUT', label: 'Luxury out' },
+    { value: 'HARD_CUT', label: 'Hard cut' },
+  ]},
+  { id: 'audioUpdateCue', label: 'صوت تحديث البيانات', type: 'select', value: 'DEFAULT', options: [
+    { value: 'DEFAULT', label: 'Default by motion preset' },
+    { value: 'DATA_TICK', label: 'Data tick' },
+    { value: 'SCOREBUG_SNAP', label: 'Score snap' },
+    { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
+    { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
+  ]},
+  { id: 'duckSfx', label: 'خفض المؤثرات تحت الصوت', type: 'boolean', value: true },
 ];
 
 // ─── حقول بيانات المباراة (نظام dataMode الموحد) ─────────────────────────────
@@ -368,7 +407,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
   { id: 'positionY', label: 'الموضع العمودي', type: 'range', value: 0, min: -700, max: 700, step: 10 },
   { id: 'positionX', label: 'الموضع الأفقي', type: 'range', value: 0, min: -1200, max: 1200, step: 10 },
   { id: 'broadcastMotion', label: 'تشغيل أنميشن البث الداخلي', type: 'boolean', value: true },
-  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 760, min: 420, max: 1200, step: 10 },
+  { id: 'transitionSpeedMs', label: 'سرعة انتقال الظهور/الإخفاء (ms)', type: 'range', value: 920, min: 420, max: 1600, step: 10 },
   { id: 'transitionIntensity', label: 'قوة حركة الانتقال', type: 'range', value: 1.15, min: 0.2, max: 1.8, step: 0.05 },
   { id: 'mondialMotionPreset', label: 'حزمة الحركة والصوت', type: 'select', value: 'reference_stinger', options: [
     { value: 'reference_stinger', label: 'Reference stinger - full-screen TV mask + sweep SFX' },
@@ -917,8 +956,26 @@ export const MONDIAL_NEWS_TEMPLATES: OverlayConfig[] = [
 
 // ─── مجموعة 8: المنتخب العراقي 🇮🇶 ──────────────────────────────────────────
 
+const mondialIraqControlFieldIds = new Set([
+  'mondialTheme',
+  'positionY',
+  'positionX',
+  'transitionIn',
+  'transitionOut',
+  'broadcastMotion',
+  'transitionSpeedMs',
+  'transitionIntensity',
+  'mondialMotionPreset',
+  'soundEnabled',
+  'soundVolume',
+  'soundInStyle',
+  'soundOutStyle',
+  'audioUpdateCue',
+  'duckSfx',
+]);
+
 const mondialIraqControlFields: OverlayField[] = mondialCommonFields
-  .filter(field => ['mondialTheme', 'positionY', 'positionX', 'transitionIn', 'transitionOut', 'soundEnabled', 'soundVolume'].includes(field.id))
+  .filter(field => mondialIraqControlFieldIds.has(field.id))
   .map(field => ({ ...field, value: field.id === 'mondialTheme' ? 'IRAQ_PRIDE' : field.value }));
 
 const withIraqControls = (template: OverlayConfig): OverlayConfig => ({

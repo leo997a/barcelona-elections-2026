@@ -42,9 +42,10 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
   assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
   assert.match(transitionLayer, /className="mondial-transition-bug"/);
-  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 760, 420, 1200\)/);
-  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 760, 420, 1200\)/);
-  assert.match(transitionLayer, /--mondial-transition-speed: 760ms;/);
+  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 920, 420, 1600\)/);
+  assert.match(renderer, /Math\.max\(320, Math\.round\(transitionSpeedMs \* 0\.72\)\)/);
+  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 920, 420, 1600\)/);
+  assert.match(transitionLayer, /--mondial-transition-speed: 920ms;/);
 });
 
 test('mondial reference stinger exit keeps the same arc direction instead of reversing top and bottom bands', async () => {
@@ -127,6 +128,36 @@ test('motion preset sound defaults remain overridable and visible in the editor'
   assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundInStyle: 'DIGITAL_SWEEP'/);
   assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundOutStyle: 'BROADCAST_OUT'/);
   assert.match(editor, /'mondialTheme', 'mondialStyle', 'broadcastLook'/);
+});
+
+test('all mondial template families expose the shared motion and audio controls', async () => {
+  const templates = await readSource('../components/renderers/MondialTemplates.ts');
+
+  for (const field of [
+    'broadcastMotion',
+    'transitionSpeedMs',
+    'transitionIntensity',
+    'mondialMotionPreset',
+    'soundInStyle',
+    'soundOutStyle',
+    'audioUpdateCue',
+    'duckSfx',
+  ]) {
+    assert.match(
+      templates,
+      new RegExp(`const mondialCommonFields[\\s\\S]*?id: '${field}'`),
+      `${field} is missing from mondialCommonFields`
+    );
+  }
+
+  assert.match(templates, /const mondialIraqControlFieldIds = new Set\(\[/);
+  for (const field of ['transitionSpeedMs', 'mondialMotionPreset', 'soundInStyle', 'audioUpdateCue', 'duckSfx']) {
+    assert.match(
+      templates,
+      new RegExp(`const mondialIraqControlFieldIds[\\s\\S]*?'${field}'`),
+      `${field} is missing from Iraq shared controls`
+    );
+  }
 });
 
 test('remote controls can create the complete mondial broadcast settings', async () => {

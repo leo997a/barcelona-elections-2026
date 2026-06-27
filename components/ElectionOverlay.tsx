@@ -132,7 +132,8 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
   const headline = String(getField('headline') || 'انتخابات برشلونة 2026');
   const subheadline = String(getField('subheadline') || 'Live coverage');
   const watermarkText = String(getField('watermarkText') || 'REO SHOW');
-  const rawDesignStyle = String(getField('designStyle') || 'RESULTS_BAR');
+  const rawDesignStyleValue = getField('designStyle');
+  const rawDesignStyle = typeof rawDesignStyleValue === 'string' ? rawDesignStyleValue : '';
   const templateVariantMap: Record<string, string> = {
     'template-election-results-bar': 'RESULTS_BAR',
     'template-election-quote-panel': 'QUOTE_PANEL',
@@ -140,7 +141,9 @@ const ElectionOverlay: React.FC<ElectionOverlayProps> = ({
     'template-election-sidebar-tower': 'SIDEBAR_TOWER',
     'template-election-turnout-strip': 'TURNOUT_STRIP',
   };
-  const designStyle = templateVariantMap[config.templateId || ''] || resolveElectionStyle(rawDesignStyle);
+  const designStyle = rawDesignStyle
+    ? resolveElectionStyle(rawDesignStyle)
+    : templateVariantMap[config.templateId || ''] || 'RESULTS_BAR';
   const themeKey = String(getField('themePreset') || 'BARCA_RED');
   const activeTheme = themes[themeKey] || themes.BARCA_RED;
   const statusBadge = String(getField('statusBadge') || 'LIVE');
