@@ -1272,12 +1272,31 @@ export const ReoObsIraqSquad: React.FC<ReoObsVariantProps> = props => {
 };
 
 export const ReoObsIraqPlayerSpotlight: React.FC<ReoObsVariantProps> = props => {
-  const proxy: Getter = id => id === 'code' ? 'IQ' : props.getField(id);
+  const proxy: Getter = id => {
+    if (id === 'code') return 'IQ';
+    if (id === 'name') return props.getField('name') || props.getField('playerName');
+    if (id === 'position') return props.getField('position') || props.getField('playerPosition');
+    if (id === 'rating') {
+      const rating = props.getField('rating');
+      return rating === undefined || rating === '' ? props.getField('playerRating') : rating;
+    }
+    if (id === 'statsJson') {
+      return props.getField('statsJson') || JSON.stringify([
+        { label: 'أهداف', value: String(props.getField('playerGoals') || 0) },
+        { label: 'أسيست', value: String(props.getField('playerAssists') || 0) },
+        { label: 'مباريات', value: String(props.getField('playerMatches') || 0) },
+        { label: 'النادي', value: String(props.getField('playerClub') || '-') },
+      ]);
+    }
+    return props.getField(id);
+  };
   return <ReoObsPlayerSpotlight {...props} getField={proxy} />;
 };
 
 export const ReoObsIraqTicker: React.FC<ReoObsVariantProps> = props => {
   const proxy: Getter = id => {
+    if (id === 'tickerLabel' && props.getField('iraqTickerLabel')) return props.getField('iraqTickerLabel');
+    if (id === 'tickerContent' && props.getField('iraqNews')) return props.getField('iraqNews');
     if (id === 'tickerLabel') return text(props.getField, 'tickerLabel', 'أسود الرافدين');
     if (id === 'tickerContent') return text(props.getField, 'tickerContent', text(props.getField, 'newsText', 'العراق في المونديال - تغطية خاصة من REO SHOW'));
     return props.getField(id);
@@ -1285,33 +1304,49 @@ export const ReoObsIraqTicker: React.FC<ReoObsVariantProps> = props => {
   return <ReoObsTicker {...props} getField={proxy} />;
 };
 
-export const ReoObsIraqHistory: React.FC<ReoObsVariantProps> = ({ t, getField }) => (
-  <KineticStage image={stageImage(getField)} theme={t}>
+export const ReoObsIraqHistory: React.FC<ReoObsVariantProps> = ({ t, getField }) => {
+  const proxy: Getter = id => {
+    if (id === 'historyYear') return getField('historyYear') || getField('momentYear');
+    if (id === 'historyTitle') return getField('historyTitle') || getField('momentTitle');
+    if (id === 'historyText') return getField('historyText') || getField('momentDetails');
+    return getField(id);
+  };
+  return (
+  <KineticStage image={stageImage(proxy)} theme={t}>
     <div className="w-full h-full p-12 flex flex-col justify-between">
       <KineticHeader title="ذاكرة أسود الرافدين" tag="IRAQ HISTORY · REO SHOW" theme={t} />
       <div className="grid grid-cols-[360px_1fr] items-end gap-12">
         <div className="bg-white text-black border-[6px] border-black rounded-[35px] p-8 text-center" style={{ boxShadow: `16px 14px 0 ${WC.green}`, animation: 'wcScorePop .68s .25s both' }}>
-          <div className="text-[12px] font-black">WORLD CUP MEMORY</div><div className="text-[100px] font-black leading-none">{text(getField, 'historyYear', '1986')}</div>
+          <div className="text-[12px] font-black">WORLD CUP MEMORY</div><div className="text-[100px] font-black leading-none">{text(proxy, 'historyYear', '1986')}</div>
         </div>
         <div>
-          <div className="text-[49px] font-black">{text(getField, 'historyTitle', 'لحظة عراقية في كأس العالم')}</div>
-          <div className="text-[27px] font-black leading-[1.65] mt-5">{text(getField, 'historyText', 'من الذاكرة إلى مونديال 2026، قصة منتخب يكتب حضوره بجمهوره وشغفه.')}</div>
+          <div className="text-[49px] font-black">{text(proxy, 'historyTitle', 'لحظة عراقية في كأس العالم')}</div>
+          <div className="text-[27px] font-black leading-[1.65] mt-5">{text(proxy, 'historyText', 'من الذاكرة إلى مونديال 2026، قصة منتخب يكتب حضوره بجمهوره وشغفه.')}</div>
         </div>
       </div>
       <ColorRail theme={t} />
     </div>
   </KineticStage>
-);
+  );
+};
 
 export const ReoObsIraqFanPulse: React.FC<ReoObsVariantProps> = ({ t, getField }) => {
-  const support = clamp(num(getField, 'supportPct', 92));
+  const proxy: Getter = id => {
+    if (id === 'supportPct') {
+      const supportPct = getField('supportPct');
+      return supportPct === undefined || supportPct === '' ? getField('pulseValue') : supportPct;
+    }
+    if (id === 'pulseText') return getField('pulseText') || getField('supportMessage');
+    return getField(id);
+  };
+  const support = clamp(num(proxy, 'supportPct', 92));
   const c = themedColors(t);
   return (
-    <KineticStage image={stageImage(getField)} theme={t}>
+    <KineticStage image={stageImage(proxy)} theme={t}>
       <div className="w-full h-full p-12 flex flex-col justify-between">
-        <KineticHeader title={text(getField, 'title', 'نبض الجماهير العراقية')} tag="FAN PULSE · REO SHOW" theme={t} />
+        <KineticHeader title={text(proxy, 'title', 'نبض الجماهير العراقية')} tag="FAN PULSE · REO SHOW" theme={t} />
         <div className="max-w-[980px]">
-          <div className="text-[46px] font-black leading-[1.5]">{text(getField, 'pulseText', 'المدرج العراقي حاضر بالصوت واللون، وREO SHOW ينقل الإيقاع كما هو.')}</div>
+          <div className="text-[46px] font-black leading-[1.5]">{text(proxy, 'pulseText', 'المدرج العراقي حاضر بالصوت واللون، وREO SHOW ينقل الإيقاع كما هو.')}</div>
           <div className="mt-9 bg-white text-black border-[6px] border-black rounded-[30px] p-7" style={{ boxShadow: `16px 13px 0 ${c.danger}` }}>
             <div className="flex items-center justify-between"><span className="text-[19px] font-black">مؤشر الحماس</span><span className="text-[58px] font-black">{support}%</span></div>
             <div className="h-8 border-[4px] border-black rounded-full overflow-hidden bg-white"><div className="h-full" style={{ width: `${support}%`, background: `linear-gradient(90deg, ${c.danger}, ${c.success}, ${c.gold})`, animation: 'wcBarGrow 1s .45s both' }} /></div>
@@ -1323,7 +1358,7 @@ export const ReoObsIraqFanPulse: React.FC<ReoObsVariantProps> = ({ t, getField }
 };
 
 export const ReoObsIraqDashboard: React.FC<ReoObsVariantProps> = ({ t, getField }) => {
-  const rows = safeParse<GroupRow[]>(String(getField('groupTeamsJson') || '[]'), DEFAULT_GROUP);
+  const rows = safeParse<GroupRow[]>(String(getField('groupTeamsJson') || getField('standingsJson') || '[]'), DEFAULT_GROUP);
   const shown = rows.length ? rows : DEFAULT_GROUP;
   const c = themedColors(t);
   return (

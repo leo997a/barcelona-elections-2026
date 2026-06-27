@@ -54,6 +54,12 @@ import {
   ReoObsAnalysis,
   ReoObsGoldenBoot,
   ReoObsGroupTable,
+  ReoObsIraqDashboard,
+  ReoObsIraqFanPulse,
+  ReoObsIraqHistory,
+  ReoObsIraqPlayerSpotlight,
+  ReoObsIraqSquad,
+  ReoObsIraqTicker,
   ReoObsLineup,
   ReoObsLowerThird,
   ReoObsMatchPreview,
@@ -374,7 +380,13 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
   wasVisible = false,
   isEditor = false,
 }) => {
-  const variant = String(getField('mondialVariant') || 'scoreboard');
+  const rawVariant = String(getField('mondialVariant') || getField('iraqVariant') || 'scoreboard');
+  const isIraqTemplate = String(config?.id || config?.templateId || '').includes('template-mondial-iraq');
+  const variant = isIraqTemplate && rawVariant === 'player_spotlight'
+    ? 'iraq_player_spotlight'
+    : isIraqTemplate && rawVariant === 'match_ticker'
+      ? 'iraq_match_ticker'
+      : rawVariant;
   const themeId = String(getField('mondialTheme') || 'MUNDIAL_MAIN');
   const t = getMondialTheme(themeId);
 
@@ -506,6 +518,24 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
           )}
           {variant === 'social_story' && (
             <ReoObsMondialSocialStory getField={getMatchField} liveData={templateLiveData} />
+          )}
+          {variant === 'squad_card' && (
+            <ReoObsIraqSquad t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
+          )}
+          {variant === 'iraq_player_spotlight' && (
+            <ReoObsIraqPlayerSpotlight t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
+          )}
+          {variant === 'iraq_match_ticker' && (
+            <ReoObsIraqTicker t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
+          )}
+          {variant === 'history_moment' && (
+            <ReoObsIraqHistory t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
+          )}
+          {variant === 'fan_pulse' && (
+            <ReoObsIraqFanPulse t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
+          )}
+          {variant === 'iraq_dashboard' && (
+            <ReoObsIraqDashboard t={t} getField={getField} liveData={templateLiveData} matchDetails={matchDetails} />
           )}
           {variant === 'golden_boot' && (
             <ReoObsGoldenBoot t={t} getField={getField} liveData={templateLiveData} />

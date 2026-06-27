@@ -430,6 +430,9 @@ const mondialBroadcastMotionFields: OverlayField[] = [
 ];
 
 const mondialBroadcastPresentationFields: OverlayField[] = [
+  ...mondialCommonFields
+    .filter(field => field.id === 'mondialTheme')
+    .map(field => ({ ...field, value: 'MUNDIAL_MAIN' })),
   { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
   { id: 'broadcastLook', label: 'حزمة الستايل التلفزيوني', type: 'select', value: 'mega_pack_black', options: [
     { value: 'mega_pack_black', label: 'Mega pack black - giant arcs + white chips' },
@@ -914,6 +917,18 @@ export const MONDIAL_NEWS_TEMPLATES: OverlayConfig[] = [
 
 // ─── مجموعة 8: المنتخب العراقي 🇮🇶 ──────────────────────────────────────────
 
+const mondialIraqControlFields: OverlayField[] = mondialCommonFields
+  .filter(field => ['mondialTheme', 'positionY', 'positionX', 'transitionIn', 'transitionOut', 'soundEnabled', 'soundVolume'].includes(field.id))
+  .map(field => ({ ...field, value: field.id === 'mondialTheme' ? 'IRAQ_PRIDE' : field.value }));
+
+const withIraqControls = (template: OverlayConfig): OverlayConfig => ({
+  ...template,
+  fields: [
+    ...mondialIraqControlFields,
+    ...template.fields.filter(field => !mondialIraqControlFields.some(control => control.id === field.id)),
+  ],
+});
+
 export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
   {
     id: 'template-mondial-iraq-squad',
@@ -1091,7 +1106,7 @@ export const MONDIAL_2026_TEMPLATES: OverlayConfig[] = [
   ...MONDIAL_ANALYSIS_TEMPLATES,
   ...MONDIAL_STARS_TEMPLATES,
   ...MONDIAL_NEWS_TEMPLATES,
-  ...MONDIAL_IRAQ_TEMPLATES,
+  ...MONDIAL_IRAQ_TEMPLATES.map(withIraqControls),
 ];
 
 export default MONDIAL_2026_TEMPLATES;

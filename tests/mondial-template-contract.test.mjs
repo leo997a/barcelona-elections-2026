@@ -57,6 +57,15 @@ const CORE_VARIANTS = [
   'lower_third',
 ];
 
+const IRAQ_TEMPLATE_IDS = [
+  'template-mondial-iraq-squad',
+  'template-mondial-iraq-player',
+  'template-mondial-iraq-ticker',
+  'template-mondial-iraq-history',
+  'template-mondial-iraq-fan-pulse',
+  'template-mondial-iraq-dashboard',
+];
+
 test('all 23 core Mondial templates are registered, rendered, and categorized', async () => {
   const [templates, renderer, taxonomy] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
@@ -234,4 +243,54 @@ test('mondial OBS templates consume selected kinetic theme colors', async () => 
   assert.match(obs, /background: c\.gold/);
   assert.match(obs, /ColorRail theme=\{t\}/);
   assert.doesNotMatch(obs, /ReoObsGoldenBoot[\s\S]*?COLORS\[index % COLORS\.length\]/);
+});
+
+test('mondial broadcast pack templates expose the main theme and translate it into palettes', async () => {
+  const [templates, shared] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/mondial/MondialBroadcastShared.tsx'),
+  ]);
+
+  assert.match(templates, /const mondialBroadcastPresentationFields[\s\S]*?field\.id === 'mondialTheme'/);
+  assert.match(shared, /const THEME_TO_BROADCAST_PALETTE/);
+  for (const [theme, palette] of Object.entries({
+    MUNDIAL_MAIN: 'global',
+    MUNDIAL_NIGHT: 'midnight',
+    MUNDIAL_GOLD: 'trophy',
+    IRAQ_PRIDE: 'reo',
+    TACTICAL_DARK: 'electric',
+    CLEAN_BROADCAST: 'stadium_lights',
+  })) {
+    assert.match(shared, new RegExp(`${theme}: '${palette}'`), `${theme} does not map to ${palette}`);
+  }
+  assert.match(shared, /const themePalette = getBroadcastThemePalette\(getField\)/);
+  assert.match(shared, /return themePalette \|\| BROADCAST_LOOKS\[look\]\.palette/);
+});
+
+test('Iraq Mondial templates use shared controls and dedicated renderer variants', async () => {
+  const [templates, renderer, obs] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/Mondial2026Renderer.tsx'),
+    readSource('../components/renderers/MondialObsTemplates.tsx'),
+  ]);
+
+  for (const id of IRAQ_TEMPLATE_IDS) {
+    assert.match(templates, new RegExp(`id:\\s*'${id}'`), `${id} is not registered`);
+  }
+  assert.match(templates, /const mondialIraqControlFields/);
+  assert.match(templates, /MONDIAL_IRAQ_TEMPLATES\.map\(withIraqControls\)/);
+  assert.match(renderer, /getField\('mondialVariant'\) \|\| getField\('iraqVariant'\)/);
+  assert.match(renderer, /rawVariant === 'player_spotlight'[\s\S]*?'iraq_player_spotlight'/);
+  assert.match(renderer, /rawVariant === 'match_ticker'[\s\S]*?'iraq_match_ticker'/);
+  for (const variant of ['squad_card', 'iraq_player_spotlight', 'iraq_match_ticker', 'history_moment', 'fan_pulse', 'iraq_dashboard']) {
+    assert.match(renderer, new RegExp(`variant === '${variant}'`), `${variant} has no renderer branch`);
+  }
+  for (const component of ['ReoObsIraqSquad', 'ReoObsIraqPlayerSpotlight', 'ReoObsIraqTicker', 'ReoObsIraqHistory', 'ReoObsIraqFanPulse', 'ReoObsIraqDashboard']) {
+    assert.match(obs, new RegExp(`export const ${component}`), `${component} is missing`);
+  }
+  assert.match(obs, /props\.getField\('playerName'\)/);
+  assert.match(obs, /props\.getField\('iraqNews'\)/);
+  assert.match(obs, /getField\('momentTitle'\)/);
+  assert.match(obs, /getField\('pulseValue'\)/);
+  assert.match(obs, /getField\('groupTeamsJson'\) \|\| getField\('standingsJson'\)/);
 });

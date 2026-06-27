@@ -250,6 +250,22 @@ const BROADCAST_LOOKS: Record<Exclude<MondialBroadcastLook, 'manual'>, { style: 
   clean_draw: { style: 'clean_grid', palette: 'midnight' },
 };
 
+const THEME_TO_BROADCAST_PALETTE: Record<string, MondialBroadcastPalette> = {
+  MUNDIAL_MAIN: 'global',
+  MUNDIAL_NIGHT: 'midnight',
+  MUNDIAL_GOLD: 'trophy',
+  IRAQ_PRIDE: 'reo',
+  TACTICAL_DARK: 'electric',
+  CLEAN_BROADCAST: 'stadium_lights',
+};
+
+export const getBroadcastThemePalette = (
+  getField: MondialBroadcastProps['getField']
+): MondialBroadcastPalette | undefined => {
+  const theme = String(getField('mondialTheme') || '').trim().toUpperCase();
+  return THEME_TO_BROADCAST_PALETTE[theme];
+};
+
 export const GROUP_ACCENTS = [
   '#00d44b', '#139ebd', '#ff8416', '#2868ff',
   '#7616ff', '#a8f22a', '#ff0d86', '#10d9c0',
@@ -648,8 +664,9 @@ export const getBroadcastStyle = (getField: MondialBroadcastProps['getField']): 
 
 export const getBroadcastPalette = (getField: MondialBroadcastProps['getField']): MondialBroadcastPalette => {
   const look = getBroadcastLook(getField);
+  const themePalette = getBroadcastThemePalette(getField);
   if (look !== 'manual') {
-    return BROADCAST_LOOKS[look].palette;
+    return themePalette || BROADCAST_LOOKS[look].palette;
   }
   const value = String(getField('broadcastPalette') || 'global').toLowerCase();
   return value === 'mega_black'
