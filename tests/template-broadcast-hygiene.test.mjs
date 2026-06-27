@@ -32,6 +32,18 @@ test('statement source timeline has an editable broadcast label', async () => {
   assert.doesNotMatch(renderer, /source monitor/i);
 });
 
+test('raw data and player bridge fields stay in advanced settings', async () => {
+  const constants = await readSource('../constants.ts');
+
+  assert.match(constants, /id\.endsWith\('Json'\)/);
+  assert.match(constants, /id\.startsWith\('include'\)/);
+  assert.match(constants, /id === 'playerStatsDataMode'/);
+  assert.match(constants, /id === 'playerStatsApiUrl'/);
+  assert.match(constants, /id === 'playerStatsPollSec'/);
+  assert.match(constants, /id === 'statsData'/);
+  assert.match(constants, /id === 'playerStatsMode'[\s\S]*?\) return 'display'/);
+});
+
 test('public broadcast renderers do not expose raw provider or bridge labels', async () => {
   const sources = await Promise.all([
     readSource('../components/renderers/StatementCardsRenderer.tsx'),
