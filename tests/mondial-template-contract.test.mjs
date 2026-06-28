@@ -244,8 +244,12 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const buildFormationLineup = \(/);
   assert.match(obs, /const lineupSkin = \(style: string/);
   assert.match(obs, /const lineupLineFromY = \(y: number, direction: string, player\?: LineupPlayer\): LineupLine/);
-  assert.match(obs, /layoutMode === 'source_positions' && sourceHasEnoughPositions/);
+  assert.match(obs, /preferSourceInAuto = false/);
+  assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && \(layoutMode === 'source_positions' \|\| \(layoutMode === 'auto_formation' && preferSourceInAuto\)\)/);
+  assert.match(obs, /if \(useSourcePositions\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
+  assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
+  assert.match(obs, /\/\(LW\|RW\|LAM\|RAM\|AM\|WING\|WINGER\)\//);
   assert.match(obs, /const lineupLayoutMode = text\(getField, 'lineupLayoutMode', 'auto_formation'\)/);
   assert.match(obs, /const lineupDirection = text\(getField, 'lineupDirection', 'attack_up'\)/);
   assert.match(obs, /const lineupBoardStyle = text\(getField, 'lineupBoardStyle', 'reference_black'\)/);
@@ -257,10 +261,11 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const isStadiumScene = skin\.scene === 'stadium'/);
   assert.match(obs, /const featurePhotoPlayers = players/);
   assert.match(obs, /referrerPolicy="no-referrer"/);
+  assert.match(obs, /rating\.toFixed\(1\)/);
   assert.match(obs, /placement: 'field' \| 'list'/);
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
-  assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection\)/);
+  assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection, livePlayers\.length > 0\)/);
   assert.match(obs, /className="lineup-player-anchor absolute"/);
   assert.match(obs, /data-zone=\{player\.line\}/);
   assert.match(obs, /transform: 'translate\(-50%, -50%\)'/);

@@ -48,6 +48,7 @@ type GroupRow = {
 };
 
 type LineupPlayer = {
+  id?: string;
   num?: number;
   number?: number;
   name: string;
@@ -55,6 +56,8 @@ type LineupPlayer = {
   x?: number;
   y?: number;
   image?: string;
+  rating?: number;
+  team?: 'home' | 'away' | 'neutral';
 };
 
 type PositionedLineupPlayer = LineupPlayer & {
@@ -196,13 +199,13 @@ const LINEUP_LINE_TAGS: Record<LineupLine, string> = {
 };
 
 const lineupLineFromPosition = (pos?: string): LineupLine | null => {
-  const token = String(pos || '').toUpperCase();
+  const token = String(pos || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (!token) return null;
   if (token.includes('GK') || token.includes('GOAL')) return 'goalkeeper';
-  if (token.includes('CB') || token.includes('LB') || token.includes('RB') || token.includes('DF') || token.includes('DEF')) return 'defence';
-  if (token.includes('FW') || token.includes('ST') || token.includes('CF') || token.includes('ATT')) return 'attack';
-  if (token.includes('AM') || token.includes('WING') || token === 'W' || token.includes('LAM') || token.includes('RAM')) return 'support';
-  if (token.includes('CM') || token.includes('DM') || token.includes('MF') || token.includes('MID')) return 'midfield';
+  if (/(CB|LCB|RCB|LB|RB|LWB|RWB|DF|DEF|BACK)/.test(token)) return 'defence';
+  if (/(ST|CF|FW|FWD|ATT|STRIKER|FORWARD)/.test(token)) return 'attack';
+  if (/(LW|RW|LAM|RAM|AM|WING|WINGER)/.test(token)) return 'support';
+  if (/(DM|CDM|CM|MF|MID|MIDFIELD|LM|RM)/.test(token)) return 'midfield';
   return null;
 };
 
@@ -353,10 +356,12 @@ const buildFormationLineup = (
   players: LineupPlayer[],
   formation: string,
   layoutMode: string,
-  direction: string
+  direction: string,
+  preferSourceInAuto = false
 ): PositionedLineupPlayer[] => {
   const sourcePlayers = players.slice(0, 11).map(normalizedPlayer);
   const sourceHasEnoughPositions = sourcePlayers.filter(hasValidPitchPosition).length >= 8;
+  const useSourcePositions = sourceHasEnoughPositions && (layoutMode === 'source_positions' || (layoutMode === 'auto_formation' && preferSourceInAuto));
   const rows = playerRowsFromFormation(sourcePlayers.length ? sourcePlayers : DEFAULT_PLAYERS, formation);
   const outfieldRows = Math.max(1, rows.length - 1);
   const autoPositioned = rows.flatMap((row, rowIndex) =>
@@ -374,7 +379,7 @@ const buildFormationLineup = (
     })
   );
 
-  if (layoutMode === 'source_positions' && sourceHasEnoughPositions) {
+  if (useSourcePositions) {
     return sourcePlayers.map((player, index) => {
       const sourceY = Number(player.y ?? autoPositioned[index]?.y ?? 50);
       const y = clamp(mirrorPitchY(sourceY, direction), 10, 90);
@@ -415,6 +420,8 @@ const ReoLineupPlayerMarker: React.FC<{
   const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field');
   const number = player.num ?? player.number ?? index + 1;
   const hasImage = Boolean(imageUrl);
+  const rating = Number(player.rating);
+  const hasRating = Number.isFinite(rating) && rating > 0;
   return (
     <div
       className="flex flex-col items-center"
@@ -424,21 +431,27 @@ const ReoLineupPlayerMarker: React.FC<{
         className={`relative ${hasImage ? 'w-[82px] h-[82px] rounded-[28px]' : 'w-[74px] h-[74px] rounded-[24px]'} border-[5px] border-black flex items-center justify-center overflow-hidden text-[28px] font-black`}
         style={{ background: skin.panel, color: skin.panelText, boxShadow: `-8px 7px 0 ${paletteAt(theme, index)}` }}
       >
+        <span className="relative z-[1]">{number}</span>
         {hasImage ? (
           <>
             <img
               src={imageUrl}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover object-top"
+              className="absolute inset-0 z-[2] w-full h-full object-cover object-top"
               referrerPolicy="no-referrer"
               onError={(event) => { event.currentTarget.style.display = 'none'; }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/10 to-transparent" />
-            <span className="absolute right-1 bottom-1 min-w-8 h-8 px-2 rounded-[12px] border-[3px] border-black bg-white text-black flex items-center justify-center text-[20px] leading-none font-black">
+            <div className="absolute inset-0 z-[3] bg-gradient-to-t from-black/82 via-black/10 to-transparent" />
+            <span className="absolute right-1 bottom-1 z-[4] min-w-8 h-8 px-2 rounded-[12px] border-[3px] border-black bg-white text-black flex items-center justify-center text-[20px] leading-none font-black">
               {number}
             </span>
           </>
-        ) : number}
+        ) : null}
+        {hasRating && (
+          <span className="absolute left-1 top-1 z-[5] rounded-[10px] border-[3px] border-black bg-lime-300 px-1.5 py-0.5 text-[12px] leading-none font-black text-black">
+            {rating.toFixed(1)}
+          </span>
+        )}
       </div>
       <div
         className="mt-2 min-w-[86px] max-w-[158px] rounded-[15px] border-[4px] border-black px-3 py-1 text-center text-[13px] leading-tight font-black whitespace-nowrap overflow-hidden text-ellipsis"
@@ -460,16 +473,17 @@ const ReoLineupMiniAvatar: React.FC<{
   const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'list');
   const number = player.num ?? player.number ?? index + 1;
   return (
-    <span className="w-7 h-7 flex items-center justify-center rounded-[10px] border-[3px] border-black overflow-hidden text-[11px] font-black" style={{ background: paletteAt(theme, index), color: '#050505' }}>
+    <span className="relative w-7 h-7 flex items-center justify-center rounded-[10px] border-[3px] border-black overflow-hidden text-[11px] font-black" style={{ background: paletteAt(theme, index), color: '#050505' }}>
+      <span>{number}</span>
       {imageUrl ? (
         <img
           src={imageUrl}
           alt=""
-          className="w-full h-full object-cover object-top"
+          className="absolute inset-0 w-full h-full object-cover object-top"
           referrerPolicy="no-referrer"
           onError={(event) => { event.currentTarget.style.display = 'none'; }}
         />
-      ) : number}
+      ) : null}
     </span>
   );
 };
@@ -1601,7 +1615,7 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, resolv
   const lineupPhotoMode = text(getField, 'lineupPhotoMode', 'auto');
   const lineupShowBench = getField('lineupShowBench') !== false && String(getField('lineupShowBench') ?? 'true') !== 'false';
   const sourcePlayers = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
-  const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection);
+  const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection, livePlayers.length > 0);
   const c = themedColors(t);
   const teamColor = text(getField, 'color', c.success);
   const skin = lineupSkin(lineupBoardStyle, c, teamColor);

@@ -312,8 +312,8 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
         { value: 'away', label: 'الضيف من المباراة المختارة' },
       ]},
       { id: 'lineupLayoutMode', label: 'طريقة توزيع التشكيلة', type: 'select', value: 'auto_formation', options: [
-        { value: 'auto_formation', label: 'توزيع تلقائي من الخطة' },
-        { value: 'source_positions', label: 'استخدام مواقع المصدر إن توفرت' },
+        { value: 'auto_formation', label: 'تلقائي ذكي: مواقع المصدر ثم الخطة' },
+        { value: 'source_positions', label: 'إجبار مواقع المصدر إن توفرت' },
       ]},
       { id: 'lineupDirection', label: 'اتجاه لعب التشكيلة', type: 'select', value: 'attack_up', options: [
         { value: 'attack_up', label: 'الهجوم للأعلى' },
@@ -1313,8 +1313,8 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
         { value: '5-3-2', label: '5-3-2' },
       ]},
       { id: 'lineupLayoutMode', label: 'طريقة توزيع التشكيلة', type: 'select', value: 'auto_formation', options: [
-        { value: 'auto_formation', label: 'توزيع تلقائي من الخطة' },
-        { value: 'source_positions', label: 'استخدام مواقع المصدر إن توفرت' },
+        { value: 'auto_formation', label: 'تلقائي ذكي: مواقع المصدر ثم الخطة' },
+        { value: 'source_positions', label: 'إجبار مواقع المصدر إن توفرت' },
       ]},
       { id: 'lineupDirection', label: 'اتجاه لعب التشكيلة', type: 'select', value: 'attack_up', options: [
         { value: 'attack_up', label: 'الهجوم للأعلى' },
