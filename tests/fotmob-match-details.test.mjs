@@ -85,7 +85,7 @@ const rawMatchDetails = {
           name: 'Santiago Gimenez',
           shirtNumber: 9,
           positionLabel: 'FW',
-          horizontalLayout: { x: 50, y: 18 },
+          horizontalLayout: { x: 0.5, y: 0.18 },
         }],
         subs: [],
       },
@@ -99,7 +99,7 @@ const rawMatchDetails = {
           name: 'Ronwen Williams',
           shirtNumber: 1,
           positionLabel: 'GK',
-          horizontalLayout: { x: 50, y: 85 },
+          horizontalLayout: { x: 5, y: 8.5 },
         }],
         subs: [],
       },
@@ -181,8 +181,13 @@ test('maps match details to legacy fields consumed by existing templates', () =>
   assert.equal(fields.statFoulsAway, 15);
   assert.equal(fields.statYellowAway, 3);
   assert.equal(fields.statPassHome, 83);
-  assert.equal(JSON.parse(fields.playersJson)[0].name, 'Santiago Gimenez');
+  const homeLineup = JSON.parse(fields.playersJson);
+  assert.equal(homeLineup[0].name, 'Santiago Gimenez');
+  assert.equal(homeLineup[0].x, 50);
+  assert.equal(homeLineup[0].y, 18);
   assert.equal(lineupsToPlayersJson(details, 'away')[0].name, 'Ronwen Williams');
+  assert.equal(lineupsToPlayersJson(details, 'away')[0].x, 50);
+  assert.equal(lineupsToPlayersJson(details, 'away')[0].y, 85);
 });
 
 test('editor, operator and OBS variants expose live match selection and details', async () => {

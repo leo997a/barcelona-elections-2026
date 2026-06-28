@@ -17,6 +17,9 @@ const CORE_TEMPLATE_IDS = [
   'template-mondial-accuracy-control',
   'template-mondial-attack-shot-quality',
   'template-mondial-duels-discipline',
+  'template-mondial-territory-control',
+  'template-mondial-xg-shot-flow',
+  'template-mondial-live-momentum',
   'template-mondial-group-wall',
   'template-mondial-all-flags-wall',
   'template-mondial-team-code-wall',
@@ -42,6 +45,9 @@ const CORE_VARIANTS = [
   'match_preview',
   'lineup',
   'match_result',
+  'match_stats',
+  'match_stats',
+  'match_stats',
   'match_stats',
   'match_stats',
   'match_stats',
@@ -74,15 +80,15 @@ const IRAQ_TEMPLATE_IDS = [
   'template-mondial-iraq-dashboard',
 ];
 
-test('all 27 core Mondial templates are registered, rendered, and categorized', async () => {
+test('all 30 core Mondial templates are registered, rendered, and categorized', async () => {
   const [templates, renderer, taxonomy] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
     readSource('../components/renderers/Mondial2026Renderer.tsx'),
     readSource('../utils/templateTaxonomy.ts'),
   ]);
 
-  assert.equal(CORE_TEMPLATE_IDS.length, 27);
-  assert.equal(CORE_VARIANTS.length, 27);
+  assert.equal(CORE_TEMPLATE_IDS.length, 30);
+  assert.equal(CORE_VARIANTS.length, 30);
   const coreTemplateSource = templates.split('export const MONDIAL_IRAQ_TEMPLATES')[0];
   const registeredCoreIds = [
     ...coreTemplateSource.matchAll(/^\s+id:\s*'(template-mondial-[^']+)'/gm),
@@ -249,6 +255,8 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /statsViewMode === 'key_numbers'/);
   assert.match(obs, /statsViewMode === 'momentum_grid'/);
   assert.match(obs, /statsViewMode === 'pressure_accuracy'/);
+  assert.match(obs, /statsViewMode === 'territory_radar'/);
+  assert.match(obs, /statsViewMode === 'xg_shot_flow'/);
   assert.match(obs, /rows\.filter\(row => row\.focus === statFocus\)/);
   assert.match(obs, /statPressureHome/);
   assert.match(obs, /statShotAccuracyHome/);
@@ -259,6 +267,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(templates, /id: 'template-mondial-accuracy-control'/);
   assert.match(templates, /id: 'template-mondial-attack-shot-quality'/);
   assert.match(templates, /id: 'template-mondial-duels-discipline'/);
+  assert.match(templates, /id: 'template-mondial-territory-control'/);
+  assert.match(templates, /id: 'template-mondial-xg-shot-flow'/);
+  assert.match(templates, /id: 'template-mondial-live-momentum'/);
 
   assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
   assert.match(obs, /scorerViewMode === 'podium'/);

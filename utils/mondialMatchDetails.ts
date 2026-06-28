@@ -258,6 +258,25 @@ const optionalNumber = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const pitchScaleFor = (...values: Array<number | undefined>): number => {
+  const finite = values.filter((value): value is number => Number.isFinite(value));
+  if (!finite.length) return 1;
+  const max = Math.max(...finite.map(value => Math.abs(value)));
+  if (max <= 1.2) return 100;
+  if (max <= 10) return 10;
+  return 1;
+};
+
+const normalizePitchCoordinate = (
+  value: number | undefined,
+  scale: number,
+  min: number,
+  max: number
+): number | undefined => {
+  if (!Number.isFinite(value)) return undefined;
+  return Math.max(min, Math.min(max, Number(value) * scale));
+};
+
 const countryToIso2 = (value: unknown): string => {
   const token = stringValue(value).trim().toLowerCase();
   if (token.length === 2) return token;
@@ -502,15 +521,18 @@ const lineupPlayer = (
   const id = stringValue(player.id, '');
   const horizontal = recordOf(player.horizontalLayout);
   const vertical = recordOf(player.verticalLayout);
-  const x = optionalNumber(horizontal?.x ?? vertical?.x);
-  const y = optionalNumber(horizontal?.y ?? vertical?.y);
+  const rawX = optionalNumber(horizontal?.x ?? vertical?.x);
+  const rawY = optionalNumber(horizontal?.y ?? vertical?.y);
+  const pitchScale = pitchScaleFor(rawX, rawY);
+  const x = normalizePitchCoordinate(rawX, pitchScale, 8, 92);
+  const y = normalizePitchCoordinate(rawY, pitchScale, 10, 88);
   return {
     id: id || undefined,
     name: stringValue(player.name, `Player ${index + 1}`),
     number: optionalNumber(player.shirtNumber),
     pos: stringValue(player.positionLabel ?? player.position, ''),
-    x: x !== undefined ? Math.max(8, Math.min(92, x)) : undefined,
-    y: y !== undefined ? Math.max(10, Math.min(88, y)) : undefined,
+    x,
+    y,
     image: id ? PLAYER_IMAGE_URL(id) : undefined,
     rating: playerRating(id, playerStats),
     team,

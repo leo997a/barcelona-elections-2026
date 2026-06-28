@@ -1063,8 +1063,18 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const pressureRows = rows
     .filter(row => row.focus === 'pressure' || row.focus === 'accuracy' || row.label === 'ميل الملعب')
     .slice(0, 6);
+  const controlRows = rows
+    .filter(row => ['control', 'accuracy', 'pressure'].includes(row.focus) || row.label === 'استرداد الكرة')
+    .slice(0, 6);
+  const shotFlowRows = rows
+    .filter(row => row.focus === 'attack' || row.label === 'دقة التسديد')
+    .slice(0, 5);
   const homeMomentum = momentumRows.filter(row => row.homeBar >= row.awayBar).length;
   const awayMomentum = momentumRows.length - homeMomentum;
+  const homeControlScore = controlRows.filter(row => row.homeBar >= row.awayBar).length;
+  const awayControlScore = controlRows.length - homeControlScore;
+  const xgRow = rows.find(row => row.label === 'الأهداف المتوقعة') || shotFlowRows[0];
+  const shotsRow = rows.find(row => row.label === 'التسديدات') || shotFlowRows[1];
   const c = themedColors(t);
   return (
     <KineticStage theme={t}>
@@ -1121,6 +1131,93 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                     <div className="text-[13px] font-black">زخم {awayCode}</div>
                     <div className="text-[82px] leading-none font-black">{awayMomentum}</div>
                     <div className="text-[11px] font-black">تفوق في {momentumRows.length} مؤشرات</div>
+                  </div>
+                </div>
+              ) : statsViewMode === 'territory_radar' ? (
+                <div className="p-7 grid grid-cols-[300px_1fr_300px] gap-5 items-stretch">
+                  <div className="relative overflow-hidden border-[5px] border-black rounded-[30px] p-5 flex flex-col justify-between" style={{ background: c.accent, animation: 'wcCardRise .62s .2s both' }}>
+                    <div className="absolute -right-12 -top-14 w-36 h-36 rounded-full bg-white/35" />
+                    <div className="relative text-[13px] font-black">سيطرة {homeCode}</div>
+                    <div className="relative text-[88px] leading-none font-black">{homeControlScore}</div>
+                    <div className="relative text-[11px] font-black">من {controlRows.length} مؤشرات تحكم</div>
+                  </div>
+                  <div className="relative border-[5px] border-black rounded-[30px] bg-black text-white p-5 overflow-hidden">
+                    <div className="absolute inset-0 opacity-25" style={{ background: `linear-gradient(90deg, ${c.accent}, transparent 42%, ${c.danger})` }} />
+                    <div className="relative grid grid-cols-2 gap-4 mb-5">
+                      {[homeCode, awayCode].map((code, index) => (
+                        <div key={code} className="rounded-[24px] bg-white text-black border-[4px] border-black p-4 font-black" style={{ animation: `wcBadgePop .5s ${.24 + index * .09}s both` }}>
+                          <div className="flex items-center gap-3"><MondialFlag codeOrName={code} size={38} /><span className="text-[15px]">{code}</span></div>
+                          <div className="text-[46px] leading-none mt-3">{index === 0 ? homeControlScore : awayControlScore}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="relative space-y-3">
+                      {controlRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                        const total = Math.max(1, homeBar + awayBar);
+                        const homePct = Math.round((homeBar / total) * 100);
+                        const awayPct = 100 - homePct;
+                        return (
+                          <div key={`territory-${label}`} className="grid grid-cols-[82px_1fr_82px] gap-3 items-center font-black" style={{ animation: `wcRowIn .46s ${.32 + index * .07}s both` }}>
+                            <span className="text-[17px]">{detailStatText(homeValue)}</span>
+                            <div>
+                              <div className="flex justify-between text-[10px] mb-1"><span>{label}</span><span>{homePct}:{awayPct}</span></div>
+                              <div className="h-4 rounded-full bg-white/15 overflow-hidden border border-white/25">
+                                <div className="h-full" style={{ width: `${homePct}%`, background: `linear-gradient(90deg, ${c.accent}, ${c.gold})` }} />
+                              </div>
+                            </div>
+                            <span className="text-[17px] text-left">{detailStatText(awayValue)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="relative overflow-hidden border-[5px] border-black rounded-[30px] p-5 flex flex-col justify-between text-white" style={{ background: c.danger, animation: 'wcCardRise .62s .28s both' }}>
+                    <div className="absolute -left-12 -bottom-14 w-36 h-36 rounded-full bg-black/20" />
+                    <div className="relative text-[13px] font-black">سيطرة {awayCode}</div>
+                    <div className="relative text-[88px] leading-none font-black">{awayControlScore}</div>
+                    <div className="relative text-[11px] font-black">من {controlRows.length} مؤشرات تحكم</div>
+                  </div>
+                </div>
+              ) : statsViewMode === 'xg_shot_flow' ? (
+                <div className="p-7 grid grid-cols-[350px_1fr] gap-6 items-stretch">
+                  <div className="relative border-[5px] border-black rounded-[30px] overflow-hidden text-black p-6 flex flex-col justify-between" style={{ background: c.gold, animation: 'wcCardRise .62s .22s both' }}>
+                    <div className="absolute -right-14 -top-14 w-44 h-44 rounded-full bg-white/45" />
+                    <div className="relative text-[14px] font-black">جودة الفرص xG</div>
+                    <div className="relative grid grid-cols-2 gap-4 items-end">
+                      <div>
+                        <div className="text-[12px] font-black">{homeCode}</div>
+                        <div className="text-[76px] leading-none font-black">{detailStatText(xgRow?.homeValue ?? 0)}</div>
+                      </div>
+                      <div className="text-left">
+                        <div className="text-[12px] font-black">{awayCode}</div>
+                        <div className="text-[76px] leading-none font-black">{detailStatText(xgRow?.awayValue ?? 0)}</div>
+                      </div>
+                    </div>
+                    <div className="relative text-[12px] font-black">التسديدات: {detailStatText(shotsRow?.homeValue ?? 0)} - {detailStatText(shotsRow?.awayValue ?? 0)}</div>
+                  </div>
+                  <div className="relative bg-black text-white border-[5px] border-black rounded-[30px] p-6 overflow-hidden">
+                    <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(circle at 18% 20%, ${c.danger}, transparent 30%), radial-gradient(circle at 85% 75%, ${c.accent}, transparent 34%)` }} />
+                    <div className="relative flex items-center justify-between mb-5">
+                      <div className="text-[34px] leading-none font-black">تدفق التسديد</div>
+                      <div className="rounded-full bg-white text-black border-[4px] border-black px-4 py-2 text-[12px] font-black">مباشر</div>
+                    </div>
+                    <div className="relative grid grid-cols-5 gap-3 h-[300px] items-end">
+                      {shotFlowRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                        const maxValue = Math.max(1, homeBar, awayBar);
+                        return (
+                          <div key={`shot-flow-${label}`} className="h-full flex flex-col justify-end gap-2" style={{ animation: `wcBadgePop .55s ${.3 + index * .08}s both` }}>
+                            <div className="grid grid-cols-2 gap-1 items-end h-[210px]">
+                              <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (homeBar / maxValue) * 100)}%`, background: c.accent }} />
+                              <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (awayBar / maxValue) * 100)}%`, background: c.danger }} />
+                            </div>
+                            <div className="text-center">
+                              <div className="text-[18px] font-black">{detailStatText(homeValue)}:{detailStatText(awayValue)}</div>
+                              <div className="text-[9px] font-black text-white/65 leading-tight">{label}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ) : statsViewMode === 'pressure_accuracy' ? (
