@@ -820,9 +820,12 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
   const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
   const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'AR'));
+  const statsViewMode = text(getField, 'statsViewMode', 'dual_bars');
+  const statFocus = text(getField, 'statFocus', 'balanced');
   const rows = [
     {
       label: 'الاستحواذ',
+      focus: 'control',
       keys: ['BallPossesion', 'Ball possession', 'Possession'],
       homeField: 'statPossessionHome',
       awayField: 'statPossessionAway',
@@ -831,6 +834,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'الأهداف المتوقعة',
+      focus: 'attack',
       keys: ['expected_goals', 'Expected goals (xG)', 'Expected goals'],
       homeField: 'statXgHome',
       awayField: 'statXgAway',
@@ -839,6 +843,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'التسديدات',
+      focus: 'attack',
       keys: ['total_shots', 'Total shots'],
       homeField: 'statShotsHome',
       awayField: 'statShotsAway',
@@ -847,6 +852,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'على المرمى',
+      focus: 'attack',
       keys: ['ShotsOnTarget', 'Shots on target'],
       homeField: 'statOnTargetHome',
       awayField: 'statOnTargetAway',
@@ -855,6 +861,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'الركنيات',
+      focus: 'attack',
       keys: ['corners', 'Corners'],
       homeField: 'statCornersHome',
       awayField: 'statCornersAway',
@@ -863,6 +870,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'المخالفات',
+      focus: 'discipline',
       keys: ['fouls', 'Fouls', 'Fouls committed'],
       homeField: 'statFoulsHome',
       awayField: 'statFoulsAway',
@@ -871,6 +879,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'البطاقات الصفراء',
+      focus: 'discipline',
       keys: ['yellow_cards', 'Yellow cards'],
       homeField: 'statYellowHome',
       awayField: 'statYellowAway',
@@ -879,6 +888,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'دقة التمرير',
+      focus: 'control',
       keys: ['AccuratePasses', 'Accurate passes', 'Pass accuracy'],
       homeField: 'statPassHome',
       awayField: 'statPassAway',
@@ -891,12 +901,21 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     const awayValue = liveRow?.away ?? num(getField, definition.awayField, definition.awayFallback);
     return {
       label: definition.label,
+      focus: definition.focus,
       homeValue,
       awayValue,
       homeBar: detailStatNumber(homeValue),
       awayBar: detailStatNumber(awayValue),
     };
   });
+  const visibleRows = statFocus === 'balanced'
+    ? rows
+    : rows.filter(row => row.focus === statFocus);
+  const statRows = visibleRows.length >= 3 ? visibleRows : rows;
+  const featuredRows = statRows.slice(0, 4);
+  const momentumRows = statRows.slice(0, 6);
+  const homeMomentum = momentumRows.filter(row => row.homeBar >= row.awayBar).length;
+  const awayMomentum = momentumRows.length - homeMomentum;
   const c = themedColors(t);
   return (
     <KineticStage theme={t}>
@@ -912,22 +931,67 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                 <div className="text-center text-[12px] font-black text-[#eeff00]">مونديال 2026</div>
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
               </div>
-              <div className="p-7 space-y-3">
-                {rows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
-                  const total = Math.max(1, homeBar + awayBar);
-                  return (
-                    <div key={label} style={{ animation: `wcRowIn .5s ${.28 + index * .08}s cubic-bezier(.16,1,.3,1) both` }}>
-                      <div className="grid grid-cols-[72px_1fr_150px_1fr_72px] items-center gap-4 font-black">
-                        <span className="text-[23px]">{detailStatText(homeValue)}</span>
-                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full" dir="rtl"><div className="h-full" style={{ width: `${homeBar / total * 100}%`, background: c.accent }} /></div>
-                        <span className="text-center text-[14px]">{label}</span>
-                        <div className="h-3 bg-gray-200 overflow-hidden rounded-full"><div className="h-full" style={{ width: `${awayBar / total * 100}%`, background: c.danger }} /></div>
-                        <span className="text-[23px] text-left">{detailStatText(awayValue)}</span>
+              {statsViewMode === 'key_numbers' ? (
+                <div className="p-7 grid grid-cols-4 gap-4">
+                  {featuredRows.map(({ label, homeValue, awayValue }, index) => (
+                    <div key={label} className="min-h-[165px] border-[5px] border-black rounded-[26px] p-4 flex flex-col justify-between" style={{ background: paletteAt(t, index), animation: `wcBadgePop .55s ${.28 + index * .09}s cubic-bezier(.16,1.25,.3,1) both` }}>
+                      <div className="text-[12px] font-black">{label}</div>
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <div>
+                          <div className="text-[10px] font-black">{homeCode}</div>
+                          <div className="text-[42px] leading-none font-black">{detailStatText(homeValue)}</div>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-[10px] font-black">{awayCode}</div>
+                          <div className="text-[42px] leading-none font-black">{detailStatText(awayValue)}</div>
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : statsViewMode === 'momentum_grid' ? (
+                <div className="p-7 grid grid-cols-[260px_1fr_260px] gap-5 items-stretch">
+                  <div className="border-[5px] border-black rounded-[28px] p-5 flex flex-col justify-between" style={{ background: c.accent, animation: 'wcCardRise .62s .22s both' }}>
+                    <div className="text-[13px] font-black">زخم {homeCode}</div>
+                    <div className="text-[82px] leading-none font-black">{homeMomentum}</div>
+                    <div className="text-[11px] font-black">تفوق في {momentumRows.length} مؤشرات</div>
+                  </div>
+                  <div className="space-y-3">
+                    {momentumRows.map(({ label, homeBar, awayBar }, index) => {
+                      const total = Math.max(1, homeBar + awayBar);
+                      return (
+                        <div key={label} className="grid grid-cols-[1fr_170px_1fr] gap-4 items-center font-black" style={{ animation: `wcRowIn .5s ${.3 + index * .07}s both` }}>
+                          <div className="h-5 rounded-full bg-gray-200 overflow-hidden" dir="rtl"><div className="h-full" style={{ width: `${homeBar / total * 100}%`, background: c.accent }} /></div>
+                          <div className="text-center text-[14px]">{label}</div>
+                          <div className="h-5 rounded-full bg-gray-200 overflow-hidden"><div className="h-full" style={{ width: `${awayBar / total * 100}%`, background: c.danger }} /></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="border-[5px] border-black rounded-[28px] p-5 flex flex-col justify-between text-white" style={{ background: c.danger, animation: 'wcCardRise .62s .3s both' }}>
+                    <div className="text-[13px] font-black">زخم {awayCode}</div>
+                    <div className="text-[82px] leading-none font-black">{awayMomentum}</div>
+                    <div className="text-[11px] font-black">تفوق في {momentumRows.length} مؤشرات</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-7 space-y-3">
+                  {statRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                    const total = Math.max(1, homeBar + awayBar);
+                    return (
+                      <div key={label} style={{ animation: `wcRowIn .5s ${.28 + index * .08}s cubic-bezier(.16,1,.3,1) both` }}>
+                        <div className="grid grid-cols-[72px_1fr_150px_1fr_72px] items-center gap-4 font-black">
+                          <span className="text-[23px]">{detailStatText(homeValue)}</span>
+                          <div className="h-3 bg-gray-200 overflow-hidden rounded-full" dir="rtl"><div className="h-full" style={{ width: `${homeBar / total * 100}%`, background: c.accent }} /></div>
+                          <span className="text-center text-[14px]">{label}</span>
+                          <div className="h-3 bg-gray-200 overflow-hidden rounded-full"><div className="h-full" style={{ width: `${awayBar / total * 100}%`, background: c.danger }} /></div>
+                          <span className="text-[23px] text-left">{detailStatText(awayValue)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1041,7 +1105,85 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
     { label: 'دقة التمرير', value: '79%' },
     { label: 'المسافة', value: '9.4 KM' },
       ];
+  const playerCardMode = text(getField, 'playerCardMode', 'hero_stats');
+  const spotlightStats = shownStats.slice(0, playerCardMode === 'impact_radar' ? 5 : 4);
   const c = themedColors(t);
+  const spotlightCode = playerCode || text(getField, 'code', 'IQ');
+  if (playerCardMode === 'impact_radar') {
+    return (
+      <KineticStage image={image} theme={t}>
+        <div className="w-full h-full p-10 grid grid-cols-[1fr_470px] gap-8 items-center">
+          <div>
+            <KineticHeader title="رادار التأثير" tag="PLAYER IMPACT · REO SHOW" theme={t} />
+            <TeamCode value={spotlightCode} color={c.success} delay={.25} />
+            <div className="text-[62px] font-black leading-[1.05] mt-5">{playerName}</div>
+            <div className="text-[20px] font-black mt-3 text-[#eeff00]">{playerPosition}</div>
+            <div className="grid grid-cols-2 gap-4 mt-8">
+              {spotlightStats.slice(0, 4).map((stat, index) => (
+                <div key={stat.label} className="border-[4px] border-black rounded-[22px] p-4 text-black" style={{ background: paletteAt(t, index), animation: `wcRowIn .5s ${.34 + index * .09}s both` }}>
+                  <div className="text-[30px] leading-none font-black">{stat.value}</div>
+                  <div className="text-[11px] font-black mt-2">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="relative h-[520px] flex items-center justify-center">
+            <div className="absolute w-[420px] h-[420px] rounded-full border-[6px] border-black bg-white/90" style={{ boxShadow: `16px 14px 0 ${c.danger}` }} />
+            {[0, 1, 2, 3, 4].map(index => (
+              <div
+                key={`radar-${index}`}
+                className="absolute w-5 h-5 rounded-full border-[3px] border-black"
+                style={{
+                  background: paletteAt(t, index),
+                  left: `${50 + Math.cos((index / 5) * Math.PI * 2 - Math.PI / 2) * 38}%`,
+                  top: `${50 + Math.sin((index / 5) * Math.PI * 2 - Math.PI / 2) * 38}%`,
+                  animation: `wcBadgePop .5s ${.42 + index * .08}s both`,
+                }}
+              />
+            ))}
+            <div className="relative text-center">
+              <MondialFlag codeOrName={spotlightCode} size={96} />
+              <div className="mt-5 text-[92px] leading-none font-black text-black">{playerRating}</div>
+              <div className="text-[13px] font-black text-black">تقييم التأثير</div>
+            </div>
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
+  if (playerCardMode === 'match_mom') {
+    return (
+      <KineticStage image={image} theme={t}>
+        <div className="w-full h-full p-10 flex items-center justify-center">
+          <div className="relative w-[1020px] min-h-[560px]">
+            <div className="absolute inset-0 rounded-[40px]" style={{ background: c.gold, transform: 'translate(22px,18px)' }} />
+            <div className="relative bg-white text-black border-[7px] border-black rounded-[40px] overflow-hidden">
+              <div className="grid grid-cols-[280px_1fr]">
+                <div className="p-8 flex flex-col items-center justify-center text-center" style={{ background: c.ink, color: c.paper }}>
+                  <MondialFlag codeOrName={spotlightCode} size={118} />
+                  <div className="mt-8 text-[102px] leading-none font-black">{playerRating}</div>
+                  <div className="text-[12px] font-black text-[#eeff00]">رجل المباراة</div>
+                </div>
+                <div className="p-9">
+                  <div className="text-[13px] font-black text-black/60">PLAYER OF THE MATCH</div>
+                  <div className="text-[72px] leading-[1.02] font-black mt-3">{playerName}</div>
+                  <div className="text-[19px] font-black mt-3">{playerPosition}</div>
+                  <div className="grid grid-cols-3 gap-3 mt-8">
+                    {spotlightStats.slice(0, 3).map((stat, index) => (
+                      <div key={stat.label} className="border-[4px] border-black rounded-[20px] p-4" style={{ background: paletteAt(t, index), animation: `wcBadgePop .5s ${.36 + index * .1}s both` }}>
+                        <div className="text-[34px] leading-none font-black">{stat.value}</div>
+                        <div className="text-[10px] font-black mt-2">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
   return (
     <KineticStage image={image} theme={t}>
       <div className="w-full h-full p-10 grid grid-cols-[1fr_47%] gap-8">
@@ -1075,8 +1217,10 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
 export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, liveData }) => {
   const liveScorers = normalizeWorldCupScorers(liveData);
   const boundScorers = scorersFromWorldCupData(liveData, getField('scorersJson'));
+  const scorerViewMode = text(getField, 'scorerViewMode', 'race_board');
+  const scorerLimit = Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6)));
   const scorers = (boundScorers.length ? boundScorers : DEFAULT_SCORERS)
-    .slice(0, Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6))));
+    .slice(0, scorerLimit);
   const c = themedColors(t);
   const sourceTag = liveScorers.length ? 'بيانات مباشرة · REO SHOW' : 'سباق الهدافين · REO SHOW';
   return (
@@ -1084,44 +1228,78 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
       <div className="w-full h-full p-10 flex flex-col">
         <KineticHeader title="سباق الحذاء الذهبي" tag={sourceTag} theme={t} />
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-[1080px] space-y-3">
-            {scorers.map((player, index) => (
-              <div
-                key={`${player.id ?? player.name}-${index}`}
-                className="grid grid-cols-[86px_82px_1fr_250px_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
-                style={{ background: c.paper, color: c.ink, boxShadow: `12px 10px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .55s ${.2 + index * .11}s both` }}
-              >
-                <div className="h-full min-h-[86px] flex items-center justify-center text-[42px] font-black" style={{ background: c.ink, color: c.paper }}>{player.rank ?? index + 1}</div>
-                <div className="flex items-center justify-center">
-                  <div className="relative w-16 h-16 overflow-hidden rounded-[18px] border-[4px] border-black bg-white">
-                    <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={64} />
-                    {player.image && (
-                      <img
-                        src={player.image}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={event => { event.currentTarget.style.display = 'none'; }}
-                      />
-                    )}
+          {scorerViewMode === 'podium' ? (
+            <div className="grid grid-cols-3 gap-6 w-[1060px] items-end">
+              {scorers.slice(0, 3).map((player, index) => (
+                <div
+                  key={`${player.id ?? player.name}-podium-${index}`}
+                  className="border-[6px] border-black rounded-[32px] overflow-hidden bg-white text-black"
+                  style={{ minHeight: index === 0 ? 430 : 350, boxShadow: `14px 12px 0 ${paletteAt(t, index)}`, animation: `wcCardRise .65s ${.22 + index * .1}s cubic-bezier(.16,1.2,.3,1) both` }}
+                >
+                  <div className="h-28 flex items-center justify-between px-6" style={{ background: index === 0 ? c.gold : paletteAt(t, index + 2) }}>
+                    <div className="text-[58px] font-black">{player.rank ?? index + 1}</div>
+                    <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={70} />
+                  </div>
+                  <div className="p-6">
+                    <div className="text-[28px] leading-[1.08] font-black">{player.nameAr || player.name}</div>
+                    <div className="text-[13px] font-black mt-2">{player.team}</div>
+                    <div className="mt-7 text-[96px] leading-none font-black">{player.goals}</div>
+                    <div className="text-[12px] font-black">أهداف</div>
                   </div>
                 </div>
-                <div className="px-5">
-                  <div className="text-[22px] font-black">{player.nameAr || player.name}</div>
-                  <div className="text-[12px] font-black">{player.team}</div>
+              ))}
+            </div>
+          ) : scorerViewMode === 'compact_ranking' ? (
+            <div className="w-[1080px] grid grid-cols-2 gap-4">
+              {scorers.map((player, index) => (
+                <div key={`${player.id ?? player.name}-compact-${index}`} className="grid grid-cols-[56px_60px_1fr_82px] items-center gap-4 border-[4px] border-black rounded-[22px] bg-white text-black px-4 py-3" style={{ boxShadow: `8px 7px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .45s ${.18 + index * .06}s both` }}>
+                  <div className="text-[28px] font-black">{player.rank ?? index + 1}</div>
+                  <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={52} />
+                  <div><div className="text-[18px] font-black leading-tight">{player.nameAr || player.name}</div><div className="text-[10px] font-black">{player.team}</div></div>
+                  <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold }}><div className="text-[28px] leading-none font-black">{player.goals}</div></div>
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-2 px-4 text-[10px] font-black">
-                  <span className="rounded-full border-2 border-black px-3 py-1">أسيست {player.assists ?? 0}</span>
-                  {player.appearances !== undefined && (
-                    <span className="rounded-full border-2 border-black px-3 py-1">مشاركة {player.appearances}</span>
-                  )}
-                  {player.minutesPlayed !== undefined && (
-                    <span className="rounded-full border-2 border-black px-3 py-1">دقيقة {player.minutesPlayed}</span>
-                  )}
+              ))}
+            </div>
+          ) : (
+            <div className="w-[1080px] space-y-3">
+              {scorers.map((player, index) => (
+                <div
+                  key={`${player.id ?? player.name}-${index}`}
+                  className="grid grid-cols-[86px_82px_1fr_250px_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
+                  style={{ background: c.paper, color: c.ink, boxShadow: `12px 10px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .55s ${.2 + index * .11}s both` }}
+                >
+                  <div className="h-full min-h-[86px] flex items-center justify-center text-[42px] font-black" style={{ background: c.ink, color: c.paper }}>{player.rank ?? index + 1}</div>
+                  <div className="flex items-center justify-center">
+                    <div className="relative w-16 h-16 overflow-hidden rounded-[18px] border-[4px] border-black bg-white">
+                      <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={64} />
+                      {player.image && (
+                        <img
+                          src={player.image}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover"
+                          onError={event => { event.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="px-5">
+                    <div className="text-[22px] font-black">{player.nameAr || player.name}</div>
+                    <div className="text-[12px] font-black">{player.team}</div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2 px-4 text-[10px] font-black">
+                    <span className="rounded-full border-2 border-black px-3 py-1">أسيست {player.assists ?? 0}</span>
+                    {player.appearances !== undefined && (
+                      <span className="rounded-full border-2 border-black px-3 py-1">مشاركة {player.appearances}</span>
+                    )}
+                    {player.minutesPlayed !== undefined && (
+                      <span className="rounded-full border-2 border-black px-3 py-1">دقيقة {player.minutesPlayed}</span>
+                    )}
+                  </div>
+                  <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[43px] font-black">{player.goals}</div><div className="text-[10px] font-black">أهداف</div></div>
                 </div>
-                <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[43px] font-black">{player.goals}</div><div className="text-[10px] font-black">أهداف</div></div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </KineticStage>
@@ -1198,7 +1376,72 @@ export const ReoObsVarAlert: React.FC<ReoObsVariantProps> = ({ t, getField }) =>
 export const ReoObsAnalysis: React.FC<ReoObsVariantProps> = ({ t, getField, resolveField }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
+  const analysisViewMode = text(getField, 'analysisViewMode', 'tactical_board');
+  const keyBattles = [
+    text(getField, 'keyBattle1', 'المهاجم ضد قلب الدفاع'),
+    text(getField, 'keyBattle2', 'معركة وسط الملعب'),
+  ];
+  const possessionHome = clamp(num(getField, 'possession', 48), 0, 100);
+  const possessionAway = clamp(num(getField, 'possessionAway', 52), 0, 100);
   const c = themedColors(t);
+  if (analysisViewMode === 'key_battles') {
+    return (
+      <KineticStage theme={t}>
+        <div className="w-full h-full p-10 flex flex-col">
+          <KineticHeader title={`${home} ضد ${away}`} tag="KEY BATTLES · REO SHOW" theme={t} />
+          <div className="flex-1 grid grid-cols-2 gap-7 items-center">
+            {keyBattles.map((value, index) => (
+              <div key={value} className="relative min-h-[420px]" style={{ animation: `wcCardRise .65s ${.22 + index * .12}s both` }}>
+                <div className="absolute inset-0 rounded-[34px]" style={{ background: paletteAt(t, index + 3), transform: 'translate(18px,16px)' }} />
+                <div className="relative h-full bg-white text-black border-[6px] border-black rounded-[34px] p-8 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[13px] font-black text-black/60">مواجهة رقم {index + 1}</div>
+                    <div className="text-[44px] leading-[1.12] font-black mt-4">{value}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-[22px] border-[4px] border-black p-4" style={{ background: c.accent }}><div className="text-[14px] font-black">{home}</div><div className="text-[42px] font-black">{possessionHome}%</div></div>
+                    <div className="rounded-[22px] border-[4px] border-black p-4" style={{ background: c.danger, color: c.paper }}><div className="text-[14px] font-black">{away}</div><div className="text-[42px] font-black">{possessionAway}%</div></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
+  if (analysisViewMode === 'pressure_map') {
+    return (
+      <KineticStage theme={t}>
+        <div className="w-full h-full p-9 flex flex-col">
+          <KineticHeader title="خريطة الضغط والاستحواذ" tag={`${home} × ${away}`} theme={t} />
+          <div className="flex-1 grid grid-cols-[1fr_360px] gap-8 items-center">
+            <div className="relative h-[560px] bg-white border-[6px] border-black rounded-[34px] overflow-hidden">
+              <div className="absolute inset-[7%] border-[4px] border-black rounded-[22px]" />
+              <div className="absolute left-[7%] right-[7%] top-1/2 border-t-[4px] border-black" />
+              <div className="absolute left-1/2 top-1/2 w-40 h-40 -translate-x-1/2 -translate-y-1/2 rounded-full border-[4px] border-black" />
+              {[
+                ['ضغط عال', 25, 24, c.danger],
+                ['استحواذ', 50, 50, c.gold],
+                ['تحولات', 74, 72, c.accent],
+                ['مساحة خلفية', 62, 28, c.success],
+              ].map(([label, left, top, color], index) => (
+                <div key={String(label)} className="absolute -translate-x-1/2 -translate-y-1/2 px-5 py-3 rounded-full border-[4px] border-black text-black text-[14px] font-black" style={{ left: `${left}%`, top: `${top}%`, background: color, animation: `wcBadgePop .55s ${.34 + index * .1}s both` }}>{label}</div>
+              ))}
+            </div>
+            <div className="space-y-6">
+              {[{ label: home, value: possessionHome, color: c.accent }, { label: away, value: possessionAway, color: c.danger }].map((item, index) => (
+                <div key={item.label} className="border-[5px] border-black rounded-[26px] bg-white text-black p-5" style={{ animation: `wcRowIn .55s ${.32 + index * .11}s both` }}>
+                  <div className="flex justify-between text-[17px] font-black"><span>{item.label}</span><span>{item.value}%</span></div>
+                  <div className="h-6 rounded-full border-[3px] border-black bg-gray-100 overflow-hidden mt-4"><div className="h-full" style={{ width: `${item.value}%`, background: item.color, animation: `wcBarGrow .8s ${.5 + index * .12}s both` }} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-9 flex flex-col">
@@ -1207,7 +1450,7 @@ export const ReoObsAnalysis: React.FC<ReoObsVariantProps> = ({ t, getField, reso
           <div>
             <div className="text-[38px] font-black leading-[1.55]">{text(getField, 'analysisText', 'الضغط العالي يمنح الأفضلية في الثلث الأخير، مع ضرورة حماية المساحة خلف الظهيرين.')}</div>
             <div className="grid grid-cols-2 gap-4 mt-8">
-              {[text(getField, 'keyBattle1', 'المهاجم ضد قلب الدفاع'), text(getField, 'keyBattle2', 'معركة وسط الملعب')].map((value, index) => (
+              {keyBattles.map((value, index) => (
                 <div key={value} className="p-5 border-[4px] border-black rounded-[22px] text-black" style={{ background: paletteAt(t, index), animation: `wcRowIn .55s ${.35 + index * .12}s both` }}>
                   <div className="text-[10px] font-black">KEY BATTLE</div><div className="text-[18px] font-black mt-2">{value}</div>
                 </div>
@@ -1237,7 +1480,68 @@ export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ t, getField, r
   const momRating = livePotm?.rating !== undefined
     ? detailStatText(livePotm.rating)
     : text(getField, 'momRating', '8.7');
+  const reportViewMode = text(getField, 'reportViewMode', 'post_match');
+  const parsedEvents = safeParse<Array<{ minute?: string | number; type?: string; player?: string; team?: string }>>(
+    String(getField('eventsJson') || '[]'),
+    []
+  );
+  const timelineEvents = parsedEvents.length
+    ? parsedEvents.slice(0, 5)
+    : [{ minute: '23', type: 'goal', player: momName, team: 'home' }];
   const c = themedColors(t);
+  if (reportViewMode === 'storyline') {
+    return (
+      <KineticStage image={stageImage(getField)} theme={t}>
+        <div className="w-full h-full p-10 flex flex-col">
+          <KineticHeader title="خط أحداث المباراة" tag={`${home} × ${away}`} theme={t} />
+          <div className="flex-1 grid grid-cols-[360px_1fr] gap-8 items-center">
+            <div className="bg-white text-black border-[6px] border-black rounded-[34px] p-8 text-center" style={{ boxShadow: `16px 14px 0 ${c.gold}`, animation: 'wcScorePop .65s .25s both' }}>
+              <div className="text-[13px] font-black">النتيجة</div>
+              <div className="text-[96px] leading-none font-black mt-3">{score}</div>
+              <div className="text-[18px] font-black mt-6">{home}</div>
+              <div className="text-[18px] font-black">{away}</div>
+            </div>
+            <div className="space-y-4">
+              {timelineEvents.map((event, index) => (
+                <div key={`${event.minute ?? index}-${event.player ?? event.type ?? index}`} className="grid grid-cols-[90px_1fr] gap-5 items-center" style={{ animation: `wcRowIn .5s ${.28 + index * .09}s both` }}>
+                  <div className="h-20 rounded-[24px] border-[5px] border-black flex items-center justify-center text-[27px] font-black" style={{ background: paletteAt(t, index) }}>{event.minute ?? '-'}</div>
+                  <div className="bg-white text-black border-[5px] border-black rounded-[24px] px-6 py-4">
+                    <div className="text-[12px] font-black text-black/60">{event.type || 'event'}</div>
+                    <div className="text-[24px] font-black">{event.player || 'حدث المباراة'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
+  if (reportViewMode === 'potm_focus') {
+    return (
+      <KineticStage image={stageImage(getField)} theme={t}>
+        <div className="w-full h-full p-10 flex items-center justify-center">
+          <div className="relative w-[1000px]">
+            <div className="absolute inset-0 rounded-[42px]" style={{ background: c.danger, transform: 'translate(-20px,16px)' }} />
+            <div className="absolute inset-0 rounded-[42px]" style={{ background: c.gold, transform: 'translate(20px,12px)' }} />
+            <div className="relative bg-white text-black border-[7px] border-black rounded-[42px] p-10 grid grid-cols-[1fr_300px] gap-7 items-center">
+              <div>
+                <TeamCode value={`${home} × ${away}`} color={c.success} delay={.25} />
+                <div className="text-[44px] font-black leading-[1.2] mt-8">رجل المباراة صنع الفارق</div>
+                <div className="text-[28px] font-black leading-[1.45] mt-5">{momName}</div>
+                <div className="text-[20px] font-black mt-5 text-black/65">{text(getField, 'reportText', 'مباراة عالية الإيقاع حسمتها التفاصيل في التحولات والكرات الثانية.')}</div>
+              </div>
+              <div className="rounded-[34px] border-[6px] border-black p-7 text-center" style={{ background: c.ink, color: c.paper, animation: 'wcScorePop .65s .35s both' }}>
+                <div className="text-[13px] font-black text-[#eeff00]">تقييم</div>
+                <div className="text-[108px] leading-none font-black">{momRating}</div>
+                <div className="mt-8 text-[80px] leading-none font-black">{score}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </KineticStage>
+    );
+  }
   return (
     <KineticStage image={stageImage(getField)} theme={t}>
       <div className="w-full h-full p-10 flex flex-col">

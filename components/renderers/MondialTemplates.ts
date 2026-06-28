@@ -377,6 +377,17 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_stats' },
+      { id: 'statsViewMode', label: 'طريقة عرض الإحصائيات', type: 'select', value: 'dual_bars', options: [
+        { value: 'dual_bars', label: 'أشرطة مقارنة كاملة' },
+        { value: 'momentum_grid', label: 'شبكة زخم المباراة' },
+        { value: 'key_numbers', label: 'أرقام رئيسية سريعة' },
+      ] },
+      { id: 'statFocus', label: 'تركيز الإحصائيات', type: 'select', value: 'balanced', options: [
+        { value: 'balanced', label: 'متوازن' },
+        { value: 'attack', label: 'الهجوم والتسديد' },
+        { value: 'control', label: 'الاستحواذ والتمرير' },
+        { value: 'discipline', label: 'الالتحامات والانضباط' },
+      ] },
       ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
       // حقول الإحصائيات اليدوية
@@ -742,6 +753,11 @@ export const MONDIAL_RESULTS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_report' },
+      { id: 'reportViewMode', label: 'طريقة عرض التقرير', type: 'select', value: 'post_match', options: [
+        { value: 'post_match', label: 'تقرير ما بعد المباراة' },
+        { value: 'storyline', label: 'خط أحداث المباراة' },
+        { value: 'potm_focus', label: 'تركيز رجل المباراة' },
+      ] },
       { ...mondialMatchSelectionFields[0], value: 'latest' },
       ...mondialMatchSelectionFields.slice(1),
       ...mondialMatchDataFields,
@@ -804,6 +820,11 @@ export const MONDIAL_ANALYSIS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'analysis_board' },
+      { id: 'analysisViewMode', label: 'طريقة عرض التحليل', type: 'select', value: 'tactical_board', options: [
+        { value: 'tactical_board', label: 'لوحة تكتيكية' },
+        { value: 'key_battles', label: 'مواجهات حاسمة' },
+        { value: 'pressure_map', label: 'خريطة الضغط والاستحواذ' },
+      ] },
       ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,
       { id: 'homeFormation', label: 'تشكيلة المضيف', type: 'text', value: '4-3-3' },
@@ -835,6 +856,11 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'golden_boot' },
+      { id: 'scorerViewMode', label: 'طريقة عرض الهدافين', type: 'select', value: 'race_board', options: [
+        { value: 'race_board', label: 'سباق الهدافين' },
+        { value: 'podium', label: 'منصة أول ثلاثة' },
+        { value: 'compact_ranking', label: 'ترتيب مضغوط' },
+      ] },
       { id: 'scorerLimit', label: 'عدد الهدافين المعروض', type: 'number', value: 6, min: 3, max: 10, step: 1 },
       { id: 'scorersJson', label: 'قائمة الهدافين JSON', type: 'textarea', value: JSON.stringify([
         { name: 'Kylian Mbappé', nameAr: 'كيليان مبابي', team: 'France', flag: '🇫🇷', goals: 5 },
@@ -887,6 +913,11 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'player_spotlight' },
+      { id: 'playerCardMode', label: 'طريقة عرض اللاعب', type: 'select', value: 'hero_stats', options: [
+        { value: 'hero_stats', label: 'بطاقة نجم + إحصائيات' },
+        { value: 'impact_radar', label: 'رادار التأثير' },
+        { value: 'match_mom', label: 'رجل المباراة' },
+      ] },
       ...mondialMatchSelectionFields,
       ...mondialMatchDataFields.slice(0, 6),
       { id: 'name', label: 'اسم اللاعب', type: 'text', value: 'أيمن حسين' },

@@ -236,7 +236,10 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'varPosition' || id === 'lineupSide' || id === 'groupWallLayout' ||
     id === 'identityColumns' || id === 'matrixLayout' || id === 'badgeMode' ||
     id === 'activePosition' || id === 'focusMode' || id === 'speakerMode' ||
-    id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode'
+    id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode' ||
+    id === 'statsViewMode' || id === 'statFocus' ||
+    id === 'scorerViewMode' || id === 'playerCardMode' ||
+    id === 'reportViewMode' || id === 'analysisViewMode'
   ) return 'display';
   if (
     id.endsWith('Json') || id.startsWith('include') ||

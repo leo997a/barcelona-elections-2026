@@ -197,6 +197,48 @@ test('selected match details are propagated to broadcast cards and player spotli
   assert.match(obs, /livePlayer\?\.stats/);
 });
 
+test('mondial statistical templates expose and consume real display modes', async () => {
+  const [templates, obs, constants] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/MondialObsTemplates.tsx'),
+    readSource('../constants.ts'),
+  ]);
+
+  for (const field of [
+    'statsViewMode',
+    'statFocus',
+    'scorerViewMode',
+    'playerCardMode',
+    'reportViewMode',
+    'analysisViewMode',
+  ]) {
+    assert.match(templates, new RegExp(`id: '${field}'`), `${field} is not exposed in template settings`);
+    assert.match(constants, new RegExp(`id === '${field}'`), `${field} is not grouped as a display control`);
+  }
+
+  assert.match(obs, /const statsViewMode = text\(getField, 'statsViewMode', 'dual_bars'\)/);
+  assert.match(obs, /const statFocus = text\(getField, 'statFocus', 'balanced'\)/);
+  assert.match(obs, /statsViewMode === 'key_numbers'/);
+  assert.match(obs, /statsViewMode === 'momentum_grid'/);
+  assert.match(obs, /rows\.filter\(row => row\.focus === statFocus\)/);
+
+  assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
+  assert.match(obs, /scorerViewMode === 'podium'/);
+  assert.match(obs, /scorerViewMode === 'compact_ranking'/);
+
+  assert.match(obs, /const playerCardMode = text\(getField, 'playerCardMode', 'hero_stats'\)/);
+  assert.match(obs, /playerCardMode === 'impact_radar'/);
+  assert.match(obs, /playerCardMode === 'match_mom'/);
+
+  assert.match(obs, /const analysisViewMode = text\(getField, 'analysisViewMode', 'tactical_board'\)/);
+  assert.match(obs, /analysisViewMode === 'key_battles'/);
+  assert.match(obs, /analysisViewMode === 'pressure_map'/);
+
+  assert.match(obs, /const reportViewMode = text\(getField, 'reportViewMode', 'post_match'\)/);
+  assert.match(obs, /reportViewMode === 'storyline'/);
+  assert.match(obs, /reportViewMode === 'potm_focus'/);
+});
+
 test('broadcast look settings drive reference-pack style and palette rendering', async () => {
   const [templates, shared, groupWall, matchCards, identityWall] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
