@@ -413,6 +413,12 @@ export const MONDIAL_TRANSITION_CSS = `
   line-height: 1;
   font-weight: 950;
 }
+.mondial-transition-frame[data-phase='in'][data-motion='on'] .mondial-transition-bug {
+  animation: mondialTransitionArcBugIn calc(var(--mondial-transition-speed) * .78) cubic-bezier(.16,1,.3,1) both;
+}
+.mondial-transition-frame[data-phase='out'][data-motion='on'] .mondial-transition-bug {
+  animation: mondialTransitionArcBugOut calc(var(--mondial-transition-speed) * .82) cubic-bezier(.22,1,.36,1) both;
+}
 .mondial-transition-frame[data-effect='stinger'][data-phase='in'][data-motion='on'] .mondial-transition-arc-stinger {
   animation: mondialTransitionArcStingerIn var(--mondial-transition-speed) cubic-bezier(.16,1,.3,1) both;
 }

@@ -77,6 +77,28 @@ test('mondial reference stinger exit uses dedicated out-phase masks and bands', 
   );
 });
 
+test('all mondial transition effects carry the REO SHOW brand bug', async () => {
+  const transitionLayer = await readSource('../components/renderers/mondial/MondialTransitionLayer.tsx');
+
+  assert.match(transitionLayer, /<span>REO<\/span>\s*<b>SHOW<\/b>/);
+  assert.match(
+    transitionLayer,
+    /data-phase='in'\]\[data-motion='on'\]\s+\.mondial-transition-bug\s*\{[\s\S]*?mondialTransitionArcBugIn/
+  );
+  assert.match(
+    transitionLayer,
+    /data-phase='out'\]\[data-motion='on'\]\s+\.mondial-transition-bug\s*\{[\s\S]*?mondialTransitionArcBugOut/
+  );
+  assert.match(
+    transitionLayer,
+    /data-effect='stinger'\]\[data-phase='in'\]\[data-motion='on'\]\s+\.mondial-transition-bug\s*\{[\s\S]*?mondialTransitionArcBugIn/
+  );
+  assert.match(
+    transitionLayer,
+    /data-effect='stinger'\]\[data-phase='out'\]\[data-motion='on'\]\s+\.mondial-transition-bug\s*\{[\s\S]*?mondialTransitionArcBugOut/
+  );
+});
+
 test('mondial exit phase stays active until the exit hold completes', async () => {
   const renderer = await readSource('../components/OverlayRenderer.tsx');
 

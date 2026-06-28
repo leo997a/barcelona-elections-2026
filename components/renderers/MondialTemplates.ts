@@ -4,7 +4,7 @@ import { OverlayType, OverlayField, OverlayConfig } from '../../types';
 // ─── حقول مشتركة لجميع قوالب المونديال ─────────────────────────────────────
 
 const mondialCommonFields: OverlayField[] = [
-  { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+  { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
   { id: 'mondialTheme', label: 'ثيم المونديال', type: 'select', value: 'MUNDIAL_MAIN', options: [
     { value: 'MUNDIAL_MAIN', label: '🌍 المونديال الرئيسي' },
     { value: 'MUNDIAL_NIGHT', label: '🌙 ليلة المباراة' },
@@ -1279,7 +1279,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'squad_card' },
       { id: 'formation', label: 'التشكيلة', type: 'select', value: '4-3-3', options: [
         { value: '4-3-3', label: '4-3-3' },
@@ -1307,7 +1307,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'player_spotlight' },
       { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'أيمن حسين' },
       { id: 'playerPosition', label: 'الموقع', type: 'text', value: 'مهاجم — قائد الهجوم' },
@@ -1336,7 +1336,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'match_ticker' },
       { id: 'iraqTickerLabel', label: 'عنوان الشريط', type: 'text', value: '🇮🇶 أخبار المنتخب العراقي' },
       { id: 'iraqNews', label: 'نص الشريط', type: 'textarea', value: 'العراق يتصدر المجموعة C — أيمن حسين يسجل الهدف الذهبي — جماهير عراقية تغزو ملاعب أمريكا' },
@@ -1358,7 +1358,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'history_moment' },
       { id: 'momentTitle', label: 'عنوان اللحظة', type: 'text', value: 'لحظة تاريخية للعراق 🇮🇶' },
       { id: 'momentSubtitle', label: 'العنوان التوضيحي', type: 'text', value: 'أول تأهل عربي لثمن نهائي مونديال 2026!' },
@@ -1381,7 +1381,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'fan_pulse' },
       { id: 'fanCount', label: 'عدد المشجعين', type: 'text', value: '٤٢٫٥ مليون' },
       { id: 'countryRank', label: 'الترتيب', type: 'text', value: '#1 عربياً' },
@@ -1406,7 +1406,7 @@ export const MONDIAL_IRAQ_TEMPLATES: OverlayConfig[] = [
     theme: { primaryColor: '#007A3D', secondaryColor: '#000', backgroundColor: 'transparent', fontFamily: 'Tajawal' },
     slots: {},
     fields: [
-      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO LIVE' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
       { id: 'iraqVariant', label: 'نوع القالب', type: 'hidden', value: 'iraq_dashboard' },
       { id: 'title', label: 'العنوان الرئيسي', type: 'text', value: 'لوحة أداء أسود الرافدين' },
       { id: 'subtitle', label: 'العنوان الفرعي', type: 'text', value: 'تغطية خاصة وتحليلات لمنتخب العراق في كأس العالم 2026' },

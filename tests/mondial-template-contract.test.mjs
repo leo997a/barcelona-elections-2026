@@ -115,6 +115,20 @@ test('Mondial visual surfaces do not expose the upstream data provider brand', a
   assert.doesNotMatch(combined, /fotmob(?:\s+live)?/i);
 });
 
+test('Mondial channel identity defaults to REO SHOW across every template family', async () => {
+  const templates = await readSource('../components/renderers/MondialTemplates.ts');
+
+  assert.match(
+    templates,
+    /const mondialCommonFields[\s\S]*?id: 'channelName'[\s\S]*?value: 'REO SHOW'/
+  );
+  assert.match(
+    templates,
+    /const mondialBroadcastPresentationFields[\s\S]*?id: 'channelName'[\s\S]*?value: 'REO SHOW'/
+  );
+  assert.doesNotMatch(templates, /value: 'REO LIVE'/);
+});
+
 test('Mondial broadcast look presets are selectable and drive renderer classes', async () => {
   const [templates, shared, groupWall, matchCards, identity, bracket] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
