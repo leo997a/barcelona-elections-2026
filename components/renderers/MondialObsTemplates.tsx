@@ -1364,17 +1364,32 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, matchD
 };
 
 export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getField, matchDetails }) => {
-  const livePlayer = matchDetails?.playerOfTheMatch;
-  const detailPlayer = matchDetails?.players.find(player =>
+  const playerSource = text(getField, 'playerSource', 'player_of_match');
+  const playerPickIndex = Math.max(0, Math.min(10, Math.round(num(getField, 'playerPickIndex', 1)) - 1));
+  const playerStatFocus = text(getField, 'playerStatFocus', 'auto');
+  const sourceTopPlayer = playerSource === 'top_home'
+    ? matchDetails?.topPlayers.home[playerPickIndex]
+    : playerSource === 'top_away'
+      ? matchDetails?.topPlayers.away[playerPickIndex]
+      : undefined;
+  const sourceLineupPlayer = playerSource === 'lineup_home'
+    ? lineupsToPlayersJson(matchDetails, 'home')[playerPickIndex]
+    : playerSource === 'lineup_away'
+      ? lineupsToPlayersJson(matchDetails, 'away')[playerPickIndex]
+      : undefined;
+  const livePlayer = playerSource === 'manual'
+    ? undefined
+    : sourceTopPlayer || (playerSource === 'player_of_match' ? matchDetails?.playerOfTheMatch : undefined) || matchDetails?.playerOfTheMatch;
+  const detailPlayer = sourceLineupPlayer || matchDetails?.players.find(player =>
     (livePlayer?.id && player.id && String(player.id) === String(livePlayer.id))
     || Boolean(livePlayer?.name && player.name === livePlayer.name)
   );
-  const playerSide = livePlayer?.team || detailPlayer?.team || 'neutral';
+  const playerSide = sourceLineupPlayer?.team || livePlayer?.team || detailPlayer?.team || 'neutral';
   const image = livePlayer?.image || detailPlayer?.image || text(getField, 'playerImage', '');
   const playerCode = playerSide === 'away'
     ? matchDetails?.match.away.countryCode || matchDetails?.match.away.code
     : matchDetails?.match.home.countryCode || matchDetails?.match.home.code;
-  const playerName = livePlayer?.name || text(getField, 'name', 'أيمن حسين');
+  const playerName = livePlayer?.name || detailPlayer?.name || text(getField, 'name', 'أيمن حسين');
   const playerPosition = detailPlayer?.pos || livePlayer?.teamName || text(getField, 'position', 'مهاجم منتخب العراق');
   const ratingValue = livePlayer?.rating ?? detailPlayer?.rating;
   const playerRating = ratingValue !== undefined
@@ -1382,16 +1397,29 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
     : text(getField, 'rating', '9.1');
   const manualStats = safeParse<Array<{ label: string; value: string }>>(String(getField('statsJson') || '[]'), []);
   const performanceStats = (livePlayer?.stats ?? []).map(stat => ({
+    key: stat.key,
     label: stat.label,
     value: stat.total === undefined ? detailStatText(stat.value) : `${detailStatText(stat.value)}/${stat.total}`,
   }));
+  const statFocusTokens: Record<string, string[]> = {
+    attack: ['goal', 'shot', 'xg', 'chance', 'assist'],
+    passing: ['pass', 'accurate', 'key', 'cross', 'long ball'],
+    defense: ['duel', 'tackle', 'interception', 'recovery', 'clearance', 'blocked'],
+  };
+  const focusTokens = statFocusTokens[playerStatFocus] ?? [];
+  const focusedPerformanceStats = focusTokens.length
+    ? performanceStats.filter(stat => {
+        const statKey = `${stat.key} ${stat.label}`.toLowerCase();
+        return focusTokens.some(token => statKey.includes(token));
+      })
+    : performanceStats;
   const identityStats = [
     detailPlayer?.number !== undefined ? { label: 'رقم القميص', value: String(detailPlayer.number) } : null,
     detailPlayer?.pos ? { label: 'المركز', value: detailPlayer.pos } : null,
     livePlayer?.teamName ? { label: 'المنتخب', value: livePlayer.teamName } : null,
     ratingValue !== undefined ? { label: 'التقييم', value: detailStatText(ratingValue) } : null,
   ].filter((stat): stat is { label: string; value: string } => Boolean(stat));
-  const liveStats = [...performanceStats, ...identityStats]
+  const liveStats = [...(focusedPerformanceStats.length ? focusedPerformanceStats : performanceStats), ...identityStats]
     .filter((stat, index, values) => values.findIndex(value => value.label === stat.label) === index);
   const shownStats = liveStats.length
     ? [...liveStats, ...manualStats].slice(0, 4)
@@ -1407,12 +1435,21 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
   const spotlightStats = shownStats.slice(0, playerCardMode === 'impact_radar' ? 5 : 4);
   const c = themedColors(t);
   const spotlightCode = playerCode || text(getField, 'code', 'IQ');
+  const sourceLabel = playerSource === 'top_home'
+    ? 'أفضل لاعبي المضيف'
+    : playerSource === 'top_away'
+      ? 'أفضل لاعبي الضيف'
+      : playerSource === 'lineup_home' || playerSource === 'lineup_away'
+        ? 'من التشكيلة المباشرة'
+        : playerSource === 'manual'
+          ? 'بيانات يدوية'
+          : 'رجل المباراة المباشر';
   if (playerCardMode === 'impact_radar') {
     return (
       <KineticStage image={image} theme={t}>
         <div className="w-full h-full p-10 grid grid-cols-[1fr_470px] gap-8 items-center">
           <div>
-            <KineticHeader title="رادار التأثير" tag="PLAYER IMPACT · REO SHOW" theme={t} />
+            <KineticHeader title="رادار التأثير" tag={`${sourceLabel} · REO SHOW`} theme={t} />
             <TeamCode value={spotlightCode} color={c.success} delay={.25} />
             <div className="text-[62px] font-black leading-[1.05] mt-5">{playerName}</div>
             <div className="text-[20px] font-black mt-3 text-[#eeff00]">{playerPosition}</div>
@@ -1463,7 +1500,7 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
                   <div className="text-[12px] font-black text-[#eeff00]">رجل المباراة</div>
                 </div>
                 <div className="p-9">
-                  <div className="text-[13px] font-black text-black/60">PLAYER OF THE MATCH</div>
+                  <div className="text-[13px] font-black text-black/60">{sourceLabel}</div>
                   <div className="text-[72px] leading-[1.02] font-black mt-3">{playerName}</div>
                   <div className="text-[19px] font-black mt-3">{playerPosition}</div>
                   <div className="grid grid-cols-3 gap-3 mt-8">
@@ -1486,7 +1523,7 @@ export const ReoObsPlayerSpotlight: React.FC<ReoObsVariantProps> = ({ t, getFiel
     <KineticStage image={image} theme={t}>
       <div className="w-full h-full p-10 grid grid-cols-[1fr_47%] gap-8">
         <div className="flex flex-col justify-between">
-          <KineticHeader title="نجم المباراة" tag="نجم المباراة · REO SHOW" theme={t} />
+          <KineticHeader title="نجم المباراة" tag={`${sourceLabel} · REO SHOW`} theme={t} />
           <div>
             <TeamCode value={playerCode || text(getField, 'code', 'IQ')} color={c.success} delay={.25} />
             <div className="text-[60px] font-black leading-[1.08] mt-5">{playerName}</div>

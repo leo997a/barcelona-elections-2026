@@ -208,6 +208,9 @@ test('selected match details are propagated to broadcast cards and player spotli
     /value: 'player_spotlight' \},[\s\S]*?\.\.\.mondialMatchSelectionFields,[\s\S]*?\.\.\.mondialMatchDataFields\.slice\(0, 6\)/
   );
   assert.match(obs, /matchDetails\?\.playerOfTheMatch/);
+  assert.match(obs, /matchDetails\?\.topPlayers\.home\[playerPickIndex\]/);
+  assert.match(obs, /lineupsToPlayersJson\(matchDetails, 'home'\)\[playerPickIndex\]/);
+  assert.match(obs, /const playerStatFocus = text\(getField, 'playerStatFocus', 'auto'\)/);
   assert.match(obs, /livePlayer\?\.stats/);
 });
 
@@ -276,8 +279,15 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
 
   assert.match(obs, /const playerCardMode = text\(getField, 'playerCardMode', 'hero_stats'\)/);
+  for (const field of ['playerSource', 'playerPickIndex', 'playerStatFocus']) {
+    assert.match(templates, new RegExp(`id: '${field}'`), `${field} is not exposed in player spotlight settings`);
+  }
+  for (const option of ['top_home', 'top_away', 'lineup_home', 'lineup_away', 'manual']) {
+    assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a player source`);
+  }
   assert.match(obs, /playerCardMode === 'impact_radar'/);
   assert.match(obs, /playerCardMode === 'match_mom'/);
+  assert.match(obs, /focusTokens\.some\(token => statKey\.includes\(token\)\)/);
 
   assert.match(obs, /const analysisViewMode = text\(getField, 'analysisViewMode', 'tactical_board'\)/);
   assert.match(obs, /analysisViewMode === 'key_battles'/);
