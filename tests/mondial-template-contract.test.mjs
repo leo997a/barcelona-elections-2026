@@ -284,6 +284,7 @@ test('mondial statistical templates expose and consume real display modes', asyn
     'statsViewMode',
     'statFocus',
     'scorerViewMode',
+    'scorerCardStyle',
     'scorerMetric',
     'playerCardMode',
     'reportViewMode',
@@ -315,11 +316,20 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(templates, /id: 'template-mondial-live-momentum'/);
 
   assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
+  assert.match(obs, /const scorerCardStyle = text\(getField, 'scorerCardStyle', 'reference_stack'\)/);
   assert.match(obs, /const scorerMetric = text\(getField, 'scorerMetric', 'goals'\)/);
   assert.match(templates, /id: 'scorerMetric'/);
+  assert.match(obs, /const ScorerPortrait/);
+  assert.match(obs, /cardStyle !== 'classic_flags'/);
+  assert.match(obs, /player\.shotsOnTarget/);
+  assert.match(obs, /player\.keyPasses/);
+  assert.match(obs, /referrerPolicy="no-referrer"/);
   assert.match(obs, /metricValue: activeMetric\.value\(player\)/);
   assert.match(obs, /scorerViewMode === 'podium'/);
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
+  for (const option of ['reference_stack', 'broadcast_photo', 'data_glass', 'classic_flags']) {
+    assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a scorer card style`);
+  }
 
   assert.match(obs, /const playerCardMode = text\(getField, 'playerCardMode', 'hero_stats'\)/);
   for (const field of ['playerSource', 'playerPickIndex', 'playerStatFocus']) {

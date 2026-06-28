@@ -241,7 +241,7 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'activePosition' || id === 'focusMode' || id === 'speakerMode' ||
     id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode' ||
     id === 'statsViewMode' || id === 'statFocus' ||
-    id === 'scorerViewMode' || id === 'scorerMetric' || id === 'playerCardMode' ||
+    id === 'scorerViewMode' || id === 'scorerCardStyle' || id === 'scorerMetric' || id === 'playerCardMode' ||
     id === 'reportViewMode' || id === 'analysisViewMode' ||
     id === 'matchStatsDisplayMode' || id === 'playerStatsLayoutMode'
   ) return 'display';

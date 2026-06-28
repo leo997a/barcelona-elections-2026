@@ -726,6 +726,53 @@ const FlagOrImage: React.FC<{ code: string; image?: string; size: number }> = ({
   </span>
 );
 
+const ScorerPortrait: React.FC<{
+  code: string;
+  flagUrl?: string;
+  image?: string;
+  size: number;
+  cardStyle: string;
+  theme?: MondialTheme;
+  rank?: number;
+}> = ({ code, flagUrl, image, size, cardStyle, theme, rank }) => {
+  const showPhoto = Boolean(image) && cardStyle !== 'classic_flags';
+  const c = themedColors(theme);
+  return (
+    <span
+      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden border-[5px] border-black bg-white"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: cardStyle === 'reference_stack' ? '30%' : 24,
+        boxShadow: cardStyle === 'reference_stack'
+          ? `8px 7px 0 ${c.danger}, 15px 13px 0 ${c.success}, 22px 19px 0 ${c.accent}`
+          : `8px 8px 0 ${c.ink}`,
+      }}
+    >
+      <span className="absolute inset-0 flex items-center justify-center">
+        <FlagOrImage code={code} image={flagUrl} size={Math.round(size * .82)} />
+      </span>
+      {showPhoto && (
+        <img
+          src={image}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-top"
+          referrerPolicy="no-referrer"
+          onError={event => { event.currentTarget.style.display = 'none'; }}
+        />
+      )}
+      {rank !== undefined && (
+        <span
+          className="absolute bottom-1 left-1 flex h-8 min-w-8 items-center justify-center rounded-[12px] border-[3px] border-black px-2 text-[14px] font-black"
+          style={{ background: c.gold, color: c.ink }}
+        >
+          {rank}
+        </span>
+      )}
+    </span>
+  );
+};
+
 const FlagStack: React.FC<{ code: string; image?: string; size?: number; delay?: number }> = ({
   code,
   image,
@@ -1928,6 +1975,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
   const liveScorers = normalizeWorldCupScorers(liveData);
   const boundScorers = scorersFromWorldCupData(liveData, getField('scorersJson'));
   const scorerViewMode = text(getField, 'scorerViewMode', 'race_board');
+  const scorerCardStyle = text(getField, 'scorerCardStyle', 'reference_stack');
   const scorerMetric = text(getField, 'scorerMetric', 'goals');
   const scorerLimit = Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6)));
   const scorerMetricConfig = {
@@ -1978,82 +2026,177 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
     .map((player, index) => ({ ...player, rank: index + 1 }))
     .slice(0, scorerLimit);
   const c = themedColors(t);
+  const leader = scorers[0];
+  const maxMetric = Math.max(1, ...scorers.map(player => Number(player.metricValue) || 0));
+  const glassMode = scorerCardStyle === 'data_glass';
+  const photoMode = scorerCardStyle === 'broadcast_photo';
+  const classicMode = scorerCardStyle === 'classic_flags';
+  const scorerPanelStyle = {
+    background: glassMode
+      ? 'linear-gradient(135deg, rgba(255,255,255,.90), rgba(255,255,255,.68))'
+      : photoMode
+        ? `linear-gradient(135deg, ${c.accent} 0%, ${c.danger} 50%, ${c.ink} 50% 100%)`
+        : c.paper,
+    color: glassMode || classicMode ? c.ink : c.paper,
+    backdropFilter: glassMode ? 'blur(18px)' : undefined,
+  };
+  const scorerSupportStats = (player: MondialLiveScorer & { metricValue?: number; metricLabel?: string }) => [
+    { label: 'أهداف', value: player.goals ?? 0 },
+    { label: 'أسيست', value: player.assists ?? 0 },
+    { label: 'على المرمى', value: player.shotsOnTarget ?? player.shots ?? 0 },
+    { label: 'فرص', value: player.keyPasses ?? 0 },
+    { label: 'تقييم', value: player.rating ?? 0 },
+  ].filter(item => item.value !== undefined && item.value !== null);
   const sourceTag = liveScorers.length ? `${activeMetric.label} مباشر · REO SHOW` : `${activeMetric.label} · REO SHOW`;
   return (
     <KineticStage theme={t}>
-      <div className="w-full h-full p-10 flex flex-col">
+      <div className="w-full h-full p-8 flex flex-col">
         <KineticHeader title={activeMetric.title} tag={sourceTag} theme={t} />
         <div className="flex-1 flex items-center justify-center">
           {scorerViewMode === 'podium' ? (
-            <div className="grid grid-cols-3 gap-6 w-[1060px] items-end">
+            <div className="grid grid-cols-3 gap-7 w-[1110px] items-end">
               {scorers.slice(0, 3).map((player, index) => (
                 <div
                   key={`${player.id ?? player.name}-podium-${index}`}
-                  className="border-[6px] border-black rounded-[32px] overflow-hidden bg-white text-black"
-                  style={{ minHeight: index === 0 ? 430 : 350, boxShadow: `14px 12px 0 ${paletteAt(t, index)}`, animation: `wcCardRise .65s ${.22 + index * .1}s cubic-bezier(.16,1.2,.3,1) both` }}
+                  className="relative border-[6px] border-black rounded-[34px] overflow-hidden bg-white text-black"
+                  style={{ minHeight: index === 0 ? 480 : 390, boxShadow: `14px 12px 0 ${paletteAt(t, index)}`, animation: `wcCardRise .78s ${.26 + index * .12}s cubic-bezier(.16,1.2,.3,1) both` }}
                 >
-                  <div className="h-28 flex items-center justify-between px-6" style={{ background: index === 0 ? c.gold : paletteAt(t, index + 2) }}>
-                    <div className="text-[58px] font-black">{player.rank ?? index + 1}</div>
-                    <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={70} />
+                  <div className="absolute inset-0 opacity-[.12]" style={{ background: `radial-gradient(circle at 20% 20%, ${paletteAt(t, index)}, transparent 32%), linear-gradient(135deg, transparent 0 44%, ${c.ink} 44% 48%, transparent 48%)` }} />
+                  <div className="relative h-[136px] flex items-center justify-between px-6 py-5" style={{ background: index === 0 ? c.gold : paletteAt(t, index + 2) }}>
+                    <div className="text-[64px] leading-none font-black">{player.rank ?? index + 1}</div>
+                    <ScorerPortrait
+                      code={player.code || player.countryCode}
+                      flagUrl={player.flagUrl}
+                      image={player.image}
+                      size={92}
+                      cardStyle={scorerCardStyle}
+                      theme={t}
+                    />
                   </div>
-                  <div className="p-6">
+                  <div className="relative p-6">
                     <div className="text-[28px] leading-[1.08] font-black">{player.nameAr || player.name}</div>
                     <div className="text-[13px] font-black mt-2">{player.team}</div>
                     <div className="mt-7 text-[96px] leading-none font-black">{detailStatText(player.metricValue)}</div>
                     <div className="text-[12px] font-black">{player.metricLabel}</div>
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      {scorerSupportStats(player).slice(0, 4).map((stat, statIndex) => (
+                        <div key={`${player.name}-${stat.label}`} className="rounded-[15px] border-[3px] border-black px-3 py-2 font-black" style={{ background: statIndex === 0 ? c.ink : paletteAt(t, statIndex), color: statIndex === 0 ? c.paper : c.ink }}>
+                          <div className="text-[20px] leading-none">{detailStatText(stat.value)}</div>
+                          <div className="text-[9px] mt-1">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : scorerViewMode === 'compact_ranking' ? (
-            <div className="w-[1080px] grid grid-cols-2 gap-4">
+            <div className="w-[1120px] grid grid-cols-2 gap-4">
               {scorers.map((player, index) => (
-                <div key={`${player.id ?? player.name}-compact-${index}`} className="grid grid-cols-[56px_60px_1fr_82px] items-center gap-4 border-[4px] border-black rounded-[22px] bg-white text-black px-4 py-3" style={{ boxShadow: `8px 7px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .45s ${.18 + index * .06}s both` }}>
+                <div key={`${player.id ?? player.name}-compact-${index}`} className="grid grid-cols-[52px_76px_1fr_128px] items-center gap-4 border-[4px] border-black rounded-[24px] bg-white text-black px-4 py-3" style={{ boxShadow: `8px 7px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .55s ${.18 + index * .065}s both`, ...scorerPanelStyle }}>
                   <div className="text-[28px] font-black">{player.rank ?? index + 1}</div>
-                  <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={52} />
+                  <ScorerPortrait
+                    code={player.code || player.countryCode}
+                    flagUrl={player.flagUrl}
+                    image={player.image}
+                    size={66}
+                    cardStyle={scorerCardStyle}
+                    theme={t}
+                  />
                   <div><div className="text-[18px] font-black leading-tight">{player.nameAr || player.name}</div><div className="text-[10px] font-black">{player.team}</div></div>
-                  <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold }}><div className="text-[28px] leading-none font-black">{detailStatText(player.metricValue)}</div></div>
+                  <div>
+                    <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold, color: c.ink }}><div className="text-[28px] leading-none font-black">{detailStatText(player.metricValue)}</div></div>
+                    <div className="mt-2 grid grid-cols-2 gap-1 text-[8px] font-black">
+                      {scorerSupportStats(player).slice(0, 2).map(stat => (
+                        <span key={`${player.name}-compact-${stat.label}`} className="rounded-full border-2 border-black px-2 py-1" style={{ background: c.paper, color: c.ink }}>{stat.label} {detailStatText(stat.value)}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="w-[1080px] space-y-3">
-              {scorers.map((player, index) => (
+            <div className="w-[1160px] grid grid-cols-[420px_1fr] gap-6 items-stretch">
+              {leader && (
                 <div
-                  key={`${player.id ?? player.name}-${index}`}
-                  className="grid grid-cols-[86px_82px_1fr_250px_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
-                  style={{ background: c.paper, color: c.ink, boxShadow: `12px 10px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .55s ${.2 + index * .11}s both` }}
+                  className="relative overflow-hidden rounded-[38px] border-[6px] border-black p-7"
+                  style={{ ...scorerPanelStyle, boxShadow: `18px 16px 0 ${c.gold}`, animation: 'wcScorePop .82s .18s cubic-bezier(.16,1.25,.3,1) both' }}
                 >
-                  <div className="h-full min-h-[86px] flex items-center justify-center text-[42px] font-black" style={{ background: c.ink, color: c.paper }}>{player.rank ?? index + 1}</div>
-                  <div className="flex items-center justify-center">
-                    <div className="relative w-16 h-16 overflow-hidden rounded-[18px] border-[4px] border-black bg-white">
-                      <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={64} />
-                      {player.image && (
-                        <img
-                          src={player.image}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={event => { event.currentTarget.style.display = 'none'; }}
-                        />
-                      )}
+                  <div className="absolute -right-28 -top-24 h-80 w-80 rounded-full opacity-80" style={{ background: c.accent }} />
+                  <div className="absolute -left-20 bottom-0 h-64 w-64 rounded-full opacity-75" style={{ background: c.danger }} />
+                  <div className="relative flex items-center justify-between">
+                    <div>
+                      <div className="text-[13px] font-black opacity-70">قائد السباق</div>
+                      <div className="mt-2 text-[70px] leading-none font-black">{detailStatText(leader.metricValue)}</div>
+                      <div className="text-[13px] font-black">{leader.metricLabel}</div>
                     </div>
+                    <ScorerPortrait
+                      code={leader.code || leader.countryCode}
+                      flagUrl={leader.flagUrl}
+                      image={leader.image}
+                      size={144}
+                      cardStyle={scorerCardStyle}
+                      theme={t}
+                      rank={leader.rank}
+                    />
                   </div>
-                  <div className="px-5">
-                    <div className="text-[22px] font-black">{player.nameAr || player.name}</div>
-                    <div className="text-[12px] font-black">{player.team}</div>
+                  <div
+                    className="relative mt-6 rounded-[26px] border-[5px] border-black px-5 py-4"
+                    style={{ background: c.ink, color: c.paper }}
+                  >
+                    <div className="text-[30px] leading-[1.05] font-black">{leader.nameAr || leader.name}</div>
+                    <div className="mt-2 text-[13px] font-black opacity-75">{leader.team}</div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 px-4 text-[10px] font-black">
-                    <span className="rounded-full border-2 border-black px-3 py-1">أسيست {player.assists ?? 0}</span>
-                    {player.appearances !== undefined && (
-                      <span className="rounded-full border-2 border-black px-3 py-1">مشاركة {player.appearances}</span>
-                    )}
-                    {player.minutesPlayed !== undefined && (
-                      <span className="rounded-full border-2 border-black px-3 py-1">دقيقة {player.minutesPlayed}</span>
-                    )}
+                  <div className="relative mt-5 grid grid-cols-2 gap-3">
+                    {scorerSupportStats(leader).slice(0, 4).map((stat, index) => (
+                      <div key={`leader-${stat.label}`} className="rounded-[22px] border-[4px] border-black px-4 py-3 font-black" style={{ background: paletteAt(t, index), color: c.ink }}>
+                        <div className="text-[30px] leading-none">{detailStatText(stat.value)}</div>
+                        <div className="mt-1 text-[10px]">{stat.label}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[43px] font-black">{detailStatText(player.metricValue)}</div><div className="text-[10px] font-black">{player.metricLabel}</div></div>
                 </div>
-              ))}
+              )}
+              <div className="space-y-3">
+                {scorers.slice(1).map((player, index) => {
+                  const rowIndex = index + 1;
+                  const width = Math.max(10, Math.round(((Number(player.metricValue) || 0) / maxMetric) * 100));
+                  return (
+                    <div
+                      key={`${player.id ?? player.name}-${index}`}
+                      className="grid grid-cols-[76px_1fr_112px] items-center border-[5px] border-black rounded-[26px] overflow-hidden bg-white text-black"
+                      style={{ background: c.paper, color: c.ink, boxShadow: `12px 10px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .6s ${.24 + rowIndex * .09}s both` }}
+                    >
+                      <div className="h-full min-h-[92px] flex items-center justify-center">
+                        <ScorerPortrait
+                          code={player.code || player.countryCode}
+                          flagUrl={player.flagUrl}
+                          image={player.image}
+                          size={64}
+                          cardStyle={scorerCardStyle}
+                          theme={t}
+                          rank={player.rank}
+                        />
+                      </div>
+                      <div className="px-4">
+                        <div className="text-[21px] leading-tight font-black">{player.nameAr || player.name}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-black">
+                          <span>{player.team}</span>
+                          <span className="rounded-full border-2 border-black px-2 py-1">أسيست {player.assists ?? 0}</span>
+                          <span className="rounded-full border-2 border-black px-2 py-1">على المرمى {player.shotsOnTarget ?? player.shots ?? 0}</span>
+                          {player.keyPasses !== undefined && (
+                            <span className="rounded-full border-2 border-black px-2 py-1">فرص {player.keyPasses}</span>
+                          )}
+                        </div>
+                        <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/12">
+                          <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${paletteAt(t, index + 1)}, ${c.gold})`, animation: `wcBarGrow .8s ${.44 + rowIndex * .06}s both` }} />
+                        </div>
+                      </div>
+                      <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[39px] font-black">{detailStatText(player.metricValue)}</div><div className="text-[10px] font-black">{player.metricLabel}</div></div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

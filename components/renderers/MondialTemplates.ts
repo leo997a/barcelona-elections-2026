@@ -1103,6 +1103,12 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
         { value: 'podium', label: 'منصة أول ثلاثة' },
         { value: 'compact_ranking', label: 'ترتيب مضغوط' },
       ] },
+      { id: 'scorerCardStyle', label: 'ستايل لوحة الهدافين', type: 'select', value: 'reference_stack', options: [
+        { value: 'reference_stack', label: 'ستايل الحزمة السوداء والطبقات' },
+        { value: 'broadcast_photo', label: 'بطاقات صور تلفزيونية' },
+        { value: 'data_glass', label: 'زجاج بيانات مباشر' },
+        { value: 'classic_flags', label: 'أعلام فقط بدون صور' },
+      ] },
       { id: 'scorerMetric', label: 'نوع ترتيب اللاعبين', type: 'select', value: 'goals', options: [
         { value: 'goals', label: 'الأهداف' },
         { value: 'assists', label: 'صناعة الأهداف' },
