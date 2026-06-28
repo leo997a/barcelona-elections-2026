@@ -128,6 +128,131 @@ const numberValue = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
+const statIdentity = (stat: MondialMatchDetailStat): string =>
+  `${stat.key || ''} ${stat.label || ''}`
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const detailStatValue = (
+  stat: MondialMatchDetailStat | undefined,
+  side: 'home' | 'away'
+): number | undefined => {
+  if (!stat) return undefined;
+  const raw = stat[side];
+  if (typeof raw === 'string') {
+    const percent = raw.match(/(-?\d+(?:\.\d+)?)\s*%/);
+    if (percent) return Number(percent[1]);
+    const ratio = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*\/\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (ratio) {
+      const made = Number(ratio[1]);
+      const total = Number(ratio[2]);
+      if (Number.isFinite(made) && Number.isFinite(total) && total > 0) {
+        return Math.round((made / total) * 100);
+      }
+    }
+  }
+  const value = numberValue(raw, Number.NaN);
+  return Number.isFinite(value) ? value : undefined;
+};
+
+const findMappedStat = (
+  stats: MondialMatchDetailStat[],
+  aliases: string[]
+): MondialMatchDetailStat | undefined => {
+  const normalizedAliases = aliases.map(alias => alias.toLowerCase());
+  return stats.find(stat => {
+    const identity = statIdentity(stat);
+    return normalizedAliases.some(alias => identity.includes(alias));
+  });
+};
+
+const mappedTeamStatFields = (
+  stats: MondialMatchDetailStat[]
+): Record<string, number> => {
+  const statMap: Array<{
+    homeField: string;
+    awayField: string;
+    aliases: string[];
+  }> = [
+    {
+      homeField: 'statPossessionHome',
+      awayField: 'statPossessionAway',
+      aliases: ['ballpossesion', 'ball possession', 'possession'],
+    },
+    {
+      homeField: 'statXgHome',
+      awayField: 'statXgAway',
+      aliases: ['expected goals', 'expected goals xg', 'xg'],
+    },
+    {
+      homeField: 'statShotsHome',
+      awayField: 'statShotsAway',
+      aliases: ['total shots', 'totalshots', 'shots total'],
+    },
+    {
+      homeField: 'statOnTargetHome',
+      awayField: 'statOnTargetAway',
+      aliases: ['shots on target', 'shotsontarget', 'on target'],
+    },
+    {
+      homeField: 'statShotAccuracyHome',
+      awayField: 'statShotAccuracyAway',
+      aliases: ['shot accuracy', 'shots accuracy', 'on target percentage'],
+    },
+    {
+      homeField: 'statPressureHome',
+      awayField: 'statPressureAway',
+      aliases: ['high press', 'high turnovers', 'possession won final 3rd', 'ppda', 'pressure'],
+    },
+    {
+      homeField: 'statFieldTiltHome',
+      awayField: 'statFieldTiltAway',
+      aliases: ['field tilt', 'final third entries', 'territory'],
+    },
+    {
+      homeField: 'statRecoveriesHome',
+      awayField: 'statRecoveriesAway',
+      aliases: ['ball recoveries', 'recoveries', 'possession won'],
+    },
+    {
+      homeField: 'statDuelsHome',
+      awayField: 'statDuelsAway',
+      aliases: ['duels won', 'ground duels won', 'aerial duels won'],
+    },
+    {
+      homeField: 'statCornersHome',
+      awayField: 'statCornersAway',
+      aliases: ['corners', 'corner kicks'],
+    },
+    {
+      homeField: 'statFoulsHome',
+      awayField: 'statFoulsAway',
+      aliases: ['fouls committed', 'fouls'],
+    },
+    {
+      homeField: 'statYellowHome',
+      awayField: 'statYellowAway',
+      aliases: ['yellow cards', 'yellowcards'],
+    },
+    {
+      homeField: 'statPassHome',
+      awayField: 'statPassAway',
+      aliases: ['accurate passes', 'accuratepasses', 'pass accuracy'],
+    },
+  ];
+
+  return statMap.reduce<Record<string, number>>((fields, definition) => {
+    const stat = findMappedStat(stats, definition.aliases);
+    const home = detailStatValue(stat, 'home');
+    const away = detailStatValue(stat, 'away');
+    if (home !== undefined) fields[definition.homeField] = home;
+    if (away !== undefined) fields[definition.awayField] = away;
+    return fields;
+  }, {});
+};
+
 const optionalNumber = (value: unknown): number | undefined => {
   const parsed = numberValue(value, Number.NaN);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -707,5 +832,6 @@ export const matchDetailsToFields = (
             value: `${stat.home} / ${stat.away}`,
           }))
     ),
+    ...mappedTeamStatFields(details.teamStats),
   };
 };

@@ -149,6 +149,8 @@ const TEMPLATE_TO_TAXONOMY: Record<string, { category: CategoryKey; subcategory:
   'template-mondial-match-stats':     { category: 'mondial', subcategory: 'mondial.stats', priority: 1 },
   'template-mondial-pressure-index':   { category: 'mondial', subcategory: 'mondial.stats', priority: 2 },
   'template-mondial-accuracy-control': { category: 'mondial', subcategory: 'mondial.stats', priority: 3 },
+  'template-mondial-attack-shot-quality': { category: 'mondial', subcategory: 'mondial.stats', priority: 4 },
+  'template-mondial-duels-discipline':    { category: 'mondial', subcategory: 'mondial.stats', priority: 5 },
   'template-mondial-group-wall':      { category: 'mondial', subcategory: 'mondial.results', priority: 1 },
   'template-mondial-all-flags-wall':  { category: 'mondial', subcategory: 'mondial.results', priority: 2 },
   'template-mondial-team-code-wall':  { category: 'mondial', subcategory: 'mondial.results', priority: 3 },

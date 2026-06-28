@@ -111,8 +111,18 @@ const rawMatchDetails = {
             title: 'Top stats',
             stats: [
               { key: 'BallPossesion', title: 'Ball possession', stats: ['55%', '45%'] },
+              { key: 'expected_goals', title: 'Expected goals (xG)', stats: [1.8, 0.7] },
               { key: 'TotalShots', title: 'Total shots', stats: [13, 8] },
               { key: 'ShotsOnTarget', title: 'Shots on target', stats: [6, 3] },
+              { key: 'ShotAccuracy', title: 'Shot accuracy', stats: ['46%', '38%'] },
+              { key: 'HighTurnovers', title: 'High turnovers', stats: [9, 5] },
+              { key: 'FieldTilt', title: 'Field tilt', stats: ['62%', '38%'] },
+              { key: 'Recoveries', title: 'Ball recoveries', stats: [44, 39] },
+              { key: 'DuelsWon', title: 'Duels won', stats: ['54%', '46%'] },
+              { key: 'Corners', title: 'Corners', stats: [7, 2] },
+              { key: 'Fouls', title: 'Fouls committed', stats: [11, 15] },
+              { key: 'YellowCards', title: 'Yellow cards', stats: [1, 3] },
+              { key: 'AccuratePasses', title: 'Accurate passes', stats: ['373/450', '76%'] },
             ],
           }],
         },
@@ -135,7 +145,7 @@ test('normalizes current FotMob match details into the REO contract', () => {
   assert.equal(details.events[0].player, 'Santiago Gimenez');
   assert.equal(details.lineups.home.formation, '4-3-3');
   assert.equal(details.lineups.away.coach, 'Hugo Broos');
-  assert.equal(details.teamStats.length, 3);
+  assert.equal(details.teamStats.length, 13);
   assert.equal(details.playerOfTheMatch.rating, 8.7);
   assert.equal(details.playerOfTheMatch.stats[0].label, 'Rating');
   assert.equal(details.playerOfTheMatch.stats[1].key, 'goals');
@@ -156,6 +166,21 @@ test('maps match details to legacy fields consumed by existing templates', () =>
     { label: 'الأهداف', value: 2 },
     { label: 'التمريرات الدقيقة', value: '21/25' },
   ]);
+  assert.equal(fields.statPossessionHome, 55);
+  assert.equal(fields.statPossessionAway, 45);
+  assert.equal(fields.statXgHome, 1.8);
+  assert.equal(fields.statXgAway, 0.7);
+  assert.equal(fields.statShotsHome, 13);
+  assert.equal(fields.statOnTargetAway, 3);
+  assert.equal(fields.statShotAccuracyHome, 46);
+  assert.equal(fields.statPressureHome, 9);
+  assert.equal(fields.statFieldTiltAway, 38);
+  assert.equal(fields.statRecoveriesHome, 44);
+  assert.equal(fields.statDuelsAway, 46);
+  assert.equal(fields.statCornersHome, 7);
+  assert.equal(fields.statFoulsAway, 15);
+  assert.equal(fields.statYellowAway, 3);
+  assert.equal(fields.statPassHome, 83);
   assert.equal(JSON.parse(fields.playersJson)[0].name, 'Santiago Gimenez');
   assert.equal(lineupsToPlayersJson(details, 'away')[0].name, 'Ronwen Williams');
 });
