@@ -229,10 +229,11 @@ test('selected match details are propagated to broadcast cards and player spotli
 });
 
 test('mondial lineup has a defensive auto-formation layout for incomplete live data', async () => {
-  const [templates, obs, constants] = await Promise.all([
+  const [templates, obs, constants, shared] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
     readSource('../components/renderers/MondialObsTemplates.tsx'),
     readSource('../constants.ts'),
+    readSource('../components/renderers/MondialSharedComponents.tsx'),
   ]);
 
   for (const field of ['lineupLayoutMode', 'lineupDirection', 'lineupBoardStyle', 'lineupNameMode', 'lineupPhotoMode', 'lineupShowBench']) {
@@ -255,6 +256,10 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const lineupBoardStyle = text\(getField, 'lineupBoardStyle', 'reference_black'\)/);
   assert.match(obs, /const lineupNameMode = text\(getField, 'lineupNameMode', 'short'\)/);
   assert.match(obs, /const lineupPhotoMode = text\(getField, 'lineupPhotoMode', 'auto'\)/);
+  assert.match(obs, /const LINEUP_TEAM_CODE_BY_NAME: Record<string, string>/);
+  assert.match(obs, /brazil: 'BRA'/);
+  assert.match(obs, /const lineupIdentityCode = \(candidateCode: unknown, teamName: unknown\): string/);
+  assert.match(obs, /const code = lineupIdentityCode\(liveLineup\?\.teamCode \|\| text\(getField, 'code', 'IQ'\), displayTeam\)/);
   assert.match(obs, /const lineupPlayerPhotoUrl = \(/);
   assert.match(obs, /scene\?: 'tactical' \| 'stadium'/);
   assert.match(obs, /scene: 'stadium'/);
@@ -276,6 +281,10 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
     assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a lineup photo mode`);
   }
   assert.match(templates, /id: 'lineupBoardStyle'[\s\S]*?value: 'stadium_motion'/);
+  assert.match(shared, /'bra': 'br'/);
+  assert.match(shared, /'bih': 'ba'/);
+  assert.match(shared, /getFlagUrl\(trimmed\)/);
+  assert.match(shared, /Array\.from\(new Set\(/);
 });
 
 test('mondial statistical templates expose and consume real display modes', async () => {

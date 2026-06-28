@@ -556,10 +556,12 @@ export const getFlagUrl = (input: string): string => {
     // 3-letter codes
     'irq': 'iq', 'arg': 'ar', 'fra': 'fr', 'bra': 'br', 'ger': 'de',
     'esp': 'es', 'ptg': 'pt', 'por': 'pt', 'ned': 'nl', 'bel': 'be', 'ita': 'it', 'usa': 'us', 'custom-usa': 'us', 'mex': 'mx',
-    'can': 'ca', 'jpn': 'jp', 'kor': 'kr', 'mar': 'ma', 'sen': 'sn', 'gha': 'gh', 'ngr': 'ng',
-    'sau': 'sa', 'irn': 'ir', 'aus': 'au', 'uru': 'uy', 'col': 'co', 'chi': 'cl', 'ecu': 'ec',
+    'can': 'ca', 'bih': 'ba', 'qat': 'qa', 'jpn': 'jp', 'kor': 'kr', 'mar': 'ma', 'hai': 'ht', 'sco': 'gb-sct', 'par': 'py',
+    'sen': 'sn', 'gha': 'gh', 'ngr': 'ng', 'rsa': 'za', 'cuw': 'cw', 'civ': 'ci', 'tun': 'tn',
+    'sau': 'sa', 'ksa': 'sa', 'irn': 'ir', 'aus': 'au', 'uru': 'uy', 'col': 'co', 'chi': 'cl', 'ecu': 'ec',
     'sui': 'ch', 'den': 'dk', 'swe': 'se', 'nor': 'no', 'cro': 'hr', 'srb': 'rs', 'pol': 'pl',
-    'cze': 'cz', 'tur': 'tr', 'ukr': 'ua', 'rus': 'ru',
+    'cze': 'cz', 'tur': 'tr', 'ukr': 'ua', 'rus': 'ru', 'egy': 'eg', 'nzl': 'nz', 'cpv': 'cv', 'alg': 'dz',
+    'aut': 'at', 'jor': 'jo', 'cod': 'cd', 'uzb': 'uz', 'pan': 'pa',
     // Arabic names
     'العراق': 'iq', 'الأرجنتين': 'ar', 'فرنسا': 'fr', 'البرازيل': 'br', 'ألمانيا': 'de',
     'إنجلترا': 'gb-eng', 'إسبانيا': 'es', 'البرتغال': 'pt', 'هولندا': 'nl', 'بلجيكا': 'be',
@@ -572,7 +574,12 @@ export const getFlagUrl = (input: string): string => {
     // English names
     'iraq': 'iq', 'argentina': 'ar', 'france': 'fr', 'brazil': 'br', 'germany': 'de',
     'spain': 'es', 'portugal': 'pt', 'netherlands': 'nl', 'belgium': 'be', 'italy': 'it',
-    'mexico': 'mx', 'canada': 'ca', 'japan': 'jp', 'south korea': 'kr', 'morocco': 'ma',
+    'mexico': 'mx', 'canada': 'ca', 'bosnia and herz': 'ba', 'bosnia and herzegovina': 'ba',
+    'qatar': 'qa', 'japan': 'jp', 'south korea': 'kr', 'korea republic': 'kr', 'morocco': 'ma',
+    'haiti': 'ht', 'scotland': 'gb-sct', 'paraguay': 'py', 'curacao': 'cw', "cote d'ivoire": 'ci',
+    'cote d ivoire': 'ci', 'ivory coast': 'ci', 'tunisia': 'tn', 'egypt': 'eg', 'new zealand': 'nz',
+    'cabo verde': 'cv', 'cape verde': 'cv', 'algeria': 'dz', 'austria': 'at', 'jordan': 'jo',
+    'congo dr': 'cd', 'dr congo': 'cd', 'uzbekistan': 'uz', 'panama': 'pa',
     'senegal': 'sn', 'ghana': 'gh', 'nigeria': 'ng', 'saudi arabia': 'sa', 'iran': 'ir',
     'australia': 'au', 'uruguay': 'uy', 'colombia': 'co', 'switzerland': 'ch', 'norway': 'no'
   };
@@ -597,11 +604,17 @@ export const MondialFlag: React.FC<{
 
   const sources = React.useMemo(() => {
     if (!normCode) return [];
-    return [
+    return Array.from(new Set([
+      getFlagUrl(trimmed),
       `https://cdn.jsdelivr.net/gh/lipis/flag-icons/flags/1x1/${normCode}.svg`,
       `https://flagcdn.com/w80/${normCode}.png`
-    ];
-  }, [normCode]);
+    ].filter(Boolean)));
+  }, [normCode, trimmed]);
+  const sourceKey = sources.join('|');
+
+  React.useEffect(() => {
+    setSrcIndex(0);
+  }, [sourceKey]);
 
   const handleImgError = () => {
     if (srcIndex < sources.length - 1) {
@@ -723,19 +736,26 @@ export const MondialTeamLogo: React.FC<{
 }> = ({ t, name, shortName, logo, size = 52, color }) => {
   const [srcIndex, setSrcIndex] = React.useState(0);
   const abbr = shortName || name.slice(0, 3).toUpperCase();
+  const identity = name || shortName || '';
   
-  const fromEmoji = emojiToCountryCode(name || shortName || '');
-  const code = (fromEmoji || name || shortName || '').toLowerCase();
+  const fromEmoji = emojiToCountryCode(identity);
+  const code = (fromEmoji || identity).toLowerCase();
   const normCode = (code === 'eng' || code === 'gb-eng') ? 'gb-eng' : code;
 
   const sources = React.useMemo(() => {
     if (logo) return [logo];
     if (!normCode) return [];
-    return [
+    return Array.from(new Set([
+      getFlagUrl(identity),
       `https://cdn.jsdelivr.net/gh/lipis/flag-icons/flags/1x1/${normCode}.svg`,
       `https://flagcdn.com/w120/${normCode}.png`
-    ];
-  }, [logo, normCode]);
+    ].filter(Boolean)));
+  }, [identity, logo, normCode]);
+  const sourceKey = sources.join('|');
+
+  React.useEffect(() => {
+    setSrcIndex(0);
+  }, [sourceKey]);
 
   const handleImgError = () => {
     if (srcIndex < sources.length - 1) {

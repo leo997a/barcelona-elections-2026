@@ -198,6 +198,81 @@ const LINEUP_LINE_TAGS: Record<LineupLine, string> = {
   attack: 'ATT',
 };
 
+const normalizeLineupTeamKey = (value: unknown): string =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+const LINEUP_TEAM_CODE_BY_NAME: Record<string, string> = {
+  mexico: 'MEX',
+  'south africa': 'RSA',
+  'korea republic': 'KOR',
+  'south korea': 'KOR',
+  czechia: 'CZE',
+  canada: 'CAN',
+  'bosnia and herz': 'BIH',
+  'bosnia and herzegovina': 'BIH',
+  qatar: 'QAT',
+  switzerland: 'SUI',
+  brazil: 'BRA',
+  morocco: 'MAR',
+  haiti: 'HAI',
+  scotland: 'SCO',
+  usa: 'USA',
+  'united states': 'USA',
+  paraguay: 'PAR',
+  australia: 'AUS',
+  turkey: 'TUR',
+  turkiye: 'TUR',
+  germany: 'GER',
+  curacao: 'CUW',
+  'cote d ivoire': 'CIV',
+  'ivory coast': 'CIV',
+  ecuador: 'ECU',
+  netherlands: 'NED',
+  japan: 'JPN',
+  sweden: 'SWE',
+  tunisia: 'TUN',
+  belgium: 'BEL',
+  egypt: 'EGY',
+  iran: 'IRN',
+  'new zealand': 'NZL',
+  spain: 'ESP',
+  'cabo verde': 'CPV',
+  'cape verde': 'CPV',
+  'saudi arabia': 'KSA',
+  uruguay: 'URU',
+  france: 'FRA',
+  senegal: 'SEN',
+  iraq: 'IRQ',
+  norway: 'NOR',
+  argentina: 'ARG',
+  algeria: 'ALG',
+  austria: 'AUT',
+  jordan: 'JOR',
+  portugal: 'POR',
+  'congo dr': 'COD',
+  'dr congo': 'COD',
+  'congo democratic republic': 'COD',
+  uzbekistan: 'UZB',
+  colombia: 'COL',
+  england: 'ENG',
+  croatia: 'CRO',
+  ghana: 'GHA',
+  panama: 'PAN',
+};
+
+const lineupIdentityCode = (candidateCode: unknown, teamName: unknown): string => {
+  const code = String(candidateCode || '').trim().toUpperCase();
+  const nameCode = LINEUP_TEAM_CODE_BY_NAME[normalizeLineupTeamKey(teamName)];
+  return nameCode || code;
+};
+
 const lineupLineFromPosition = (pos?: string): LineupLine | null => {
   const token = String(pos || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (!token) return null;
@@ -1603,9 +1678,9 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, resolv
   const liveLineup = matchDetails?.lineups?.[lineupSide];
   const livePlayers = lineupsToPlayersJson(matchDetails, lineupSide) as LineupPlayer[];
   const parsed = safeParse<LineupPlayer[]>(String(getField('playersJson') || '[]'), DEFAULT_PLAYERS);
-  const code = liveLineup?.teamCode || text(getField, 'code', 'IQ');
   const team = text(getField, 'teamName', 'منتخب العراق');
   const displayTeam = liveLineup?.teamName || team;
+  const code = lineupIdentityCode(liveLineup?.teamCode || text(getField, 'code', 'IQ'), displayTeam);
   const formation = liveLineup?.formation || text(getField, 'formation', '4-3-3');
   const coach = liveLineup?.coach || text(getField, 'coach', '');
   const lineupLayoutMode = text(getField, 'lineupLayoutMode', 'auto_formation');
