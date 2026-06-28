@@ -117,6 +117,34 @@ const DEFAULT_METRICS: Record<string, PlayerMetricValue> = {
   minutes: { status: 'available', value: '2,640', source: 'fbref', statGroup: 'standard' },
 };
 
+const PLAYER_STATS_THEME_PRESETS = {
+  CYAN_PINK: {
+    accent: '#22d3ee',
+    secondary: '#fb7185',
+    frame: 'bg-[#080a0f]',
+  },
+  NEON_GREEN: {
+    accent: '#a3ff12',
+    secondary: '#18f0cf',
+    frame: 'bg-[radial-gradient(circle_at_20%_10%,rgba(163,255,18,.18),transparent_34%),#07120b]',
+  },
+  ROYAL_GOLD: {
+    accent: '#facc15',
+    secondary: '#38bdf8',
+    frame: 'bg-[radial-gradient(circle_at_16%_10%,rgba(250,204,21,.18),transparent_35%),#090806]',
+  },
+  BARCA_NIGHT: {
+    accent: '#ef4444',
+    secondary: '#2563eb',
+    frame: 'bg-[linear-gradient(135deg,#130016,#08142b_48%,#050608)]',
+  },
+  CLEAN_LIGHT: {
+    accent: '#e2e8f0',
+    secondary: '#2563eb',
+    frame: 'bg-[linear-gradient(135deg,#0f172a,#1e293b)]',
+  },
+} as const;
+
 const normalizePlayerStatsResponse = (payload: any): PlayerStatsPayload | null => {
   if (!payload || typeof payload !== 'object') return null;
   
@@ -427,11 +455,16 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   activeTheme,
 }) => {
   const dataMode = String(getField('playerStatsDataMode') || 'MANUAL');
-  const statsMode = String(getField('playerStatsMode') || 'SINGLE');
+  const rawStatsMode = String(getField('playerStatsMode') || 'SINGLE');
+  const statsMode = rawStatsMode === 'SCOUT_CARD' ? 'SCOUT_SHORTLIST' : rawStatsMode;
   const apiUrl = String(getField('playerStatsApiUrl') || '/api/player-stats');
   const pollIntervalSec = clamp(toNumber(getField('playerStatsPollSec'), 60), 15, 180);
-  const accent = String(getField('accentColor') || activeTheme.accent || '#22d3ee');
-  const secondaryAccent = String(getField('secondaryAccentColor') || '#fb7185');
+  const themePresetKey = String(getField('themePreset') || 'CYAN_PINK').toUpperCase() as keyof typeof PLAYER_STATS_THEME_PRESETS;
+  const playerTheme = PLAYER_STATS_THEME_PRESETS[themePresetKey] || PLAYER_STATS_THEME_PRESETS.CYAN_PINK;
+  const rawAccentColor = String(getField('accentColor') || '').trim();
+  const rawSecondaryAccentColor = String(getField('secondaryAccentColor') || '').trim();
+  const accent = rawAccentColor && rawAccentColor.toLowerCase() !== '#22d3ee' ? rawAccentColor : (playerTheme.accent || activeTheme.accent || '#22d3ee');
+  const secondaryAccent = rawSecondaryAccentColor && rawSecondaryAccentColor.toLowerCase() !== '#fb7185' ? rawSecondaryAccentColor : playerTheme.secondary;
   const scale = clamp(toNumber(getField('scale'), 1), 0.5, 3);
   const positionX = toNumber(getField('positionX'), 0);
   const positionY = toNumber(getField('positionY'), 0);
@@ -440,6 +473,7 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
   const heroMetrics = parseJson<string[]>(getField('heroMetricsJson')) || selectedMetrics.slice(0, 4);
   const secondaryMetrics = parseJson<string[]>(getField('secondaryMetricsJson')) || selectedMetrics.slice(4, 16);
   const visualVariant = String(getField('playerStatsVisualVariant') || 'ULTRA_LAB');
+  const playerStatsLayoutMode = String(getField('playerStatsLayoutMode') || 'AUTO').toUpperCase();
   const sourceJson = String(getField('playerStatsSourceJson') || '').trim();
   const [remotePayload, setRemotePayload] = useState<PlayerStatsPayload | null>(null);
 
@@ -544,11 +578,44 @@ export const PlayerStatsRenderer: React.FC<RendererProps> = ({
         : visualVariant === 'COMPACT_CARD'
           ? 'bg-[#0a0d12]'
           : visualVariant === 'CLEAN_BROADCAST'
-            ? 'bg-[#080a0f]'
-            : 'bg-[#080a0f]';
+            ? playerTheme.frame
+            : playerTheme.frame;
 
   // ── Visual variant density tokens (no provider/data changes) ──
   const variantDensity = (() => {
+    if (playerStatsLayoutMode === 'HERO_FIRST') {
+      return {
+        singleColumns: 'minmax(0,1fr) minmax(340px, 30%)',
+        titleSize: '48px',
+        heroValueSize: '84px',
+        heroLabelSize: '12px',
+        secondaryValueSize: '30px',
+        maxSecondaryRows: 5,
+        showScanLine: true,
+      };
+    }
+    if (playerStatsLayoutMode === 'METRIC_GRID') {
+      return {
+        singleColumns: 'minmax(0,1fr) minmax(260px, 26%)',
+        titleSize: '36px',
+        heroValueSize: '58px',
+        heroLabelSize: '10px',
+        secondaryValueSize: '24px',
+        maxSecondaryRows: 10,
+        showScanLine: false,
+      };
+    }
+    if (playerStatsLayoutMode === 'SCOUT_COMPACT') {
+      return {
+        singleColumns: 'minmax(0,1fr) minmax(260px, 28%)',
+        titleSize: '34px',
+        heroValueSize: '52px',
+        heroLabelSize: '10px',
+        secondaryValueSize: '22px',
+        maxSecondaryRows: 4,
+        showScanLine: false,
+      };
+    }
     switch (visualVariant) {
       case 'COMPACT_CARD':
         return {

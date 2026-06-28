@@ -126,3 +126,29 @@ test('template style controls are editable and drive their renderer style', asyn
     /const designStyle = rawDesignStyle[\s\S]*?resolveElectionStyle\(rawDesignStyle\)[\s\S]*?: templateVariantMap/
   );
 });
+
+test('football stat template theme and display controls drive renderers', async () => {
+  const [constants, matchStatsRenderer, playerStatsRenderer] = await Promise.all([
+    readSource('../constants.ts'),
+    readSource('../components/renderers/MatchStatsRenderer.tsx'),
+    readSource('../components/renderers/PlayerStatsRenderer.tsx'),
+  ]);
+
+  assert.match(constants, /template-football-smart-match-stats[\s\S]*?id: 'themePreset'/);
+  assert.match(constants, /template-football-smart-match-stats[\s\S]*?id: 'matchStatsDisplayMode'/);
+  assert.match(constants, /id === 'matchStatsDisplayMode'[\s\S]*?\) return 'display'/);
+  assert.match(matchStatsRenderer, /const MATCH_STATS_THEME_PRESETS =/);
+  assert.match(matchStatsRenderer, /const matchStatsDisplayMode = String\(getField\('matchStatsDisplayMode'\)/);
+  assert.match(matchStatsRenderer, /effectiveShowPlayerTicker/);
+  assert.match(matchStatsRenderer, /effectiveShowTopStats/);
+  assert.match(matchStatsRenderer, /background: matchTheme\.backdrop/);
+
+  assert.match(constants, /template-football-player-stats-lab[\s\S]*?id: 'themePreset'/);
+  assert.match(constants, /template-football-player-stats-lab[\s\S]*?id: 'playerStatsLayoutMode'/);
+  assert.match(constants, /value: 'SCOUT_SHORTLIST'/);
+  assert.match(constants, /id === 'playerStatsLayoutMode'[\s\S]*?\) return 'display'/);
+  assert.match(playerStatsRenderer, /const PLAYER_STATS_THEME_PRESETS =/);
+  assert.match(playerStatsRenderer, /const rawStatsMode = String\(getField\('playerStatsMode'\)/);
+  assert.match(playerStatsRenderer, /rawStatsMode === 'SCOUT_CARD' \? 'SCOUT_SHORTLIST'/);
+  assert.match(playerStatsRenderer, /const playerStatsLayoutMode = String\(getField\('playerStatsLayoutMode'\)/);
+});

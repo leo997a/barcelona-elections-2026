@@ -239,7 +239,8 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode' ||
     id === 'statsViewMode' || id === 'statFocus' ||
     id === 'scorerViewMode' || id === 'playerCardMode' ||
-    id === 'reportViewMode' || id === 'analysisViewMode'
+    id === 'reportViewMode' || id === 'analysisViewMode' ||
+    id === 'matchStatsDisplayMode' || id === 'playerStatsLayoutMode'
   ) return 'display';
   if (
     id.endsWith('Json') || id.startsWith('include') ||
@@ -661,6 +662,20 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'manualJson', label: 'JSON المباراة المستورد', type: 'textarea', value: '' },
       { id: 'pollIntervalSec', label: 'تحديث القالب من الجسر كل ثانية', type: 'range', value: 30, min: 10, max: 60, step: 5 },
       { id: 'statsRotateSec', label: 'تبديل مجموعات الإحصائيات كل ثانية', type: 'range', value: 30, min: 10, max: 90, step: 5 },
+      { id: 'themePreset', label: 'ثيم إحصائيات المباراة', type: 'select', value: 'BROADCAST_BLUE', options: [
+        { value: 'BROADCAST_BLUE', label: 'Broadcast Blue' },
+        { value: 'WORLD_CUP_NEON', label: 'World Cup Neon' },
+        { value: 'PITCH_GREEN', label: 'Pitch Green' },
+        { value: 'NIGHT_GOLD', label: 'Night Gold' },
+        { value: 'DERBY_RED', label: 'Derby Red' },
+        { value: 'CLEAN_STUDIO', label: 'Clean Studio' },
+      ] },
+      { id: 'matchStatsDisplayMode', label: 'وضع عرض إحصائيات المباراة', type: 'select', value: 'FULL_COMMAND', options: [
+        { value: 'FULL_COMMAND', label: 'مركز تحكم كامل' },
+        { value: 'TEAM_STATS_ONLY', label: 'إحصائيات الفرق فقط' },
+        { value: 'PLAYER_IMPACT', label: 'تركيز تأثير اللاعب' },
+        { value: 'TIMELINE_FLOW', label: 'الأحداث مع الإحصائيات' },
+      ] },
       { id: 'matchMetricPreset', label: 'تركيز إحصائيات المباراة', type: 'select', value: 'SMART', options: [
         { value: 'SMART', label: 'ذكي بدون تكرار' },
         { value: 'ALL', label: 'كل الإحصائيات' },
@@ -756,7 +771,7 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'playerStatsMode', label: 'وضع القالب', type: 'select', value: 'SINGLE', options: [
         { value: 'SINGLE', label: 'لاعب واحد' },
         { value: 'COMPARE', label: 'مقارنة لاعبين' },
-        { value: 'SCOUT_CARD', label: 'بطاقة كشاف / قائمة مراقبة 3 لاعبين' },
+        { value: 'SCOUT_SHORTLIST', label: 'بطاقة كشاف / قائمة مراقبة 3 لاعبين' },
       ] },
       { id: 'providerPolicy', label: 'سياسة المصدر', type: 'select', value: 'auto', options: [
         { value: 'auto', label: 'موجِّه تلقائي' },
@@ -781,6 +796,19 @@ const FOOTBALL_BROADCAST_TEMPLATES: OverlayConfig[] = [
       { id: 'metricNaturalLanguage', label: 'بحث الإحصائيات الطبيعي', type: 'hidden', value: '' },
       { id: 'playerStatsLabUiMode', label: 'وضع لوحة التحكم', type: 'hidden', value: 'easy' },
       { id: 'showUnavailableMetrics', label: 'إظهار غير المتاح', type: 'hidden', value: 'false' },
+      { id: 'themePreset', label: 'ثيم بطاقة اللاعب', type: 'select', value: 'CYAN_PINK', options: [
+        { value: 'CYAN_PINK', label: 'Cyan Pink' },
+        { value: 'NEON_GREEN', label: 'Neon Green' },
+        { value: 'ROYAL_GOLD', label: 'Royal Gold' },
+        { value: 'BARCA_NIGHT', label: 'Barca Night' },
+        { value: 'CLEAN_LIGHT', label: 'Clean Light' },
+      ] },
+      { id: 'playerStatsLayoutMode', label: 'توزيع إحصائيات اللاعب', type: 'select', value: 'AUTO', options: [
+        { value: 'AUTO', label: 'تلقائي حسب النمط' },
+        { value: 'HERO_FIRST', label: 'أرقام رئيسية كبيرة' },
+        { value: 'METRIC_GRID', label: 'شبكة إحصائيات كثيفة' },
+        { value: 'SCOUT_COMPACT', label: 'كشاف مختصر' },
+      ] },
       { id: 'playerStatsVisualVariant', label: 'نمط العرض', type: 'select', value: 'CLEAN_BROADCAST', options: [
         { value: 'CLEAN_BROADCAST', label: 'بث نظيف' },
         { value: 'ULTRA_LAB', label: 'مختبر متقدم' },

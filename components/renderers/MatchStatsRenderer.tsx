@@ -26,6 +26,39 @@ import { PLAYER_PORTRAIT_CACHE_URLS, fetchAssetCaches, parseAssetMap, splitAsset
 
 const DEFAULT_PLAYER_IMAGE_CACHE_URL = PLAYER_PORTRAIT_CACHE_URLS.join(';');
 
+const MATCH_STATS_THEME_PRESETS = {
+  BROADCAST_BLUE: {
+    home: '#2563eb',
+    away: '#ef4444',
+    backdrop: 'radial-gradient(circle at 18% 18%, rgba(37,99,235,.18), transparent 34%), radial-gradient(circle at 82% 76%, rgba(239,68,68,.14), transparent 34%)',
+  },
+  WORLD_CUP_NEON: {
+    home: '#18f0cf',
+    away: '#ff1377',
+    backdrop: 'radial-gradient(circle at 15% 25%, rgba(24,240,207,.18), transparent 32%), radial-gradient(circle at 86% 18%, rgba(255,19,119,.15), transparent 34%)',
+  },
+  PITCH_GREEN: {
+    home: '#22c55e',
+    away: '#fde047',
+    backdrop: 'linear-gradient(135deg, rgba(34,197,94,.12), transparent 38%, rgba(253,224,71,.10))',
+  },
+  NIGHT_GOLD: {
+    home: '#f59e0b',
+    away: '#38bdf8',
+    backdrop: 'radial-gradient(circle at 22% 20%, rgba(245,158,11,.16), transparent 34%), radial-gradient(circle at 80% 72%, rgba(56,189,248,.12), transparent 34%)',
+  },
+  DERBY_RED: {
+    home: '#ef4444',
+    away: '#f8fafc',
+    backdrop: 'linear-gradient(135deg, rgba(239,68,68,.16), transparent 42%, rgba(248,250,252,.08))',
+  },
+  CLEAN_STUDIO: {
+    home: '#38bdf8',
+    away: '#a3e635',
+    backdrop: 'radial-gradient(circle at 50% 15%, rgba(255,255,255,.10), transparent 30%)',
+  },
+} as const;
+
 const cleanBroadcastSourceName = (value: string, mode: string) => {
   const raw = value.trim();
   const fallback = mode === 'CLOUD_BRIDGE' ? 'بيانات REO المباشرة' : 'بيانات REO';
@@ -1135,8 +1168,12 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const manualJson = String(getField('manualJson') || '');
   const pollIntervalSec = clamp(toNumber(getField('pollIntervalSec'), 30), 10, 60);
   const statsRotateSec = clamp(toNumber(getField('statsRotateSec'), 30), 10, 90);
-  const homeColor = String(getField('homeColor') || activeTheme.primary || '#2563eb');
-  const awayColor = String(getField('awayColor') || activeTheme.secondary || '#ef4444');
+  const themePresetKey = String(getField('themePreset') || 'BROADCAST_BLUE').toUpperCase() as keyof typeof MATCH_STATS_THEME_PRESETS;
+  const matchTheme = MATCH_STATS_THEME_PRESETS[themePresetKey] || MATCH_STATS_THEME_PRESETS.BROADCAST_BLUE;
+  const rawHomeColor = String(getField('homeColor') || '').trim();
+  const rawAwayColor = String(getField('awayColor') || '').trim();
+  const homeColor = rawHomeColor && rawHomeColor.toLowerCase() !== '#3b82f6' ? rawHomeColor : (matchTheme.home || activeTheme.primary || '#2563eb');
+  const awayColor = rawAwayColor && rawAwayColor.toLowerCase() !== '#ef4444' ? rawAwayColor : (matchTheme.away || activeTheme.secondary || '#ef4444');
   const showScorebug = boolField(getField('showScorebug'), true);
   const showEvents = boolField(getField('showEvents'), true);
   const showKeyBattle = boolField(getField('showKeyBattle'), true);
@@ -1145,6 +1182,16 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const showTopStats = boolField(getField('showTopStats'), true);
   const showAdvancedStats = boolField(getField('showAdvancedStats'), true);
   const showPlayerTicker = boolField(getField('showPlayerTicker'), true);
+  const matchStatsDisplayMode = String(getField('matchStatsDisplayMode') || 'FULL_COMMAND').toUpperCase();
+  const isTeamStatsOnly = matchStatsDisplayMode === 'TEAM_STATS_ONLY';
+  const isPlayerImpactMode = matchStatsDisplayMode === 'PLAYER_IMPACT';
+  const isTimelineFlowMode = matchStatsDisplayMode === 'TIMELINE_FLOW';
+  const effectiveShowScorebug = showScorebug && !isPlayerImpactMode;
+  const effectiveShowEvents = showEvents && !isPlayerImpactMode;
+  const effectiveShowKeyBattle = showKeyBattle && !isTeamStatsOnly;
+  const effectiveShowMotm = showMotm && !isTeamStatsOnly && !isTimelineFlowMode;
+  const effectiveShowTopStats = showTopStats && !isTeamStatsOnly;
+  const effectiveShowPlayerTicker = showPlayerTicker && !isTeamStatsOnly && !isTimelineFlowMode;
   const playerRotateSec = clamp(toNumber(getField('playerRotateSec'), 30), 15, 120);
   const panelSide = String(getField('panelSide') || 'LEFT');
   const requestedPlayerSide = String(getField('playerPanelSide') || 'RIGHT');
@@ -1313,8 +1360,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   const matchSideClass = panelSide === 'LEFT' ? 'left-6' : 'right-6';
   const playerSideClass = playerPanelSide === 'LEFT' ? 'left-6' : 'right-6';
   const qualityBoost = broadcastQuality === 'ULTRA' ? 24 : 0;
-  const matchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[490px]' : visualStyle === 'DATA_TOWER' ? 'w-[520px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[580px]' : qualityBoost ? 'w-[564px]' : 'w-[540px]';
-  const playerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[450px]' : visualStyle === 'DATA_TOWER' ? 'w-[480px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[540px]' : qualityBoost ? 'w-[524px]' : 'w-[500px]';
+  const baseMatchPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[490px]' : visualStyle === 'DATA_TOWER' ? 'w-[520px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[580px]' : qualityBoost ? 'w-[564px]' : 'w-[540px]';
+  const basePlayerPanelWidth = visualStyle === 'COMPACT_BROADCAST' ? 'w-[450px]' : visualStyle === 'DATA_TOWER' ? 'w-[480px]' : visualStyle === 'GLASS_STUDIO' ? 'w-[540px]' : qualityBoost ? 'w-[524px]' : 'w-[500px]';
+  const matchPanelWidth = isTeamStatsOnly ? 'w-[720px]' : isTimelineFlowMode ? 'w-[620px]' : baseMatchPanelWidth;
+  const playerPanelWidth = isPlayerImpactMode ? 'w-[560px]' : basePlayerPanelWidth;
   const matchPanelTransform = `scale(${matchPanelScale})`;
   const playerPanelTransform = `scale(${playerPanelScale})`;
   const matchPanelOrigin = panelSide === 'LEFT' ? 'left center' : 'right center';
@@ -1573,7 +1622,7 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
   );
 
   const PlayerStatsPanel = () => {
-    if (!showPlayerTicker || !activePlayerGroup) return null;
+    if (!effectiveShowPlayerTicker || !activePlayerGroup) return null;
     const ActivePlayerIcon = playerIconByKey[activePlayerGroup.key] || Medal;
     const activePlayerHelp = metricHelpByKey[activePlayerGroup.key] || activePlayerGroup.subtitle;
     return (
@@ -1782,10 +1831,10 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
           animation: reoSoftPulse 9s ease-in-out infinite;
         }
       `}</style>
-      <div className={`relative h-full w-full overflow-hidden p-6 ${qualityClass}`} style={{ direction: 'ltr' }}>
+      <div className={`relative h-full w-full overflow-hidden p-6 ${qualityClass}`} style={{ direction: 'ltr', background: matchTheme.backdrop }}>
         {backdropClass ? <div className={`pointer-events-none absolute inset-0 ${backdropClass}`} /> : null}
         <div dir="rtl" className={`absolute inset-y-6 ${matchSideClass} flex ${matchPanelWidth} max-w-[calc(50vw-42px)] flex-col gap-3 overflow-hidden font-['Cairo'] text-white ${motionClass}`} style={{ transform: matchPanelTransform, transformOrigin: matchPanelOrigin }}>
-          {showScorebug && (
+          {effectiveShowScorebug && (
             <div className={`relative shrink-0 overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
               <div className="absolute inset-x-0 top-0 h-1 reo-sweep" style={{ background: `linear-gradient(90deg, ${homeColor}, #f8fafc, ${awayColor})` }} />
               <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
@@ -1854,8 +1903,8 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
             </div>
           )}
 
-          {showEvents && <EventsCard />}
-          {showTopStats && <TopStatsStrip />}
+          {effectiveShowEvents && <EventsCard />}
+          {effectiveShowTopStats && <TopStatsStrip />}
 
           {showAdvancedStats && (
             <div className={`flex min-h-[350px] shrink-0 flex-col overflow-hidden rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
@@ -1900,11 +1949,11 @@ export const MatchStatsRenderer: React.FC<RendererProps> = ({
             </div>
           )}
 
-          {(showMotm || showKeyBattle) && (
+          {(effectiveShowMotm || effectiveShowKeyBattle) && (
             <div className="grid grid-cols-1 gap-3">
-              {showMotm && impactPlayer ? (
+              {effectiveShowMotm && impactPlayer ? (
                 <ImpactCard />
-              ) : showKeyBattle && keyCreator && keyDefender ? (
+              ) : effectiveShowKeyBattle && keyCreator && keyDefender ? (
                 <div className={`min-h-[132px] rounded-lg border ${panelSurface} p-3 shadow-2xl backdrop-blur-xl`}>
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Key Battle</div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
