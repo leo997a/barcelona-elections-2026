@@ -234,7 +234,9 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'playerStatsMode' ||
     id === 'panelSide' || id === 'playerPanelSide' || id === 'scorebugPosition' ||
     id === 'varPosition' || id === 'lineupSide' || id === 'lineupLayoutMode' ||
-    id === 'lineupDirection' || id === 'groupWallLayout' ||
+    id === 'lineupDirection' || id === 'lineupBoardStyle' ||
+    id === 'lineupNameMode' || id === 'lineupPhotoMode' ||
+    id === 'lineupShowBench' || id === 'groupWallLayout' ||
     id === 'identityColumns' || id === 'matrixLayout' || id === 'badgeMode' ||
     id === 'activePosition' || id === 'focusMode' || id === 'speakerMode' ||
     id === 'statementDensity' || id === 'statementLayout' || id === 'motionMode' ||

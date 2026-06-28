@@ -235,17 +235,42 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
     readSource('../constants.ts'),
   ]);
 
-  for (const field of ['lineupLayoutMode', 'lineupDirection']) {
+  for (const field of ['lineupLayoutMode', 'lineupDirection', 'lineupBoardStyle', 'lineupNameMode', 'lineupPhotoMode', 'lineupShowBench']) {
     assert.match(templates, new RegExp(`id: '${field}'`), `${field} is not exposed in lineup settings`);
     assert.match(constants, new RegExp(`id === '${field}'`), `${field} is not grouped as a display control`);
   }
 
   assert.match(obs, /const parseFormationRows = \(formation: string\): number\[\]/);
   assert.match(obs, /const buildFormationLineup = \(/);
+  assert.match(obs, /const lineupSkin = \(style: string/);
+  assert.match(obs, /const lineupLineFromY = \(y: number, direction: string, player\?: LineupPlayer\): LineupLine/);
   assert.match(obs, /layoutMode === 'source_positions' && sourceHasEnoughPositions/);
+  assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /const lineupLayoutMode = text\(getField, 'lineupLayoutMode', 'auto_formation'\)/);
   assert.match(obs, /const lineupDirection = text\(getField, 'lineupDirection', 'attack_up'\)/);
+  assert.match(obs, /const lineupBoardStyle = text\(getField, 'lineupBoardStyle', 'reference_black'\)/);
+  assert.match(obs, /const lineupNameMode = text\(getField, 'lineupNameMode', 'short'\)/);
+  assert.match(obs, /const lineupPhotoMode = text\(getField, 'lineupPhotoMode', 'auto'\)/);
+  assert.match(obs, /const lineupPlayerPhotoUrl = \(/);
+  assert.match(obs, /scene\?: 'tactical' \| 'stadium'/);
+  assert.match(obs, /scene: 'stadium'/);
+  assert.match(obs, /const isStadiumScene = skin\.scene === 'stadium'/);
+  assert.match(obs, /const featurePhotoPlayers = players/);
+  assert.match(obs, /referrerPolicy="no-referrer"/);
+  assert.match(obs, /placement: 'field' \| 'list'/);
+  assert.match(obs, /ReoLineupPlayerMarker/);
+  assert.match(obs, /ReoLineupMiniAvatar/);
   assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection\)/);
+  assert.match(obs, /className="lineup-player-anchor absolute"/);
+  assert.match(obs, /data-zone=\{player\.line\}/);
+  assert.match(obs, /transform: 'translate\(-50%, -50%\)'/);
+  for (const option of ['reference_black', 'stadium_motion', 'social_blue', 'score_red', 'clean_pitch']) {
+    assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a lineup board style`);
+  }
+  for (const option of ['auto', 'list_only', 'off']) {
+    assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a lineup photo mode`);
+  }
+  assert.match(templates, /id: 'lineupBoardStyle'[\s\S]*?value: 'stadium_motion'/);
 });
 
 test('mondial statistical templates expose and consume real display modes', async () => {

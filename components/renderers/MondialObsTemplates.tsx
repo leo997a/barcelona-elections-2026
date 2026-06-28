@@ -61,6 +61,25 @@ type PositionedLineupPlayer = LineupPlayer & {
   name: string;
   x: number;
   y: number;
+  line: LineupLine;
+  lineLabel: string;
+  rowIndex: number;
+  slotIndex: number;
+};
+
+type LineupLine = 'goalkeeper' | 'defence' | 'midfield' | 'support' | 'attack';
+
+type LineupSkin = {
+  shell: string;
+  field: string;
+  pitchLine: string;
+  panel: string;
+  panelText: string;
+  chip: string;
+  chipText: string;
+  title: string;
+  muted: string;
+  scene?: 'tactical' | 'stadium';
 };
 
 const WC = {
@@ -160,6 +179,133 @@ const normalizedPlayer = (player: LineupPlayer | undefined, index: number): Line
 const hasValidPitchPosition = (player: LineupPlayer): boolean =>
   Number.isFinite(Number(player.x)) && Number.isFinite(Number(player.y));
 
+const LINEUP_LINE_LABELS: Record<LineupLine, string> = {
+  goalkeeper: 'حراسة',
+  defence: 'دفاع',
+  midfield: 'وسط',
+  support: 'صناعة',
+  attack: 'هجوم',
+};
+
+const LINEUP_LINE_TAGS: Record<LineupLine, string> = {
+  goalkeeper: 'GK',
+  defence: 'DEF',
+  midfield: 'MID',
+  support: 'AM',
+  attack: 'ATT',
+};
+
+const lineupLineFromPosition = (pos?: string): LineupLine | null => {
+  const token = String(pos || '').toUpperCase();
+  if (!token) return null;
+  if (token.includes('GK') || token.includes('GOAL')) return 'goalkeeper';
+  if (token.includes('CB') || token.includes('LB') || token.includes('RB') || token.includes('DF') || token.includes('DEF')) return 'defence';
+  if (token.includes('FW') || token.includes('ST') || token.includes('CF') || token.includes('ATT')) return 'attack';
+  if (token.includes('AM') || token.includes('WING') || token === 'W' || token.includes('LAM') || token.includes('RAM')) return 'support';
+  if (token.includes('CM') || token.includes('DM') || token.includes('MF') || token.includes('MID')) return 'midfield';
+  return null;
+};
+
+const lineupLineFromRow = (rowIndex: number, rowsLength: number, player?: LineupPlayer): LineupLine => {
+  const byPosition = lineupLineFromPosition(player?.pos);
+  if (byPosition) return byPosition;
+  if (rowIndex === 0) return 'goalkeeper';
+  if (rowIndex === 1) return 'defence';
+  if (rowIndex === rowsLength - 1) return 'attack';
+  if (rowsLength >= 5 && rowIndex === rowsLength - 2) return 'support';
+  return 'midfield';
+};
+
+const lineupLineFromY = (y: number, direction: string, player?: LineupPlayer): LineupLine => {
+  const byPosition = lineupLineFromPosition(player?.pos);
+  if (byPosition) return byPosition;
+  const defendingScaleY = direction === 'attack_down' ? 100 - y : y;
+  if (defendingScaleY >= 80) return 'goalkeeper';
+  if (defendingScaleY >= 62) return 'defence';
+  if (defendingScaleY >= 39) return 'midfield';
+  if (defendingScaleY >= 25) return 'support';
+  return 'attack';
+};
+
+const mirrorPitchY = (value: number, direction: string): number =>
+  direction === 'attack_down' ? 100 - value : value;
+
+const lineupDisplayName = (name: string, mode: string): string => {
+  if (mode === 'number_only') return '';
+  const clean = name.trim();
+  if (mode === 'full') return clean;
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return clean;
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+};
+
+const lineupSkin = (style: string, c: ReturnType<typeof themedColors>, teamColor: string): LineupSkin => {
+  if (style === 'score_red') {
+    return {
+      shell: `linear-gradient(135deg, #050505 0%, ${WC.black} 44%, ${WC.red} 44% 56%, #060606 56% 100%)`,
+      field: `radial-gradient(circle at 50% 20%, rgba(255,255,255,.08), transparent 38%), linear-gradient(160deg, #0b102a, #071d13 62%, #040404)`,
+      pitchLine: 'rgba(255,255,255,.62)',
+      panel: '#ffffff',
+      panelText: '#050505',
+      chip: WC.red,
+      chipText: WC.white,
+      title: WC.white,
+      muted: 'rgba(255,255,255,.68)',
+    };
+  }
+  if (style === 'social_blue') {
+    return {
+      shell: `linear-gradient(150deg, ${WC.blue} 0 42%, ${WC.green} 42% 72%, #050505 72% 100%)`,
+      field: `linear-gradient(145deg, #072bff 0%, #061b73 54%, #011a0a 100%)`,
+      pitchLine: 'rgba(255,255,255,.55)',
+      panel: '#050505',
+      panelText: WC.white,
+      chip: WC.lime,
+      chipText: '#050505',
+      title: WC.white,
+      muted: 'rgba(255,255,255,.72)',
+    };
+  }
+  if (style === 'clean_pitch') {
+    return {
+      shell: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 55%, #e5edf8 100%)',
+      field: `linear-gradient(140deg, #0f8b49 0%, #0a6537 50%, #074628 100%)`,
+      pitchLine: 'rgba(255,255,255,.7)',
+      panel: '#050505',
+      panelText: WC.white,
+      chip: teamColor || c.accent,
+      chipText: '#050505',
+      title: '#050505',
+      muted: 'rgba(0,0,0,.62)',
+    };
+  }
+  if (style === 'stadium_motion') {
+    return {
+      shell: `radial-gradient(ellipse at 50% -12%, rgba(255,255,255,.38), transparent 30%), radial-gradient(ellipse at 24% 24%, rgba(8,234,209,.34), transparent 24%), radial-gradient(ellipse at 80% 28%, rgba(255,21,149,.28), transparent 28%), linear-gradient(145deg, #06122f 0%, #081a45 46%, #050505 100%)`,
+      field: `radial-gradient(ellipse at 50% 1%, rgba(255,255,255,.28), transparent 18%), radial-gradient(ellipse at 50% 8%, rgba(27,132,255,.55), transparent 38%), linear-gradient(180deg, #071c42 0%, #0a3323 58%, #04110b 100%)`,
+      pitchLine: 'rgba(255,255,255,.58)',
+      panel: 'rgba(2,6,23,.92)',
+      panelText: WC.white,
+      chip: WC.cyan,
+      chipText: '#050505',
+      title: WC.white,
+      muted: 'rgba(255,255,255,.72)',
+      scene: 'stadium',
+    };
+  }
+  return {
+    shell: `radial-gradient(ellipse at 108% -20%, ${c.accent2} 0 17%, transparent 18% 100%), radial-gradient(ellipse at -10% 115%, ${c.accent} 0 20%, transparent 21% 100%), linear-gradient(135deg, #050505 0%, #050505 58%, ${teamColor || c.success} 58% 62%, #050505 62% 100%)`,
+    field: `radial-gradient(ellipse at 50% 116%, rgba(255,255,255,.13), transparent 42%), linear-gradient(160deg, #061409 0%, #09261b 50%, #020202 100%)`,
+    pitchLine: 'rgba(255,255,255,.52)',
+    panel: '#050505',
+    panelText: WC.white,
+    chip: c.gold,
+    chipText: '#050505',
+    title: WC.white,
+    muted: 'rgba(255,255,255,.68)',
+  };
+};
+
 const playerRowsFromFormation = (players: LineupPlayer[], formation: string): LineupPlayer[][] => {
   const cleanPlayers = players.slice(0, 11).map(normalizedPlayer);
   const goalkeeperIndex = cleanPlayers.findIndex(player => String(player.pos || '').toUpperCase().includes('GK'));
@@ -214,22 +360,118 @@ const buildFormationLineup = (
   const rows = playerRowsFromFormation(sourcePlayers.length ? sourcePlayers : DEFAULT_PLAYERS, formation);
   const outfieldRows = Math.max(1, rows.length - 1);
   const autoPositioned = rows.flatMap((row, rowIndex) =>
-    row.map((player, playerIndex) => ({
-      ...player,
-      x: clamp(rowSlotX(playerIndex, row.length), 8, 92),
-      y: clamp(formationSlotY(rowIndex, outfieldRows, direction), 10, 90),
-    }))
+    row.map((player, playerIndex) => {
+      const line = lineupLineFromRow(rowIndex, rows.length, player);
+      return {
+        ...player,
+        x: clamp(rowSlotX(playerIndex, row.length), 8, 92),
+        y: clamp(formationSlotY(rowIndex, outfieldRows, direction), 10, 90),
+        line,
+        lineLabel: LINEUP_LINE_LABELS[line],
+        rowIndex,
+        slotIndex: playerIndex,
+      };
+    })
   );
 
   if (layoutMode === 'source_positions' && sourceHasEnoughPositions) {
-    return sourcePlayers.map((player, index) => ({
-      ...player,
-      x: clamp(Number(player.x ?? autoPositioned[index]?.x ?? 50), 8, 92),
-      y: clamp(Number(player.y ?? autoPositioned[index]?.y ?? 50), 10, 90),
-    }));
+    return sourcePlayers.map((player, index) => {
+      const sourceY = Number(player.y ?? autoPositioned[index]?.y ?? 50);
+      const y = clamp(mirrorPitchY(sourceY, direction), 10, 90);
+      const line = lineupLineFromY(y, direction, player);
+      return {
+        ...player,
+        x: clamp(Number(player.x ?? autoPositioned[index]?.x ?? 50), 8, 92),
+        y,
+        line,
+        lineLabel: LINEUP_LINE_LABELS[line],
+        rowIndex: autoPositioned[index]?.rowIndex ?? index,
+        slotIndex: autoPositioned[index]?.slotIndex ?? 0,
+      };
+    });
   }
 
   return autoPositioned.slice(0, 11);
+};
+
+const lineupPlayerPhotoUrl = (
+  player: LineupPlayer,
+  mode: string,
+  placement: 'field' | 'list'
+): string => {
+  if (mode === 'off') return '';
+  if (mode === 'list_only' && placement === 'field') return '';
+  return String(player.image || '').trim();
+};
+
+const ReoLineupPlayerMarker: React.FC<{
+  player: PositionedLineupPlayer;
+  index: number;
+  skin: LineupSkin;
+  lineupNameMode: string;
+  lineupPhotoMode: string;
+  theme?: MondialTheme;
+}> = ({ player, index, skin, lineupNameMode, lineupPhotoMode, theme }) => {
+  const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field');
+  const number = player.num ?? player.number ?? index + 1;
+  const hasImage = Boolean(imageUrl);
+  return (
+    <div
+      className="flex flex-col items-center"
+      style={{ animation: `wcBadgePop .72s ${.32 + index * .065}s cubic-bezier(.16,1.18,.3,1) both` }}
+    >
+      <div
+        className={`relative ${hasImage ? 'w-[82px] h-[82px] rounded-[28px]' : 'w-[74px] h-[74px] rounded-[24px]'} border-[5px] border-black flex items-center justify-center overflow-hidden text-[28px] font-black`}
+        style={{ background: skin.panel, color: skin.panelText, boxShadow: `-8px 7px 0 ${paletteAt(theme, index)}` }}
+      >
+        {hasImage ? (
+          <>
+            <img
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-top"
+              referrerPolicy="no-referrer"
+              onError={(event) => { event.currentTarget.style.display = 'none'; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/10 to-transparent" />
+            <span className="absolute right-1 bottom-1 min-w-8 h-8 px-2 rounded-[12px] border-[3px] border-black bg-white text-black flex items-center justify-center text-[20px] leading-none font-black">
+              {number}
+            </span>
+          </>
+        ) : number}
+      </div>
+      <div
+        className="mt-2 min-w-[86px] max-w-[158px] rounded-[15px] border-[4px] border-black px-3 py-1 text-center text-[13px] leading-tight font-black whitespace-nowrap overflow-hidden text-ellipsis"
+        style={{ background: skin.panel, color: skin.panelText }}
+      >
+        {lineupDisplayName(player.name, lineupNameMode)}
+      </div>
+      <div className="mt-1 rounded-full px-3 py-0.5 text-[9px] font-black text-white" style={{ background: '#050505' }}>{player.lineLabel}</div>
+    </div>
+  );
+};
+
+const ReoLineupMiniAvatar: React.FC<{
+  player: LineupPlayer;
+  index: number;
+  lineupPhotoMode: string;
+  theme?: MondialTheme;
+}> = ({ player, index, lineupPhotoMode, theme }) => {
+  const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'list');
+  const number = player.num ?? player.number ?? index + 1;
+  return (
+    <span className="w-7 h-7 flex items-center justify-center rounded-[10px] border-[3px] border-black overflow-hidden text-[11px] font-black" style={{ background: paletteAt(theme, index), color: '#050505' }}>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-full object-cover object-top"
+          referrerPolicy="no-referrer"
+          onError={(event) => { event.currentTarget.style.display = 'none'; }}
+        />
+      ) : number}
+    </span>
+  );
 };
 
 const DEFAULT_SCORERS: MondialLiveScorer[] = [
@@ -1295,7 +1537,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   );
 };
 
-export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, matchDetails }) => {
+export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, resolveField, matchDetails }) => {
   const lineupSide = text(getField, 'lineupSide', 'home') === 'away' ? 'away' : 'home';
   const liveLineup = matchDetails?.lineups?.[lineupSide];
   const livePlayers = lineupsToPlayersJson(matchDetails, lineupSide) as LineupPlayer[];
@@ -1307,53 +1549,186 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, matchD
   const coach = liveLineup?.coach || text(getField, 'coach', '');
   const lineupLayoutMode = text(getField, 'lineupLayoutMode', 'auto_formation');
   const lineupDirection = text(getField, 'lineupDirection', 'attack_up');
+  const lineupBoardStyle = text(getField, 'lineupBoardStyle', 'reference_black');
+  const lineupNameMode = text(getField, 'lineupNameMode', 'short');
+  const lineupPhotoMode = text(getField, 'lineupPhotoMode', 'auto');
+  const lineupShowBench = getField('lineupShowBench') !== false && String(getField('lineupShowBench') ?? 'true') !== 'false';
   const sourcePlayers = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
   const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection);
   const c = themedColors(t);
+  const teamColor = text(getField, 'color', c.success);
+  const skin = lineupSkin(lineupBoardStyle, c, teamColor);
+  const status = matchStatusPresentation(getField, resolveField);
+  const minute = String(matchDetails?.match.minute ?? getField('minute') ?? '').trim();
+  const statusText = status.isLive ? liveStatusText(minute) : status.label;
+  const benchPlayers = lineupShowBench ? (liveLineup?.subs ?? []).slice(0, 6).map(normalizedPlayer) : [];
+  const lineOrder: LineupLine[] = lineupDirection === 'attack_down'
+    ? ['goalkeeper', 'defence', 'midfield', 'support', 'attack']
+    : ['attack', 'support', 'midfield', 'defence', 'goalkeeper'];
+  const summaryOrder: LineupLine[] = ['goalkeeper', 'defence', 'midfield', 'support', 'attack'];
+  const lineCounts = summaryOrder
+    .map(line => ({
+      line,
+      label: LINEUP_LINE_LABELS[line],
+      tag: LINEUP_LINE_TAGS[line],
+      count: players.filter(player => player.line === line).length,
+    }))
+    .filter(item => item.count > 0);
+  const isStadiumScene = skin.scene === 'stadium';
+  const featurePhotoPlayers = players
+    .filter(player => Boolean(lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field')))
+    .slice(0, 3);
+
   return (
     <KineticStage theme={t}>
-      <div className="w-full h-full p-8 flex items-center justify-center">
-        <div className="relative w-[1240px] h-[700px]">
-          <div className="absolute inset-0 rounded-[34px]" style={{ background: c.danger, transform: 'translate(-18px,17px)' }} />
-          <div className="absolute inset-0 rounded-[34px]" style={{ background: c.success, transform: 'translate(18px,10px)' }} />
-          <div className="relative w-full h-full bg-white text-black border-[6px] border-black rounded-[34px] overflow-hidden">
-            <div className="h-[76px] bg-black text-white flex items-center justify-between px-8">
-              <div className="flex items-center gap-4"><MondialFlag codeOrName={code} size={44} /><span className="text-[25px] font-black">{displayTeam}</span></div>
-              <div className="flex items-center gap-3">
-                {coach && <span className="max-w-[310px] truncate text-[12px] font-black text-white/70">{coach}</span>}
-                <Pill color={c.gold}>{formation}</Pill>
+      <div className="w-full h-full p-7 flex items-center justify-center" dir="ltr">
+        <div
+          className="relative w-[1540px] h-[860px] overflow-hidden rounded-[44px] border-[6px] border-black text-white"
+          style={{ background: skin.shell, boxShadow: `18px 18px 0 ${c.ink}` }}
+        >
+          {isStadiumScene && (
+            <>
+              <div className="absolute inset-0 opacity-80" style={{ background: 'radial-gradient(ellipse at 50% 3%, rgba(255,255,255,.28), transparent 18%), radial-gradient(ellipse at 50% 34%, rgba(11,115,255,.24), transparent 34%), linear-gradient(180deg, rgba(255,255,255,.06) 0%, transparent 16%, rgba(0,0,0,.22) 58%, rgba(0,0,0,.62) 100%)' }} />
+              <div className="absolute inset-x-16 top-8 h-24 rounded-full bg-white/10 blur-[38px]" />
+              <div className="absolute left-0 right-0 top-[112px] h-[92px] opacity-35" style={{ background: 'repeating-linear-gradient(90deg, rgba(255,255,255,.20) 0 2px, transparent 2px 36px), linear-gradient(180deg, rgba(255,255,255,.10), transparent)' }} />
+              <div className="absolute -left-24 bottom-[-130px] w-[560px] h-[260px] rounded-[50%] bg-emerald-400/22 blur-[12px]" />
+              <div className="absolute -right-24 bottom-[-130px] w-[560px] h-[260px] rounded-[50%] bg-blue-500/22 blur-[12px]" />
+            </>
+          )}
+          <div className="absolute -right-24 -top-24 w-[460px] h-[460px] rounded-full border-[58px] border-white/10" />
+          <div className="absolute -left-28 bottom-16 w-[380px] h-[380px] rounded-full border-[42px] border-white/10" />
+          <div className="absolute inset-x-0 top-0"><ColorRail theme={t} /></div>
+          <div className="relative z-10 h-full p-8 grid grid-rows-[118px_1fr] gap-7">
+            <div className="rounded-[34px] border-[5px] border-black bg-black/88 overflow-hidden" style={{ boxShadow: `10px 10px 0 ${teamColor}` }}>
+              <div className="h-full grid grid-cols-[250px_1fr_250px] items-center gap-6 px-7">
+                <div className="flex items-center gap-4">
+                  <MondialFlag codeOrName={code} size={70} />
+                  <div>
+                    <div className="text-[12px] font-black tracking-[.2em] text-white/55">LINEUP</div>
+                    <div className="text-[42px] leading-none font-black">{formation}</div>
+                  </div>
+                </div>
+                <div className="text-center" dir="rtl">
+                  <div className="text-[18px] font-black text-white/62">{coach ? `المدرب: ${coach}` : 'التشكيلة الرسمية'}</div>
+                  <div className="text-[56px] leading-none font-black mt-1">{displayTeam}</div>
+                </div>
+                <div className="flex items-center justify-end gap-4">
+                  <div className="rounded-full border-[4px] border-white px-5 py-3 text-[18px] font-black" style={{ background: skin.chip, color: skin.chipText }}>
+                    {statusText}
+                  </div>
+                  <ReoMark compact />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-[300px_1fr] h-[calc(100%_-_76px)]">
-              <div className="p-5 border-r-[5px] border-black overflow-hidden">
-                <div className="text-[13px] font-black mb-2">التشكيلة الأساسية</div>
-                {players.map((player, index) => (
-                  <div key={`${player.name}-${index}`} className="flex items-center gap-3 py-1.5 border-b-2 border-black/15 text-[12px] font-black" style={{ animation: `wcRowIn .45s ${.18 + index * .045}s both` }}>
-                    <span className="w-8 h-8 flex items-center justify-center rounded-[10px] border-[3px] border-black" style={{ background: paletteAt(t, index) }}>{player.num ?? player.number ?? index + 1}</span>
-                    <span className="flex-1">{player.name}</span><span>{player.pos}</span>
+            <div className="grid grid-cols-[1fr_385px] gap-7 min-h-0">
+              <div
+                className="relative rounded-[38px] border-[6px] border-black overflow-hidden"
+                style={{ background: skin.field, boxShadow: `12px 12px 0 ${c.danger}` }}
+              >
+                {isStadiumScene && (
+                  <>
+                    <div className="absolute inset-0 opacity-60" style={{ background: 'radial-gradient(ellipse at 50% 88%, rgba(33,255,141,.34), transparent 28%), radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.20), transparent 17%), repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 3px, transparent 3px 54px)' }} />
+                    <div className="absolute inset-x-0 top-0 h-[88px] opacity-45" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,.20), transparent), repeating-linear-gradient(90deg, rgba(255,255,255,.24) 0 2px, transparent 2px 28px)' }} />
+                    <div className="absolute left-1/2 top-8 w-[72%] h-[120px] -translate-x-1/2 rounded-[50%] border-t-[6px] border-white/20" />
+                  </>
+                )}
+                {isStadiumScene && featurePhotoPlayers.map((player, index) => {
+                  const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field');
+                  return (
+                    <div
+                      key={`lineup-feature-${player.name}-${index}`}
+                      className="absolute top-4 bottom-0 w-[210px] opacity-[.16] mix-blend-screen"
+                      style={{ [index === 0 ? 'left' : index === 1 ? 'right' : 'left']: index === 2 ? '40%' : '-2%' }}
+                    >
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover object-top grayscale contrast-125"
+                        referrerPolicy="no-referrer"
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                      />
+                    </div>
+                  );
+                })}
+                <div className="absolute inset-0 opacity-70" style={{ background: `linear-gradient(90deg, transparent 0 19%, ${skin.pitchLine} 19% 19.35%, transparent 19.35% 39%, ${skin.pitchLine} 39% 39.35%, transparent 39.35% 59%, ${skin.pitchLine} 59% 59.35%, transparent 59.35% 79%, ${skin.pitchLine} 79% 79.35%, transparent 79.35%)` }} />
+                <div className="absolute inset-[42px] rounded-[30px] border-[3px]" style={{ borderColor: skin.pitchLine }} />
+                <div className="absolute left-[42px] right-[42px] top-1/2 border-t-[3px]" style={{ borderColor: skin.pitchLine }} />
+                <div className="absolute left-1/2 top-1/2 w-36 h-36 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px]" style={{ borderColor: skin.pitchLine }} />
+                <div className="absolute left-1/2 top-[42px] w-[34%] h-[74px] -translate-x-1/2 rounded-b-[34px] border-x-[3px] border-b-[3px]" style={{ borderColor: skin.pitchLine }} />
+                <div className="absolute left-1/2 bottom-[42px] w-[34%] h-[74px] -translate-x-1/2 rounded-t-[34px] border-x-[3px] border-t-[3px]" style={{ borderColor: skin.pitchLine }} />
+                {lineOrder.map((line, index) => (
+                  <div
+                    key={line}
+                    className="absolute left-6 rounded-full border-[3px] border-black px-4 py-2 text-[12px] font-black"
+                    style={{
+                      top: `${10 + index * 20}%`,
+                      background: paletteAt(t, index),
+                      color: '#050505',
+                      animation: `wcRowIn .46s ${.16 + index * .05}s both`,
+                    }}
+                  >
+                    {LINEUP_LINE_TAGS[line]}
                   </div>
                 ))}
-              </div>
-              <div className="relative m-6 border-[4px] border-black rounded-[26px] overflow-hidden" style={{ background: '#f5f5f2' }}>
-                <div className="absolute inset-x-[8%] top-[5%] bottom-[5%] border-[3px] border-black rounded-[20px]" />
-                <div className="absolute left-[8%] right-[8%] top-1/2 border-t-[3px] border-black" />
-                <div className="absolute left-1/2 top-1/2 w-28 h-28 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-black" />
                 {players.map((player, index) => (
                   <div
                     key={`field-${player.name}-${index}`}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+                    className="lineup-player-anchor absolute"
+                    data-zone={player.line}
+                    data-slot={`${player.rowIndex}-${player.slotIndex}`}
                     style={{
                       left: `${player.x}%`,
                       top: `${player.y}%`,
-                      animation: `wcBadgePop .58s ${.38 + index * .065}s cubic-bezier(.16,1.28,.3,1) both`,
+                      transform: 'translate(-50%, -50%)',
                     }}
                   >
-                    <div className="w-12 h-12 rounded-full border-[4px] border-black flex items-center justify-center overflow-hidden text-[15px] font-black" style={{ background: paletteAt(t, index) }}>
-                      {player.image ? <img src={player.image} alt="" className="w-full h-full object-cover" /> : player.num ?? player.number ?? index + 1}
-                    </div>
-                    <div className="mt-1 bg-black text-white rounded-full px-2 py-1 text-[9px] font-black whitespace-nowrap">{player.name.split(' ')[0]}</div>
+                    <ReoLineupPlayerMarker
+                      player={player}
+                      index={index}
+                      skin={skin}
+                      lineupNameMode={lineupNameMode}
+                      lineupPhotoMode={lineupPhotoMode}
+                      theme={t}
+                    />
                   </div>
                 ))}
+              </div>
+              <div className="rounded-[36px] border-[6px] border-black overflow-hidden" style={{ background: skin.panel, color: skin.panelText, boxShadow: `12px 12px 0 ${c.gold}` }} dir="rtl">
+                <div className="p-4 border-b-[5px] border-black">
+                  <div className="text-[13px] font-black opacity-60">لوحة توزيع اللاعبين</div>
+                  <div className="text-[34px] leading-none font-black mt-1">{displayTeam}</div>
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {lineCounts.map((item, index) => (
+                      <div key={item.line} className="rounded-[15px] border-[4px] border-black p-2" style={{ background: paletteAt(t, index), color: '#050505' }}>
+                        <div className="text-[9px] font-black">{item.label}</div>
+                        <div className="text-[24px] leading-none font-black">{item.count}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-1.5">
+                  {players.map((player, index) => (
+                    <div key={`${player.name}-list-${index}`} className="grid grid-cols-[30px_1fr] items-center gap-2 rounded-[13px] border-[3px] border-black px-2 py-1 text-[10px] font-black min-w-0" style={{ animation: `wcRowIn .45s ${.18 + index * .04}s both` }}>
+                      <ReoLineupMiniAvatar player={player} index={index} lineupPhotoMode={lineupPhotoMode} theme={t} />
+                      <span className="min-w-0">
+                        <span className="block truncate">{player.name}</span>
+                        <span className="block text-[8px] opacity-60">{player.pos || LINEUP_LINE_TAGS[player.line]}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {benchPlayers.length > 0 && (
+                  <div className="px-5 pb-5">
+                    <div className="text-[12px] font-black opacity-60 mb-2">الاحتياط</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {benchPlayers.map((player, index) => (
+                        <div key={`${player.name}-bench-${index}`} className="rounded-[14px] border-[3px] border-black px-3 py-2 text-[11px] font-black truncate">
+                          {player.num ?? player.number ?? index + 12}. {lineupDisplayName(player.name, 'short')}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

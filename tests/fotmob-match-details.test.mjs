@@ -185,9 +185,11 @@ test('maps match details to legacy fields consumed by existing templates', () =>
   assert.equal(homeLineup[0].name, 'Santiago Gimenez');
   assert.equal(homeLineup[0].x, 50);
   assert.equal(homeLineup[0].y, 18);
+  assert.match(homeLineup[0].image, /playerimages\/100\.png$/);
   assert.equal(lineupsToPlayersJson(details, 'away')[0].name, 'Ronwen Williams');
   assert.equal(lineupsToPlayersJson(details, 'away')[0].x, 50);
   assert.equal(lineupsToPlayersJson(details, 'away')[0].y, 85);
+  assert.match(lineupsToPlayersJson(details, 'away')[0].image, /playerimages\/200\.png$/);
 });
 
 test('editor, operator and OBS variants expose live match selection and details', async () => {
