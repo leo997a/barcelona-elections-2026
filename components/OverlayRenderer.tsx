@@ -385,58 +385,58 @@ const MONDIAL_MOTION_PRESETS: Record<string, MondialMotionPreset> = {
   reference_stinger: {
     transitionIn: 'MONDIAL_STINGER',
     transitionOut: 'MONDIAL_STINGER_OUT',
-    soundInStyle: 'DIGITAL_SWEEP',
-    soundOutStyle: 'BROADCAST_OUT',
-    audioUpdateCue: 'DIGITAL_SWEEP',
+    soundInStyle: 'LUXURY_SWEEP_PRO',
+    soundOutStyle: 'OUTRO_HIT',
+    audioUpdateCue: 'LIVE_UPDATE_PING',
   },
   scorebug_snap: {
     transitionIn: 'SCOREBUG_SNAP',
     transitionOut: 'SCOREBUG_SNAP_OUT',
-    soundInStyle: 'SCOREBUG_SNAP',
-    soundOutStyle: 'DIGITAL_SWEEP',
-    audioUpdateCue: 'SCOREBUG_SNAP',
+    soundInStyle: 'SCOREBOARD_TICK',
+    soundOutStyle: 'PANEL_CLOSE',
+    audioUpdateCue: 'SCOREBOARD_TICK',
   },
   group_wall_rush: {
     transitionIn: 'DATA_RUSH',
     transitionOut: 'DATA_RUSH_OUT',
-    soundInStyle: 'DATA_SLAM',
-    soundOutStyle: 'DIGITAL_SWEEP',
-    audioUpdateCue: 'DATA_TICK',
+    soundInStyle: 'DATA_SCAN_CLEAN',
+    soundOutStyle: 'PANEL_CLOSE',
+    audioUpdateCue: 'LIVE_UPDATE_PING',
   },
   stadium_sweep: {
     transitionIn: 'STADIUM_SWEEP',
     transitionOut: 'STADIUM_SWEEP_OUT',
-    soundInStyle: 'STADIUM_WHOOSH',
-    soundOutStyle: 'BROADCAST_OUT',
-    audioUpdateCue: 'DATA_TICK',
+    soundInStyle: 'MATCHDAY_OPENING',
+    soundOutStyle: 'OUTRO_HIT',
+    audioUpdateCue: 'SCOREBOARD_TICK',
   },
   glass_sweep: {
     transitionIn: 'GLASS_SWEEP',
     transitionOut: 'GLASS_SWEEP_OUT',
-    soundInStyle: 'DIGITAL_SWEEP',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'DIGITAL_SWEEP',
+    soundInStyle: 'GLASS_WHOOSH',
+    soundOutStyle: 'PANEL_CLOSE',
+    audioUpdateCue: 'LIVE_UPDATE_PING',
   },
   spotlight_pop: {
     transitionIn: 'SPOTLIGHT_POP',
     transitionOut: 'SPOTLIGHT_POP_OUT',
-    soundInStyle: 'TROPHY_FANFARE',
-    soundOutStyle: 'BROADCAST_OUT',
-    audioUpdateCue: 'SCOREBUG_SNAP',
+    soundInStyle: 'GOAL_STINGER_MODERN',
+    soundOutStyle: 'OUTRO_HIT',
+    audioUpdateCue: 'SCOREBOARD_TICK',
   },
   side_wipe: {
     transitionIn: 'LOWER_THIRD_WIPE',
     transitionOut: 'LOWER_THIRD_WIPE_OUT',
-    soundInStyle: 'LOWER_THIRD_WIPE',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'DATA_TICK',
+    soundInStyle: 'MODERN_SWIPE_LEFT',
+    soundOutStyle: 'MODERN_SWIPE_RIGHT',
+    audioUpdateCue: 'LIVE_UPDATE_PING',
   },
   story_glitch: {
     transitionIn: 'GLASS_SWEEP',
     transitionOut: 'GLASS_SWEEP_OUT',
-    soundInStyle: 'GLITCH_TRANSITION',
-    soundOutStyle: 'SOFT_FADE',
-    audioUpdateCue: 'GLITCH_TRANSITION',
+    soundInStyle: 'DIGITAL_GLITCH_SHORT',
+    soundOutStyle: 'PANEL_CLOSE',
+    audioUpdateCue: 'DIGITAL_GLITCH_SHORT',
   },
 };
 
@@ -472,6 +472,7 @@ const CSS = `
   @keyframes tvMondialReferenceCoverIn { 0%{transform:translateX(-126%) skewX(-14deg) scaleX(1.08);opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)} 14%{opacity:1} 34%{transform:translateX(-18%) skewX(-10deg) scaleX(1.12);clip-path:polygon(0 0,100% 0,90% 100%,0 100%)} 56%{transform:translateX(0) skewX(-2deg) scaleX(1.06);clip-path:polygon(-8% 0,108% 0,100% 100%,0 100%)} 80%{transform:translateX(72%) skewX(-10deg) scaleX(1.12);opacity:1;clip-path:polygon(14% 0,100% 0,100% 100%,0 100%)} 100%{transform:translateX(126%) skewX(-14deg) scaleX(1.08);opacity:0;clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)} }
   @keyframes tvMondialReferenceCoverOut { 0%{transform:translateX(126%) skewX(14deg) scaleX(1.08);opacity:0;clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)} 16%{opacity:1} 42%{transform:translateX(16%) skewX(10deg) scaleX(1.12);clip-path:polygon(0 0,100% 0,100% 100%,10% 100%)} 64%{transform:translateX(0) skewX(2deg) scaleX(1.06);clip-path:polygon(-8% 0,108% 0,100% 100%,0 100%)} 84%{transform:translateX(-72%) skewX(10deg) scaleX(1.12);opacity:1;clip-path:polygon(0 0,86% 0,100% 100%,0 100%)} 100%{transform:translateX(-126%) skewX(14deg) scaleX(1.08);opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)} }
   @keyframes tvMondialStingerBars { 0%{transform:translateX(-135%) skewX(-18deg);opacity:0} 18%{opacity:.95} 58%{opacity:.85} 100%{transform:translateX(135%) skewX(-18deg);opacity:0} }
+  @keyframes tvMondialStingerBarsOut { 0%{transform:translateX(135%) skewX(18deg);opacity:0} 18%{opacity:.95} 62%{opacity:.85} 100%{transform:translateX(-135%) skewX(18deg);opacity:0} }
 
   @keyframes tvScorebugSnapOut   { from{transform:translateY(0) scale(1);opacity:1} to{transform:translateY(-40px) scale(.92);opacity:0;filter:blur(8px)} }
   @keyframes tvStadiumSweepOut   { from{transform:translateX(0);opacity:1} to{transform:translateX(-18%) skewX(8deg);opacity:0;filter:blur(10px)} }
@@ -514,9 +515,9 @@ const CSS = `
   .tv-spotlight-pop-out      { animation: tvSpotlightPopOut      var(--tv-exit-speed, .48s) ease-in both }
   .tv-glass-sweep-out        { animation: tvGlassSweepOut        var(--tv-exit-speed, .5s) ease-in both }
   .tv-broadcast-fade-out     { animation: tvBroadcastFadeOut     var(--tv-exit-speed, .42s) ease-in both }
-  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut var(--tv-exit-speed, .72s) cubic-bezier(.7,0,.84,0) both }
-  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-18% -24%; z-index:5; pointer-events:none; background:linear-gradient(90deg,#03040a 0 18%,rgba(5,6,14,.98) 18% 100%),radial-gradient(circle at 70% 50%,rgba(255,255,255,.16),transparent 34%); box-shadow:inset 0 0 90px rgba(255,255,255,.12); animation:tvMondialReferenceCoverOut var(--tv-exit-speed, .72s) cubic-bezier(.7,0,.84,0) both }
-  .tv-mondial-stinger-out::after { content:''; position:absolute; inset:-14%; z-index:6; pointer-events:none; background:linear-gradient(90deg,transparent 0 14%,rgba(12,232,207,.9) 14% 24%,transparent 24% 34%,rgba(255,47,159,.9) 34% 45%,transparent 45% 56%,rgba(182,255,0,.86) 56% 66%,transparent 66% 100%),repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.13) 34px 36px); mix-blend-mode:screen; animation:tvMondialStingerBars var(--tv-exit-bar-speed, .58s) cubic-bezier(.7,0,.84,0) reverse both }
+  .tv-mondial-stinger-out    { position:relative; isolation:isolate; animation: tvMondialStingerOut var(--tv-exit-speed, 1.25s) cubic-bezier(.22,1,.36,1) both }
+  .tv-mondial-stinger-out::before { content:''; position:absolute; inset:-18% -24%; z-index:5; pointer-events:none; background:linear-gradient(90deg,#03040a 0 18%,rgba(5,6,14,.98) 18% 100%),radial-gradient(circle at 70% 50%,rgba(255,255,255,.16),transparent 34%); box-shadow:inset 0 0 90px rgba(255,255,255,.12); animation:tvMondialReferenceCoverOut var(--tv-exit-speed, 1.25s) cubic-bezier(.22,1,.36,1) both }
+  .tv-mondial-stinger-out::after { content:''; position:absolute; inset:-14%; z-index:6; pointer-events:none; background:linear-gradient(90deg,transparent 0 14%,rgba(12,232,207,.9) 14% 24%,transparent 24% 34%,rgba(255,47,159,.9) 34% 45%,transparent 45% 56%,rgba(182,255,0,.86) 56% 66%,transparent 66% 100%),repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.13) 34px 36px); mix-blend-mode:screen; animation:tvMondialStingerBarsOut var(--tv-exit-bar-speed, 1.18s) cubic-bezier(.22,1,.36,1) both }
 
   @media (prefers-reduced-motion: reduce) {
     .tv-drop-in, .tv-slide-left, .tv-slide-right, .tv-slide-up, .tv-zoom-flash,
@@ -566,6 +567,10 @@ const RUNTIME_UPDATE_IGNORED_FIELDS = new Set([
   'mondialMotionPreset',
   'transitionSpeedMs',
   'transitionIntensity',
+  'liveRefreshEnabled',
+  'manualRefreshNonce',
+  'pollIntervalSec',
+  'bridgeApiUrl',
   'chromaKey',
 ]);
 
@@ -587,12 +592,12 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   const isMondialTemplate = MONDIAL_TYPES.has(config.type);
   const mondialMotionEnabled = !isMondialTemplate || Boolean(getField('broadcastMotion') ?? true);
   const transitionSpeedMs = isMondialTemplate
-      ? clampNumber(getField('transitionSpeedMs'), 920, 420, 1600)
+      ? clampNumber(getField('transitionSpeedMs'), 1250, 700, 2400)
       : 650;
   const exitTransitionMs = isMondialTemplate
-      ? Math.max(320, Math.round(transitionSpeedMs * 0.72))
+      ? Math.max(700, Math.round(transitionSpeedMs * 1.05))
       : 550;
-  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 100 : 40;
+  const mondialExitHoldMs = mondialMotionEnabled ? exitTransitionMs + 220 : 40;
   const editorExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 650;
   const runtimeExitHoldMs = isMondialTemplate ? mondialExitHoldMs : 600;
 
@@ -731,7 +736,11 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   // ── Strict Mode & Debounce Guards ──────────────────────────────────────────
   // Prevents double-play from React Strict Mode (dev) or rapid state changes.
   const previousVisibilityRef = useRef<boolean | null>(null);
-  const lastSoundAt = useRef(0);
+  const lastSoundAt = useRef<Record<'ENTRY' | 'TRANSITION' | 'EXIT', number>>({
+      ENTRY: 0,
+      TRANSITION: 0,
+      EXIT: 0,
+  });
   const lastDataCueAt = useRef(0);
   const lastCommandId = useRef(0);
   const lastDataFingerprint = useRef<string | null>(null);
@@ -785,8 +794,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       // Guard: debounce rapid successive triggers
       if (isNowVisible && prevVisible !== true) {
           clearTimeout(timer.current);
-          if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
-              lastSoundAt.current = now;
+          if (now - lastSoundAt.current.ENTRY > SOUND_DEBOUNCE_MS) {
+              lastSoundAt.current.ENTRY = now;
               void playSound('ENTRY');
           }
           setWasVisible(true);
@@ -794,8 +803,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           requestAnimationFrame(() => setAnimCls(resolveEnterClass()));
           recordDiagnostic(config, 'show');
       } else if (!isNowVisible && prevVisible === true) {
-          if (now - lastSoundAt.current > SOUND_DEBOUNCE_MS) {
-              lastSoundAt.current = now;
+          if (now - lastSoundAt.current.EXIT > SOUND_DEBOUNCE_MS) {
+              lastSoundAt.current.EXIT = now;
               void playSound('EXIT');
           }
           setWasVisible(true);
@@ -846,7 +855,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
           '--tv-enter-speed': `${transitionSpeedMs}ms`,
           '--tv-exit-speed': `${exitTransitionMs}ms`,
           '--tv-enter-bar-speed': `${Math.max(140, Math.round(transitionSpeedMs * 0.62))}ms`,
-          '--tv-exit-bar-speed': `${Math.max(120, Math.round(exitTransitionMs * 0.72))}ms`,
+          '--tv-exit-bar-speed': `${Math.max(560, Math.round(exitTransitionMs * 0.94))}ms`,
         } as React.CSSProperties)
       : {};
 

@@ -245,6 +245,7 @@ test('mondial statistical templates expose and consume real display modes', asyn
     'statsViewMode',
     'statFocus',
     'scorerViewMode',
+    'scorerMetric',
     'playerCardMode',
     'reportViewMode',
     'analysisViewMode',
@@ -275,6 +276,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(templates, /id: 'template-mondial-live-momentum'/);
 
   assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
+  assert.match(obs, /const scorerMetric = text\(getField, 'scorerMetric', 'goals'\)/);
+  assert.match(templates, /id: 'scorerMetric'/);
+  assert.match(obs, /metricValue: activeMetric\.value\(player\)/);
   assert.match(obs, /scorerViewMode === 'podium'/);
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
 
@@ -338,7 +342,9 @@ test('mondial OBS templates consume selected kinetic theme colors', async () => 
   assert.match(obs, /theme\?: MondialTheme/);
   assert.match(obs, /<KineticStage image=\{stageImage\(getField\)\} theme=\{t\}>/);
   assert.match(obs, /<KineticStage transparent theme=\{t\}>/);
-  assert.match(obs, /<KineticHeader title="سباق الحذاء الذهبي" tag=\{sourceTag\} theme=\{t\}/);
+  assert.match(obs, /<KineticHeader title=\{activeMetric\.title\} tag=\{sourceTag\} theme=\{t\}/);
+  assert.match(obs, /const scorerMetricConfig = \{/);
+  assert.match(obs, /player\.metricLabel/);
   assert.match(obs, /export const ReoObsGoldenBoot[\s\S]*?const c = themedColors\(t\)/);
   assert.match(obs, /boxShadow: `12px 10px 0 \$\{paletteAt\(t, index\)\}`/);
   assert.match(obs, /background: c\.gold/);

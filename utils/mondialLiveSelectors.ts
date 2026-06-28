@@ -47,9 +47,15 @@ export type MondialLiveScorer = {
   flagUrl?: string;
   goals: number;
   assists?: number;
+  shots?: number;
+  shotsOnTarget?: number;
+  rating?: number;
+  keyPasses?: number;
   appearances?: number;
   minutesPlayed?: number;
   rank?: number;
+  value?: number;
+  metricLabel?: string;
   image?: string;
 };
 
@@ -344,9 +350,15 @@ const normalizeScorer = (value: unknown, index: number): MondialLiveScorer | nul
     flagUrl: stringValue(source.flagUrl, '') || undefined,
     goals: optionalNumber(source.goals ?? source.value ?? source.StatValue) ?? 0,
     assists: optionalNumber(source.assists ?? source.SubStatValue),
+    shots: optionalNumber(source.shots ?? source.totalShots ?? source.shotsTotal ?? source.ShotTotal),
+    shotsOnTarget: optionalNumber(source.shotsOnTarget ?? source.onTarget ?? source.shotsOnTargetTotal),
+    rating: optionalNumber(source.rating ?? source.fotmobRating ?? source.score),
+    keyPasses: optionalNumber(source.keyPasses ?? source.chancesCreated ?? source.bigChancesCreated),
     appearances: optionalNumber(source.appearances ?? source.matchesPlayed ?? source.MatchesPlayed),
     minutesPlayed: optionalNumber(source.minutesPlayed ?? source.MinutesPlayed),
     rank: optionalNumber(source.rank ?? source.Rank) ?? index + 1,
+    value: optionalNumber(source.value ?? source.StatValue),
+    metricLabel: stringValue(source.metricLabel ?? source.statLabel, '') || undefined,
     image: stringValue(source.image ?? source.imageUrl, '') || undefined,
   };
 };

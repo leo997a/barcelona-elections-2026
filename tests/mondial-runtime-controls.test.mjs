@@ -42,30 +42,38 @@ test('mondial transition speed controls both outer and inner animation layers', 
   assert.match(transitionLayer, /className="mondial-transition-rings"/);
   assert.match(transitionLayer, /className="mondial-transition-arc-stinger"/);
   assert.match(transitionLayer, /className="mondial-transition-bug"/);
-  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 920, 420, 1600\)/);
-  assert.match(renderer, /Math\.max\(320, Math\.round\(transitionSpeedMs \* 0\.72\)\)/);
-  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 920, 420, 1600\)/);
-  assert.match(transitionLayer, /--mondial-transition-speed: 920ms;/);
+  assert.match(renderer, /clampNumber\(getField\('transitionSpeedMs'\), 1250, 700, 2400\)/);
+  assert.match(renderer, /Math\.max\(700, Math\.round\(transitionSpeedMs \* 1\.05\)\)/);
+  assert.match(transitionLayer, /clampNumber\(getField\('transitionSpeedMs'\), 1250, 700, 2400\)/);
+  assert.match(transitionLayer, /--mondial-transition-speed: 1250ms;/);
 });
 
-test('mondial reference stinger exit keeps the same arc direction instead of reversing top and bottom bands', async () => {
+test('mondial reference stinger exit uses dedicated out-phase masks and bands', async () => {
   const transitionLayer = await readSource('../components/renderers/mondial/MondialTransitionLayer.tsx');
 
   assert.match(
     transitionLayer,
-    /data-phase='out'][\s\S]*?span\[data-arc='top'\][\s\S]*?mondialTransitionArcBandTopIn[\s\S]*?\.62/
+    /data-phase='out'][\s\S]*?\.mondial-transition-mask[\s\S]*?mondialTransitionReferenceCoverOut/
   );
   assert.match(
     transitionLayer,
-    /data-phase='out'][\s\S]*?span\[data-arc='bottom'\][\s\S]*?mondialTransitionArcBandBottomIn[\s\S]*?\.62/
+    /data-phase='out'][\s\S]*?\.mondial-transition-rings[\s\S]*?mondialTransitionReferencePulseOut/
+  );
+  assert.match(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='top'\][\s\S]*?mondialTransitionArcBandTopOut/
+  );
+  assert.match(
+    transitionLayer,
+    /data-phase='out'][\s\S]*?span\[data-arc='bottom'\][\s\S]*?mondialTransitionArcBandBottomOut/
   );
   assert.doesNotMatch(
     transitionLayer,
-    /data-phase='out'][\s\S]*?span\[data-arc='top'\][\s\S]*?mondialTransitionArcBandBottomIn[\s\S]*?reverse/
+    /data-phase='out'][\s\S]*?mondialTransitionReferenceCoverIn calc\(var\(--mondial-transition-speed\) \* \.62\)/
   );
   assert.doesNotMatch(
     transitionLayer,
-    /data-phase='out'][\s\S]*?span\[data-arc='bottom'\][\s\S]*?mondialTransitionArcBandTopIn[\s\S]*?reverse/
+    /data-phase='out'][\s\S]*?mondialTransitionArcBandTopIn calc\(var\(--mondial-transition-speed\) \* \.62\)/
   );
 });
 
@@ -125,9 +133,42 @@ test('motion preset sound defaults remain overridable and visible in the editor'
   assert.match(templates, /id: 'soundOutStyle'[\s\S]*?value: 'DEFAULT'/);
   assert.match(templates, /id: 'audioUpdateCue'[\s\S]*?value: 'DEFAULT'/);
   assert.match(templates, /Reference stinger - full-screen TV mask \+ sweep SFX/);
-  assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundInStyle: 'DIGITAL_SWEEP'/);
-  assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundOutStyle: 'BROADCAST_OUT'/);
+  assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundInStyle: 'LUXURY_SWEEP_PRO'/);
+  assert.match(renderer, /reference_stinger:\s*\{[\s\S]*?soundOutStyle: 'OUTRO_HIT'/);
+  assert.match(templates, /value: 'LUXURY_SWEEP_PRO'/);
+  assert.match(templates, /value: 'PANEL_CLOSE'/);
+  assert.match(templates, /value: 'LIVE_UPDATE_PING'/);
   assert.match(editor, /'mondialTheme', 'mondialStyle', 'broadcastLook'/);
+});
+
+test('legacy mondial cue names are routed into the professional sound library', async () => {
+  const audioEngine = await readSource('../services/audioEngine.ts');
+
+  for (const [legacyCue, libraryCue] of [
+    ['DIGITAL_SWEEP', 'LUXURY_SWEEP_PRO'],
+    ['GLITCH_TRANSITION', 'DIGITAL_GLITCH_SHORT'],
+    ['STADIUM_WHOOSH', 'STADIUM_RISE_REALISTIC'],
+    ['BROADCAST_OUT', 'OUTRO_HIT'],
+    ['DATA_TICK', 'LIVE_UPDATE_PING'],
+    ['SCOREBUG_SNAP', 'SCOREBOARD_TICK'],
+  ]) {
+    assert.match(audioEngine, new RegExp(`${legacyCue}: '${libraryCue}'`));
+  }
+  assert.match(audioEngine, /const normalizedCue = LIBRARY_CUE_ALIASES\[requestedCue\] \|\| requestedCue;/);
+  assert.match(audioEngine, /if \(isLibraryCue\(normalizedCue\)\)/);
+});
+
+test('mondial live refresh stops completely unless automatic refresh or manual update is requested', async () => {
+  const renderer = await readSource('../components/renderers/Mondial2026Renderer.tsx');
+
+  assert.match(renderer, /if \(liveRefreshEnabled \|\| forceUpdate\) void fetchFromBridge\(forceUpdate\);/);
+  assert.doesNotMatch(renderer, /void fetchFromBridge\(forceUpdate\);\s*if \(intervalRef\.current\) clearInterval/);
+  assert.match(renderer, /if \(liveRefreshEnabled \|\| forceUpdate\) void fetchDetails\(\);/);
+  assert.doesNotMatch(renderer, /useEffect\(\(\) => \{\s*void fetchDetails\(\);/);
+  const overlayRenderer = await readSource('../components/OverlayRenderer.tsx');
+  for (const field of ['liveRefreshEnabled', 'manualRefreshNonce', 'pollIntervalSec', 'bridgeApiUrl']) {
+    assert.match(overlayRenderer, new RegExp(`'${field}'`));
+  }
 });
 
 test('all mondial template families expose the shared motion and audio controls', async () => {

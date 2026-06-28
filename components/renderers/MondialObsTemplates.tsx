@@ -1553,15 +1553,61 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
   const liveScorers = normalizeWorldCupScorers(liveData);
   const boundScorers = scorersFromWorldCupData(liveData, getField('scorersJson'));
   const scorerViewMode = text(getField, 'scorerViewMode', 'race_board');
+  const scorerMetric = text(getField, 'scorerMetric', 'goals');
   const scorerLimit = Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6)));
+  const scorerMetricConfig = {
+    goals: {
+      title: 'سباق الحذاء الذهبي',
+      label: 'أهداف',
+      value: (player: MondialLiveScorer) => player.goals,
+    },
+    assists: {
+      title: 'سباق صناعة الأهداف',
+      label: 'أسيست',
+      value: (player: MondialLiveScorer) => player.assists ?? 0,
+    },
+    shots: {
+      title: 'سباق التسديد',
+      label: 'تسديدات',
+      value: (player: MondialLiveScorer) => player.shots ?? player.shotsOnTarget ?? 0,
+    },
+    rating: {
+      title: 'الأعلى تقييماً',
+      label: 'تقييم',
+      value: (player: MondialLiveScorer) => player.rating ?? 0,
+    },
+    appearances: {
+      title: 'الأكثر مشاركة',
+      label: 'مشاركة',
+      value: (player: MondialLiveScorer) => player.appearances ?? 0,
+    },
+    minutes: {
+      title: 'الأكثر لعباً',
+      label: 'دقيقة',
+      value: (player: MondialLiveScorer) => player.minutesPlayed ?? 0,
+    },
+  } satisfies Record<string, { title: string; label: string; value: (player: MondialLiveScorer) => number }>;
+  const activeMetric = scorerMetricConfig[scorerMetric] ?? scorerMetricConfig.goals;
   const scorers = (boundScorers.length ? boundScorers : DEFAULT_SCORERS)
+    .map(player => ({
+      ...player,
+      metricValue: activeMetric.value(player),
+      metricLabel: player.metricLabel || activeMetric.label,
+    }))
+    .sort((a, b) =>
+      (b.metricValue - a.metricValue)
+      || ((b.goals ?? 0) - (a.goals ?? 0))
+      || ((b.assists ?? 0) - (a.assists ?? 0))
+      || ((a.rank ?? 999) - (b.rank ?? 999))
+    )
+    .map((player, index) => ({ ...player, rank: index + 1 }))
     .slice(0, scorerLimit);
   const c = themedColors(t);
-  const sourceTag = liveScorers.length ? 'بيانات مباشرة · REO SHOW' : 'سباق الهدافين · REO SHOW';
+  const sourceTag = liveScorers.length ? `${activeMetric.label} مباشر · REO SHOW` : `${activeMetric.label} · REO SHOW`;
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-10 flex flex-col">
-        <KineticHeader title="سباق الحذاء الذهبي" tag={sourceTag} theme={t} />
+        <KineticHeader title={activeMetric.title} tag={sourceTag} theme={t} />
         <div className="flex-1 flex items-center justify-center">
           {scorerViewMode === 'podium' ? (
             <div className="grid grid-cols-3 gap-6 w-[1060px] items-end">
@@ -1578,8 +1624,8 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   <div className="p-6">
                     <div className="text-[28px] leading-[1.08] font-black">{player.nameAr || player.name}</div>
                     <div className="text-[13px] font-black mt-2">{player.team}</div>
-                    <div className="mt-7 text-[96px] leading-none font-black">{player.goals}</div>
-                    <div className="text-[12px] font-black">أهداف</div>
+                    <div className="mt-7 text-[96px] leading-none font-black">{detailStatText(player.metricValue)}</div>
+                    <div className="text-[12px] font-black">{player.metricLabel}</div>
                   </div>
                 </div>
               ))}
@@ -1591,7 +1637,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   <div className="text-[28px] font-black">{player.rank ?? index + 1}</div>
                   <FlagOrImage code={player.code || player.countryCode} image={player.flagUrl} size={52} />
                   <div><div className="text-[18px] font-black leading-tight">{player.nameAr || player.name}</div><div className="text-[10px] font-black">{player.team}</div></div>
-                  <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold }}><div className="text-[28px] leading-none font-black">{player.goals}</div></div>
+                  <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold }}><div className="text-[28px] leading-none font-black">{detailStatText(player.metricValue)}</div></div>
                 </div>
               ))}
             </div>
@@ -1630,7 +1676,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                       <span className="rounded-full border-2 border-black px-3 py-1">دقيقة {player.minutesPlayed}</span>
                     )}
                   </div>
-                  <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[43px] font-black">{player.goals}</div><div className="text-[10px] font-black">أهداف</div></div>
+                  <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[43px] font-black">{detailStatText(player.metricValue)}</div><div className="text-[10px] font-black">{player.metricLabel}</div></div>
                 </div>
               ))}
             </div>

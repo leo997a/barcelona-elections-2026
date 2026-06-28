@@ -240,6 +240,21 @@ const PRELOAD_CUES: SoundCue[] = [
   'BEFORE_THE_KICKOFF',
 ];
 
+const LIBRARY_CUE_ALIASES: Record<string, string> = {
+  DIGITAL_SWEEP: 'LUXURY_SWEEP_PRO',
+  GLITCH_TRANSITION: 'DIGITAL_GLITCH_SHORT',
+  STADIUM_WHOOSH: 'STADIUM_RISE_REALISTIC',
+  BROADCAST_OUT: 'OUTRO_HIT',
+  SOFT_FADE: 'PANEL_CLOSE',
+  DATA_TICK: 'LIVE_UPDATE_PING',
+  DATA_SLAM: 'DATA_SCAN_CLEAN',
+  SCOREBUG_SNAP: 'SCOREBOARD_TICK',
+  LOWER_THIRD_WIPE: 'MODERN_SWIPE_LEFT',
+  LUXURY_SWEEP: 'LUXURY_SWEEP_PRO',
+  LUXURY_OUT: 'PANEL_CLOSE',
+  TROPHY_FANFARE: 'GOAL_STINGER_MODERN',
+};
+
 const SOUND_PRIORITY: Record<string, number> = {
   GOAL_HORN: 100,
   BREAKING_NEWS_ALARM: 90,
@@ -1778,7 +1793,8 @@ export const playFromLibrary = (key: string, options: PlayCueOptions = {}): bool
 
 export const playCue = async (cue: SoundCue, options: PlayCueOptions = {}) => {
   if (!cue) return false;
-  const normalizedCue = String(cue);
+  const requestedCue = String(cue);
+  const normalizedCue = LIBRARY_CUE_ALIASES[requestedCue] || requestedCue;
 
   if (!canPlayCue(normalizedCue)) return false;
 

@@ -311,8 +311,9 @@ function useMondialData(
     }
     const forceUpdate = manualRefreshNonce !== refreshNonceRef.current;
     refreshNonceRef.current = manualRefreshNonce;
-    void fetchFromBridge(forceUpdate);
     if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    if (liveRefreshEnabled || forceUpdate) void fetchFromBridge(forceUpdate);
     if (liveRefreshEnabled) {
       intervalRef.current = setInterval(() => { void fetchFromBridge(false); }, pollSec * 1000);
     }
@@ -335,6 +336,7 @@ function useMondialMatchDetails(
   const [matchDetails, setMatchDetails] = useState<MondialMatchDetails | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const refreshNonceRef = useRef(manualRefreshNonce);
 
   const fetchDetails = useCallback(async () => {
     if (!/^\d{4,}$/.test(matchId) || dataMode === 'DEMO' || dataMode === 'PASTE_JSON') {
@@ -357,8 +359,17 @@ function useMondialMatchDetails(
   }, [dataMode, matchId]);
 
   useEffect(() => {
-    void fetchDetails();
+    const forceUpdate = manualRefreshNonce !== refreshNonceRef.current;
+    refreshNonceRef.current = manualRefreshNonce;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    if (!/^\d{4,}$/.test(matchId) || dataMode === 'DEMO' || dataMode === 'PASTE_JSON') {
+      setMatchDetails(null);
+      return () => {
+        if (abortRef.current) abortRef.current.abort();
+      };
+    }
+    if (liveRefreshEnabled || forceUpdate) void fetchDetails();
     if (liveRefreshEnabled && /^\d{4,}$/.test(matchId) && dataMode !== 'DEMO' && dataMode !== 'PASTE_JSON') {
       intervalRef.current = setInterval(() => { void fetchDetails(); }, pollSec * 1000);
     }

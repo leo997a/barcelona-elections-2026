@@ -185,3 +185,30 @@ test('preserves rich live scorer fields and tie-breaks equal goal totals', () =>
   assert.equal(scorers[2].minutesPlayed, 360);
   assert.equal(scorers[2].image, 'https://example.com/a.png');
 });
+
+test('normalizes additional scorer metrics for reusable ranking templates', () => {
+  const scorers = normalizeWorldCupScorers({
+    topScorers: [{
+      id: 7,
+      name: 'Creative Player',
+      teamName: 'Team C',
+      countryCode: 'tc',
+      goals: 2,
+      assists: 6,
+      shots: 14,
+      shotsOnTarget: 8,
+      rating: 8.6,
+      keyPasses: 11,
+      appearances: 4,
+      minutesPlayed: 350,
+      metricLabel: 'تقييم',
+    }],
+  });
+
+  assert.equal(scorers[0].assists, 6);
+  assert.equal(scorers[0].shots, 14);
+  assert.equal(scorers[0].shotsOnTarget, 8);
+  assert.equal(scorers[0].rating, 8.6);
+  assert.equal(scorers[0].keyPasses, 11);
+  assert.equal(scorers[0].metricLabel, 'تقييم');
+});

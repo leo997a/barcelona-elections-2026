@@ -113,11 +113,14 @@ export function resolveTemplateAudio(overlay: OverlayConfig): AudioProfile {
   const volume = get('soundVolume');
   const inStyle = String(get('soundInStyle') ?? 'DEFAULT');
   const outStyle = String(get('soundOutStyle') ?? 'DEFAULT');
+  const normalizedVolume = typeof volume === 'number' && Number.isFinite(volume) && volume >= 0
+    ? Math.min(3, volume)
+    : base.volume;
 
   return {
     id: base.id,
     enabled: enabled === undefined ? base.enabled : enabled !== false,
-    volume: typeof volume === 'number' && volume >= 0 && volume <= 1 ? volume : base.volume,
+    volume: normalizedVolume,
     inCue: inStyle && inStyle !== 'DEFAULT' ? inStyle : base.inCue,
     outCue: outStyle && outStyle !== 'DEFAULT' ? outStyle : base.outCue,
     updateCue: base.updateCue,
