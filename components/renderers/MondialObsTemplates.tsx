@@ -57,6 +57,12 @@ type LineupPlayer = {
   image?: string;
 };
 
+type PositionedLineupPlayer = LineupPlayer & {
+  name: string;
+  x: number;
+  y: number;
+};
+
 const WC = {
   black: '#090909',
   ink: '#151515',
@@ -130,6 +136,101 @@ const DEFAULT_PLAYERS: LineupPlayer[] = [
   { num: 9, name: 'أيمن حسين', pos: 'FW', x: 50, y: 14 },
   { num: 10, name: 'مهند علي', pos: 'FW', x: 78, y: 20 },
 ];
+
+const parseFormationRows = (formation: string): number[] => {
+  const rows = (formation.match(/\d+/g) || [])
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value) && value > 0 && value <= 6);
+  const total = rows.reduce((sum, value) => sum + value, 0);
+  return total >= 8 && total <= 10 ? rows : [4, 3, 3];
+};
+
+const playerNumber = (player: Partial<LineupPlayer> | undefined, fallback: number): number =>
+  Number.isFinite(Number(player?.num ?? player?.number))
+    ? Number(player?.num ?? player?.number)
+    : fallback;
+
+const normalizedPlayer = (player: LineupPlayer | undefined, index: number): LineupPlayer => ({
+  ...(player || {}),
+  name: String(player?.name || DEFAULT_PLAYERS[index]?.name || `لاعب ${index + 1}`),
+  pos: String(player?.pos || DEFAULT_PLAYERS[index]?.pos || ''),
+  num: playerNumber(player || {}, index + 1),
+});
+
+const hasValidPitchPosition = (player: LineupPlayer): boolean =>
+  Number.isFinite(Number(player.x)) && Number.isFinite(Number(player.y));
+
+const playerRowsFromFormation = (players: LineupPlayer[], formation: string): LineupPlayer[][] => {
+  const cleanPlayers = players.slice(0, 11).map(normalizedPlayer);
+  const goalkeeperIndex = cleanPlayers.findIndex(player => String(player.pos || '').toUpperCase().includes('GK'));
+  const goalkeeper = goalkeeperIndex >= 0
+    ? cleanPlayers[goalkeeperIndex]
+    : cleanPlayers[0] || normalizedPlayer(undefined, 0);
+  const outfield = (goalkeeperIndex >= 0
+    ? cleanPlayers.filter((_, index) => index !== goalkeeperIndex)
+    : cleanPlayers.slice(1)
+  );
+  const rows = parseFormationRows(formation);
+  const splitRows: LineupPlayer[][] = [[goalkeeper]];
+  let cursor = 0;
+  rows.forEach(count => {
+    const row = outfield.slice(cursor, cursor + count);
+    if (row.length) splitRows.push(row);
+    cursor += count;
+  });
+  const leftovers = outfield.slice(cursor);
+  if (leftovers.length) {
+    const lastRow = splitRows[splitRows.length - 1] || [];
+    lastRow.push(...leftovers);
+  }
+  return splitRows;
+};
+
+const rowSlotX = (index: number, count: number): number => {
+  if (count <= 1) return 50;
+  const min = count >= 5 ? 12 : 18;
+  const max = 100 - min;
+  return min + ((max - min) * index) / (count - 1);
+};
+
+const formationSlotY = (rowIndex: number, outfieldRows: number, direction: string): number => {
+  if (rowIndex === 0) return direction === 'attack_down' ? 12 : 88;
+  const bottom = 70;
+  const top = 18;
+  const y = outfieldRows <= 1
+    ? 44
+    : bottom - ((bottom - top) * (rowIndex - 1)) / (outfieldRows - 1);
+  return direction === 'attack_down' ? 100 - y : y;
+};
+
+const buildFormationLineup = (
+  players: LineupPlayer[],
+  formation: string,
+  layoutMode: string,
+  direction: string
+): PositionedLineupPlayer[] => {
+  const sourcePlayers = players.slice(0, 11).map(normalizedPlayer);
+  const sourceHasEnoughPositions = sourcePlayers.filter(hasValidPitchPosition).length >= 8;
+  const rows = playerRowsFromFormation(sourcePlayers.length ? sourcePlayers : DEFAULT_PLAYERS, formation);
+  const outfieldRows = Math.max(1, rows.length - 1);
+  const autoPositioned = rows.flatMap((row, rowIndex) =>
+    row.map((player, playerIndex) => ({
+      ...player,
+      x: clamp(rowSlotX(playerIndex, row.length), 8, 92),
+      y: clamp(formationSlotY(rowIndex, outfieldRows, direction), 10, 90),
+    }))
+  );
+
+  if (layoutMode === 'source_positions' && sourceHasEnoughPositions) {
+    return sourcePlayers.map((player, index) => ({
+      ...player,
+      x: clamp(Number(player.x ?? autoPositioned[index]?.x ?? 50), 8, 92),
+      y: clamp(Number(player.y ?? autoPositioned[index]?.y ?? 50), 10, 90),
+    }));
+  }
+
+  return autoPositioned.slice(0, 11);
+};
 
 const DEFAULT_SCORERS: MondialLiveScorer[] = [
   { name: 'كيليان مبابي', team: 'فرنسا', code: 'FR', countryCode: 'fr', goals: 5 },
@@ -860,6 +961,15 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
       awayFallback: 7,
     },
     {
+      label: 'دقة التسديد',
+      focus: 'accuracy',
+      keys: ['Shot accuracy', 'Shots accuracy', 'On target percentage'],
+      homeField: 'statShotAccuracyHome',
+      awayField: 'statShotAccuracyAway',
+      homeFallback: 50,
+      awayFallback: 50,
+    },
+    {
       label: 'الركنيات',
       focus: 'attack',
       keys: ['corners', 'Corners'],
@@ -867,6 +977,42 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
       awayField: 'statCornersAway',
       homeFallback: 3,
       awayFallback: 6,
+    },
+    {
+      label: 'مؤشر الضغط',
+      focus: 'pressure',
+      keys: ['High press', 'High turnovers', 'Possession won final 3rd', 'PPDA'],
+      homeField: 'statPressureHome',
+      awayField: 'statPressureAway',
+      homeFallback: 61,
+      awayFallback: 54,
+    },
+    {
+      label: 'ميل الملعب',
+      focus: 'control',
+      keys: ['Field tilt', 'Final third entries', 'Territory'],
+      homeField: 'statFieldTiltHome',
+      awayField: 'statFieldTiltAway',
+      homeFallback: 47,
+      awayFallback: 53,
+    },
+    {
+      label: 'استرداد الكرة',
+      focus: 'pressure',
+      keys: ['Ball recoveries', 'Recoveries', 'Possession won'],
+      homeField: 'statRecoveriesHome',
+      awayField: 'statRecoveriesAway',
+      homeFallback: 42,
+      awayFallback: 39,
+    },
+    {
+      label: 'التحامات ناجحة',
+      focus: 'discipline',
+      keys: ['Duels won', 'Ground duels won', 'Aerial duels won'],
+      homeField: 'statDuelsHome',
+      awayField: 'statDuelsAway',
+      homeFallback: 51,
+      awayFallback: 49,
     },
     {
       label: 'المخالفات',
@@ -888,7 +1034,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     },
     {
       label: 'دقة التمرير',
-      focus: 'control',
+      focus: 'accuracy',
       keys: ['AccuratePasses', 'Accurate passes', 'Pass accuracy'],
       homeField: 'statPassHome',
       awayField: 'statPassAway',
@@ -914,6 +1060,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const statRows = visibleRows.length >= 3 ? visibleRows : rows;
   const featuredRows = statRows.slice(0, 4);
   const momentumRows = statRows.slice(0, 6);
+  const pressureRows = rows
+    .filter(row => row.focus === 'pressure' || row.focus === 'accuracy' || row.label === 'ميل الملعب')
+    .slice(0, 6);
   const homeMomentum = momentumRows.filter(row => row.homeBar >= row.awayBar).length;
   const awayMomentum = momentumRows.length - homeMomentum;
   const c = themedColors(t);
@@ -974,6 +1123,55 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                     <div className="text-[11px] font-black">تفوق في {momentumRows.length} مؤشرات</div>
                   </div>
                 </div>
+              ) : statsViewMode === 'pressure_accuracy' ? (
+                <div className="p-7 grid grid-cols-[1fr_310px] gap-6 items-stretch">
+                  <div className="grid grid-cols-2 gap-4">
+                    {pressureRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                      const total = Math.max(1, homeBar + awayBar);
+                      const homePct = Math.round((homeBar / total) * 100);
+                      const awayPct = 100 - homePct;
+                      return (
+                        <div key={label} className="border-[5px] border-black rounded-[26px] bg-white p-4 flex flex-col justify-between min-h-[154px]" style={{ animation: `wcBadgePop .55s ${.24 + index * .08}s cubic-bezier(.16,1.25,.3,1) both` }}>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[13px] font-black">{label}</span>
+                            <span className="text-[10px] font-black rounded-full border-[3px] border-black px-2 py-1" style={{ background: paletteAt(t, index) }}>مباشر</span>
+                          </div>
+                          <div className="grid grid-cols-[1fr_56px_1fr] items-end gap-3 mt-4 font-black">
+                            <div>
+                              <div className="text-[10px]">{homeCode}</div>
+                              <div className="text-[34px] leading-none">{detailStatText(homeValue)}</div>
+                              <div className="h-3 rounded-full bg-gray-200 overflow-hidden mt-2" dir="rtl"><div className="h-full" style={{ width: `${homePct}%`, background: c.accent }} /></div>
+                            </div>
+                            <div className="text-center text-[15px] pb-2">vs</div>
+                            <div className="text-left">
+                              <div className="text-[10px]">{awayCode}</div>
+                              <div className="text-[34px] leading-none">{detailStatText(awayValue)}</div>
+                              <div className="h-3 rounded-full bg-gray-200 overflow-hidden mt-2"><div className="h-full" style={{ width: `${awayPct}%`, background: c.danger }} /></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="relative border-[5px] border-black rounded-[30px] overflow-hidden bg-black text-white p-5 flex flex-col justify-between">
+                    <div className="absolute inset-0 opacity-35" style={{ background: `radial-gradient(circle at 28% 24%, ${c.danger}, transparent 33%), radial-gradient(circle at 72% 70%, ${c.accent}, transparent 36%)` }} />
+                    <div className="relative">
+                      <div className="text-[13px] font-black text-white/60">خلاصة الضغط والدقة</div>
+                      <div className="text-[38px] leading-[1.1] font-black mt-2">من يفرض نسق المباراة؟</div>
+                    </div>
+                    <div className="relative space-y-3">
+                      {pressureRows.slice(0, 4).map(({ label, homeBar, awayBar }, index) => {
+                        const leader = homeBar >= awayBar ? homeCode : awayCode;
+                        return (
+                          <div key={`leader-${label}`} className="flex items-center justify-between rounded-[18px] bg-white text-black px-4 py-3 font-black" style={{ animation: `wcRowIn .5s ${.42 + index * .08}s both` }}>
+                            <span className="text-[12px]">{label}</span>
+                            <span className="text-[17px]">{leader}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="p-7 space-y-3">
                   {statRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
@@ -1005,12 +1203,15 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, matchD
   const liveLineup = matchDetails?.lineups?.[lineupSide];
   const livePlayers = lineupsToPlayersJson(matchDetails, lineupSide) as LineupPlayer[];
   const parsed = safeParse<LineupPlayer[]>(String(getField('playersJson') || '[]'), DEFAULT_PLAYERS);
-  const players = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
   const code = liveLineup?.teamCode || text(getField, 'code', 'IQ');
   const team = text(getField, 'teamName', 'منتخب العراق');
   const displayTeam = liveLineup?.teamName || team;
   const formation = liveLineup?.formation || text(getField, 'formation', '4-3-3');
   const coach = liveLineup?.coach || text(getField, 'coach', '');
+  const lineupLayoutMode = text(getField, 'lineupLayoutMode', 'auto_formation');
+  const lineupDirection = text(getField, 'lineupDirection', 'attack_up');
+  const sourcePlayers = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
+  const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection);
   const c = themedColors(t);
   return (
     <KineticStage theme={t}>
@@ -1045,8 +1246,8 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, matchD
                     key={`field-${player.name}-${index}`}
                     className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
                     style={{
-                      left: `${clamp(player.x ?? DEFAULT_PLAYERS[index]?.x ?? 50, 8, 92)}%`,
-                      top: `${clamp(player.y ?? DEFAULT_PLAYERS[index]?.y ?? 50, 10, 84)}%`,
+                      left: `${player.x}%`,
+                      top: `${player.y}%`,
                       animation: `wcBadgePop .58s ${.38 + index * .065}s cubic-bezier(.16,1.28,.3,1) both`,
                     }}
                   >

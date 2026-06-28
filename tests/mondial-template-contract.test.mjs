@@ -13,6 +13,8 @@ const CORE_TEMPLATE_IDS = [
   'template-mondial-lineup',
   'template-mondial-match-result',
   'template-mondial-match-stats',
+  'template-mondial-pressure-index',
+  'template-mondial-accuracy-control',
   'template-mondial-group-wall',
   'template-mondial-all-flags-wall',
   'template-mondial-team-code-wall',
@@ -38,6 +40,8 @@ const CORE_VARIANTS = [
   'match_preview',
   'lineup',
   'match_result',
+  'match_stats',
+  'match_stats',
   'match_stats',
   'group_wall',
   'flag_wall',
@@ -66,15 +70,15 @@ const IRAQ_TEMPLATE_IDS = [
   'template-mondial-iraq-dashboard',
 ];
 
-test('all 23 core Mondial templates are registered, rendered, and categorized', async () => {
+test('all 25 core Mondial templates are registered, rendered, and categorized', async () => {
   const [templates, renderer, taxonomy] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
     readSource('../components/renderers/Mondial2026Renderer.tsx'),
     readSource('../utils/templateTaxonomy.ts'),
   ]);
 
-  assert.equal(CORE_TEMPLATE_IDS.length, 23);
-  assert.equal(CORE_VARIANTS.length, 23);
+  assert.equal(CORE_TEMPLATE_IDS.length, 25);
+  assert.equal(CORE_VARIANTS.length, 25);
   const coreTemplateSource = templates.split('export const MONDIAL_IRAQ_TEMPLATES')[0];
   const registeredCoreIds = [
     ...coreTemplateSource.matchAll(/^\s+id:\s*'(template-mondial-[^']+)'/gm),
@@ -197,6 +201,26 @@ test('selected match details are propagated to broadcast cards and player spotli
   assert.match(obs, /livePlayer\?\.stats/);
 });
 
+test('mondial lineup has a defensive auto-formation layout for incomplete live data', async () => {
+  const [templates, obs, constants] = await Promise.all([
+    readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/MondialObsTemplates.tsx'),
+    readSource('../constants.ts'),
+  ]);
+
+  for (const field of ['lineupLayoutMode', 'lineupDirection']) {
+    assert.match(templates, new RegExp(`id: '${field}'`), `${field} is not exposed in lineup settings`);
+    assert.match(constants, new RegExp(`id === '${field}'`), `${field} is not grouped as a display control`);
+  }
+
+  assert.match(obs, /const parseFormationRows = \(formation: string\): number\[\]/);
+  assert.match(obs, /const buildFormationLineup = \(/);
+  assert.match(obs, /layoutMode === 'source_positions' && sourceHasEnoughPositions/);
+  assert.match(obs, /const lineupLayoutMode = text\(getField, 'lineupLayoutMode', 'auto_formation'\)/);
+  assert.match(obs, /const lineupDirection = text\(getField, 'lineupDirection', 'attack_up'\)/);
+  assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection\)/);
+});
+
 test('mondial statistical templates expose and consume real display modes', async () => {
   const [templates, obs, constants] = await Promise.all([
     readSource('../components/renderers/MondialTemplates.ts'),
@@ -220,7 +244,15 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /const statFocus = text\(getField, 'statFocus', 'balanced'\)/);
   assert.match(obs, /statsViewMode === 'key_numbers'/);
   assert.match(obs, /statsViewMode === 'momentum_grid'/);
+  assert.match(obs, /statsViewMode === 'pressure_accuracy'/);
   assert.match(obs, /rows\.filter\(row => row\.focus === statFocus\)/);
+  assert.match(obs, /statPressureHome/);
+  assert.match(obs, /statShotAccuracyHome/);
+  assert.match(obs, /statFieldTiltHome/);
+  assert.match(obs, /statRecoveriesHome/);
+  assert.match(obs, /statDuelsHome/);
+  assert.match(templates, /id: 'template-mondial-pressure-index'/);
+  assert.match(templates, /id: 'template-mondial-accuracy-control'/);
 
   assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
   assert.match(obs, /scorerViewMode === 'podium'/);
