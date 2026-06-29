@@ -1444,6 +1444,11 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     ? rows
     : rows.filter(row => row.focus === statFocus);
   const statRows = visibleRows.length >= 3 ? visibleRows : rows;
+  const statColumnSplit = Math.ceil(statRows.length / 2);
+  const statComparisonColumns = [
+    statRows.slice(0, statColumnSplit),
+    statRows.slice(statColumnSplit),
+  ];
   const featuredRows = statRows.slice(0, 4);
   const momentumRows = statRows.slice(0, 6);
   const pressureRows = rows
@@ -1565,39 +1570,68 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                   </div>
                 </div>
               ) : statsViewMode === 'xg_shot_flow' ? (
-                <div className="p-7 grid grid-cols-[380px_1fr] gap-6 items-stretch">
+                <div className="p-7 grid grid-cols-[430px_1fr] gap-6 items-stretch">
                   <div className="relative xg-team-card border-[5px] border-black rounded-[30px] overflow-hidden text-black p-6 flex flex-col justify-between" style={{ background: c.gold, animation: 'wcCardRise .62s .22s both' }}>
-                    <div className="absolute -right-14 -top-14 w-44 h-44 rounded-full bg-white/45" />
-                    <div className="relative text-[14px] font-black">جودة الفرص xG</div>
-                    <div className="relative grid gap-3">
-                      <div className="rounded-[22px] border-[4px] border-black bg-white px-4 py-3">
-                        <div className="flex items-center gap-3 text-[13px] font-black"><MondialFlag codeOrName={homeCode} size={34} /><span>{homeDisplayCode}</span></div>
-                        <div className="text-[56px] leading-none font-black">{detailStatText(xgRow?.homeValue ?? 0)}</div>
+                    <div className="absolute -right-16 -top-16 w-52 h-52 rounded-full bg-white/45" />
+                    <div className="absolute -left-20 bottom-8 w-48 h-48 rounded-full bg-black/10" />
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-[13px] font-black opacity-70">SHOT QUALITY</div>
+                        <div className="text-[34px] leading-none font-black">جودة الفرص xG</div>
                       </div>
-                      <div className="rounded-[22px] border-[4px] border-black bg-black px-4 py-3 text-white">
-                        <div className="flex items-center gap-3 text-[13px] font-black"><MondialFlag codeOrName={awayCode} size={34} /><span>{awayDisplayCode}</span></div>
-                        <div className="text-[56px] leading-none font-black">{detailStatText(xgRow?.awayValue ?? 0)}</div>
+                      <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">مباشر</div>
+                    </div>
+                    <div className="relative grid gap-4">
+                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4">
+                        <div className="flex items-center justify-between gap-3 text-[14px] font-black">
+                          <span className="flex items-center gap-3"><MondialFlag codeOrName={homeCode} size={38} /><span>{homeDisplayCode}</span></span>
+                          <span className="text-[11px] opacity-60">{homeDisplayName}</span>
+                        </div>
+                        <div className="mt-2 flex items-end justify-between gap-3">
+                          <div className="text-[66px] leading-none font-black">{detailStatText(xgRow?.homeValue ?? 0)}</div>
+                          <div className="pb-2 text-[12px] font-black">xG</div>
+                        </div>
+                      </div>
+                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-black px-5 py-4 text-white">
+                        <div className="flex items-center justify-between gap-3 text-[14px] font-black">
+                          <span className="flex items-center gap-3"><MondialFlag codeOrName={awayCode} size={38} /><span>{awayDisplayCode}</span></span>
+                          <span className="text-[11px] opacity-60">{awayDisplayName}</span>
+                        </div>
+                        <div className="mt-2 flex items-end justify-between gap-3">
+                          <div className="text-[66px] leading-none font-black">{detailStatText(xgRow?.awayValue ?? 0)}</div>
+                          <div className="pb-2 text-[12px] font-black">xG</div>
+                        </div>
                       </div>
                     </div>
-                    <div className="relative text-[12px] font-black">التسديدات: {detailStatText(shotsRow?.homeValue ?? 0)} - {detailStatText(shotsRow?.awayValue ?? 0)}</div>
+                    <div className="xg-shot-summary relative grid grid-cols-[1fr_48px_1fr] items-center gap-3 rounded-[22px] border-[4px] border-black bg-white px-4 py-3 font-black">
+                      <div className="xg-shot-team flex items-center gap-2"><MondialFlag codeOrName={homeCode} size={28} /><span>{homeDisplayCode}</span><b className="text-[28px] leading-none">{detailStatText(shotsRow?.homeValue ?? 0)}</b></div>
+                      <div className="text-center text-[10px] leading-tight">تسديدات</div>
+                      <div className="xg-shot-team flex items-center justify-end gap-2 text-left"><b className="text-[28px] leading-none">{detailStatText(shotsRow?.awayValue ?? 0)}</b><span>{awayDisplayCode}</span><MondialFlag codeOrName={awayCode} size={28} /></div>
+                    </div>
                   </div>
                   <div className="relative bg-black text-white border-[5px] border-black rounded-[30px] p-6 overflow-hidden">
                     <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(circle at 18% 20%, ${c.danger}, transparent 30%), radial-gradient(circle at 85% 75%, ${c.accent}, transparent 34%)` }} />
                     <div className="relative flex items-center justify-between mb-5">
-                      <div className="text-[34px] leading-none font-black">تدفق التسديد</div>
-                      <div className="rounded-full bg-white text-black border-[4px] border-black px-4 py-2 text-[12px] font-black">مباشر</div>
+                      <div>
+                        <div className="text-[34px] leading-none font-black">تدفق التسديد</div>
+                        <div className="mt-2 text-[11px] font-black text-white/60">كل عمود يقارن المؤشر بين المنتخبين</div>
+                      </div>
+                      <div className="shot-flow-legend flex items-center gap-3 rounded-full bg-white text-black border-[4px] border-black px-4 py-2 text-[12px] font-black">
+                        <span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded-full" style={{ background: c.accent }} />{homeDisplayCode}</span>
+                        <span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded-full" style={{ background: c.danger }} />{awayDisplayCode}</span>
+                      </div>
                     </div>
-                    <div className="relative grid grid-cols-5 gap-3 h-[300px] items-end">
+                    <div className="relative grid grid-cols-5 gap-4 h-[300px] items-end">
                       {shotFlowRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
                         const maxValue = Math.max(1, homeBar, awayBar);
                         return (
                           <div key={`shot-flow-${label}`} className="shot-flow-column h-full flex flex-col justify-end gap-2" style={{ animation: `wcBadgePop .55s ${.3 + index * .08}s both` }}>
-                            <div className="grid grid-cols-2 gap-1 items-end h-[210px]">
+                            <div className="grid grid-cols-2 gap-2 items-end h-[210px] rounded-[18px] border border-white/10 bg-white/5 px-2 pb-2 pt-8">
                               <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (homeBar / maxValue) * 100)}%`, background: c.accent }} />
                               <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (awayBar / maxValue) * 100)}%`, background: c.danger }} />
                             </div>
                             <div className="text-center">
-                              <div className="text-[18px] font-black">{detailStatText(homeValue)}:{detailStatText(awayValue)}</div>
+                              <div className="text-[19px] font-black">{detailStatText(homeValue)} : {detailStatText(awayValue)}</div>
                               <div className="text-[9px] font-black text-white/65 leading-tight">{label}</div>
                             </div>
                           </div>
@@ -1656,55 +1690,70 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                   </div>
                 </div>
               ) : (
-                <div className="p-6 space-y-2.5">
-                  <div className="stat-comparison-header grid grid-cols-[1fr_180px_1fr] items-center rounded-[24px] border-[5px] border-black bg-black px-5 py-4 text-white">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <MondialFlag codeOrName={homeCode} size={44} />
+                <div className="p-4 space-y-3">
+                  <div className="stat-comparison-header grid grid-cols-[1fr_170px_1fr] items-center rounded-[22px] border-[5px] border-black bg-black px-5 py-3 text-white">
+                    <div className="stat-team-chip flex min-w-0 items-center gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5">
+                      <MondialFlag codeOrName={homeCode} size={38} />
                       <div className="min-w-0">
-                        <div className="text-[19px] leading-none font-black">{homeDisplayCode}</div>
+                        <div className="text-[18px] leading-none font-black">{homeDisplayCode}</div>
                         <div className="mt-1 truncate text-[10px] font-black text-white/65">{homeDisplayName}</div>
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-[10px] font-black text-[#eeff00]">MATCH DATA</div>
-                      <div className="text-[17px] leading-tight font-black">VS</div>
+                      <div className="text-[17px] leading-tight font-black">{statRows.length} مؤشرات</div>
                     </div>
-                    <div className="flex min-w-0 items-center justify-end gap-3 text-right">
+                    <div className="stat-team-chip flex min-w-0 items-center justify-end gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5 text-right">
                       <div className="min-w-0">
-                        <div className="text-[19px] leading-none font-black">{awayDisplayCode}</div>
+                        <div className="text-[18px] leading-none font-black">{awayDisplayCode}</div>
                         <div className="mt-1 truncate text-[10px] font-black text-white/65">{awayDisplayName}</div>
                       </div>
-                      <MondialFlag codeOrName={awayCode} size={44} />
+                      <MondialFlag codeOrName={awayCode} size={38} />
                     </div>
                   </div>
-                  {statRows.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
-                    const total = Math.max(1, homeBar + awayBar);
-                    const homePct = Math.round((homeBar / total) * 100);
-                    const awayPct = 100 - homePct;
-                    return (
-                      <div
-                        key={label}
-                        className="stat-comparison-row rounded-[18px] border-[3px] border-black/85 bg-white px-4 py-2.5"
-                        style={{ animation: `wcRowIn .5s ${.28 + index * .055}s cubic-bezier(.16,1,.3,1) both` }}
-                      >
-                        <div className="grid grid-cols-[82px_1fr_82px] items-center gap-4 font-black">
-                          <span className="text-[22px] leading-none">{detailStatText(homeValue)}</span>
-                          <div className="min-w-0">
-                            <div className="mb-1 flex items-center justify-between gap-3">
-                              <span className="text-[9px] text-black/55">{homeDisplayCode}</span>
-                              <span className="truncate text-center text-[13px]">{label}</span>
-                              <span className="text-[9px] text-black/55">{awayDisplayCode}</span>
+                  <div className="stat-comparison-grid grid grid-cols-2 gap-3">
+                    {statComparisonColumns.map((column, columnIndex) => (
+                      <div key={`stat-column-${columnIndex}`} className="space-y-2">
+                        {column.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                          const total = Math.max(1, homeBar + awayBar);
+                          const homePct = Math.round((homeBar / total) * 100);
+                          const awayPct = 100 - homePct;
+                          const animationIndex = columnIndex * statColumnSplit + index;
+                          return (
+                            <div
+                              key={label}
+                              className="stat-comparison-row stat-metric-card rounded-[15px] border-[3px] border-black/85 bg-white px-3 py-2"
+                              style={{ animation: `wcRowIn .5s ${.28 + animationIndex * .045}s cubic-bezier(.16,1,.3,1) both` }}
+                            >
+                              <div className="mb-1.5 flex items-center justify-center">
+                                <span className="stat-row-label-card max-w-full truncate rounded-full border-[2px] border-black bg-black px-4 py-0.5 text-center text-[11px] font-black leading-tight text-white">{label}</span>
+                              </div>
+                              <div className="grid grid-cols-[82px_1fr_82px] items-center gap-3 font-black">
+                                <div className="stat-row-value-card flex min-w-0 items-center gap-1.5 rounded-[13px] border-[3px] border-black px-2 py-1" style={{ background: c.accent }}>
+                                  <MondialFlag codeOrName={homeCode} size={20} />
+                                  <span className="text-[18px] leading-none">{detailStatText(homeValue)}</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="mb-1 flex items-center justify-between text-[9px] font-black text-black/55">
+                                    <span>{homeDisplayCode}</span>
+                                    <span>{awayDisplayCode}</span>
+                                  </div>
+                                  <div className="stat-split-bar flex h-[11px] overflow-hidden rounded-full border-[2px] border-black bg-gray-200">
+                                    <div className="h-full" style={{ width: `${homePct}%`, background: c.accent }} />
+                                    <div className="h-full" style={{ width: `${awayPct}%`, background: c.danger }} />
+                                  </div>
+                                </div>
+                                <div className="stat-row-value-card flex min-w-0 items-center justify-end gap-1.5 rounded-[13px] border-[3px] border-black px-2 py-1 text-left text-white" style={{ background: c.danger }}>
+                                  <span className="text-[18px] leading-none">{detailStatText(awayValue)}</span>
+                                  <MondialFlag codeOrName={awayCode} size={20} />
+                                </div>
+                              </div>
                             </div>
-                            <div className="stat-split-bar flex h-[15px] overflow-hidden rounded-full border-[2px] border-black bg-gray-200">
-                              <div className="h-full" style={{ width: `${homePct}%`, background: c.accent }} />
-                              <div className="h-full" style={{ width: `${awayPct}%`, background: c.danger }} />
-                            </div>
-                          </div>
-                          <span className="text-left text-[22px] leading-none">{detailStatText(awayValue)}</span>
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -2247,40 +2296,43 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
               ))}
             </div>
           ) : (
-            <div className="w-[1160px] grid grid-cols-[420px_1fr] gap-6 items-stretch">
+            <div className="w-[1160px] grid grid-cols-[390px_1fr] gap-6 items-stretch">
               {leader && (
                 <div
-                  className="relative overflow-hidden rounded-[38px] border-[6px] border-black p-7"
-                  style={{ ...scorerPanelStyle, boxShadow: `18px 16px 0 ${c.gold}`, animation: 'wcScorePop .82s .18s cubic-bezier(.16,1.25,.3,1) both' }}
+                  className="scorer-leader-card relative overflow-hidden rounded-[34px] border-[6px] border-black p-6"
+                  style={{ ...scorerPanelStyle, boxShadow: `14px 12px 0 ${c.gold}`, animation: 'wcScorePop .82s .18s cubic-bezier(.16,1.25,.3,1) both' }}
                 >
-                  <div className="absolute -right-28 -top-24 h-80 w-80 rounded-full opacity-80" style={{ background: c.accent }} />
-                  <div className="absolute -left-20 bottom-0 h-64 w-64 rounded-full opacity-75" style={{ background: c.danger }} />
-                  <div className="relative flex items-center justify-between">
+                  <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-80" style={{ background: c.accent }} />
+                  <div className="absolute -left-24 bottom-5 h-60 w-60 rounded-full opacity-70" style={{ background: c.danger }} />
+                  <div className="relative flex items-start justify-between gap-4">
                     <div>
                       <div className="text-[13px] font-black opacity-70">قائد السباق</div>
-                      <div className="mt-2 text-[70px] leading-none font-black">{detailStatText(leader.metricValue)}</div>
-                      <div className="text-[13px] font-black">{leader.metricLabel}</div>
+                      <div className="mt-2 inline-flex items-end gap-2 rounded-[22px] border-[5px] border-black bg-white px-5 py-3 text-black">
+                        <span className="text-[68px] leading-none font-black">{detailStatText(leader.metricValue)}</span>
+                        <span className="pb-2 text-[12px] font-black">{leader.metricLabel}</span>
+                      </div>
                     </div>
                     <ScorerPortrait
                       code={leader.code || leader.countryCode}
                       flagUrl={leader.flagUrl}
                       image={leader.image}
-                      size={144}
+                      size={118}
                       cardStyle={scorerCardStyle}
                       theme={t}
+                      rank={leader.rank}
                     />
                   </div>
                   <div
                     className="relative mt-6 rounded-[26px] border-[5px] border-black px-5 py-4"
                     style={{ background: c.ink, color: c.paper }}
                   >
-                    <div className="text-[30px] leading-[1.05] font-black">{leader.nameAr || leader.name}</div>
+                    <div className="text-[29px] leading-[1.05] font-black">{leader.nameAr || leader.name}</div>
                     <div className="mt-2 text-[13px] font-black opacity-75">{leader.team}</div>
                   </div>
                   <div className="relative mt-5 grid grid-cols-2 gap-3">
                     {scorerSupportStats(leader).slice(0, 4).map((stat, index) => (
-                      <div key={`leader-${stat.label}`} className="rounded-[22px] border-[4px] border-black px-4 py-3 font-black" style={{ background: paletteAt(t, index), color: c.ink }}>
-                        <div className="text-[30px] leading-none">{detailStatText(stat.value)}</div>
+                      <div key={`leader-${stat.label}`} className="scorer-metric-pill rounded-[20px] border-[4px] border-black px-4 py-3 font-black" style={{ background: paletteAt(t, index), color: c.ink }}>
+                        <div className="text-[28px] leading-none">{detailStatText(stat.value)}</div>
                         <div className="mt-1 text-[10px]">{stat.label}</div>
                       </div>
                     ))}
@@ -2294,23 +2346,25 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   return (
                     <div
                       key={`${player.id ?? player.name}-${index}`}
-                      className="scorer-race-row grid grid-cols-[96px_minmax(0,1fr)_112px] items-center border-[5px] border-black rounded-[26px] overflow-visible bg-white text-black"
-                      style={{ background: c.paper, color: c.ink, boxShadow: `12px 10px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .6s ${.24 + rowIndex * .09}s both` }}
+                      className="scorer-race-row grid grid-cols-[70px_88px_minmax(0,1fr)_104px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
+                      style={{ background: c.paper, color: c.ink, boxShadow: `9px 8px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .6s ${.24 + rowIndex * .09}s both` }}
                     >
-                      <div className="h-full min-h-[86px] flex items-center justify-center">
+                      <div className="h-full min-h-[82px] flex items-center justify-center text-[30px] font-black" style={{ background: paletteAt(t, index) }}>
+                        {player.rank ?? rowIndex + 1}
+                      </div>
+                      <div className="h-full min-h-[82px] flex items-center justify-center bg-black/5">
                         <ScorerPortrait
                           code={player.code || player.countryCode}
                           flagUrl={player.flagUrl}
                           image={player.image}
-                          size={64}
+                          size={56}
                           cardStyle={scorerCardStyle}
                           theme={t}
-                          rank={player.rank}
                         />
                       </div>
                       <div className="min-w-0 px-4">
                         <div className="truncate text-[22px] leading-tight font-black">{player.nameAr || player.name}</div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] font-black">
+                        <div className="scorer-row-meta mt-1 flex flex-wrap items-center gap-2 text-[9px] font-black">
                           <span>{player.team}</span>
                           <span className="rounded-full border-2 border-black px-2 py-1">أسيست {player.assists ?? 0}</span>
                           <span className="rounded-full border-2 border-black px-2 py-1">على المرمى {player.shotsOnTarget ?? player.shots ?? 0}</span>
@@ -2322,7 +2376,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                           <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${paletteAt(t, index + 1)}, ${c.gold})`, animation: `wcBarGrow .8s ${.44 + rowIndex * .06}s both` }} />
                         </div>
                       </div>
-                      <div className="h-full flex flex-col items-center justify-center" style={{ background: c.gold }}><div className="text-[39px] font-black">{detailStatText(player.metricValue)}</div><div className="text-[10px] font-black">{player.metricLabel}</div></div>
+                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[38px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[10px] font-black">{player.metricLabel}</div></div>
                     </div>
                   );
                 })}

@@ -317,8 +317,16 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /awayDisplayCode/);
   assert.match(obs, /stat-comparison-header/);
   assert.match(obs, /stat-comparison-row/);
+  assert.match(obs, /stat-team-chip/);
+  assert.match(obs, /stat-comparison-grid/);
+  assert.match(obs, /stat-metric-card/);
+  assert.match(obs, /stat-row-value-card/);
+  assert.match(obs, /stat-row-label-card/);
   assert.match(obs, /stat-split-bar/);
   assert.match(obs, /xg-team-card/);
+  assert.match(obs, /xg-metric-card/);
+  assert.match(obs, /xg-shot-summary/);
+  assert.match(obs, /shot-flow-legend/);
   assert.match(obs, /shot-flow-column/);
   assert.match(obs, /statsViewMode === 'key_numbers'/);
   assert.match(obs, /statsViewMode === 'momentum_grid'/);
@@ -352,6 +360,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /scorer-portrait/);
   assert.match(obs, /scorer-rank-chip/);
   assert.match(obs, /scorer-race-row/);
+  assert.match(obs, /scorer-leader-card/);
+  assert.match(obs, /scorer-metric-pill/);
+  assert.match(obs, /scorer-row-meta/);
   assert.match(obs, /scorerViewMode === 'podium'/);
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
   for (const option of ['reference_stack', 'broadcast_photo', 'data_glass', 'classic_flags']) {
@@ -422,7 +433,7 @@ test('mondial OBS templates consume selected kinetic theme colors', async () => 
   assert.match(obs, /const scorerMetricConfig = \{/);
   assert.match(obs, /player\.metricLabel/);
   assert.match(obs, /export const ReoObsGoldenBoot[\s\S]*?const c = themedColors\(t\)/);
-  assert.match(obs, /boxShadow: `12px 10px 0 \$\{paletteAt\(t, index\)\}`/);
+  assert.match(obs, /boxShadow: `9px 8px 0 \$\{paletteAt\(t, index\)\}`/);
   assert.match(obs, /background: c\.gold/);
   assert.match(obs, /ColorRail theme=\{t\}/);
   assert.doesNotMatch(obs, /ReoObsGoldenBoot[\s\S]*?COLORS\[index % COLORS\.length\]/);
