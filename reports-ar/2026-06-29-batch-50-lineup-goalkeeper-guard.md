@@ -33,5 +33,19 @@
 ## ملف البناء
 - الملف المحلي الجديد بعد البناء: `assets/index-DpUU3fLV.js`
 
+## تحقق هوستنغر
+- الموقع العام أصبح يقدم الملف:
+  - `https://peachpuff-herring-712997.hostingersite.com/assets/index-DpUU3fLV.js`
+- تم تشغيل اختبار متصفح على رابط عرض منشور.
+- نتيجة موضع الحارس في هوستنغر:
+  - `zone = goalkeeper`
+  - `slot = 0-0`
+  - `styleLeft = 50%`
+  - `styleTop = 88%`
+  - `pitchPctLeft = 50`
+  - `pitchPctTop = 87.3`
+- لقطة هوستنغر:
+  - `reports-ar/2026-06-29-batch-50-hostinger-lineup-goalkeeper-guard.png`
+
 ## ملاحظة مهمة
 هذا إصلاح دفاعي على مستوى القالب نفسه، وليس مجرد تعديل بصري. أي رابط عرض قديم أو بيانات مباشرة فيها موقع حارس خاطئ يجب أن تصحح داخل الرندر تلقائيا.
