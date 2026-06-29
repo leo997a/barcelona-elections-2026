@@ -252,7 +252,12 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /byPosition === 'goalkeeper'/);
   assert.match(obs, /x: 50,[\s\S]*?formationSlotY\(0, outfieldRows, direction\)/);
   assert.match(obs, /const lineupSafeYForLine = \(line: LineupLine, direction: string\): number/);
+  assert.match(obs, /const lineupShouldRedistributeX = \(linePlayers: PositionedLineupPlayer\[\]\): boolean/);
+  assert.match(obs, /const stabilizeLineupSourceX = \(players: PositionedLineupPlayer\[\]\): PositionedLineupPlayer\[\]/);
   assert.match(obs, /byPosition[\s\S]*?lineupSafeYForLine\(line, direction\)/);
+  assert.match(obs, /const uniqueBuckets = new Set\(xs\.map\(x => Math\.round\(x \/ 3\)\)\)\.size/);
+  assert.match(obs, /spread < Math\.min\(18, \(linePlayers\.length - 1\) \* 8\)/);
+  assert.match(obs, /return stabilizeLineupSourceX\(sourceMapped\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
   assert.match(obs, /\/\(LW\|RW\|LAM\|RAM\|AM\|WING\|WINGER\)\//);

@@ -439,6 +439,41 @@ const lineupSafeYForLine = (line: LineupLine, direction: string): number => {
   return direction === 'attack_down' ? 100 - y : y;
 };
 
+const lineupShouldRedistributeX = (linePlayers: PositionedLineupPlayer[]): boolean => {
+  if (linePlayers.length <= 1) return false;
+  const xs = linePlayers.map(player => Number(player.x));
+  if (xs.some(x => !Number.isFinite(x))) return true;
+  const spread = Math.max(...xs) - Math.min(...xs);
+  const uniqueBuckets = new Set(xs.map(x => Math.round(x / 3))).size;
+  return uniqueBuckets < Math.min(linePlayers.length, 3) || spread < Math.min(18, (linePlayers.length - 1) * 8);
+};
+
+const stabilizeLineupSourceX = (players: PositionedLineupPlayer[]): PositionedLineupPlayer[] => {
+  const stabilized = [...players];
+  const lines: LineupLine[] = ['defence', 'midfield', 'support', 'attack'];
+
+  lines.forEach(line => {
+    const entries = stabilized
+      .map((player, index) => ({ player, index }))
+      .filter(entry => entry.player.line === line)
+      .sort((a, b) => a.player.x - b.player.x || a.index - b.index);
+
+    if (!entries.length) return;
+    const redistribute = lineupShouldRedistributeX(entries.map(entry => entry.player));
+    entries.forEach((entry, slotIndex) => {
+      stabilized[entry.index] = {
+        ...entry.player,
+        x: redistribute
+          ? clamp(rowSlotX(slotIndex, entries.length), 8, 92)
+          : clamp(entry.player.x, 8, 92),
+        slotIndex,
+      };
+    });
+  });
+
+  return stabilized;
+};
+
 const buildFormationLineup = (
   players: LineupPlayer[],
   formation: string,
@@ -466,7 +501,7 @@ const buildFormationLineup = (
   );
 
   if (useSourcePositions) {
-    return sourcePlayers.map((player, index) => {
+    const sourceMapped: PositionedLineupPlayer[] = sourcePlayers.map((player, index) => {
       const byPosition = lineupLineFromPosition(player.pos);
       if (byPosition === 'goalkeeper') {
         return {
@@ -495,6 +530,7 @@ const buildFormationLineup = (
         slotIndex: autoPositioned[index]?.slotIndex ?? 0,
       };
     });
+    return stabilizeLineupSourceX(sourceMapped);
   }
 
   return autoPositioned.slice(0, 11);
