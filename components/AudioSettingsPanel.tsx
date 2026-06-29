@@ -27,6 +27,7 @@ import { resolveTemplateAudio } from '../utils/templateRuntime';
 import { playCue, PREVIEWABLE_CUES } from '../services/audioEngine';
 
 const CUE_CATEGORY_LABELS: Record<string, string> = {
+  reo: '🎙️ مكتبة Reo الصوتية',
   featured: 'مختارات سريعة',
   news: 'أخبار وتنبيهات',
   football: 'كرة القدم والملعب',

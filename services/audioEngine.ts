@@ -210,7 +210,32 @@ const _legacyEntries: PreviewableCue[] = _legacyKeys
   .filter(k => !_libraryEntries.some(p => p.value === k))
   .map(k => ({ value: k, label: k.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), category: 'legacy' as string, tags: ['legacy'] }));
 
+// REO-LIBRARY — curated REAL-FILE sound pack (CC0 + licensed packs). Each value
+// maps to a real mp3 in CUE_TO_FILE_MAP, so playCue plays the actual file (with
+// synth fallback if a file is ever missing). Surfaces as its own "reo" category.
+const _reoEntries: PreviewableCue[] = [
+  { value: 'REO_WHISTLE',      label: 'صافرة حكم — Whistle',     category: 'reo', tags: ['football'] },
+  { value: 'REO_CROWD',        label: 'هتاف جمهور — Crowd',      category: 'reo', tags: ['stadium'] },
+  { value: 'REO_VAR',          label: 'تنبيه VAR — Buzzer',      category: 'reo', tags: ['football'] },
+  { value: 'REO_GOAL',         label: 'هدف — Goal Roar',         category: 'reo', tags: ['stadium'] },
+  { value: 'REO_DATA_IN',      label: 'ظهور بيانات — Data In',   category: 'reo', tags: ['report'] },
+  { value: 'REO_DATA_TICK',    label: 'نبضة بيانات — Data Tick', category: 'reo', tags: ['short'] },
+  { value: 'REO_WHOOSH_IN',    label: 'دخول — Whoosh In',        category: 'reo', tags: ['transition'] },
+  { value: 'REO_WHOOSH_OUT',   label: 'خروج — Whoosh Out',       category: 'reo', tags: ['transition'] },
+  { value: 'REO_TRANSITION',   label: 'انتقال — Transition',     category: 'reo', tags: ['transition'] },
+  { value: 'REO_CLICK',        label: 'نقرة — Click',            category: 'reo', tags: ['short'] },
+  { value: 'REO_NOTIFICATION', label: 'إشعار — Notification',    category: 'reo', tags: ['clean'] },
+  { value: 'REO_POP',          label: 'ظهور صغير — Pop',         category: 'reo', tags: ['short'] },
+  { value: 'REO_IMPACT',       label: 'ضربة — Impact',           category: 'reo', tags: ['cinematic'] },
+  { value: 'REO_SUBDROP',      label: 'سقطة باس — Subdrop',      category: 'reo', tags: ['deep'] },
+  { value: 'REO_RISER',        label: 'صعود — Riser',            category: 'reo', tags: ['cinematic'] },
+  { value: 'REO_CINEMA',       label: 'اصطدام سينمائي — Cinema', category: 'reo', tags: ['cinematic'] },
+  { value: 'REO_GLITCH',       label: 'جليتش — Glitch',          category: 'reo', tags: ['transition'] },
+  { value: 'REO_BREAKING',     label: 'خبر عاجل — Breaking',     category: 'reo', tags: ['newsroom'] },
+];
+
 export const PREVIEWABLE_CUES: PreviewableCue[] = [
+  ..._reoEntries,
   ..._featuredQuickPicks,
   ..._libraryEntries,
   ..._legacyEntries,
@@ -236,6 +261,25 @@ const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
   ULTRA_RISER: '/audio/sfx/cinematic/riser.mp3',
   SOFT_CHAT_TICK: '/audio/sfx/toko/click/click_01.mp3',
   SOFT_NOTIFICATION_PULSE: '/audio/sfx/toko/bubble/bubble_01.mp3',
+  // REO-LIBRARY — dedicated real-file sound pack (new keys, never aliased / never recipes).
+  REO_WHISTLE: '/audio/sfx/football/whistle_short.mp3',
+  REO_CROWD: '/audio/sfx/football/crowd_applause.mp3',
+  REO_VAR: '/audio/sfx/football/var_buzzer.mp3',
+  REO_GOAL: '/audio/sfx/football/goal_roar.mp3',
+  REO_DATA_IN: '/audio/sfx/toko/data/data_02.mp3',
+  REO_DATA_TICK: '/audio/sfx/toko/data/data_01.mp3',
+  REO_WHOOSH_IN: '/audio/sfx/toko/whoosh/whoosh_01.mp3',
+  REO_WHOOSH_OUT: '/audio/sfx/toko/whoosh/whoosh_03.mp3',
+  REO_TRANSITION: '/audio/sfx/toko/whoosh/whoosh_02.mp3',
+  REO_CLICK: '/audio/sfx/toko/click/click_01.mp3',
+  REO_NOTIFICATION: '/audio/sfx/toko/notification/notification_01.mp3',
+  REO_POP: '/audio/sfx/toko/bubble/bubble_01.mp3',
+  REO_IMPACT: '/audio/sfx/toko/impact/impact_02.mp3',
+  REO_SUBDROP: '/audio/sfx/toko/subdrop/subdrop_01.mp3',
+  REO_RISER: '/audio/sfx/cinematic/riser.mp3',
+  REO_CINEMA: '/audio/sfx/cinematic/impact.mp3',
+  REO_GLITCH: '/audio/sfx/ui/glitch_flash.mp3',
+  REO_BREAKING: '/sounds/special/breaking_news.mp3',
 };
 
 const PRELOAD_CUES: SoundCue[] = [
