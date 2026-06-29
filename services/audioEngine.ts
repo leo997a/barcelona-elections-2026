@@ -223,7 +223,7 @@ const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
   DATA_SLAM: '/sounds/show/player_stats_data.mp3',
   BROADCAST_OUT: '/sounds/hide/whoosh_out.mp3',
   SOFT_FADE: '/sounds/hide/fade_out.mp3',
-  GOAL_HORN: '/sounds/special/goal_horn.mp3',
+  GOAL_HORN: '/audio/sfx/football/goal_roar.mp3',
   BREAKING_NEWS_ALARM: '/sounds/special/breaking_news.mp3',
   BEFORE_THE_KICKOFF: '/sounds/before_the_kickoff.mp3',
 };
