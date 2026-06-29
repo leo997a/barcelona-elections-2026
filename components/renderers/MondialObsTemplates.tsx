@@ -292,6 +292,12 @@ const lineupIsGoalkeeperCandidate = (player: LineupPlayer, index: number): boole
   return shirt === 1;
 };
 
+const lineupSourceLine = (player: LineupPlayer, index: number): LineupLine | null => {
+  const byPosition = lineupLineFromPosition(player.pos);
+  if (byPosition) return byPosition;
+  return lineupIsGoalkeeperCandidate(player, index) ? 'goalkeeper' : null;
+};
+
 const lineupLineFromRow = (rowIndex: number, rowsLength: number, player?: LineupPlayer): LineupLine => {
   const byPosition = lineupLineFromPosition(player?.pos);
   if (byPosition) return byPosition;
@@ -510,7 +516,7 @@ const buildFormationLineup = (
 
   if (useSourcePositions) {
     const sourceMapped: PositionedLineupPlayer[] = sourcePlayers.map((player, index) => {
-      const byPosition = lineupLineFromPosition(player.pos);
+      const byPosition = lineupSourceLine(player, index);
       if (byPosition === 'goalkeeper') {
         return {
           ...player,
@@ -589,8 +595,8 @@ const ReoLineupPlayerMarker: React.FC<{
       ? 'mt-2 min-w-[112px] max-w-[176px] rounded-[18px] border-[4px] px-3 py-1.5 text-[13px]'
       : 'mt-2 min-w-[108px] max-w-[184px] rounded-[16px] border-[4px] px-3 py-1 text-[13px]';
   const badgeClass = markerMode === 'tactical'
-    ? 'right-[-10px] bottom-[-8px] min-w-7 h-7 rounded-[10px] text-[13px]'
-    : 'right-[-13px] bottom-[-10px] min-w-9 h-9 rounded-[13px] text-[16px]';
+    ? 'min-w-7 h-7 rounded-[10px] text-[13px]'
+    : 'min-w-9 h-9 rounded-[13px] text-[16px]';
   const roleChipClass = markerMode === 'tactical'
     ? 'mt-1 rounded-full px-2.5 py-0.5 text-[8px]'
     : 'mt-1 rounded-full px-3 py-0.5 text-[9px]';
@@ -599,33 +605,35 @@ const ReoLineupPlayerMarker: React.FC<{
       className="flex flex-col items-center"
       style={{ animation: `wcBadgePop .72s ${.32 + index * .065}s cubic-bezier(.16,1.18,.3,1) both` }}
     >
-      <div
-        className={`lineup-photo-frame relative ${frameClass} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
-        data-lineup-marker-mode={markerMode}
-        style={{ background: skin.panel, color: skin.panelText, boxShadow: `-8px 7px 0 ${paletteAt(theme, index)}` }}
-      >
-        {hasImage ? (
-          <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
-            <img
-              src={imageUrl}
-              alt=""
-              className="absolute inset-0 z-[2] w-full h-full object-cover object-top"
-              referrerPolicy="no-referrer"
-              onError={(event) => { event.currentTarget.style.display = 'none'; }}
-            />
-            <div className="absolute inset-0 z-[3] bg-gradient-to-t from-black/38 via-transparent to-transparent" />
-          </div>
-        ) : (
-          <span className="lineup-number-core relative z-[1]">{number}</span>
-        )}
+      <div className="lineup-photo-shell relative pb-5">
+        <div
+          className={`lineup-photo-frame relative ${frameClass} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
+          data-lineup-marker-mode={markerMode}
+          style={{ background: skin.panel, color: skin.panelText, boxShadow: `-8px 7px 0 ${paletteAt(theme, index)}` }}
+        >
+          {hasImage ? (
+            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+              <img
+                src={imageUrl}
+                alt=""
+                className="absolute inset-0 z-[2] w-full h-full object-cover object-top"
+                referrerPolicy="no-referrer"
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+              />
+              <div className="absolute inset-0 z-[3] bg-gradient-to-t from-black/38 via-transparent to-transparent" />
+            </div>
+          ) : (
+            <span className="lineup-number-core relative z-[1]">{number}</span>
+          )}
+          {hasRating && (
+            <span className="absolute left-[-9px] top-[-9px] z-[5] rounded-[10px] border-[3px] border-black bg-lime-300 px-1.5 py-0.5 text-[12px] leading-none font-black text-black">
+              {rating.toFixed(1)}
+            </span>
+          )}
+        </div>
         {hasImage && (
-          <span className={`lineup-number-badge absolute z-[6] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
+          <span className={`lineup-number-badge absolute left-1/2 top-full z-[6] -translate-x-1/2 -translate-y-[72%] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
             {number}
-          </span>
-        )}
-        {hasRating && (
-          <span className="absolute left-[-9px] top-[-9px] z-[5] rounded-[10px] border-[3px] border-black bg-lime-300 px-1.5 py-0.5 text-[12px] leading-none font-black text-black">
-            {rating.toFixed(1)}
           </span>
         )}
       </div>

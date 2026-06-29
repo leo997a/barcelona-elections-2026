@@ -252,8 +252,11 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /if \(byPosition === 'goalkeeper'\) return true/);
   assert.match(obs, /if \(byPosition\) return false/);
   assert.match(obs, /return shirt === 1/);
+  assert.match(obs, /const lineupSourceLine = \(player: LineupPlayer, index: number\): LineupLine \| null/);
+  assert.match(obs, /return lineupIsGoalkeeperCandidate\(player, index\) \? 'goalkeeper' : null/);
   assert.match(obs, /const goalkeeperIndex = cleanPlayers\.findIndex\(lineupIsGoalkeeperCandidate\)/);
   assert.match(obs, /pos: String\(player\?\.pos \|\| \(player \? '' : DEFAULT_PLAYERS\[index\]\?\.pos\) \|\| ''\)/);
+  assert.match(obs, /const byPosition = lineupSourceLine\(player, index\)/);
   assert.match(obs, /byPosition === 'goalkeeper'/);
   assert.match(obs, /x: 50,[\s\S]*?formationSlotY\(0, outfieldRows, direction\)/);
   assert.match(obs, /const lineupSafeYForLine = \(line: LineupLine, direction: string\): number/);
@@ -285,8 +288,11 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /placement: 'field' \| 'list'/);
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
+  assert.match(obs, /lineup-photo-shell relative pb-5/);
   assert.match(obs, /lineup-photo-frame/);
   assert.match(obs, /lineup-number-badge/);
+  assert.match(obs, /lineup-number-badge absolute left-1\/2 top-full/);
+  assert.doesNotMatch(obs, /lineup-number-badge absolute z-\[6\] \$\{badgeClass\}/);
   assert.doesNotMatch(obs, /lineup-nameplate-number/);
   assert.match(obs, /data-lineup-marker-mode/);
   assert.match(obs, /lineup-mini-avatar-clean/);
@@ -302,6 +308,7 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
     assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a lineup photo mode`);
   }
   assert.match(templates, /id: 'lineupBoardStyle'[\s\S]*?value: 'stadium_motion'/);
+  assert.match(templates, /num: 1, name: 'جلال حسن', pos: 'GK', x: 50, y: 88/);
   assert.match(shared, /'bra': 'br'/);
   assert.match(shared, /'bih': 'ba'/);
   assert.match(shared, /getFlagUrl\(trimmed\)/);

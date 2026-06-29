@@ -376,7 +376,7 @@ export const MONDIAL_LIVE_TEMPLATES: OverlayConfig[] = [
       { id: 'coach', label: 'المدرب', type: 'text', value: 'خيسوس كاساس' },
       { id: 'color', label: 'لون التشكيلة', type: 'color', value: '#007A3D' },
       { id: 'playersJson', label: 'تشكيلة اللاعبين JSON', type: 'textarea', value: JSON.stringify([
-        { num: 1, name: 'جلال حسن', pos: 'GK', x: 8, y: 50 },
+        { num: 1, name: 'جلال حسن', pos: 'GK', x: 50, y: 88 },
         { num: 3, name: 'حسين علي', pos: 'DF', x: 28, y: 15 },
         { num: 4, name: 'سعد ناطق', pos: 'DF', x: 25, y: 38 },
         { num: 6, name: 'علي عدنان', pos: 'DF', x: 25, y: 62 },
