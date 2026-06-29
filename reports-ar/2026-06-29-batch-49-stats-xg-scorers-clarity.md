@@ -50,6 +50,38 @@
 - `reports-ar/2026-06-29-batch-49-local-final2-xg-shot-flow.png`
 - `reports-ar/2026-06-29-batch-49-local-final2-golden-boot.png`
 
+## تحقق Hostinger
+
+بعد الدفع إلى GitHub التقط Hostinger البناء الجديد:
+
+- `https://peachpuff-herring-712997.hostingersite.com/assets/index-w0SW8ywy.js`
+
+تم فحص الروابط العامة للقوالب على Hostinger:
+
+- `https://peachpuff-herring-712997.hostingersite.com/output/qa-template-mondial-match-stats?obs=1&rgev=obs-live-v3`
+- `https://peachpuff-herring-712997.hostingersite.com/output/qa-template-mondial-xg-shot-flow?obs=1&rgev=obs-live-v3`
+- `https://peachpuff-herring-712997.hostingersite.com/output/qa-template-mondial-golden-boot?obs=1&rgev=obs-live-v3`
+
+نتائج القياس على النسخة الحية:
+
+- إحصائيات المباراة:
+  - 13 بطاقة إحصائية.
+  - آخر عنصر عند 987px من شاشة 1080px.
+- xG وتدفق التسديد:
+  - بطاقتا xG.
+  - بطاقة ملخص التسديد.
+  - 5 أعمدة تدفق.
+- الحذاء الذهبي:
+  - بطاقة قائد السباق.
+  - 4 بطاقات مقاييس.
+  - 5 صفوف سباق على Hostinger لأن بيانات النسخة الحية أوسع من بيانات المعاينة المحلية.
+
+لقطات Hostinger:
+
+- `reports-ar/2026-06-29-batch-49-hostinger-match-stats.png`
+- `reports-ar/2026-06-29-batch-49-hostinger-xg-shot-flow.png`
+- `reports-ar/2026-06-29-batch-49-hostinger-golden-boot.png`
+
 ## ملاحظة مهمة
 
 هذه الدفعة لا تعالج قالب التشكيلة. مشكلة تمركز الحارس في التشكيلة سيتم التعامل معها كدفعة مستقلة لأنها تحتاج تعديل منطق توزيع اللاعبين وليس مجرد تنسيق.
