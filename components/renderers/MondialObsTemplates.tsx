@@ -427,6 +427,18 @@ const formationSlotY = (rowIndex: number, outfieldRows: number, direction: strin
   return direction === 'attack_down' ? 100 - y : y;
 };
 
+const lineupSafeYForLine = (line: LineupLine, direction: string): number => {
+  const attackUpY: Record<LineupLine, number> = {
+    goalkeeper: 88,
+    defence: 69,
+    midfield: 50,
+    support: 34,
+    attack: 18,
+  };
+  const y = attackUpY[line];
+  return direction === 'attack_down' ? 100 - y : y;
+};
+
 const buildFormationLineup = (
   players: LineupPlayer[],
   formation: string,
@@ -468,8 +480,11 @@ const buildFormationLineup = (
         };
       }
       const sourceY = Number(player.y ?? autoPositioned[index]?.y ?? 50);
-      const y = clamp(mirrorPitchY(sourceY, direction), 10, 90);
-      const line = lineupLineFromY(y, direction, player);
+      const sourceDrivenY = clamp(mirrorPitchY(sourceY, direction), 10, 90);
+      const line = byPosition ?? lineupLineFromY(sourceDrivenY, direction, player);
+      const y = byPosition
+        ? clamp(lineupSafeYForLine(line, direction), 10, 90)
+        : sourceDrivenY;
       return {
         ...player,
         x: clamp(Number(player.x ?? autoPositioned[index]?.x ?? 50), 8, 92),
