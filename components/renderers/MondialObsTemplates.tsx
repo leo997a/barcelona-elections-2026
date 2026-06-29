@@ -550,22 +550,50 @@ const ReoLineupPlayerMarker: React.FC<{
   player: PositionedLineupPlayer;
   index: number;
   skin: LineupSkin;
+  styleId?: string;
   lineupNameMode: string;
   lineupPhotoMode: string;
   theme?: MondialTheme;
-}> = ({ player, index, skin, lineupNameMode, lineupPhotoMode, theme }) => {
+}> = ({ player, index, skin, styleId = 'reference_black', lineupNameMode, lineupPhotoMode, theme }) => {
   const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field');
   const number = player.num ?? player.number ?? index + 1;
   const hasImage = Boolean(imageUrl);
   const rating = Number(player.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
+  const markerMode = styleId === 'clean_pitch'
+    ? 'tactical'
+    : styleId === 'social_blue'
+      ? 'social'
+      : styleId === 'score_red'
+        ? 'score'
+        : styleId === 'stadium_motion'
+          ? 'broadcast'
+          : 'reference';
+  const showNameplate = lineupNameMode !== 'number_only';
+  const frameClass = markerMode === 'tactical'
+    ? (hasImage ? 'w-[66px] h-[66px] rounded-[22px]' : 'w-[62px] h-[62px] rounded-[20px]')
+    : markerMode === 'social'
+      ? (hasImage ? 'w-[78px] h-[78px] rounded-[26px]' : 'w-[70px] h-[70px] rounded-[22px]')
+      : (hasImage ? 'w-[84px] h-[84px] rounded-[30px]' : 'w-[74px] h-[74px] rounded-[24px]');
+  const nameplateClass = markerMode === 'tactical'
+    ? 'mt-1.5 min-w-[94px] max-w-[148px] rounded-[13px] border-[3px] px-2 py-0.5 text-[11px]'
+    : markerMode === 'social'
+      ? 'mt-2 min-w-[112px] max-w-[176px] rounded-[18px] border-[4px] px-3 py-1.5 text-[13px]'
+      : 'mt-2 min-w-[108px] max-w-[184px] rounded-[16px] border-[4px] px-3 py-1 text-[13px]';
+  const badgeClass = markerMode === 'tactical'
+    ? 'right-[-10px] bottom-[-8px] min-w-7 h-7 rounded-[10px] text-[13px]'
+    : 'right-[-13px] bottom-[-10px] min-w-9 h-9 rounded-[13px] text-[16px]';
+  const roleChipClass = markerMode === 'tactical'
+    ? 'mt-1 rounded-full px-2.5 py-0.5 text-[8px]'
+    : 'mt-1 rounded-full px-3 py-0.5 text-[9px]';
   return (
     <div
       className="flex flex-col items-center"
       style={{ animation: `wcBadgePop .72s ${.32 + index * .065}s cubic-bezier(.16,1.18,.3,1) both` }}
     >
       <div
-        className={`lineup-photo-frame relative ${hasImage ? 'w-[82px] h-[82px] rounded-[28px]' : 'w-[74px] h-[74px] rounded-[24px]'} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
+        className={`lineup-photo-frame relative ${frameClass} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
+        data-lineup-marker-mode={markerMode}
         style={{ background: skin.panel, color: skin.panelText, boxShadow: `-8px 7px 0 ${paletteAt(theme, index)}` }}
       >
         {hasImage ? (
@@ -580,7 +608,12 @@ const ReoLineupPlayerMarker: React.FC<{
             <div className="absolute inset-0 z-[3] bg-gradient-to-t from-black/38 via-transparent to-transparent" />
           </div>
         ) : (
-          <span className="relative z-[1]">{number}</span>
+          <span className="lineup-number-core relative z-[1]">{number}</span>
+        )}
+        {hasImage && (
+          <span className={`lineup-number-badge absolute z-[6] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
+            {number}
+          </span>
         )}
         {hasRating && (
           <span className="absolute left-[-9px] top-[-9px] z-[5] rounded-[10px] border-[3px] border-black bg-lime-300 px-1.5 py-0.5 text-[12px] leading-none font-black text-black">
@@ -588,19 +621,25 @@ const ReoLineupPlayerMarker: React.FC<{
           </span>
         )}
       </div>
-      <div
-        className={`lineup-nameplate mt-2 grid min-w-[104px] max-w-[176px] ${hasImage ? 'grid-cols-[30px_minmax(0,1fr)]' : 'grid-cols-1'} items-center gap-1 rounded-[15px] border-[4px] border-black px-2 py-1 text-[13px] leading-tight font-black`}
-        style={{ background: skin.panel, color: skin.panelText }}
-        dir="ltr"
-      >
-        {hasImage && (
-          <span className="lineup-nameplate-number flex h-6 min-w-7 items-center justify-center rounded-[9px] border-[3px] border-black bg-white px-1 text-[14px] leading-none text-black">
-            {number}
-          </span>
-        )}
-        <span className="truncate text-center">{lineupDisplayName(player.name, lineupNameMode)}</span>
-      </div>
-      <div className="mt-1 rounded-full px-3 py-0.5 text-[9px] font-black text-white" style={{ background: '#050505' }}>{player.lineLabel}</div>
+      {showNameplate && (
+        <div
+          className={`lineup-nameplate ${nameplateClass} leading-tight font-black text-center`}
+          style={{ background: skin.panel, color: skin.panelText }}
+          dir="ltr"
+        >
+          <span className="block truncate">{lineupDisplayName(player.name, lineupNameMode)}</span>
+        </div>
+      )}
+      {showNameplate && (
+        <div className={`${roleChipClass} font-black text-white`} style={{ background: '#050505' }}>
+          {player.lineLabel}
+        </div>
+      )}
+      {!showNameplate && (
+        <div className={`${roleChipClass} font-black text-black border-[3px] border-black`} style={{ background: paletteAt(theme, index) }}>
+          {player.lineLabel}
+        </div>
+      )}
     </div>
   );
 };
@@ -1372,6 +1411,25 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const awayDisplayName = String(away || awayDisplayCode).trim();
   const statsViewMode = text(getField, 'statsViewMode', 'dual_bars');
   const statFocus = text(getField, 'statFocus', 'balanced');
+  const status = matchStatusPresentation(getField, resolveField);
+  const minute = String(matchDetails?.match.minute ?? getField('minute') ?? '').trim();
+  const dataStatusLabel = status.isLive ? liveStatusText(minute) : status.label;
+  const statFocusLabel = ({
+    balanced: 'كل مؤشرات المباراة',
+    attack: 'الهجوم والتسديد',
+    control: 'الاستحواذ والسيطرة',
+    pressure: 'الضغط واسترداد الكرة',
+    accuracy: 'الدقة وجودة التنفيذ',
+    discipline: 'الالتحامات والانضباط',
+  } as Record<string, string>)[statFocus] ?? 'كل مؤشرات المباراة';
+  const statsViewModeLabel = ({
+    dual_bars: 'مقارنة مباشرة',
+    key_numbers: 'أرقام رئيسية',
+    momentum_grid: 'زخم المباراة',
+    territory_radar: 'السيطرة الميدانية',
+    xg_shot_flow: 'تدفق xG والتسديد',
+    pressure_accuracy: 'الضغط والدقة',
+  } as Record<string, string>)[statsViewMode] ?? 'مقارنة مباشرة';
   const rows = [
     {
       label: 'الاستحواذ',
@@ -1533,15 +1591,19 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-9 flex flex-col">
-        <KineticHeader title="إحصائيات المباراة" tag="بيانات المباراة · REO SHOW" theme={t} />
+        <KineticHeader title="إحصائيات المباراة" tag={`${dataStatusLabel} · REO SHOW`} theme={t} />
         <div className="flex-1 flex items-center justify-center">
           <div className="relative w-[1040px]">
             <div className="absolute inset-0 rounded-[32px]" style={{ background: c.danger, transform: 'translate(-18px,17px)' }} />
             <div className="absolute inset-0 rounded-[32px]" style={{ background: c.success, transform: 'translate(18px,10px)' }} />
             <div className="relative bg-white text-black border-[6px] border-black rounded-[32px] overflow-hidden">
-              <div className="grid grid-cols-[1fr_170px_1fr] items-center bg-black text-white px-9 py-5">
+              <div className="grid grid-cols-[1fr_270px_1fr] items-center bg-black text-white px-9 py-5">
                 <div className="flex items-center gap-4"><MondialFlag codeOrName={homeCode} size={48} /><TeamCode value={homeDisplayCode} color={WC.green} small /></div>
-                <div className="text-center text-[12px] font-black text-[#eeff00]">مونديال 2026</div>
+                <div className="stat-context-chip text-center font-black">
+                  <div className="text-[10px] text-[#eeff00]">{dataStatusLabel}</div>
+                  <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
+                  <div className="mt-1 text-[9px] text-white/55">{statFocusLabel} · {statsViewModeLabel}</div>
+                </div>
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayDisplayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
               </div>
               {statsViewMode === 'key_numbers' ? (
@@ -1642,7 +1704,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div className="text-[13px] font-black opacity-70">SHOT QUALITY</div>
                         <div className="text-[34px] leading-none font-black">جودة الفرص xG</div>
                       </div>
-                      <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">مباشر</div>
+                      <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">{dataStatusLabel}</div>
                     </div>
                     <div className="relative grid gap-4">
                       <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4">
@@ -1714,7 +1776,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div key={label} className="border-[5px] border-black rounded-[26px] bg-white p-4 flex flex-col justify-between min-h-[154px]" style={{ animation: `wcBadgePop .55s ${.24 + index * .08}s cubic-bezier(.16,1.25,.3,1) both` }}>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-[13px] font-black">{label}</span>
-                            <span className="text-[10px] font-black rounded-full border-[3px] border-black px-2 py-1" style={{ background: paletteAt(t, index) }}>مباشر</span>
+                            <span className="text-[10px] font-black rounded-full border-[3px] border-black px-2 py-1" style={{ background: paletteAt(t, index) }}>{dataStatusLabel}</span>
                           </div>
                           <div className="grid grid-cols-[1fr_56px_1fr] items-end gap-3 mt-4 font-black">
                             <div>
@@ -1754,7 +1816,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                 </div>
               ) : (
                 <div className="p-4 space-y-3">
-                  <div className="stat-comparison-header grid grid-cols-[1fr_170px_1fr] items-center rounded-[22px] border-[5px] border-black bg-black px-5 py-3 text-white">
+                  <div className="stat-comparison-header grid grid-cols-[1fr_270px_1fr] items-center rounded-[22px] border-[5px] border-black bg-black px-5 py-3 text-white">
                     <div className="stat-team-chip flex min-w-0 items-center gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5">
                       <MondialFlag codeOrName={homeCode} size={38} />
                       <div className="min-w-0">
@@ -1762,9 +1824,10 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div className="mt-1 truncate text-[10px] font-black text-white/65">{homeDisplayName}</div>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-[10px] font-black text-[#eeff00]">MATCH DATA</div>
-                      <div className="text-[17px] leading-tight font-black">{statRows.length} مؤشرات</div>
+                    <div className="stat-context-chip text-center font-black">
+                      <div className="text-[10px] text-[#eeff00]">{dataStatusLabel}</div>
+                      <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
+                      <div className="mt-1 text-[9px] text-white/55">{statRows.length} مؤشرات · {statFocusLabel}</div>
                     </div>
                     <div className="stat-team-chip flex min-w-0 items-center justify-end gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5 text-right">
                       <div className="min-w-0">
@@ -1976,6 +2039,7 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, resolv
                       player={player}
                       index={index}
                       skin={skin}
+                      styleId={lineupBoardStyle}
                       lineupNameMode={lineupNameMode}
                       lineupPhotoMode={lineupPhotoMode}
                       theme={t}
@@ -2406,16 +2470,19 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                 {scorers.slice(1).map((player, index) => {
                   const rowIndex = index + 1;
                   const width = Math.max(10, Math.round(((Number(player.metricValue) || 0) / maxMetric) * 100));
+                  const rowSupportStats = scorerSupportStats(player)
+                    .filter(stat => stat.label !== player.metricLabel)
+                    .slice(0, 2);
                   return (
                     <div
                       key={`${player.id ?? player.name}-${index}`}
-                      className="scorer-race-row grid grid-cols-[70px_88px_minmax(0,1fr)_104px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
+                      className="scorer-race-row grid grid-cols-[62px_78px_minmax(0,1fr)_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
                       style={{ background: c.paper, color: c.ink, boxShadow: `9px 8px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .6s ${.24 + rowIndex * .09}s both` }}
                     >
-                      <div className="h-full min-h-[82px] flex items-center justify-center text-[30px] font-black" style={{ background: paletteAt(t, index) }}>
+                      <div className="h-full min-h-[76px] flex items-center justify-center text-[28px] font-black" style={{ background: paletteAt(t, index) }}>
                         {player.rank ?? rowIndex + 1}
                       </div>
-                      <div className="h-full min-h-[82px] flex items-center justify-center bg-black/5">
+                      <div className="h-full min-h-[76px] flex items-center justify-center bg-black/5">
                         <ScorerPortrait
                           code={player.code || player.countryCode}
                           flagUrl={player.flagUrl}
@@ -2426,20 +2493,20 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                         />
                       </div>
                       <div className="min-w-0 px-4">
-                        <div className="truncate text-[22px] leading-tight font-black">{player.nameAr || player.name}</div>
-                        <div className="scorer-row-meta mt-1 flex flex-wrap items-center gap-2 text-[9px] font-black">
-                          <span>{player.team}</span>
-                          <span className="rounded-full border-2 border-black px-2 py-1">أسيست {player.assists ?? 0}</span>
-                          <span className="rounded-full border-2 border-black px-2 py-1">على المرمى {player.shotsOnTarget ?? player.shots ?? 0}</span>
-                          {player.keyPasses !== undefined && (
-                            <span className="rounded-full border-2 border-black px-2 py-1">فرص {player.keyPasses}</span>
-                          )}
+                        <div className="truncate text-[20px] leading-tight font-black">{player.nameAr || player.name}</div>
+                        <div className="scorer-row-meta mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5 text-[8px] font-black">
+                          <span className="truncate rounded-full border-2 border-black bg-black px-2 py-1 text-white">{player.team}</span>
+                          {rowSupportStats.map(stat => (
+                            <span key={`${player.name}-${stat.label}-race`} className="whitespace-nowrap rounded-full border-2 border-black px-2 py-1" style={{ background: c.paper, color: c.ink }}>
+                              {stat.label} {detailStatText(stat.value)}
+                            </span>
+                          ))}
                         </div>
                         <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/12">
                           <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${paletteAt(t, index + 1)}, ${c.gold})`, animation: `wcBarGrow .8s ${.44 + rowIndex * .06}s both` }} />
                         </div>
                       </div>
-                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[38px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[10px] font-black">{player.metricLabel}</div></div>
+                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[36px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[10px] font-black">{player.metricLabel}</div></div>
                     </div>
                   );
                 })}

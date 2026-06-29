@@ -226,6 +226,16 @@ const CUE_TO_FILE_MAP: Partial<Record<string, string>> = {
   GOAL_HORN: '/audio/sfx/football/goal_roar.mp3',
   BREAKING_NEWS_ALARM: '/sounds/special/breaking_news.mp3',
   BEFORE_THE_KICKOFF: '/sounds/before_the_kickoff.mp3',
+  // SOUND-ASSETS-PACK — real-file upgrades for synth-only cues (CC0 + library packs).
+  // Additive only: these keys are NOT in LIBRARY_CUE_ALIASES and NOT library recipes,
+  // so they resolve here via playFileCue and fall back to synth if a file is missing.
+  VAR_BUZZ: '/audio/sfx/football/var_buzzer.mp3',
+  WHISTLE_SHORT: '/audio/sfx/football/whistle_short.mp3',
+  STADIUM_CHEER: '/audio/sfx/football/crowd_applause.mp3',
+  CINEMA_BOOM: '/audio/sfx/toko/subdrop/subdrop_01.mp3',
+  ULTRA_RISER: '/audio/sfx/cinematic/riser.mp3',
+  SOFT_CHAT_TICK: '/audio/sfx/toko/click/click_01.mp3',
+  SOFT_NOTIFICATION_PULSE: '/audio/sfx/toko/bubble/bubble_01.mp3',
 };
 
 const PRELOAD_CUES: SoundCue[] = [

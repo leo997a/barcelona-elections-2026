@@ -32,3 +32,13 @@ test('goal and transition cues resolve to the shipped broadcast SFX pack', () =>
   assert.match(source, /SCOREBUG_SNAP:\s*'\/sounds\/show\/scoreboard_in\.mp3'/);
   assert.match(source, /BROADCAST_OUT:\s*'\/sounds\/hide\/whoosh_out\.mp3'/);
 });
+
+test('library-visible football and soft cues resolve to real files before synth fallback', () => {
+  assert.match(source, /VAR_BUZZ:\s*'\/audio\/sfx\/football\/var_buzzer\.mp3'/);
+  assert.match(source, /WHISTLE_SHORT:\s*'\/audio\/sfx\/football\/whistle_short\.mp3'/);
+  assert.match(source, /STADIUM_CHEER:\s*'\/audio\/sfx\/football\/crowd_applause\.mp3'/);
+  assert.match(source, /CINEMA_BOOM:\s*'\/audio\/sfx\/toko\/subdrop\/subdrop_01\.mp3'/);
+  assert.match(source, /ULTRA_RISER:\s*'\/audio\/sfx\/cinematic\/riser\.mp3'/);
+  assert.match(source, /SOFT_CHAT_TICK:\s*'\/audio\/sfx\/toko\/click\/click_01\.mp3'/);
+  assert.match(source, /SOFT_NOTIFICATION_PULSE:\s*'\/audio\/sfx\/toko\/bubble\/bubble_01\.mp3'/);
+});

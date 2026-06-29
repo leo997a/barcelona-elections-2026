@@ -281,8 +281,11 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
   assert.match(obs, /lineup-photo-frame/);
-  assert.match(obs, /lineup-nameplate-number/);
+  assert.match(obs, /lineup-number-badge/);
+  assert.doesNotMatch(obs, /lineup-nameplate-number/);
+  assert.match(obs, /data-lineup-marker-mode/);
   assert.match(obs, /lineup-mini-avatar-clean/);
+  assert.match(obs, /styleId=\{lineupBoardStyle\}/);
   assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection\)/);
   assert.match(obs, /className="lineup-player-anchor absolute"/);
   assert.match(obs, /data-zone=\{player\.line\}/);
@@ -326,6 +329,7 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /homeDisplayCode/);
   assert.match(obs, /awayDisplayCode/);
   assert.match(obs, /stat-comparison-header/);
+  assert.match(obs, /stat-context-chip/);
   assert.match(obs, /stat-comparison-row/);
   assert.match(obs, /stat-team-chip/);
   assert.match(obs, /stat-comparison-grid/);
