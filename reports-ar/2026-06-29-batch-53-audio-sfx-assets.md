@@ -26,6 +26,19 @@
 - ملف التطبيق الرئيسي:
   `assets/index-BaLQH1Gt.js`
 
+## التحقق من Hostinger
+- الموقع العام أصبح يخدم ملف البناء:
+  `assets/index-BaLQH1Gt.js`
+- تم فحص روابط الصوت من Hostinger مباشرة وكانت النتيجة `200` لكل المسارات:
+  - `/sounds/show/scoreboard_in.mp3` - 24767 bytes
+  - `/sounds/show/lower_third_in.mp3` - 42623 bytes
+  - `/sounds/show/transfer_hit.mp3` - 42623 bytes
+  - `/sounds/show/player_stats_data.mp3` - 43777 bytes
+  - `/sounds/hide/whoosh_out.mp3` - 18431 bytes
+  - `/sounds/hide/fade_out.mp3` - 90431 bytes
+  - `/sounds/special/breaking_news.mp3` - 67967 bytes
+  - `/audio/sfx/football/goal_roar.mp3` - 51885 bytes
+
 ## ملفات صوت تم التأكد من وجودها في البناء
 - `dist/sounds/show/scoreboard_in.mp3`
 - `dist/sounds/show/lower_third_in.mp3`
