@@ -160,6 +160,19 @@ test('motion preset sound defaults remain overridable and visible in the editor'
   assert.match(templates, /value: 'LUXURY_SWEEP_PRO'/);
   assert.match(templates, /value: 'PANEL_CLOSE'/);
   assert.match(templates, /value: 'LIVE_UPDATE_PING'/);
+  for (const cue of [
+    'REO_WHOOSH_IN',
+    'REO_TRANSITION',
+    'REO_WHOOSH_OUT',
+    'REO_DATA_TICK',
+    'REO_NOTIFICATION',
+    'REO_BREAKING',
+  ]) {
+    assert.match(templates, new RegExp(`value: '${cue}'`), `${cue} should be selectable in Mondial audio fields`);
+  }
+  assert.match(templates, /id: 'soundInStyle'[\s\S]*?\.\.\.reoSoundInOptions/);
+  assert.match(templates, /id: 'soundOutStyle'[\s\S]*?\.\.\.reoSoundOutOptions/);
+  assert.match(templates, /id: 'audioUpdateCue'[\s\S]*?\.\.\.reoUpdateCueOptions/);
   assert.match(editor, /'mondialTheme', 'mondialStyle', 'broadcastLook'/);
 });
 

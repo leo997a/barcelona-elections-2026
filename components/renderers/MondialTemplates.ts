@@ -1,5 +1,35 @@
 import { OverlayType, OverlayField, OverlayConfig } from '../../types';
 
+const reoSoundInOptions = [
+  { value: 'REO_WHOOSH_IN', label: 'Reo - whoosh in (real file)' },
+  { value: 'REO_TRANSITION', label: 'Reo - TV transition (real file)' },
+  { value: 'REO_DATA_IN', label: 'Reo - data reveal (real file)' },
+  { value: 'REO_CROWD', label: 'Reo - crowd bed (real file)' },
+  { value: 'REO_IMPACT', label: 'Reo - impact hit (real file)' },
+  { value: 'REO_CINEMA', label: 'Reo - cinematic hit (real file)' },
+  { value: 'REO_GLITCH', label: 'Reo - glitch flash (real file)' },
+];
+
+const reoSoundOutOptions = [
+  { value: 'REO_WHOOSH_OUT', label: 'Reo - whoosh out (real file)' },
+  { value: 'REO_SUBDROP', label: 'Reo - sub drop out (real file)' },
+  { value: 'REO_IMPACT', label: 'Reo - impact close (real file)' },
+  { value: 'REO_CINEMA', label: 'Reo - cinematic close (real file)' },
+  { value: 'REO_GLITCH', label: 'Reo - glitch out (real file)' },
+];
+
+const reoUpdateCueOptions = [
+  { value: 'REO_DATA_TICK', label: 'Reo - data tick (real file)' },
+  { value: 'REO_DATA_IN', label: 'Reo - data update (real file)' },
+  { value: 'REO_CLICK', label: 'Reo - precision click (real file)' },
+  { value: 'REO_NOTIFICATION', label: 'Reo - notification (real file)' },
+  { value: 'REO_POP', label: 'Reo - pop reveal (real file)' },
+  { value: 'REO_VAR', label: 'Reo - VAR alert (real file)' },
+  { value: 'REO_WHISTLE', label: 'Reo - whistle (real file)' },
+  { value: 'REO_GOAL', label: 'Reo - goal roar (real file)' },
+  { value: 'REO_BREAKING', label: 'Reo - breaking sting (real file)' },
+];
+
 
 // ─── حقول مشتركة لجميع قوالب المونديال ─────────────────────────────────────
 
@@ -57,6 +87,7 @@ const mondialCommonFields: OverlayField[] = [
     { value: 'DATA_SCAN_CLEAN', label: 'Library - data scan clean' },
     { value: 'SCOREBOARD_TICK', label: 'Library - scoreboard tick' },
     { value: 'GOAL_STINGER_MODERN', label: 'Library - goal stinger modern' },
+    ...reoSoundInOptions,
     { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
     { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
@@ -69,6 +100,7 @@ const mondialCommonFields: OverlayField[] = [
     { value: 'OUTRO_HIT', label: 'Library - outro hit' },
     { value: 'PANEL_CLOSE', label: 'Library - panel close' },
     { value: 'MODERN_SWIPE_RIGHT', label: 'Library - swipe out' },
+    ...reoSoundOutOptions,
     { value: 'BROADCAST_OUT', label: 'Broadcast out' },
     { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
     { value: 'SOFT_FADE', label: 'Soft fade' },
@@ -80,6 +112,7 @@ const mondialCommonFields: OverlayField[] = [
     { value: 'LIVE_UPDATE_PING', label: 'Library - live update ping' },
     { value: 'SCOREBOARD_TICK', label: 'Library - scoreboard tick' },
     { value: 'DATA_SCAN_CLEAN', label: 'Library - data scan clean' },
+    ...reoUpdateCueOptions,
     { value: 'DATA_TICK', label: 'Data tick' },
     { value: 'SCOREBUG_SNAP', label: 'Score snap' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
@@ -690,6 +723,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'DATA_SCAN_CLEAN', label: 'Library - data scan clean' },
     { value: 'SCOREBOARD_TICK', label: 'Library - scoreboard tick' },
     { value: 'GOAL_STINGER_MODERN', label: 'Library - goal stinger modern' },
+    ...reoSoundInOptions,
     { value: 'STADIUM_WHOOSH', label: 'Stadium whoosh' },
     { value: 'TROPHY_FANFARE', label: 'Trophy fanfare' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
@@ -702,6 +736,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'OUTRO_HIT', label: 'Library - outro hit' },
     { value: 'PANEL_CLOSE', label: 'Library - panel close' },
     { value: 'MODERN_SWIPE_RIGHT', label: 'Library - swipe out' },
+    ...reoSoundOutOptions,
     { value: 'BROADCAST_OUT', label: 'Broadcast out' },
     { value: 'DIGITAL_SWEEP', label: 'Digital sweep' },
     { value: 'SOFT_FADE', label: 'Soft fade' },
@@ -713,6 +748,7 @@ const mondialBroadcastMotionFields: OverlayField[] = [
     { value: 'LIVE_UPDATE_PING', label: 'Library - live update ping' },
     { value: 'SCOREBOARD_TICK', label: 'Library - scoreboard tick' },
     { value: 'DATA_SCAN_CLEAN', label: 'Library - data scan clean' },
+    ...reoUpdateCueOptions,
     { value: 'DATA_TICK', label: 'Data tick' },
     { value: 'SCOREBUG_SNAP', label: 'Score snap' },
     { value: 'GLITCH_TRANSITION', label: 'Glitch transition' },
