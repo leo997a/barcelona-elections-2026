@@ -17,11 +17,25 @@
   - `assets/index-Cx0WFX-o.js`
 - لقطة فحص محلية من بناء الإنتاج:
   - `reports-ar/2026-06-29-batch-48-local-lineup-vertical-fix.png`
+- لقطة فحص من Hostinger بعد النشر:
+  - `reports-ar/2026-06-29-batch-48-hostinger-lineup-vertical-fix.png`
 - قياس تمركز الحارس في DOM:
   - `left: 50%`
   - `top: 88%`
 
 هذا يعني أن الحارس أصبح في أسفل منتصف الملعب، والدفاع فوقه، ثم الوسط، ثم الهجوم للأعلى.
+
+## تحقق Hostinger
+
+بعد الدفع إلى GitHub التقط Hostinger البناء الجديد:
+
+- `/assets/index-Cx0WFX-o.js`
+
+ثم تم فتح قالب التشكيلة على الرابط العام، وكانت نتيجة تمركز الحارس:
+
+- `left: 50%`
+- `top: 88%`
+- لا توجد أخطاء Console أثناء الفحص.
 
 ## الفحوص
 
