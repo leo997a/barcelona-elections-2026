@@ -431,12 +431,11 @@ const buildFormationLineup = (
   players: LineupPlayer[],
   formation: string,
   layoutMode: string,
-  direction: string,
-  preferSourceInAuto = false
+  direction: string
 ): PositionedLineupPlayer[] => {
   const sourcePlayers = players.slice(0, 11).map(normalizedPlayer);
   const sourceHasEnoughPositions = sourcePlayers.filter(hasValidPitchPosition).length >= 8;
-  const useSourcePositions = sourceHasEnoughPositions && (layoutMode === 'source_positions' || (layoutMode === 'auto_formation' && preferSourceInAuto));
+  const useSourcePositions = sourceHasEnoughPositions && layoutMode === 'source_positions';
   const rows = playerRowsFromFormation(sourcePlayers.length ? sourcePlayers : DEFAULT_PLAYERS, formation);
   const outfieldRows = Math.max(1, rows.length - 1);
   const autoPositioned = rows.flatMap((row, rowIndex) =>
@@ -527,13 +526,15 @@ const ReoLineupPlayerMarker: React.FC<{
         )}
       </div>
       <div
-        className="lineup-nameplate mt-2 grid min-w-[104px] max-w-[176px] grid-cols-[30px_minmax(0,1fr)] items-center gap-1 rounded-[15px] border-[4px] border-black px-2 py-1 text-[13px] leading-tight font-black"
+        className={`lineup-nameplate mt-2 grid min-w-[104px] max-w-[176px] ${hasImage ? 'grid-cols-[30px_minmax(0,1fr)]' : 'grid-cols-1'} items-center gap-1 rounded-[15px] border-[4px] border-black px-2 py-1 text-[13px] leading-tight font-black`}
         style={{ background: skin.panel, color: skin.panelText }}
         dir="ltr"
       >
-        <span className="lineup-nameplate-number flex h-6 min-w-7 items-center justify-center rounded-[9px] border-[3px] border-black bg-white px-1 text-[14px] leading-none text-black">
-          {number}
-        </span>
+        {hasImage && (
+          <span className="lineup-nameplate-number flex h-6 min-w-7 items-center justify-center rounded-[9px] border-[3px] border-black bg-white px-1 text-[14px] leading-none text-black">
+            {number}
+          </span>
+        )}
         <span className="truncate text-center">{lineupDisplayName(player.name, lineupNameMode)}</span>
       </div>
       <div className="mt-1 rounded-full px-3 py-0.5 text-[9px] font-black text-white" style={{ background: '#050505' }}>{player.lineLabel}</div>
@@ -1731,7 +1732,7 @@ export const ReoObsLineup: React.FC<ReoObsVariantProps> = ({ t, getField, resolv
   const lineupPhotoMode = text(getField, 'lineupPhotoMode', 'auto');
   const lineupShowBench = getField('lineupShowBench') !== false && String(getField('lineupShowBench') ?? 'true') !== 'false';
   const sourcePlayers = livePlayers.length ? livePlayers : parsed.length ? parsed : DEFAULT_PLAYERS;
-  const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection, livePlayers.length > 0);
+  const players = buildFormationLineup(sourcePlayers, formation, lineupLayoutMode, lineupDirection);
   const c = themedColors(t);
   const teamColor = text(getField, 'color', c.success);
   const skin = lineupSkin(lineupBoardStyle, c, teamColor);

@@ -245,8 +245,8 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const buildFormationLineup = \(/);
   assert.match(obs, /const lineupSkin = \(style: string/);
   assert.match(obs, /const lineupLineFromY = \(y: number, direction: string, player\?: LineupPlayer\): LineupLine/);
-  assert.match(obs, /preferSourceInAuto = false/);
-  assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && \(layoutMode === 'source_positions' \|\| \(layoutMode === 'auto_formation' && preferSourceInAuto\)\)/);
+  assert.doesNotMatch(obs, /preferSourceInAuto/);
+  assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && layoutMode === 'source_positions'/);
   assert.match(obs, /if \(useSourcePositions\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
@@ -273,7 +273,7 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /lineup-photo-frame/);
   assert.match(obs, /lineup-nameplate-number/);
   assert.match(obs, /lineup-mini-avatar-clean/);
-  assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection, livePlayers\.length > 0\)/);
+  assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection\)/);
   assert.match(obs, /className="lineup-player-anchor absolute"/);
   assert.match(obs, /data-zone=\{player\.line\}/);
   assert.match(obs, /transform: 'translate\(-50%, -50%\)'/);
