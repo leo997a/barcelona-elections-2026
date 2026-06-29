@@ -391,9 +391,14 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /scorer-row-meta/);
   assert.match(obs, /scorerViewMode === 'podium'/);
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
+  assert.match(obs, /scorerViewMode === 'tv_ladder'/);
+  assert.match(obs, /golden-tv-ladder/);
+  assert.match(obs, /golden-tv-ladder-row/);
+  assert.match(obs, /grid grid-cols-\[minmax\(0,1fr\)_auto\]/);
   for (const option of ['reference_stack', 'broadcast_photo', 'data_glass', 'classic_flags']) {
     assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a scorer card style`);
   }
+  assert.match(templates, /value: 'tv_ladder'/);
 
   assert.match(obs, /const playerCardMode = text\(getField, 'playerCardMode', 'hero_stats'\)/);
   for (const field of ['playerSource', 'playerPickIndex', 'playerStatFocus']) {

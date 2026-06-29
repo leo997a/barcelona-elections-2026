@@ -2438,8 +2438,96 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                 </div>
               ))}
             </div>
+          ) : scorerViewMode === 'tv_ladder' ? (
+            <div className="golden-tv-ladder w-[1200px] grid grid-cols-[minmax(0,1fr)_360px] gap-6 items-stretch" dir="rtl">
+              <div className="space-y-3">
+                {scorers.map((player, index) => {
+                  const width = Math.max(10, Math.round(((Number(player.metricValue) || 0) / maxMetric) * 100));
+                  const support = scorerSupportStats(player)
+                    .filter(stat => stat.label !== player.metricLabel)
+                    .slice(0, 2);
+                  return (
+                    <div
+                      key={`${player.id ?? player.name}-ladder-${index}`}
+                      className="golden-tv-ladder-row grid grid-cols-[86px_92px_minmax(0,1fr)_138px] items-center gap-4 rounded-[28px] border-[5px] border-black bg-white px-5 py-4 text-black"
+                      style={{ boxShadow: `10px 8px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .56s ${.18 + index * .07}s both` }}
+                    >
+                      <div className="rounded-[20px] border-[4px] border-black px-3 py-2 text-center" style={{ background: index === 0 ? c.gold : paletteAt(t, index), color: c.ink }}>
+                        <div className="text-[13px] font-black leading-none">#</div>
+                        <div className="text-[34px] leading-none font-black">{player.rank ?? index + 1}</div>
+                      </div>
+                      <ScorerPortrait
+                        code={player.code || player.countryCode}
+                        flagUrl={player.flagUrl}
+                        image={player.image}
+                        size={74}
+                        cardStyle={scorerCardStyle}
+                        theme={t}
+                      />
+                      <div className="min-w-0">
+                        <div className="truncate text-[27px] leading-none font-black">{player.nameAr || player.name}</div>
+                        <div className="mt-2 flex min-w-0 items-center gap-2 text-[10px] font-black">
+                          <span className="truncate rounded-full border-[3px] border-black bg-black px-3 py-1 text-white">{player.team}</span>
+                          {support.map(stat => (
+                            <span key={`${player.name}-${stat.label}-ladder`} className="shrink-0 rounded-full border-[3px] border-black px-3 py-1" style={{ background: c.paper, color: c.ink }}>
+                              {stat.label} {detailStatText(stat.value)}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-3 h-4 overflow-hidden rounded-full border-[3px] border-black bg-black/10">
+                          <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${c.danger}, ${c.gold}, ${c.success})`, animation: `wcBarGrow .82s ${.32 + index * .05}s both` }} />
+                        </div>
+                      </div>
+                      <div className="rounded-[22px] border-[5px] border-black py-3 text-center" style={{ background: c.ink, color: c.paper }}>
+                        <div className="text-[44px] leading-none font-black">{detailStatText(player.metricValue)}</div>
+                        <div className="mt-1 text-[10px] font-black">{player.metricLabel}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div
+                className="golden-tv-ladder-summary relative overflow-hidden rounded-[34px] border-[6px] border-black p-6 text-black"
+                style={{ background: c.gold, boxShadow: `14px 12px 0 ${c.danger}`, animation: 'wcScorePop .72s .22s both' }}
+              >
+                <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/45" />
+                <div className="absolute -left-16 bottom-8 h-52 w-52 rounded-full bg-black/10" />
+                <div className="relative text-[16px] font-black">لوحة السباق</div>
+                <div className="relative mt-2 text-[46px] leading-[.95] font-black">{activeMetric.title}</div>
+                {leader && (
+                  <div className="relative mt-8 rounded-[28px] border-[5px] border-black bg-white p-5">
+                    <div className="flex items-center gap-4">
+                      <ScorerPortrait
+                        code={leader.code || leader.countryCode}
+                        flagUrl={leader.flagUrl}
+                        image={leader.image}
+                        size={92}
+                        cardStyle={scorerCardStyle}
+                        theme={t}
+                      />
+                      <div className="min-w-0">
+                        <div className="truncate text-[26px] leading-tight font-black">{leader.nameAr || leader.name}</div>
+                        <div className="mt-1 text-[12px] font-black opacity-70">{leader.team}</div>
+                      </div>
+                    </div>
+                    <div className="mt-5 rounded-[24px] border-[5px] border-black bg-black px-5 py-4 text-center text-white">
+                      <div className="text-[76px] leading-none font-black">{detailStatText(leader.metricValue)}</div>
+                      <div className="text-[12px] font-black">{leader.metricLabel}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="relative mt-6 grid grid-cols-3 gap-2">
+                  {scorers.slice(0, 3).map((player, index) => (
+                    <div key={`${player.name}-ladder-mini-${index}`} className="rounded-[18px] border-[4px] border-black bg-white px-3 py-2 text-center font-black">
+                      <div className="text-[14px]">#{player.rank ?? index + 1}</div>
+                      <div className="mt-1 truncate text-[11px]">{player.code || player.countryCode || player.team}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="w-[1160px] grid grid-cols-[390px_1fr] gap-6 items-stretch">
+            <div className="w-[1210px] grid grid-cols-[420px_minmax(0,1fr)] gap-8 items-stretch">
               {leader && (
                 <div
                   className="scorer-leader-card relative overflow-hidden rounded-[34px] border-[6px] border-black p-6"
@@ -2492,7 +2580,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   return (
                     <div
                       key={`${player.id ?? player.name}-${index}`}
-                      className="scorer-race-row grid grid-cols-[62px_78px_minmax(0,1fr)_120px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
+                      className="scorer-race-row grid grid-cols-[58px_76px_minmax(0,1fr)_112px] items-center border-[5px] border-black rounded-[25px] overflow-hidden bg-white text-black"
                       style={{ background: c.paper, color: c.ink, boxShadow: `9px 8px 0 ${paletteAt(t, index)}`, animation: `wcRowIn .6s ${.24 + rowIndex * .09}s both` }}
                     >
                       <div className="h-full min-h-[76px] flex items-center justify-center text-[28px] font-black" style={{ background: paletteAt(t, index) }}>
@@ -2510,9 +2598,9 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                       </div>
                       <div className="min-w-0 px-4">
                         <div className="truncate text-[20px] leading-tight font-black">{player.nameAr || player.name}</div>
-                        <div className="scorer-row-meta mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5 text-[8px] font-black">
+                        <div className="scorer-row-meta mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 text-[8px] font-black">
                           <span className="truncate rounded-full border-2 border-black bg-black px-2 py-1 text-white">{player.team}</span>
-                          {rowSupportStats.map(stat => (
+                          {rowSupportStats.slice(0, 1).map(stat => (
                             <span key={`${player.name}-${stat.label}-race`} className="whitespace-nowrap rounded-full border-2 border-black px-2 py-1" style={{ background: c.paper, color: c.ink }}>
                               {stat.label} {detailStatText(stat.value)}
                             </span>
@@ -2522,7 +2610,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                           <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${paletteAt(t, index + 1)}, ${c.gold})`, animation: `wcBarGrow .8s ${.44 + rowIndex * .06}s both` }} />
                         </div>
                       </div>
-                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[36px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[10px] font-black">{player.metricLabel}</div></div>
+                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[34px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[9px] font-black">{player.metricLabel}</div></div>
                     </div>
                   );
                 })}

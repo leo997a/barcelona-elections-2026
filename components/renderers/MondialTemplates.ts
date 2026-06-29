@@ -1136,6 +1136,7 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'golden_boot' },
       { id: 'scorerViewMode', label: 'طريقة عرض الهدافين', type: 'select', value: 'race_board', options: [
         { value: 'race_board', label: 'سباق الهدافين' },
+        { value: 'tv_ladder', label: 'سلم تلفزيوني واسع' },
         { value: 'podium', label: 'منصة أول ثلاثة' },
         { value: 'compact_ranking', label: 'ترتيب مضغوط' },
       ] },
