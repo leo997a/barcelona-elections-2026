@@ -248,6 +248,9 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.doesNotMatch(obs, /preferSourceInAuto/);
   assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && layoutMode === 'source_positions'/);
   assert.match(obs, /if \(useSourcePositions\)/);
+  assert.match(obs, /cleanPlayers\.findIndex\(player => lineupLineFromPosition\(player\.pos\) === 'goalkeeper'\)/);
+  assert.match(obs, /byPosition === 'goalkeeper'/);
+  assert.match(obs, /x: 50,[\s\S]*?formationSlotY\(0, outfieldRows, direction\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
   assert.match(obs, /\/\(LW\|RW\|LAM\|RAM\|AM\|WING\|WINGER\)\//);

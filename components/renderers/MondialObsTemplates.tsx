@@ -276,7 +276,7 @@ const lineupIdentityCode = (candidateCode: unknown, teamName: unknown): string =
 const lineupLineFromPosition = (pos?: string): LineupLine | null => {
   const token = String(pos || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (!token) return null;
-  if (token.includes('GK') || token.includes('GOAL')) return 'goalkeeper';
+  if (token.includes('GK') || token.includes('GOAL') || token.includes('KEEPER') || token === 'G') return 'goalkeeper';
   if (/(CB|LCB|RCB|LB|RB|LWB|RWB|DF|DEF|BACK)/.test(token)) return 'defence';
   if (/(ST|CF|FW|FWD|ATT|STRIKER|FORWARD)/.test(token)) return 'attack';
   if (/(LW|RW|LAM|RAM|AM|WING|WINGER)/.test(token)) return 'support';
@@ -386,7 +386,7 @@ const lineupSkin = (style: string, c: ReturnType<typeof themedColors>, teamColor
 
 const playerRowsFromFormation = (players: LineupPlayer[], formation: string): LineupPlayer[][] => {
   const cleanPlayers = players.slice(0, 11).map(normalizedPlayer);
-  const goalkeeperIndex = cleanPlayers.findIndex(player => String(player.pos || '').toUpperCase().includes('GK'));
+  const goalkeeperIndex = cleanPlayers.findIndex(player => lineupLineFromPosition(player.pos) === 'goalkeeper');
   const goalkeeper = goalkeeperIndex >= 0
     ? cleanPlayers[goalkeeperIndex]
     : cleanPlayers[0] || normalizedPlayer(undefined, 0);
@@ -455,6 +455,18 @@ const buildFormationLineup = (
 
   if (useSourcePositions) {
     return sourcePlayers.map((player, index) => {
+      const byPosition = lineupLineFromPosition(player.pos);
+      if (byPosition === 'goalkeeper') {
+        return {
+          ...player,
+          x: 50,
+          y: clamp(formationSlotY(0, outfieldRows, direction), 10, 90),
+          line: 'goalkeeper',
+          lineLabel: LINEUP_LINE_LABELS.goalkeeper,
+          rowIndex: 0,
+          slotIndex: 0,
+        };
+      }
       const sourceY = Number(player.y ?? autoPositioned[index]?.y ?? 50);
       const y = clamp(mirrorPitchY(sourceY, direction), 10, 90);
       const line = lineupLineFromY(y, direction, player);
