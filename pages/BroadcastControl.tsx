@@ -146,9 +146,10 @@ const BroadcastControl: React.FC = () => {
 
         {/* Sound Preview Grid — Per-Cue FX */}
         <div className="space-y-8">
-          {(['featured', 'news', 'football', 'mercato', 'tactical', 'report', 'lowerthird', 'cinematic', 'experimental', 'legacy'] as const).map(cat => {
+          {(['featured', 'reo', 'news', 'football', 'mercato', 'tactical', 'report', 'lowerthird', 'cinematic', 'experimental', 'legacy'] as const).map(cat => {
             const catLabel =
               cat === 'featured'     ? '⭐ Featured — موصى به' :
+              cat === 'reo'          ? '🎙️ Reo Library — مكتبة Reo الصوتية' :
               cat === 'news'         ? '🚨 News & Breaking — أخبار' :
               cat === 'football'     ? '⚽ Football Match — مباراة' :
               cat === 'mercato'      ? '⚡ Mercato / Transfers — انتقالات' :
@@ -158,7 +159,7 @@ const BroadcastControl: React.FC = () => {
               cat === 'cinematic'    ? '🎞️ Cinematic Transitions — انتقالات سينمائية' :
               cat === 'experimental' ? '🧪 Experimental — تجريبي' :
               '📦 Legacy — أصوات قديمة (محفوظة)';
-            const CatIcon = (cat === 'featured' || cat === 'news') ? Radio : cat === 'mercato' ? Music : Play;
+            const CatIcon = cat === 'reo' ? Volume2 : (cat === 'featured' || cat === 'news') ? Radio : cat === 'mercato' ? Music : Play;
             const cues = PREVIEWABLE_CUES.filter(c => c.category === cat);
             if (cues.length === 0) return null;
             return (
@@ -180,7 +181,7 @@ const BroadcastControl: React.FC = () => {
                             disabled={!canEditAudio}
                             onClick={async () => {
                               setPlayingCue(cue.value);
-                              await playCue(cue.value, { volume: masterVol, forceSynth: true, channel: 'preview' });
+                              await playCue(cue.value, { volume: masterVol, channel: 'preview' });
                               setTimeout(() => setPlayingCue(null), 1200);
                             }}
                             className={`flex items-center gap-2 flex-1 rounded-lg border px-3 py-2 text-xs font-bold transition-all disabled:opacity-30 ${

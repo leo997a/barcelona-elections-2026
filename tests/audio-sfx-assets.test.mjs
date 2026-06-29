@@ -8,8 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const audioEnginePath = path.join(repoRoot, 'services', 'audioEngine.ts');
 const audioSettingsPanelPath = path.join(repoRoot, 'components', 'AudioSettingsPanel.tsx');
+const broadcastControlPath = path.join(repoRoot, 'pages', 'BroadcastControl.tsx');
 const source = fs.readFileSync(audioEnginePath, 'utf8');
 const audioSettingsPanelSource = fs.readFileSync(audioSettingsPanelPath, 'utf8');
+const broadcastControlSource = fs.readFileSync(broadcastControlPath, 'utf8');
 
 const expectedReoCueFiles = {
   REO_WHISTLE: '/audio/sfx/football/whistle_short.mp3',
@@ -89,4 +91,27 @@ test('Reo file cues are not converted into library aliases', () => {
   for (const cue of Object.keys(expectedReoCueFiles)) {
     assert.doesNotMatch(aliasBlock[1], new RegExp(`${cue}\\s*:`), `${cue} must remain a direct file cue`);
   }
+});
+
+test('Broadcast control exposes Reo cues and previews real files first', () => {
+  assert.match(
+    broadcastControlSource,
+    /\(\['featured',\s*'reo',\s*'news'/,
+    'BroadcastControl should include the reo sound category near the top',
+  );
+  assert.match(
+    broadcastControlSource,
+    /cat === 'reo'\s*\?\s*'.*Reo.*'/,
+    'BroadcastControl should label the Reo audio category',
+  );
+  assert.match(
+    broadcastControlSource,
+    /playCue\(cue\.value,\s*\{\s*volume:\s*masterVol,\s*channel:\s*'preview'\s*\}\)/,
+    'BroadcastControl previews should allow mapped real files before fallback',
+  );
+  assert.doesNotMatch(
+    broadcastControlSource,
+    /playCue\(cue\.value,\s*\{[^}]*forceSynth:\s*true[^}]*\}\)/,
+    'BroadcastControl cue previews must not force synthetic playback',
+  );
 });
