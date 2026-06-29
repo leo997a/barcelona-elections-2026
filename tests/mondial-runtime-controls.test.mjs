@@ -271,9 +271,11 @@ test('public output links have fast fallback polling and template reconstruction
   assert.match(app, /const initialOutputState = embeddedOverlay \?\? cachedOutputState \?\? fallbackOutputState;/);
   assert.match(app, /const pollIntervalMs = isObsBrowser \? 250 : 600;/);
   assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
-  assert.match(app, /startFallback\(\);\s*connectSSE\(\);/);
-  assert.match(app, /es\.onopen = \(\) => \{\s*setConnStatus\('live'\);\s*\};/);
-  assert.doesNotMatch(app, /es\.onopen = \(\) => \{[^}]*stopFallback\(\);[^}]*\};/);
+  assert.match(app, /const missingStateProbeMs = isObsBrowser \? 2200 : 5000;/);
+  assert.match(app, /if \(consecutiveLiveMisses >= 8 && Date\.now\(\) - lastMissingProbeAt < missingStateProbeMs\) return;/);
+  assert.doesNotMatch(app, /startFallback\(\);\s*connectSSE\(\);/);
+  assert.match(app, /stopFallback\(\);\s*consecutiveLiveMisses = 0;\s*setConnStatus\('live'\);/);
+  assert.match(app, /connectSSE\(\);/);
 });
 
 test('stream fallback refresh is fast enough for hostinger live output', async () => {

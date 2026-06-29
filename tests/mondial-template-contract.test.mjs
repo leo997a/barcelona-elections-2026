@@ -270,6 +270,9 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /placement: 'field' \| 'list'/);
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
+  assert.match(obs, /lineup-photo-frame/);
+  assert.match(obs, /lineup-nameplate-number/);
+  assert.match(obs, /lineup-mini-avatar-clean/);
   assert.match(obs, /buildFormationLineup\(sourcePlayers, formation, lineupLayoutMode, lineupDirection, livePlayers\.length > 0\)/);
   assert.match(obs, /className="lineup-player-anchor absolute"/);
   assert.match(obs, /data-zone=\{player\.line\}/);
@@ -310,6 +313,13 @@ test('mondial statistical templates expose and consume real display modes', asyn
 
   assert.match(obs, /const statsViewMode = text\(getField, 'statsViewMode', 'dual_bars'\)/);
   assert.match(obs, /const statFocus = text\(getField, 'statFocus', 'balanced'\)/);
+  assert.match(obs, /homeDisplayCode/);
+  assert.match(obs, /awayDisplayCode/);
+  assert.match(obs, /stat-comparison-header/);
+  assert.match(obs, /stat-comparison-row/);
+  assert.match(obs, /stat-split-bar/);
+  assert.match(obs, /xg-team-card/);
+  assert.match(obs, /shot-flow-column/);
   assert.match(obs, /statsViewMode === 'key_numbers'/);
   assert.match(obs, /statsViewMode === 'momentum_grid'/);
   assert.match(obs, /statsViewMode === 'pressure_accuracy'/);
@@ -339,6 +349,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /player\.keyPasses/);
   assert.match(obs, /referrerPolicy="no-referrer"/);
   assert.match(obs, /metricValue: activeMetric\.value\(player\)/);
+  assert.match(obs, /scorer-portrait/);
+  assert.match(obs, /scorer-rank-chip/);
+  assert.match(obs, /scorer-race-row/);
   assert.match(obs, /scorerViewMode === 'podium'/);
   assert.match(obs, /scorerViewMode === 'compact_ranking'/);
   for (const option of ['reference_stack', 'broadcast_photo', 'data_glass', 'classic_flags']) {

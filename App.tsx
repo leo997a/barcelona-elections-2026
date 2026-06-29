@@ -201,6 +201,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let requestCounter = 0;
     let pollInFlight = false;
+    let consecutiveLiveMisses = 0;
+    let lastMissingProbeAt = 0;
     let lastAppliedVersion = 0;
     let lastAppliedFingerprint = initialOutputState ? JSON.stringify(initialOutputState) : '';
     let lastFullFetchAt = 0;
@@ -212,6 +214,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       || hashParams.get('obs') === '1';
     const pollIntervalMs = isObsBrowser ? 250 : 600;
     const staleFullFetchMs = isObsBrowser ? 900 : 1400;
+    const missingStateProbeMs = isObsBrowser ? 2200 : 5000;
     const noCacheHeaders = {
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
@@ -291,14 +294,18 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
     const pollLiveMeta = async () => {
       if (pollInFlight) return;
+      if (consecutiveLiveMisses >= 8 && Date.now() - lastMissingProbeAt < missingStateProbeMs) return;
       pollInFlight = true;
 
       try {
         const r = await fetchNoCache(liveUrl({ meta: '1' }));
         if (!r.ok) {
+          consecutiveLiveMisses += 1;
+          lastMissingProbeAt = Date.now();
           if (!lastGoodState.current) await fetchLiveState();
           return;
         }
+        consecutiveLiveMisses = 0;
 
         const meta = await r.json() as { version?: number };
         const nextVersion = Number(meta.version || 0);
@@ -309,6 +316,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
 
         if (!es) setConnStatus('fallback');
       } catch {
+        consecutiveLiveMisses += 1;
+        lastMissingProbeAt = Date.now();
         if (!lastGoodState.current) {
           void fetchLiveState();
         }
@@ -338,6 +347,8 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
         setConnStatus('connecting');
 
         es.onopen = () => {
+          stopFallback();
+          consecutiveLiveMisses = 0;
           setConnStatus('live');
         };
 
@@ -368,7 +379,6 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     };
 
     // ── Official output sync: SSE + fast polling fallback over /api/live ──
-    startFallback();
     connectSSE();
 
     return () => {
