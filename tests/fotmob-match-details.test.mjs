@@ -192,6 +192,36 @@ test('maps match details to legacy fields consumed by existing templates', () =>
   assert.match(lineupsToPlayersJson(details, 'away')[0].image, /playerimages\/200\.png$/);
 });
 
+test('infers a missing goalkeeper label from shirt number without inheriting fallback positions', () => {
+  const details = normalizeFotMobMatchDetails({
+    ...rawMatchDetails,
+    content: {
+      ...rawMatchDetails.content,
+      lineup: {
+        homeTeam: {
+          id: 6260,
+          name: 'Japan',
+          formation: '3-4-2-1',
+          starters: [
+            { id: 301, name: 'Hiroki Ito', shirtNumber: 21 },
+            { id: 302, name: 'Keito Nakamura', shirtNumber: 13 },
+            { id: 303, name: 'Zion Suzuki', shirtNumber: 1 },
+            { id: 304, name: 'Ko Itakura', shirtNumber: 4 },
+          ],
+          subs: [],
+        },
+        awayTeam: rawMatchDetails.content.lineup.awayTeam,
+      },
+    },
+  });
+
+  const japan = lineupsToPlayersJson(details, 'home');
+  assert.equal(japan[0].name, 'Hiroki Ito');
+  assert.equal(japan[0].pos, '');
+  assert.equal(japan[2].name, 'Zion Suzuki');
+  assert.equal(japan[2].pos, 'GK');
+});
+
 test('editor, operator and OBS variants expose live match selection and details', async () => {
   const [picker, editor, operator, renderer, obs, templates, api] = await Promise.all([
     readSource('../components/editor/MondialMatchPicker.tsx'),

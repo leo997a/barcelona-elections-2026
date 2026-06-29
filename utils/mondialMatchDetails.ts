@@ -510,6 +510,20 @@ const playerRating = (playerId: unknown, playerStats: Record<string, unknown>): 
   return optionalNumber(ratingRecord?.num ?? ratingRecord?.rating);
 };
 
+const lineupPositionLabel = (player: Record<string, unknown>): string => {
+  const explicit = stringValue(
+    player.positionLabel ??
+    player.position ??
+    player.positionString ??
+    player.positionShort ??
+    player.role ??
+    player.positionDescription,
+    ''
+  );
+  if (explicit) return explicit;
+  return optionalNumber(player.shirtNumber) === 1 ? 'GK' : '';
+};
+
 const lineupPlayer = (
   value: unknown,
   index: number,
@@ -526,11 +540,12 @@ const lineupPlayer = (
   const pitchScale = pitchScaleFor(rawX, rawY);
   const x = normalizePitchCoordinate(rawX, pitchScale, 8, 92);
   const y = normalizePitchCoordinate(rawY, pitchScale, 10, 88);
+  const pos = lineupPositionLabel(player);
   return {
     id: id || undefined,
     name: stringValue(player.name, `Player ${index + 1}`),
     number: optionalNumber(player.shirtNumber),
-    pos: stringValue(player.positionLabel ?? player.position, ''),
+    pos,
     x,
     y,
     image: id ? PLAYER_IMAGE_URL(id) : undefined,

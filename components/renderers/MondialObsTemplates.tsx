@@ -175,7 +175,7 @@ const playerNumber = (player: Partial<LineupPlayer> | undefined, fallback: numbe
 const normalizedPlayer = (player: LineupPlayer | undefined, index: number): LineupPlayer => ({
   ...(player || {}),
   name: String(player?.name || DEFAULT_PLAYERS[index]?.name || `لاعب ${index + 1}`),
-  pos: String(player?.pos || DEFAULT_PLAYERS[index]?.pos || ''),
+  pos: String(player?.pos || (player ? '' : DEFAULT_PLAYERS[index]?.pos) || ''),
   num: playerNumber(player || {}, index + 1),
 });
 
@@ -284,6 +284,14 @@ const lineupLineFromPosition = (pos?: string): LineupLine | null => {
   return null;
 };
 
+const lineupIsGoalkeeperCandidate = (player: LineupPlayer, index: number): boolean => {
+  const byPosition = lineupLineFromPosition(player.pos);
+  if (byPosition === 'goalkeeper') return true;
+  if (byPosition) return false;
+  const shirt = playerNumber(player, index + 1);
+  return shirt === 1;
+};
+
 const lineupLineFromRow = (rowIndex: number, rowsLength: number, player?: LineupPlayer): LineupLine => {
   const byPosition = lineupLineFromPosition(player?.pos);
   if (byPosition) return byPosition;
@@ -386,7 +394,7 @@ const lineupSkin = (style: string, c: ReturnType<typeof themedColors>, teamColor
 
 const playerRowsFromFormation = (players: LineupPlayer[], formation: string): LineupPlayer[][] => {
   const cleanPlayers = players.slice(0, 11).map(normalizedPlayer);
-  const goalkeeperIndex = cleanPlayers.findIndex(player => lineupLineFromPosition(player.pos) === 'goalkeeper');
+  const goalkeeperIndex = cleanPlayers.findIndex(lineupIsGoalkeeperCandidate);
   const goalkeeper = goalkeeperIndex >= 0
     ? cleanPlayers[goalkeeperIndex]
     : cleanPlayers[0] || normalizedPlayer(undefined, 0);
