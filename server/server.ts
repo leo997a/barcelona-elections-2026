@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import aiHandler from '../api/ai.js';
 import licenseHandler from '../api/license.js';
 import liveHandler from '../api/live.js';
+import mercatoHandler from '../api/mercato.js';
 import platformHandler from '../api/platform.js';
 import playerIntelV2Handler from '../api/player-intel-v2.js';
 import playerStatsHandler from '../api/player-stats.js';
@@ -20,6 +21,7 @@ const apiRoutes = new Map<string, ApiHandler>([
   ['/api/ai', aiHandler as ApiHandler],
   ['/api/license', licenseHandler as ApiHandler],
   ['/api/live', liveHandler as ApiHandler],
+  ['/api/mercato', mercatoHandler as ApiHandler],
   ['/api/platform', platformHandler as ApiHandler],
   ['/api/player-intel-v2', playerIntelV2Handler as ApiHandler],
   ['/api/player-stats', playerStatsHandler as ApiHandler],

@@ -28,6 +28,8 @@ export enum OverlayType {
   MERCATO_BUDGET_TRACKER = 'MERCATO_BUDGET_TRACKER',
   MERCATO_DEADLINE_DAY = 'MERCATO_DEADLINE_DAY',
   MERCATO_X_RAY = 'MERCATO_X_RAY',
+  // mercato-template-studio — قالب مرجعي كامل (ثيم + ستايل + نصوص + ربط جسر موحّد)
+  MERCATO_LIVE_CARD = 'MERCATO_LIVE_CARD',
   PLAYER_INTEL_V2 = 'PLAYER_INTEL_V2',
   MERCATO_MEDIA_STORY = 'MERCATO_MEDIA_STORY',
   // AUDIO-PACKS-X5 / MERCATO-TEMPLATES-X6 — 10 new mercato variants

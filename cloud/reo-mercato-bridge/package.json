@@ -1,0 +1,16 @@
+{
+  "name": "reo-fotmob-transfers-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "REO FotMob Transfers Bridge — captures real FotMob transfer feed via headless Chrome (CDP), normalizes to REO contract.",
+  "engines": { "node": ">=20.19.0" },
+  "scripts": {
+    "start": "node server.js",
+    "capture": "node lib/fotmobCapture.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

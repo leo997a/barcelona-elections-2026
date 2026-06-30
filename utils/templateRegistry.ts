@@ -152,6 +152,11 @@ const FALLBACK_TEMPLATE_META: Record<OverlayType, Omit<TemplateMeta, 'id' | 'gro
     accent: '#a855f7',
     description: 'تحليل بصري للاعب — رادار chart + 6 قابليات + heat map للمناطق + verdict.',
   },
+  [OverlayType.MERCATO_LIVE_CARD]: {
+    icon: '🃏',
+    accent: '#FFD700',
+    description: 'بطاقة صفقة ميركاتو مرجعية كاملة: ثيم حيّ يُطبَّق على العرض + ستايلات متعددة + نصوص قابلة للتحرير + ربط بالجسر الموحّد (FotMob × Transfermarkt) مع زر تحديث.',
+  },
   [OverlayType.PLAYER_INTEL_V2]: {
     icon: '🧠',
     accent: '#22d3ee',

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { OverlayConfig } from '../../types';
+import type { ResolvedTheme } from '../../utils/theme/resolveTheme';
+import type { TemplateStyleVariant } from '../../utils/style/styleVariants';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════════
@@ -31,7 +33,10 @@ export interface RendererProps {
   playSound: (type: 'TRANSITION') => Promise<void>;
   isEditor?: boolean;
   wasVisible: boolean;
-  activeTheme: { primary: string; secondary: string; text: string; accent: string };
+  /** الثيم المحلول الكامل (ResolvedTheme) — يوسّع البنية الضعيفة السابقة؛ متوافق رجعياً (superset). */
+  activeTheme: ResolvedTheme;
+  /** الستايل البصري الفعّال للقالب (اختياري — تُحقنه OverlayRenderer لقوالب الميركاتو). */
+  styleVariant?: TemplateStyleVariant;
   animClass: string;
 }
 

@@ -7,6 +7,8 @@ import { resolveTemplateAudio, recordDiagnostic } from '../utils/templateRuntime
 import { shouldPlayTemplateSound, shouldPlayVoiceCue } from '../utils/templateAudioGate';
 import { resolveVoiceUrl } from '../utils/voiceLibrary';
 import type { RendererProps } from './renderers/SharedComponents';
+import { useResolvedTheme } from '../utils/theme/resolveTheme';
+import { resolveStyleVariant } from '../utils/style/styleVariants';
 
 // Lazy-load non-Mondial renderers so public /output links do not boot every template family.
 const ElectionOverlay = React.lazy(() => import('./ElectionOverlay'));
@@ -90,6 +92,7 @@ const MercatoXRayRenderer = React.lazy(() =>
 );
 const MercatoUnifiedRenderer = React.lazy(() => import('./renderers/MercatoUnifiedRenderer'));
 const MercatoMediaStoryRenderer = React.lazy(() => import('./renderers/MercatoMediaStoryRenderer'));
+const MercatoLiveCardRenderer = React.lazy(() => import('./renderers/MercatoLiveCardRenderer'));
 const PlayerIntelV2Renderer = React.lazy(() =>
   import('./renderers/PlayerIntelV2Renderer').then(({ PlayerIntelV2Renderer }) => ({ default: PlayerIntelV2Renderer }))
 );
@@ -129,6 +132,7 @@ const ENTER: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep',
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep',
+  [OverlayType.MERCATO_LIVE_CARD]: 'tv-stadium-sweep',
   [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep',
   [OverlayType.MONDIAL_STATS]: 'tv-data-rush',
   [OverlayType.MONDIAL_RESULTS]: 'tv-mondial-stinger',
@@ -171,6 +175,7 @@ const EXIT: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'tv-stadium-sweep-out',
   [OverlayType.MERCATO_UNIFIED]: 'tv-stadium-sweep-out',
   [OverlayType.MERCATO_MEDIA_STORY]: 'tv-glass-sweep-out',
+  [OverlayType.MERCATO_LIVE_CARD]: 'tv-stadium-sweep-out',
   [OverlayType.MONDIAL_LIVE]: 'tv-stadium-sweep-out',
   [OverlayType.MONDIAL_STATS]: 'tv-data-rush-out',
   [OverlayType.MONDIAL_RESULTS]: 'tv-mondial-stinger-out',
@@ -213,6 +218,7 @@ const DEFAULT_ENTER_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP',
   [OverlayType.MERCATO_UNIFIED]: 'STADIUM_SWEEP',
   [OverlayType.MERCATO_MEDIA_STORY]: 'GLASS_SWEEP',
+  [OverlayType.MERCATO_LIVE_CARD]: 'STADIUM_SWEEP',
 };
 
 const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
@@ -247,6 +253,7 @@ const DEFAULT_EXIT_KEY: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'STADIUM_SWEEP_OUT',
   [OverlayType.MERCATO_UNIFIED]: 'STADIUM_SWEEP_OUT',
   [OverlayType.MERCATO_MEDIA_STORY]: 'GLASS_SWEEP_OUT',
+  [OverlayType.MERCATO_LIVE_CARD]: 'STADIUM_SWEEP_OUT',
 };
 
 const ENTER_BY_KEY: Record<string, string> = {
@@ -310,6 +317,7 @@ const SOUND_IN_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'LOWER_THIRD_WIPE',
   [OverlayType.MERCATO_UNIFIED]: 'LOWER_THIRD_WIPE',
   [OverlayType.MERCATO_MEDIA_STORY]: 'LOWER_THIRD_WIPE',
+  [OverlayType.MERCATO_LIVE_CARD]: 'MERCATO_HIT',
   [OverlayType.MONDIAL_LIVE]: 'GLITCH_TRANSITION',
   [OverlayType.MONDIAL_STATS]: 'GLITCH_TRANSITION',
   [OverlayType.MONDIAL_RESULTS]: 'GLITCH_TRANSITION',
@@ -352,6 +360,7 @@ const SOUND_OUT_DEFAULTS: Partial<Record<OverlayType, string>> = {
   [OverlayType.PLAYER_INTEL_V2]: 'SOFT_FADE',
   [OverlayType.MERCATO_UNIFIED]: 'SOFT_FADE',
   [OverlayType.MERCATO_MEDIA_STORY]: 'SOFT_FADE',
+  [OverlayType.MERCATO_LIVE_CARD]: 'SOFT_FADE',
   [OverlayType.MONDIAL_LIVE]: 'DIGITAL_SWEEP',
   [OverlayType.MONDIAL_STATS]: 'DIGITAL_SWEEP',
   [OverlayType.MONDIAL_RESULTS]: 'DIGITAL_SWEEP',
@@ -887,8 +896,8 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       backfaceVisibility: 'hidden',
   };
 
-  const themeKey = String(getField('themePreset') || 'CLASSIC_RED');
-  const activeTheme = THEMES[themeKey] || THEMES['CLASSIC_RED'];
+  const activeTheme = useResolvedTheme(config);
+  const styleVariant = resolveStyleVariant(config);
   
   let innerAnimClass = '';
   // Removed old opacity-0 logic because the outer wrapper handles the entire element animation now
@@ -903,6 +912,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       isEditor,
       wasVisible,
       activeTheme,
+      styleVariant,
       animClass: innerAnimClass
   };
 
@@ -945,6 +955,7 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
                   {config.type === OverlayType.MERCATO_X_RAY && <MercatoXRayRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_UNIFIED && <MercatoUnifiedRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MERCATO_MEDIA_STORY && <MercatoMediaStoryRenderer key={activeSlot} {...props} />}
+                  {config.type === OverlayType.MERCATO_LIVE_CARD && <MercatoLiveCardRenderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.PLAYER_INTEL_V2 && <PlayerIntelV2Renderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MONDIAL_LIVE && <Mondial2026Renderer key={activeSlot} {...props} />}
                   {config.type === OverlayType.MONDIAL_STATS && <Mondial2026Renderer key={activeSlot} {...props} />}

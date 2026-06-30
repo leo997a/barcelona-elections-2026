@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>REO — الدمج الموحّد (FotMob + Transfermarkt)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Tahoma,system-ui,sans-serif;background:radial-gradient(circle at 25% -10%,#13203b,#05070f 60%);color:#e6edf6;min-height:100vh;padding:20px}
+  header{text-align:center;margin-bottom:16px}
+  header h1{font-size:23px}
+  header p{color:#8aa0c0;font-size:13px;margin-top:5px}
+  .legend{display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:12px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;border:1px solid}
+  .pill.fm{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.4);color:#7fe9ff}
+  .pill.tm{background:rgba(140,255,150,.08);border-color:rgba(74,222,128,.4);color:#86efac}
+  .toolbar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+  .tab,.refresh{background:#101a30;color:#e6edf6;border:1px solid #2a3a5a;border-radius:10px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:inherit}
+  .tab.active{background:linear-gradient(135deg,#2563eb,#06b6d4);border-color:transparent;font-weight:700}
+  .refresh{background:linear-gradient(135deg,#16a34a,#22d3ee);border-color:transparent;font-weight:700}
+  .refresh:disabled{opacity:.5;cursor:wait}
+  .meta{text-align:center;color:#64789a;font-size:12px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;max-width:1500px;margin:0 auto}
+  .card{background:rgba(16,26,48,.7);border:1px solid #233452;border-radius:14px;padding:14px;display:flex;gap:12px;cursor:pointer;transition:.15s;position:relative}
+  .card:hover{border-color:#3b82f6;transform:translateY(-2px)}
+  .card.enriched{border-color:rgba(74,222,128,.35)}
+  .photo{width:64px;height:64px;border-radius:12px;object-fit:cover;background:#0c1424;border:1px solid #1e2d49;flex-shrink:0}
+  .pname{font-size:16px;font-weight:700;line-height:1.2}
+  .ppos{color:#7e93b3;font-size:12px;margin-top:2px}
+  .clubs{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#aebfd6}
+  .clogo{width:18px;height:18px;object-fit:contain;vertical-align:middle}
+  .arrow{color:#64789a}
+  .feerow{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .fee{font-size:18px;font-weight:800;color:#ffd24a}
+  .badge{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700}
+  .b-today{background:#dc2626;color:#fff}
+  .b-loan{background:#7c4dff;color:#fff}
+  .b-free{background:#16a34a;color:#fff}
+  .b-renew{background:#0ea5e9;color:#fff}
+  .srcmark{position:absolute;top:8px;left:8px;display:flex;gap:4px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.fm{background:#00e5ff}.dot.tm{background:#4ade80}
+  .date{color:#5f74a0;font-size:11px;margin-top:6px}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#0c1424;border:1px solid #2a3a5a;border-radius:18px;max-width:680px;width:100%;padding:22px;position:relative;max-height:90vh;overflow:auto}
+  .close{position:absolute;top:12px;left:12px;background:#1e2d49;border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px}
+  .mhead{display:flex;gap:16px;align-items:center}
+  .mphoto{width:90px;height:90px;border-radius:14px;object-fit:cover;border:2px solid #2a3a5a;background:#101a30}
+  .mfacts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  .mfact{background:#101a30;border:1px solid #1e2d49;border-radius:10px;padding:10px}
+  .mfact .l{font-size:11px;color:#7e93b3;display:flex;align-items:center;gap:5px}
+  .mfact .v{font-size:15px;font-weight:700;margin-top:4px}
+  .tagdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .spark{display:flex;align-items:flex-end;gap:5px;height:46px;margin-top:8px}
+  .spark .bar{flex:1;background:linear-gradient(to top,#16a34a,#4ade80);border-radius:3px 3px 0 0;min-height:5px}
+  .miss{color:#64789a;font-style:italic;font-size:12px}
+  .loading{text-align:center;color:#8aa0c0;padding:40px}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ REO — الدمج الموحّد للانتقالات</h1>
+  <p>بيانات حيّة حقيقية من FotMob (موسم 2026/27) + عمق مرجعي من Transfermarkt</p>
+  <div class="legend">
+    <span class="pill fm"><span class="dot fm" style="width:8px;height:8px;border-radius:50%"></span> FotMob: صورة / شعار / حدث الصفقة</span>
+    <span class="pill tm"><span class="dot tm" style="width:8px;height:8px;border-radius:50%"></span> Transfermarkt: القيمة المرجعية / الاتجاه / المسيرة</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="tab active" data-view="fee">💰 أغلى الصفقات</button>
+  <button class="tab" data-view="latest">🕐 صفقات تمت مؤخراً</button>
+  <button class="refresh" id="refreshBtn">🔄 تحديث من FotMob</button>
+  <a class="tab" href="/overview" style="text-decoration:none">🗂️ كل القوالب</a>
+</div>
+<div class="meta" id="meta">جارٍ التحميل…</div>
+<div class="grid" id="grid"><div class="loading">⏳ جارٍ جلب البيانات…</div></div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+let view = 'fee';
+let current = [];
+
+const eur = v => { if(v==null)return 'غير متاح'; const n=Number(v); if(!isFinite(n))return String(v); if(n>=1e6)return'€'+(n/1e6).toFixed(n%1e6?1:0)+'M'; if(n>=1e3)return'€'+Math.round(n/1e3)+'K'; return'€'+n; };
+const fallbackPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' rx='12' fill='%230c1424'/><text x='32' y='40' font-size='28' text-anchor='middle' fill='%23355'>⚽</text></svg>";
+
+function badge(t){
+  const ty = t.transferType.value;
+  if(t.isToday.value) return '<span class="badge b-today">اليوم</span>';
+  if(ty==='loan') return '<span class="badge b-loan">إعارة</span>';
+  if(ty==='free') return '<span class="badge b-free">حر</span>';
+  if(ty==='renewal') return '<span class="badge b-renew">تجديد</span>';
+  return '';
+}
+
+async function load(){
+  document.getElementById('grid').innerHTML = '<div class="loading">⏳ جارٍ جلب البيانات…</div>';
+  const r = await fetch('/api/feed?view='+view);
+  const data = await r.json();
+  current = data.transfers || [];
+  document.getElementById('meta').textContent =
+    `${data.season} · ${data.count} صفقة · مُغناة بـ Transfermarkt: ${data.enrichedCount} · آخر تحديث: ${(data.fetchedAt||'').slice(0,16).replace('T',' ')}`;
+  render();
+}
+
+function render(){
+  const g = document.getElementById('grid');
+  if(!current.length){ g.innerHTML='<div class="loading">لا توجد صفقات لهذا الموسم.</div>'; return; }
+  g.innerHTML = current.map((t,i)=>`
+    <div class="card ${t._enriched?'enriched':''}" onclick="openModal(${i})">
+      <div class="srcmark"><span class="dot fm" title="FotMob"></span>${t._enriched?'<span class="dot tm" title="Transfermarkt"></span>':''}</div>
+      <img class="photo" src="${t.playerImage.value||fallbackPhoto}" onerror="this.src='${fallbackPhoto}'" alt="">
+      <div style="flex:1;min-width:0">
+        <div class="pname">${t.name.value}</div>
+        <div class="ppos">${t.position.value||''}</div>
+        <div class="clubs">
+          <img class="clogo" src="${t.fromLogo.value}" onerror="this.style.display='none'"> ${t.fromClub.value}
+          <span class="arrow">←</span>
+          <img class="clogo" src="${t.toLogo.value}" onerror="this.style.display='none'"> <b>${t.toClub.value}</b>
+        </div>
+        <div class="feerow"><span class="fee">${t.fee.value}</span>${badge(t)}
+          <span style="color:#7e93b3;font-size:12px">قيمة: ${t.marketValue.value||'—'}</span>
+        </div>
+        <div class="date">📅 ${t.date.value}</div>
+      </div>
+    </div>`).join('');
+}
+
+function srcDot(src){ return src==='transfermarkt'?'<span class="tagdot" style="background:#4ade80"></span>':src==='fotmob'?'<span class="tagdot" style="background:#00e5ff"></span>':'<span class="tagdot" style="background:#475569"></span>'; }
+
+function openModal(i){
+  const t = current[i];
+  const hist = (t.valueHistory.value||[]);
+  const max = Math.max(...hist.map(h=>h.valueEur),1);
+  const spark = hist.length? `<div class="spark">${hist.map(h=>`<div class="bar" style="height:${Math.max(5,(h.valueEur/max)*46)}px" title="${h.date}: ${eur(h.valueEur)}"></div>`).join('')}</div>` : '<div class="miss">لا يوجد تاريخ قيمة (لا مرجع Transfermarkt لهذا اللاعب)</div>';
+  const ss = t.seasonStats.value;
+  const fact = (label, field) => `<div class="mfact"><div class="l">${srcDot(field._src)} ${label}</div><div class="v">${field.value!=null&&field.value!==''?field.value:'<span class=miss>غير متاح</span>'}</div></div>`;
+  document.getElementById('modal').innerHTML = `
+    <button class="close" onclick="document.getElementById('overlay').classList.remove('show')">✕</button>
+    <div class="mhead">
+      <img class="mphoto" src="${t.playerImage.value||fallbackPhoto}" onerror="this.src='${fallbackPhoto}'">
+      <div>
+        <div style="font-size:22px;font-weight:800">${t.name.value}</div>
+        <div style="color:#8aa0c0;margin-top:3px">${t.position.value} ${t.age.value?'· '+t.age.value+' سنة':''} ${t.nationality.value?'· '+t.nationality.value:''}</div>
+        <div class="clubs" style="margin-top:8px">
+          <img class="clogo" src="${t.fromLogo.value}" onerror="this.style.display='none'"> ${t.fromClub.value}
+          <span class="arrow">←</span>
+          <img class="clogo" src="${t.toLogo.value}" onerror="this.style.display='none'"> <b>${t.toClub.value}</b>
+        </div>
+      </div>
+    </div>
+    <div class="mfacts">
+      ${fact('الرسوم (الصفقة)', t.fee)}
+      ${fact('القيمة السوقية', t.marketValue)}
+      ${fact('تاريخ الصفقة', t.date)}
+      ${fact('اتجاه القيمة (سنة)', {value: t.valueTrendPct.value!=null?(t.valueTrendPct.value>=0?'▲ ':'▼ ')+Math.abs(t.valueTrendPct.value)+'%':null, _src:t.valueTrendPct._src})}
+      ${fact('آخر رسوم سابقة', t.lastFee)}
+      ${fact('مستوى الدوري', {value: t.leagueLevel.value===1?'الدرجة الأولى':t.leagueLevel.value, _src:t.leagueLevel._src})}
+    </div>
+    <div style="margin-top:14px"><div class="l" style="font-size:12px;color:#7e93b3">${srcDot('transfermarkt')} تطوّر القيمة السوقية (Transfermarkt)</div>${spark}</div>
+    ${ss?`<div style="margin-top:12px;color:#aebfd6;font-size:13px">${srcDot('transfermarkt')} الموسم: ${ss.matches} مباراة · ${ss.goals} هدف · ${ss.assists} صناعة · ${ss.minutes} دقيقة</div>`:''}
+    <div style="margin-top:16px;color:#5f74a0;font-size:11px;border-top:1px solid #1e2d49;padding-top:10px">
+      المصادر: ${t._sources.map(s=>s==='fotmob'?'FotMob':'Transfermarkt').join(' + ')} ${t._enriched?'· ✅ مُغناة مرجعياً':'· ⚪ FotMob فقط (لا مرجع TM لهذا اللاعب)'}
+    </div>`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));
+  view=b.dataset.view; load();
+});
+document.getElementById('refreshBtn').onclick=async()=>{
+  const btn=document.getElementById('refreshBtn'); btn.disabled=true; btn.textContent='⏳ جارٍ التحديث الحيّ…';
+  try{ const r=await fetch('/api/refresh?view='+view); const d=await r.json(); current=d.transfers||[];
+    document.getElementById('meta').textContent=`${d.season} · ${d.count} صفقة · مُغناة: ${d.enrichedCount} · تحديث حيّ: ${(d.fetchedAt||'').slice(0,16).replace('T',' ')}`; render(); }
+  catch(e){ alert('فشل التحديث: '+e.message); }
+  btn.disabled=false; btn.textContent='🔄 تحديث من FotMob';
+};
+document.getElementById('overlay').onclick=(e)=>{ if(e.target.id==='overlay') e.target.classList.remove('show'); };
+load();
+</script>
+</body>
+</html>

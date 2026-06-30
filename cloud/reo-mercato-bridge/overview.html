@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>REO — الصورة العامة لكل القوالب</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Tahoma,system-ui,sans-serif;background:radial-gradient(circle at 25% -10%,#13203b,#05070f 60%);color:#e6edf6;min-height:100vh;padding:22px}
+  header{text-align:center;margin-bottom:8px}
+  header h1{font-size:24px}
+  header p{color:#8aa0c0;font-size:13px;margin-top:6px}
+  .links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
+  .links a{background:#101a30;border:1px solid #2a3a5a;border-radius:9px;padding:7px 13px;color:#9fd0ff;text-decoration:none;font-size:13px}
+  .links a:hover{border-color:#3b82f6}
+  .legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:12px;margin:12px 0 20px;color:#aebfd6}
+  .lg{display:inline-flex;align-items:center;gap:6px}
+  .sq{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .s-live{background:#00e5ff}.s-fin{background:#facc15}.s-count{background:#a855f7}.s-ref{background:#4ade80}.s-news{background:#fb7185}
+  .group{max-width:1500px;margin:0 auto 22px}
+  .group h2{font-size:15px;color:#cfe0f5;margin-bottom:10px;border-right:3px solid #3b82f6;padding-right:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .card{background:rgba(16,26,48,.7);border:1px solid #233452;border-radius:12px;padding:13px;position:relative;overflow:hidden}
+  .card .bar{position:absolute;top:0;right:0;left:0;height:3px}
+  .card h3{font-size:15px;margin:4px 0 2px}
+  .card .id{font-size:11px;color:#5f74a0;font-family:monospace}
+  .card .src{font-size:11px;margin:8px 0;color:#aebfd6;display:flex;align-items:center;gap:6px}
+  .card .acts{display:flex;gap:8px;margin-top:8px}
+  .card .acts a{flex:1;text-align:center;font-size:12px;padding:6px;border-radius:7px;text-decoration:none;border:1px solid #2a3a5a;color:#cfe0f5}
+  .card .acts a.ctrl{background:rgba(59,130,246,.15)}
+  .card .acts a.out{background:rgba(34,197,94,.12)}
+  .card .acts a:hover{border-color:#3b82f6}
+  .count{color:#64789a;font-size:12px;text-align:center;margin-bottom:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗂️ REO — الصورة العامة لكل القوالب (32 قالباً)</h1>
+  <p>كل قالب وما يغذّيه من الجسرين: FotMob (حيّ/بصري) + Transfermarkt (مرجعي دقيق)</p>
+</header>
+<div class="links">
+  <a href="http://127.0.0.1:4319/" target="_blank">⚡ لوحة الدمج الموحّد</a>
+  <a href="http://localhost:3001/" target="_blank">🎬 معرض الميركاتو الأصلي</a>
+  <a href="http://127.0.0.1:4317/" target="_blank">🧠 جسر Transfermarkt</a>
+</div>
+<div class="legend">
+  <span class="lg"><span class="sq s-live"></span> صفقات حيّة (FotMob+TM)</span>
+  <span class="lg"><span class="sq s-fin"></span> مالية/تجميعية</span>
+  <span class="lg"><span class="sq s-count"></span> عدّاد/نافذة</span>
+  <span class="lg"><span class="sq s-ref"></span> مرجعي (TM)</span>
+  <span class="lg"><span class="sq s-news"></span> أخبار/شائعات</span>
+</div>
+<div class="count" id="count"></div>
+<div id="groups"></div>
+
+<script>
+const C3001 = 'http://localhost:3001';
+// التصنيف ومصدر البيانات لكل قالب
+const T = [
+  ['الصفقات الحيّة (FotMob + Transfermarkt)','live','#00e5ff',[
+    ['deal-of-the-day','صفقة اليوم','FotMob: صورة/شعار/تاريخ · TM: الرسوم الرسمية + القيمة'],
+    ['todays-deals','صفقات اليوم','FotMob: الخلاصة الحيّة (lastModified) · فلترة موسم 26/27'],
+    ['breaking-news','خبر عاجل','FotMob: الحدث · TM: الرسوم الرسمية'],
+    ['here-we-go','Here We Go','FotMob: اللاعب/الأندية · TM: الرسوم'],
+    ['top-signings','أفضل 5 صفقات','FotMob: الترتيب بالرسوم · TM: القيمة'],
+    ['biggest-window-deal','أكبر صفقة','FotMob+TM: أعلى رسوم في النافذة'],
+    ['top10-window-deals','أفضل 10 صفقات','FotMob: amountEuro · TM: الرسوم الرسمية'],
+    ['deal-timeline','الخط الزمني','FotMob: transferDate · ترتيب زمني'],
+    ['new-signing-card','بطاقة لاعب جديد','FotMob: صورة · TM: العمر/المركز/القيمة/المسيرة'],
+    ['loan-deal','إعارة','FotMob: onLoan=true'],
+    ['free-transfer','انتقال حر','FotMob: fee=free'],
+    ['transfer-ticker','شريط الانتقالات','FotMob: الخلاصة الحيّة'],
+    ['rising-stars','النجوم الصاعدة','FotMob+TM: لاعبون شباب + قفزة القيمة'],
+  ]],
+  ['المالية والتجميعية','fin','#facc15',[
+    ['fee-counter','عداد الإنفاق','تجميع رسوم FotMob/TM عبر النافذة'],
+    ['club-spending','إنفاق الأندية','تجميع حسب نادي الوجهة'],
+    ['league-spending','إنفاق الدوريات','تجميع حسب الدوري'],
+    ['biggest-deals','أكبر الصفقات تاريخياً','TM: سجل تاريخي'],
+    ['agent-activity','نشاط الوكلاء','TM/يدوي (غير متوفر في FotMob)'],
+    ['club-spending-wall','جدار الإنفاق','تجميع رسوم + شعارات FotMob'],
+    ['net-spend-rank','الإنفاق الصافي','تجميع وارد−صادر'],
+    ['single-club-detail','بطاقة نادي','تجميع صفقات نادٍ + TM'],
+    ['spending-comparison','مقارنة بالعام الماضي','TM: تاريخي'],
+    ['spending-ticker','شريط الإنفاق','تجميع أعلى الأندية'],
+  ]],
+  ['العدّاد والنافذة','count','#a855f7',[
+    ['mercato-countdown','عدّاد الميركاتو','تواريخ النافذة 15/5 → 1/9 2026'],
+    ['window-status','حالة النافذة','تواريخ النافذة'],
+    ['coming-soon','التالي قريباً','يدوي/جدولة'],
+    ['last-hour','الساعة الأخيرة','تواريخ النافذة'],
+    ['end-of-day','ملخص اليوم','تجميع صفقات اليوم (FotMob)'],
+  ]],
+  ['اللاعبون والمرجعي','ref','#4ade80',[
+    ['player-comparison','مقارنة لاعبين','TM: القيمة/المشاركات/المسيرة'],
+    ['manager-quote','اقتباس المدرب','يدوي'],
+  ]],
+  ['الأخبار والشائعات','news','#fb7185',[
+    ['rumor-mill','مطحنة الشائعات','FotMob: rumours endpoint (منفصل)'],
+  ]],
+];
+const colorOf = {live:'#00e5ff',fin:'#facc15',count:'#a855f7',ref:'#4ade80',news:'#fb7185'};
+let total=0;
+document.getElementById('groups').innerHTML = T.map(([title,key,color,items])=>{
+  total += items.length;
+  return `<div class="group"><h2>${title} <span style="color:#64789a;font-size:12px">(${items.length})</span></h2>
+   <div class="grid">${items.map(([id,name,src])=>`
+     <div class="card">
+       <div class="bar" style="background:${color}"></div>
+       <h3>${name}</h3>
+       <div class="id">${id}</div>
+       <div class="src"><span class="sq" style="background:${color};border-radius:3px"></span> ${src}</div>
+       <div class="acts">
+         <a class="ctrl" href="${C3001}/control/${id}" target="_blank">⚙️ تحكّم</a>
+         <a class="out" href="${C3001}/output/${id}" target="_blank">📺 إخراج</a>
+       </div>
+     </div>`).join('')}</div></div>`;
+}).join('');
+document.getElementById('count').textContent = `${total} قالباً · اضغط «تحكّم» للإعدادات أو «إخراج» للعرض الشفاف (يفتح في معرض :3001)`;
+</script>
+</body>
+</html>

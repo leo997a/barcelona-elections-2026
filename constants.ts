@@ -12,6 +12,8 @@ import {
   BROADCAST_SOUND_OPTIONS,
   BROADCAST_TRANSITION_OPTIONS,
 } from './components/renderers/OverlayConstants';
+import { MERCATO_THEME_IDS } from './utils/theme/resolveTheme';
+import { listVariantsFor } from './utils/style/styleVariants';
 
 // Helper to add common fields
 const commonFields: OverlayField[] = [
@@ -36,6 +38,67 @@ const MERCATO_DESIGN_STYLE_OPTIONS = [
   { value: 'DONE_DEALS_WALL', label: 'جدار الصفقات المحسومة' },
   { value: 'PLAYER_SEASON_CARD', label: 'بطاقة موسم اللاعب' },
   { value: 'PLAYER_IMPACT_CARD', label: 'توقع تأثير اللاعب' },
+];
+
+const createReadableOptionLabel = (id: string): string =>
+  id
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+const MERCATO_THEME_OPTIONS = MERCATO_THEME_IDS.map(id => ({
+  value: id,
+  label: createReadableOptionLabel(id),
+}));
+
+const createMercatoStyleOptions = (type: OverlayType) =>
+  listVariantsFor(type).map(variant => ({
+    value: variant.id,
+    label: variant.labelAr || createReadableOptionLabel(variant.id),
+  }));
+
+const createMercatoDataControlFields = (defaultView = 'fee'): OverlayField[] => [
+  {
+    id: 'bridgeApiUrl',
+    label: 'جسر الميركاتو الأونلاين',
+    type: 'text',
+    value: '/api/mercato',
+  },
+  {
+    id: 'dataBridgeView',
+    label: 'نوع بيانات الميركاتو',
+    type: 'select',
+    value: defaultView,
+    options: [
+      { value: 'fee', label: 'أعلى الرسوم / الصفقات المهمة' },
+      { value: 'latest', label: 'آخر الانتقالات' },
+      { value: 'probability', label: 'احتمالات الصفقة' },
+      { value: 'medical', label: 'الفحص الطبي والمخاطر' },
+      { value: 'sources', label: 'المصادر والتأكيدات' },
+    ],
+  },
+  {
+    id: 'manualRefreshNonce',
+    label: 'تحديث يدوي من الجسر',
+    type: 'hidden',
+    value: 0,
+  },
+  {
+    id: 'liveRefreshEnabled',
+    label: 'تحديث مباشر تلقائي',
+    type: 'boolean',
+    value: false,
+  },
+  {
+    id: 'pollIntervalSec',
+    label: 'فاصل التحديث المباشر بالثواني',
+    type: 'range',
+    value: 60,
+    min: 15,
+    max: 180,
+    step: 5,
+  },
 ];
 
 const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayField[] => {
@@ -168,6 +231,7 @@ const createBroadcastControlFields = (existingFields: OverlayField[]): OverlayFi
  */
 export const FIELD_GROUP_ORDER = [
   'content',     // text, names, numbers, images
+  'data',        // bridge, refresh, source controls
   'display',     // size, position, theme
   'transitions', // transitionIn / transitionOut
   'audio',       // soundEnabled / soundVolume / soundInStyle / soundOutStyle
@@ -248,6 +312,7 @@ export const fieldGroup = (id: string): FieldGroup => {
   if (
     id.endsWith('Json') || id.startsWith('include') ||
     id === 'manualJson' || id === 'apiUrl' || id === 'bridgeApiUrl' ||
+    id === 'dataBridgeView' ||
     id === 'sourceMatchUrl' || id === 'playerImageMapJson' ||
     id === 'playerImageCacheUrl' || id === 'manualRefreshNonce' ||
     id === 'pollIntervalSec' || id === 'liveRefreshEnabled' ||
@@ -256,7 +321,7 @@ export const fieldGroup = (id: string): FieldGroup => {
     id === 'playerStatsPollSec' || id === 'statsData' ||
     id === 'matchPickMode' || id === 'matchGroupCode' || id === 'matchRoundStage' ||
     id === 'matchStatusFilter' || id === 'selectedMatchId'
-  ) return 'advanced';
+  ) return 'data';
   return 'content';
 };
 
@@ -264,21 +329,23 @@ export const fieldGroup = (id: string): FieldGroup => {
  * Stable-sort fields so display order is consistent across templates.
  * Order:
  *   1. Content fields (in their original order)
- *   2. Display fields
- *   3. Transitions
- *   4. Audio
- *   5. Advanced
+ *   2. Data bridge fields
+ *   3. Display fields
+ *   4. Transitions
+ *   5. Audio
+ *   6. Advanced
  *
  * Within a group, original order is preserved.
  */
 export const normalizeTemplateFields = (fields: OverlayField[]): OverlayField[] => {
   const deduped = dedupeFields(fields);
   const groups: Record<FieldGroup, OverlayField[]> = {
-    content: [], display: [], transitions: [], audio: [], advanced: [],
+    content: [], data: [], display: [], transitions: [], audio: [], advanced: [],
   };
   for (const f of deduped) groups[fieldGroup(f.id)].push(f);
   return [
     ...groups.content,
+    ...groups.data,
     ...groups.display,
     ...groups.transitions,
     ...groups.audio,
@@ -2891,6 +2958,7 @@ const createMercatoTemplate = (input: MercatoTemplateInput): OverlayConfig => ({
   fields: [
     { id: 'mercatoVariant', label: 'نوع القالب', type: 'hidden', value: input.variant },
     { id: 'audioSceneId', label: 'مشهد صوتي افتراضي', type: 'hidden', value: input.audioSceneId },
+    ...createMercatoDataControlFields('fee'),
     // Phase X11/X12 — when sfxEnabledDefault is set, inject the field
     // BEFORE withBroadcastControls (which uses dedupeFields keep-first).
     // This wins over the default true and lets the call template ship
@@ -3972,6 +4040,48 @@ const STATEMENT_TEMPLATES: OverlayConfig[] = [
   }),
 ];
 
+const MERCATO_LIVE_CARD_TEMPLATES: OverlayConfig[] = [
+  {
+    id: 'mercato-live-card',
+    templateId: 'mercato-live-card',
+    name: 'ميركاتو — بطاقة صفقة حيّة',
+    type: OverlayType.MERCATO_LIVE_CARD,
+    templateGroup: 'MERCATO_LIVE',
+    templateIcon: '🃏',
+    templateAccent: '#FFD700',
+    templateDescription: 'بطاقة صفقة مرجعية: ثيم يُطبَّق على العرض + ستايلات متعددة + نصوص قابلة للتحرير + ربط بالجسر الموحّد مع زر تحديث.',
+    isVisible: false,
+    theme: { primaryColor: '#FFD700', secondaryColor: '#0A1A3A', backgroundColor: 'transparent', fontFamily: 'Inter, sans-serif' },
+    slots: {},
+    fields: [
+      // الثيم والستايل (المحوران 1 و2)
+      { id: 'themePreset', label: 'الثيم', type: 'select', value: 'gold-dark',
+        options: MERCATO_THEME_OPTIONS },
+      { id: 'styleVariant', label: 'الستايل البصري', type: 'select', value: 'classic',
+        options: createMercatoStyleOptions(OverlayType.MERCATO_LIVE_CARD) },
+      // النصوص القابلة للتحرير (المحور 5)
+      { id: 'headlineText', label: 'العنوان', type: 'text', value: 'DEAL OF THE DAY' },
+      { id: 'badgeText', label: 'الشارة', type: 'text', value: 'OFFICIAL · CONFIRMED' },
+      { id: 'channelName', label: 'اسم القناة', type: 'text', value: 'REO SHOW' },
+      { id: 'playerName', label: 'اسم اللاعب', type: 'text', value: 'Anthony Gordon' },
+      { id: 'position', label: 'المركز', type: 'text', value: 'LW' },
+      { id: 'fromClub', label: 'النادي السابق', type: 'text', value: 'Newcastle United' },
+      { id: 'toClub', label: 'النادي الجديد', type: 'text', value: 'Barcelona' },
+      { id: 'fee', label: 'الرسوم الرسمية (Transfermarkt)', type: 'text', value: '€80.0m' },
+      { id: 'marketValue', label: 'القيمة السوقية (Transfermarkt)', type: 'text', value: '€75.0m' },
+      { id: 'sourceText', label: 'المصدر', type: 'text', value: 'Transfermarkt' },
+      // الأصول البصرية (تُملأ من الجسر — المحور 4)
+      { id: 'playerImage', label: 'صورة اللاعب', type: 'image', value: '' },
+      { id: 'fromLogo', label: 'شعار النادي السابق', type: 'image', value: '' },
+      { id: 'toLogo', label: 'شعار النادي الجديد', type: 'image', value: '' },
+      // ربط الجسر الموحّد + زر التحديث (المحور 4/5)
+      ...createMercatoDataControlFields('fee'),
+      { id: 'scale', label: 'الحجم', type: 'range', value: 1, min: 0.4, max: 2, step: 0.05 },
+      ...broadcastMotionPreset('STADIUM_SWEEP', 'STADIUM_SWEEP_OUT', 'MERCATO_HIT', 'LUXURY_OUT'),
+    ],
+  },
+];
+
 const _allTemplates: OverlayConfig[] = [
   ...INITIAL_TEMPLATE_DEFINITIONS,
   ...BARCELONA_ELECTION_TEMPLATES,
@@ -3983,6 +4093,7 @@ const _allTemplates: OverlayConfig[] = [
   ...MERCATO_INNOVATIVE_TEMPLATES,
   ...MERCATO_X6_TEMPLATES,
   ...MERCATO_MEDIA_STORY_TEMPLATES,
+  ...MERCATO_LIVE_CARD_TEMPLATES,
   ...PLAYER_INTEL_V2_TEMPLATES,
   ...MONDIAL_2026_TEMPLATES,
 ];

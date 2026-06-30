@@ -16,10 +16,11 @@
  * action commands; the existing OverlayRenderer plays sounds when
  * isVisible flips.
  */
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Eye, Volume2, VolumeX, RotateCcw, Play, Square, RefreshCw, Radio } from 'lucide-react';
 import type { OverlayConfig } from '../types';
 import { syncManager } from '../services/syncManager';
+import { isMercatoDataTemplate, useTemplateData, type BridgeView } from '../utils/data/useTemplateData';
 import {
   buildAction,
   recordDiagnostic,
@@ -59,10 +60,47 @@ const TemplateControlBar: React.FC<Props> = ({ overlay, onPreview, onShow, onHid
     f.id === 'manualRefreshNonce' ||
     f.id === 'liveRefreshEnabled' ||
     f.id === 'dataMode' ||
-    f.id === 'bridgeApiUrl'
+    f.id === 'bridgeApiUrl' ||
+    f.id === 'dataBridgeView'
   );
   const liveRefreshEnabledField = overlay.fields.find(f => f.id === 'liveRefreshEnabled');
-  const liveRefreshEnabled = liveRefreshEnabledField === undefined ? true : liveRefreshEnabledField.value !== false;
+  const liveRefreshEnabled = liveRefreshEnabledField?.value === true;
+  const manualRefreshNonce = Number(overlay.fields.find(f => f.id === 'manualRefreshNonce')?.value || 0);
+  const pollIntervalSecRaw = Number(overlay.fields.find(f => f.id === 'pollIntervalSec')?.value || 60);
+  const pollIntervalSec = Number.isFinite(pollIntervalSecRaw) ? Math.max(15, pollIntervalSecRaw) : 60;
+  const bridgeView = String(overlay.fields.find(f => f.id === 'dataBridgeView')?.value || 'fee') as BridgeView;
+  const isMercatoDataOverlay = useMemo(() => isMercatoDataTemplate(overlay), [overlay]);
+  const lastManualRefreshNonceRef = useRef(manualRefreshNonce);
+  const applyMercatoUpdates = useCallback((updates: Partial<Record<string, unknown>>) => {
+    for (const [fieldId, value] of Object.entries(updates)) {
+      syncManager.updateLiveField(overlay.id, fieldId, value);
+    }
+  }, [overlay.id]);
+  const dataApi = useTemplateData(overlay, applyMercatoUpdates);
+  const refreshRef = useRef(dataApi.refresh);
+
+  useEffect(() => {
+    refreshRef.current = dataApi.refresh;
+  }, [dataApi.refresh]);
+
+  useEffect(() => {
+    if (!isMercatoDataOverlay) {
+      lastManualRefreshNonceRef.current = manualRefreshNonce;
+      return;
+    }
+    if (lastManualRefreshNonceRef.current === manualRefreshNonce) return;
+    lastManualRefreshNonceRef.current = manualRefreshNonce;
+    void refreshRef.current(bridgeView);
+  }, [bridgeView, isMercatoDataOverlay, manualRefreshNonce]);
+
+  useEffect(() => {
+    if (!isMercatoDataOverlay || !liveRefreshEnabled) return;
+    void refreshRef.current(bridgeView);
+    const timer = window.setInterval(() => {
+      void refreshRef.current(bridgeView);
+    }, pollIntervalSec * 1000);
+    return () => window.clearInterval(timer);
+  }, [bridgeView, isMercatoDataOverlay, liveRefreshEnabled, pollIntervalSec]);
 
   const dispatch = (action: TemplateAction, payload?: { fieldId?: string; value?: unknown }) => {
     if (action === 'preview') {
