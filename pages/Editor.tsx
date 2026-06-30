@@ -59,6 +59,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { SortableMetricItem } from '../components/editor/SortableMetricItem';
 import { buildSmartToken, describeSmartToken } from '../utils/smartToken';
+import {
+  TEMPLATE_EXPORT_PRESETS,
+  exportTemplateElementAsPng,
+  getTemplateExportPreset,
+  type TemplateExportPresetId,
+} from '../utils/templateImageExport';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -504,6 +510,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [motionPreviewAudio, setMotionPreviewAudio] = useState(true);
   const [editLinkCopied, setEditLinkCopied] = useState(false);
   const [smartTokenCopied, setSmartTokenCopied] = useState(false);
+  const [exportPresetId, setExportPresetId] = useState<TemplateExportPresetId>('youtube_4k');
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'done' | 'error'>('idle');
+  const previewExportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sponsorBackupInputRef = useRef<HTMLInputElement>(null);
   const screenshotInputRef = useRef<HTMLInputElement>(null);
@@ -547,6 +556,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
   const smartTokenInfo = useMemo(() => describeSmartToken(draftOverlay), [draftOverlay]);
   const smartTokenTooltip = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
+  const selectedExportPreset = useMemo(() => getTemplateExportPreset(exportPresetId), [exportPresetId]);
   const [panelOpen, setPanelOpen] = useState(true);
 
   const runMotionPreview = (phase: 'IN' | 'OUT' | 'HOLD') => {
@@ -1430,6 +1440,36 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
           setTimeout(() => setSmartTokenCopied(false), 1800);
       } catch {
           alert('تعذر نسخ Smart Token');
+      }
+  };
+
+  const handleExportPreviewImage = async () => {
+      const target = previewExportRef.current;
+      if (!target) {
+          alert('تعذر العثور على سطح القالب للتصدير.');
+          return;
+      }
+
+      setExportStatus('exporting');
+      setMotionPreviewPhase('HOLD');
+      setMotionPreviewKey(key => key + 1);
+
+      try {
+          if (document.fonts?.ready) {
+              await document.fonts.ready.catch(() => undefined);
+          }
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          await exportTemplateElementAsPng(target, {
+              presetId: exportPresetId,
+              fileBaseName: draftOverlay.name || draftOverlay.id,
+          });
+          setExportStatus('done');
+          setTimeout(() => setExportStatus('idle'), 1800);
+      } catch (error) {
+          console.error('Template image export failed', error);
+          setExportStatus('error');
+          setTimeout(() => setExportStatus('idle'), 2200);
+          alert('تعذر تصدير الصورة. إذا كان القالب يستخدم صورة خارجية محمية، حمّل الصورة داخل الأداة ثم أعد التصدير.');
       }
   };
 
@@ -4878,6 +4918,32 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       <span>SFX</span>
                     </button>
                  </div>
+                 <div
+                    className="hidden lg:flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] p-1"
+                    title={`${selectedExportPreset.labelAr} - ${selectedExportPreset.width}x${selectedExportPreset.height}`}
+                 >
+                    <select
+                      value={exportPresetId}
+                      onChange={event => setExportPresetId(event.target.value as TemplateExportPresetId)}
+                      className="h-7 max-w-[118px] rounded-md border border-white/10 bg-[#111827] px-2 text-[10px] font-black text-emerald-100 outline-none hover:border-emerald-400/40"
+                      aria-label="اختيار مقاس تصدير الصورة"
+                    >
+                      {TEMPLATE_EXPORT_PRESETS.map(preset => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.shortLabelAr}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleExportPreviewImage}
+                      disabled={exportStatus === 'exporting'}
+                      className="flex h-7 items-center gap-1.5 rounded-md border border-emerald-400/30 bg-emerald-500/15 px-2.5 text-[10px] font-black text-emerald-100 transition-colors hover:bg-emerald-500/25 disabled:cursor-wait disabled:opacity-60"
+                      title="تصدير صورة PNG عالية الدقة من القالب الحالي"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>{exportStatus === 'exporting' ? 'تصدير...' : exportStatus === 'done' ? 'تم' : 'تصدير PNG'}</span>
+                    </button>
+                 </div>
                  <button
                     onClick={copyEditLink}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-300 rounded-lg text-xs font-bold border border-cyan-500/30 transition-colors"
@@ -4920,6 +4986,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
             {draftOverlay.type === OverlayType.PLAYER_INTEL_V2 ? (
                 /* Player Intel V2 — uses scaled editor frame so the full template stays visible */
                 <PlayerIntelV2EditorFrame fitMode={piPreviewFit}>
+                  <div ref={previewExportRef} className="absolute inset-0 overflow-hidden bg-transparent">
                     <OverlayRenderer
                       config={{ ...draftOverlay, isVisible: true }}
                       chromaKey={previewChroma}
@@ -4928,9 +4995,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                       editorPreviewKey={motionPreviewKey}
                       editorPreviewAudio={motionPreviewAudio}
                     />
+                  </div>
                 </PlayerIntelV2EditorFrame>
             ) : (
                 <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
+                   <div ref={previewExportRef} className="absolute inset-0 overflow-hidden bg-transparent">
                      <OverlayRenderer
                        config={{ ...draftOverlay, isVisible: true }}
                        chromaKey={previewChroma}
@@ -4939,6 +5008,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                        editorPreviewKey={motionPreviewKey}
                        editorPreviewAudio={motionPreviewAudio}
                      />
+                   </div>
                      <div className="absolute inset-[5%] border border-white/5 border-dashed pointer-events-none rounded" />
                 </div>
             )}
