@@ -632,10 +632,66 @@ export const normalizeStatsPeriodKey = (value: unknown): string => {
   if (!token || token === 'all' || token === 'full' || token.includes('fulltime') || token.includes('match')) return 'FULL';
   if (token === '1h' || token.includes('firsthalf') || token.includes('1sthalf') || token.includes('halftime1')) return '1H';
   if (token === '2h' || token.includes('secondhalf') || token.includes('2ndhalf') || token.includes('halftime2')) return '2H';
-  if (token === 'et' || token.includes('extratime') || token.includes('overtime')) return 'ET';
+  if (token === 'et' || token.includes('extratime') || token.includes('extrahalf') || token.includes('overtime')) return 'ET';
   if (token === 'pen' || token.includes('penalty') || token.includes('shootout')) return 'PEN';
   if (token === 'live' || token.includes('current')) return 'LIVE';
   return raw.toUpperCase();
+};
+
+const shouldAverageMergedStat = (row: MondialMatchDetailStat): boolean => {
+  const identity = `${row.key || ''} ${row.label || ''}`.toLowerCase().replace(/[_-]+/g, ' ');
+  return /\b(possession|accuracy|percentage|field tilt|duels won|win rate|success rate)\b/.test(identity);
+};
+
+const mergeStatValue = (
+  current: string | number,
+  next: string | number,
+  average: boolean
+): string | number => {
+  const currentNumber = numberValue(current, Number.NaN);
+  const nextNumber = numberValue(next, Number.NaN);
+  if (!Number.isFinite(currentNumber) || !Number.isFinite(nextNumber)) return next;
+
+  const raw = average ? (currentNumber + nextNumber) / 2 : currentNumber + nextNumber;
+  const hasPercent = String(current).includes('%') || String(next).includes('%');
+  if (hasPercent) return `${Math.round(raw)}%`;
+
+  const hasDecimal = String(current).includes('.') || String(next).includes('.');
+  return Number(raw.toFixed(hasDecimal ? 2 : 0));
+};
+
+const mergePeriodStatRows = (
+  currentRows: MondialMatchDetailStat[],
+  nextRows: MondialMatchDetailStat[],
+  period: string
+): MondialMatchDetailStat[] => {
+  const merged = currentRows.map(row => ({ ...row, period }));
+  const indexByIdentity = new Map<string, number>();
+  merged.forEach((row, index) => {
+    const identity = `${String(row.key || '').toLowerCase()}::${String(row.label || '').toLowerCase()}`;
+    indexByIdentity.set(identity, index);
+  });
+
+  nextRows.forEach(row => {
+    const identity = `${String(row.key || '').toLowerCase()}::${String(row.label || '').toLowerCase()}`;
+    const existingIndex = indexByIdentity.get(identity);
+    if (existingIndex === undefined) {
+      indexByIdentity.set(identity, merged.length);
+      merged.push({ ...row, period });
+      return;
+    }
+
+    const existing = merged[existingIndex];
+    const average = shouldAverageMergedStat(existing);
+    merged[existingIndex] = {
+      ...existing,
+      home: mergeStatValue(existing.home, row.home, average),
+      away: mergeStatValue(existing.away, row.away, average),
+      period,
+    };
+  });
+
+  return merged;
 };
 
 const statRowsFromPeriod = (
@@ -682,7 +738,9 @@ const statRowsByPeriod = (statsSource: unknown): Record<string, MondialMatchDeta
       const period = normalizeStatsPeriodKey(periodName);
       const rows = statRowsFromPeriod(periodValue, period);
       if (!rows.length) return;
-      rowsByPeriod[period] = rows;
+      rowsByPeriod[period] = rowsByPeriod[period]
+        ? mergePeriodStatRows(rowsByPeriod[period], rows, period)
+        : rows;
     });
   }
 

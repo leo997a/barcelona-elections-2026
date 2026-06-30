@@ -147,6 +147,26 @@ const rawMatchDetails = {
             ],
           }],
         },
+        FirstExtraHalf: {
+          stats: [{
+            title: 'Top stats',
+            stats: [
+              { key: 'BallPossesion', title: 'Ball possession', stats: ['58%', '42%'] },
+              { key: 'expected_goals', title: 'Expected goals (xG)', stats: [0.3, 0.1] },
+              { key: 'TotalShots', title: 'Total shots', stats: [2, 1] },
+            ],
+          }],
+        },
+        SecondExtraHalf: {
+          stats: [{
+            title: 'Top stats',
+            stats: [
+              { key: 'BallPossesion', title: 'Ball possession', stats: ['42%', '58%'] },
+              { key: 'expected_goals', title: 'Expected goals (xG)', stats: [0.1, 0.2] },
+              { key: 'TotalShots', title: 'Total shots', stats: [1, 2] },
+            ],
+          }],
+        },
       },
     },
   },
@@ -170,6 +190,10 @@ test('normalizes current FotMob match details into the REO contract', () => {
   assert.equal(details.teamStatsByPeriod.FULL.length, 13);
   assert.equal(details.teamStatsByPeriod['1H'].length, 3);
   assert.equal(details.teamStatsByPeriod['2H'].length, 3);
+  assert.equal(details.teamStatsByPeriod.ET.length, 3);
+  assert.equal(findDetailStat(details, ['expected_goals'], 'ET').home, 0.4);
+  assert.equal(findDetailStat(details, ['TotalShots'], 'ET').away, 3);
+  assert.equal(findDetailStat(details, ['BallPossesion'], 'ET').home, '50%');
   assert.equal(details.playerOfTheMatch.rating, 8.7);
   assert.equal(details.playerOfTheMatch.stats[0].label, 'Rating');
   assert.equal(details.playerOfTheMatch.stats[1].key, 'goals');
