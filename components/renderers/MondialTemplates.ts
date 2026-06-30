@@ -469,6 +469,7 @@ const mondialStatsDetailFields: OverlayField[] = [
 ];
 
 const mondialStatsViewModeOptions = [
+  { value: 'reference_board', label: 'لوحة بث كلاسيكية بصورة خلفية' },
   { value: 'dual_bars', label: 'أشرطة مقارنة كاملة' },
   { value: 'momentum_grid', label: 'شبكة زخم المباراة' },
   { value: 'key_numbers', label: 'أرقام رئيسية سريعة' },
@@ -518,7 +519,7 @@ export const MONDIAL_STATS_TEMPLATES: OverlayConfig[] = [
     fields: [
       ...mondialCommonFields,
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'match_stats' },
-      mondialStatsModeField('dual_bars'),
+      mondialStatsModeField('reference_board'),
       mondialStatFocusField('balanced'),
       ...mondialMatchSelectionFields,
       ...mondialMatchDataFields,

@@ -19,6 +19,9 @@ test('template image export library exposes real high-resolution platform preset
     '<foreignObject',
     'inlineComputedStyles',
     'inlineImages',
+    'imageExportFallbackDataUrl',
+    'replaceExternalImageForExport',
+    'data-export-image-fallback',
     'sanitizeExportFilenamePart',
   ]) {
     assert.match(source, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${token} is missing`);
@@ -26,6 +29,7 @@ test('template image export library exposes real high-resolution platform preset
 
   assert.match(source, /width:\s*3840[\s\S]*?height:\s*2160/);
   assert.match(source, /width:\s*1080[\s\S]*?height:\s*1920/);
+  assert.doesNotMatch(source, /canvas export will surface any CORS failure/);
 });
 
 test('editor wires one-click PNG export to the clean preview surface', async () => {

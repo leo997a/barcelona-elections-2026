@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
+  findDetailStat,
   lineupsToPlayersJson,
   matchDetailsToFields,
   normalizeFotMobMatchDetails,
@@ -190,6 +191,15 @@ test('maps match details to legacy fields consumed by existing templates', () =>
   assert.equal(lineupsToPlayersJson(details, 'away')[0].x, 50);
   assert.equal(lineupsToPlayersJson(details, 'away')[0].y, 85);
   assert.match(lineupsToPlayersJson(details, 'away')[0].image, /playerimages\/200\.png$/);
+});
+
+test('finds detail stats across bridge key and label aliases', () => {
+  const details = normalizeFotMobMatchDetails(rawMatchDetails);
+
+  assert.equal(findDetailStat(details, ['Expected goals'])?.home, 1.8);
+  assert.equal(findDetailStat(details, ['expected_goals'])?.away, 0.7);
+  assert.equal(findDetailStat(details, ['Shot accuracy'])?.home, '46%');
+  assert.equal(findDetailStat(details, ['Shots on target'])?.away, 3);
 });
 
 test('infers a missing goalkeeper label from shirt number without inheriting fallback positions', () => {

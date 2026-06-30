@@ -848,13 +848,22 @@ export const statValueNumber = (value: string | number): number => {
   return match ? Number(match[0]) : 0;
 };
 
+const normalizeDetailStatKey = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, '');
+
 export const findDetailStat = (
   details: MondialMatchDetails | null | undefined,
   keys: string[]
 ): MondialMatchDetailStat | undefined => {
-  const wanted = keys.map(key => key.toLowerCase());
+  const wanted = new Set(keys.flatMap(key => [key.toLowerCase(), normalizeDetailStatKey(key)]));
   return details?.teamStats.find(stat =>
-    wanted.includes(stat.key.toLowerCase()) || wanted.includes(stat.label.toLowerCase())
+    wanted.has(stat.key.toLowerCase()) ||
+    wanted.has(stat.label.toLowerCase()) ||
+    wanted.has(normalizeDetailStatKey(stat.key)) ||
+    wanted.has(normalizeDetailStatKey(stat.label))
   );
 };
 

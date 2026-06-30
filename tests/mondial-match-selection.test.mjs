@@ -16,6 +16,40 @@ const team = (id, name, shortName, countryCode) => ({
   flagUrl: `https://flagcdn.com/${countryCode}.svg`,
 });
 
+test('normalizes scorer metric aliases from bridge payloads', () => {
+  const scorers = normalizeWorldCupScorers({
+    topScorers: [{
+      ParticipantId: 42,
+      ParticipantName: 'Alias Player',
+      TeamName: 'Alias FC',
+      ParticipantCountryCode: 'fr',
+      StatValue: 7,
+      SubStatValue: 3,
+      TotalShots: 22,
+      ShotsOnTarget: 12,
+      FotMobRating: 8.8,
+      KeyPasses: 9,
+      Apps: 5,
+      Minutes: 410,
+      StatLabel: 'Goals',
+      PlayerImage: 'https://example.com/player.png',
+    }],
+  });
+
+  assert.equal(scorers[0].id, 42);
+  assert.equal(scorers[0].name, 'Alias Player');
+  assert.equal(scorers[0].goals, 7);
+  assert.equal(scorers[0].assists, 3);
+  assert.equal(scorers[0].shots, 22);
+  assert.equal(scorers[0].shotsOnTarget, 12);
+  assert.equal(scorers[0].rating, 8.8);
+  assert.equal(scorers[0].keyPasses, 9);
+  assert.equal(scorers[0].appearances, 5);
+  assert.equal(scorers[0].minutesPlayed, 410);
+  assert.equal(scorers[0].metricLabel, 'Goals');
+  assert.equal(scorers[0].image, 'https://example.com/player.png');
+});
+
 const payload = {
   competition: 'World Cup',
   fixtures: [{

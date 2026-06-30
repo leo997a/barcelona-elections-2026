@@ -430,31 +430,32 @@ export const selectedMatchToFields = (
 const normalizeScorer = (value: unknown, index: number): MondialLiveScorer | null => {
   const source = recordOf(value);
   if (!source) return null;
-  const name = stringValue(source.name ?? source.ParticipantName ?? source.participantName);
+  const name = stringValue(source.name ?? source.Name ?? source.ParticipantName ?? source.participantName ?? source.PlayerName);
   if (!name) return null;
   const countryCode = normalizeCountryCode(
-    source.countryCode ?? source.code ?? source.ParticipantCountryCode
+    source.countryCode ?? source.CountryCode ?? source.code ?? source.ParticipantCountryCode ?? source.participantCountryCode
   );
+  const rawMetricValue = firstNumber(source.value, source.Value, source.StatValue, source.statValue);
   return {
-    id: source.id as string | number | undefined ?? source.ParticiantId as string | number | undefined,
+    id: source.id as string | number | undefined ?? source.ParticipantId as string | number | undefined ?? source.ParticiantId as string | number | undefined,
     name,
     nameAr: stringValue(source.nameAr, '') || undefined,
-    team: stringValue(source.team ?? source.teamName ?? source.TeamName, 'World Cup'),
+    team: stringValue(source.team ?? source.teamName ?? source.TeamName ?? source.Team ?? source.CountryName, 'World Cup'),
     code: countryCode || stringValue(source.code, ''),
     countryCode,
-    flagUrl: stringValue(source.flagUrl, '') || undefined,
-    goals: optionalNumber(source.goals ?? source.value ?? source.StatValue) ?? 0,
-    assists: optionalNumber(source.assists ?? source.SubStatValue),
-    shots: optionalNumber(source.shots ?? source.totalShots ?? source.shotsTotal ?? source.ShotTotal),
-    shotsOnTarget: optionalNumber(source.shotsOnTarget ?? source.onTarget ?? source.shotsOnTargetTotal),
-    rating: optionalNumber(source.rating ?? source.fotmobRating ?? source.score),
-    keyPasses: optionalNumber(source.keyPasses ?? source.chancesCreated ?? source.bigChancesCreated),
-    appearances: optionalNumber(source.appearances ?? source.matchesPlayed ?? source.MatchesPlayed),
-    minutesPlayed: optionalNumber(source.minutesPlayed ?? source.MinutesPlayed),
+    flagUrl: stringValue(source.flagUrl ?? source.FlagUrl, '') || undefined,
+    goals: firstNumber(source.goals, source.Goals, rawMetricValue) ?? 0,
+    assists: firstNumber(source.assists, source.Assists, source.SubStatValue, source.subStatValue),
+    shots: firstNumber(source.shots, source.Shots, source.totalShots, source.TotalShots, source.shotsTotal, source.ShotsTotal, source.ShotTotal),
+    shotsOnTarget: firstNumber(source.shotsOnTarget, source.ShotsOnTarget, source.onTarget, source.OnTarget, source.shotsOnTargetTotal, source.ShotOnTarget),
+    rating: firstNumber(source.rating, source.Rating, source.fotmobRating, source.FotMobRating, source.score, source.Score),
+    keyPasses: firstNumber(source.keyPasses, source.KeyPasses, source.chancesCreated, source.ChancesCreated, source.bigChancesCreated, source.BigChancesCreated),
+    appearances: firstNumber(source.appearances, source.Appearances, source.apps, source.Apps, source.matchesPlayed, source.MatchesPlayed),
+    minutesPlayed: firstNumber(source.minutesPlayed, source.MinutesPlayed, source.minutes, source.Minutes),
     rank: optionalNumber(source.rank ?? source.Rank) ?? index + 1,
-    value: optionalNumber(source.value ?? source.StatValue),
-    metricLabel: stringValue(source.metricLabel ?? source.statLabel, '') || undefined,
-    image: stringValue(source.image ?? source.imageUrl, '') || undefined,
+    value: rawMetricValue,
+    metricLabel: stringValue(source.metricLabel ?? source.statLabel ?? source.StatLabel ?? source.title ?? source.Title, '') || undefined,
+    image: stringValue(source.image ?? source.imageUrl ?? source.ImageUrl ?? source.photoUrl ?? source.PhotoUrl ?? source.PlayerImage ?? source.profileImage, '') || undefined,
   };
 };
 

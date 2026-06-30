@@ -201,6 +201,52 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
     reader.readAsDataURL(blob);
   });
 
+const svgEscape = (value: string): string =>
+  value.replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&apos;',
+  }[character] || character));
+
+const imageExportFallbackDataUrl = (image: HTMLImageElement, rawSrc: string): string => {
+  const width = Math.max(
+    16,
+    Math.round(image.naturalWidth || image.width || image.clientWidth || Number(image.getAttribute('width')) || 640)
+  );
+  const height = Math.max(
+    16,
+    Math.round(image.naturalHeight || image.height || image.clientHeight || Number(image.getAttribute('height')) || 360)
+  );
+  const fileHint = rawSrc.split(/[\\/]/).pop()?.split(/[?#]/)[0]?.slice(0, 36) || 'external image';
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <linearGradient id="reoExportFallback" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#05070d"/>
+          <stop offset="0.48" stop-color="#1637ff"/>
+          <stop offset="1" stop-color="#ff1738"/>
+        </linearGradient>
+      </defs>
+      <rect width="${width}" height="${height}" rx="${Math.round(Math.min(width, height) * 0.04)}" fill="url(#reoExportFallback)"/>
+      <circle cx="${Math.round(width * 0.18)}" cy="${Math.round(height * 0.18)}" r="${Math.round(Math.min(width, height) * 0.2)}" fill="#08ead1" opacity="0.28"/>
+      <circle cx="${Math.round(width * 0.86)}" cy="${Math.round(height * 0.78)}" r="${Math.round(Math.min(width, height) * 0.24)}" fill="#eeff00" opacity="0.22"/>
+      <text x="50%" y="47%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="${Math.max(18, Math.round(width * 0.055))}" font-weight="900">REO SHOW</text>
+      <text x="50%" y="59%" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" opacity="0.72" font-family="Arial, sans-serif" font-size="${Math.max(10, Math.round(width * 0.018))}" font-weight="700">${svgEscape(fileHint)}</text>
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+const replaceExternalImageForExport = (image: HTMLImageElement, rawSrc: string) => {
+  image.removeAttribute('srcset');
+  image.removeAttribute('sizes');
+  image.removeAttribute('crossorigin');
+  image.setAttribute('data-export-image-fallback', 'true');
+  image.setAttribute('src', imageExportFallbackDataUrl(image, rawSrc));
+};
+
 const inlineImages = async (root: HTMLElement) => {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(images.map(async image => {
@@ -213,11 +259,14 @@ const inlineImages = async (root: HTMLElement) => {
     try {
       const absoluteUrl = new URL(rawSrc, window.location.href).href;
       const response = await fetch(absoluteUrl, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
-      if (!response.ok) return;
+      if (!response.ok) {
+        replaceExternalImageForExport(image, rawSrc);
+        return;
+      }
       const blob = await response.blob();
       image.setAttribute('src', await blobToDataUrl(blob));
     } catch {
-      // Leave the original source; canvas export will surface any CORS failure.
+      replaceExternalImageForExport(image, rawSrc);
     }
   }));
 };

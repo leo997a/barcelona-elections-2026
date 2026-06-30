@@ -379,6 +379,11 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /stat-row-label-card/);
   assert.match(obs, /stat-row-leader-card/);
   assert.match(obs, /stat-split-bar/);
+  assert.match(obs, /distinctTeamAccents\(t, getField\('homeColor'\), getField\('awayColor'\)\)/);
+  assert.match(obs, /const homeAccent = teamAccents\.home/);
+  assert.match(obs, /const awayAccent = teamAccents\.away/);
+  assert.match(obs, /stats-reference-board/);
+  assert.match(obs, /stats-reference-board-row/);
   assert.match(obs, /xg-team-card/);
   assert.match(obs, /xg-metric-card/);
   assert.match(obs, /const xgLeaderName = xgLeaderCode === 'EVEN'/);
@@ -390,6 +395,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /statsViewMode === 'pressure_accuracy'/);
   assert.match(obs, /statsViewMode === 'territory_radar'/);
   assert.match(obs, /statsViewMode === 'xg_shot_flow'/);
+  assert.match(obs, /statsViewMode === 'reference_board'/);
+  assert.match(templates, /value: 'reference_board'/);
+  assert.match(templates, /mondialStatsModeField\('reference_board'\)/);
   assert.match(obs, /rows\.filter\(row => row\.focus === statFocus\)/);
   assert.match(obs, /statPressureHome/);
   assert.match(obs, /statShotAccuracyHome/);
@@ -414,6 +422,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /player\.keyPasses/);
   assert.match(obs, /referrerPolicy="no-referrer"/);
   assert.match(obs, /metricValue: activeMetric\.value\(player\)/);
+  assert.match(obs, /scorerMetricValue/);
+  assert.match(obs, /scorerKnownStat/);
+  assert.doesNotMatch(obs, /player\.keyPasses \?\? 0/);
   assert.match(obs, /scorer-portrait/);
   assert.match(obs, /scorer-rank-chip/);
   assert.match(obs, /scorer-race-row/);
