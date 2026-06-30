@@ -274,7 +274,13 @@ const lineupIdentityCode = (candidateCode: unknown, teamName: unknown): string =
 };
 
 const lineupLineFromPosition = (pos?: string): LineupLine | null => {
-  const token = String(pos || '').toUpperCase().replace(/[^A-Z]/g, '');
+  const raw = String(pos || '').trim().toLowerCase();
+  if (/حارس|حراسة|مرمى|goalie/.test(raw)) return 'goalkeeper';
+  if (/دفاع|ظهير|مدافع/.test(raw)) return 'defence';
+  if (/وسط|محور/.test(raw)) return 'midfield';
+  if (/جناح|صانع/.test(raw)) return 'support';
+  if (/هجوم|مهاجم|رأس حربة/.test(raw)) return 'attack';
+  const token = raw.toUpperCase().replace(/[^A-Z]/g, '');
   if (!token) return null;
   if (token.includes('GK') || token.includes('GOAL') || token.includes('KEEPER') || token === 'G') return 'goalkeeper';
   if (/(CB|LCB|RCB|LB|RB|LWB|RWB|DF|DEF|BACK)/.test(token)) return 'defence';
@@ -286,9 +292,10 @@ const lineupLineFromPosition = (pos?: string): LineupLine | null => {
 
 const lineupIsGoalkeeperCandidate = (player: LineupPlayer, index: number): boolean => {
   const byPosition = lineupLineFromPosition(player.pos);
+  const shirt = playerNumber(player, index + 1);
+  if (shirt === 1 && index <= 3) return true;
   if (byPosition === 'goalkeeper') return true;
   if (byPosition) return false;
-  const shirt = playerNumber(player, index + 1);
   return shirt === 1;
 };
 
@@ -424,9 +431,11 @@ const playerRowsFromFormation = (players: LineupPlayer[], formation: string): Li
   return splitRows;
 };
 
+const safeLineupX = (value: number): number => clamp(value, 12, 88);
+
 const rowSlotX = (index: number, count: number): number => {
   if (count <= 1) return 50;
-  const min = count >= 5 ? 12 : 18;
+  const min = count >= 5 ? 14 : 20;
   const max = 100 - min;
   return min + ((max - min) * index) / (count - 1);
 };
@@ -478,8 +487,8 @@ const stabilizeLineupSourceX = (players: PositionedLineupPlayer[]): PositionedLi
       stabilized[entry.index] = {
         ...entry.player,
         x: redistribute
-          ? clamp(rowSlotX(slotIndex, entries.length), 8, 92)
-          : clamp(entry.player.x, 8, 92),
+          ? safeLineupX(rowSlotX(slotIndex, entries.length))
+          : safeLineupX(entry.player.x),
         slotIndex,
       };
     });
@@ -528,7 +537,7 @@ const buildFormationLineup = (
       const line = lineupLineFromRow(rowIndex, rows.length, player);
       return {
         ...player,
-        x: clamp(rowSlotX(playerIndex, row.length), 8, 92),
+        x: safeLineupX(rowSlotX(playerIndex, row.length)),
         y: clamp(formationSlotY(rowIndex, outfieldRows, direction), 10, 90),
         line,
         lineLabel: LINEUP_LINE_LABELS[line],
@@ -560,7 +569,7 @@ const buildFormationLineup = (
         : sourceDrivenY;
       return {
         ...player,
-        x: clamp(Number(player.x ?? autoPositioned[index]?.x ?? 50), 8, 92),
+        x: safeLineupX(Number(player.x ?? autoPositioned[index]?.x ?? 50)),
         y,
         line,
         lineLabel: LINEUP_LINE_LABELS[line],

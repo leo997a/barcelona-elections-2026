@@ -249,6 +249,8 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && layoutMode === 'source_positions'/);
   assert.match(obs, /if \(useSourcePositions\)/);
   assert.match(obs, /const lineupIsGoalkeeperCandidate = \(player: LineupPlayer, index: number\): boolean/);
+  assert.match(obs, /حارس\|حراسة\|مرمى\|goalie/);
+  assert.match(obs, /if \(shirt === 1 && index <= 3\) return true/);
   assert.match(obs, /if \(byPosition === 'goalkeeper'\) return true/);
   assert.match(obs, /if \(byPosition\) return false/);
   assert.match(obs, /return shirt === 1/);
@@ -260,6 +262,7 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /byPosition === 'goalkeeper'/);
   assert.match(obs, /x: 50,[\s\S]*?formationSlotY\(0, outfieldRows, direction\)/);
   assert.match(obs, /const lineupSafeYForLine = \(line: LineupLine, direction: string\): number/);
+  assert.match(obs, /const safeLineupX = \(value: number\): number => clamp\(value, 12, 88\)/);
   assert.match(obs, /const lineupShouldRedistributeX = \(linePlayers: PositionedLineupPlayer\[\]\): boolean/);
   assert.match(obs, /const stabilizeLineupSourceX = \(players: PositionedLineupPlayer\[\]\): PositionedLineupPlayer\[\]/);
   assert.match(obs, /const finalizeLineupPlacement = \(/);
@@ -268,6 +271,8 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /spread < Math\.min\(18, \(linePlayers\.length - 1\) \* 8\)/);
   assert.match(obs, /return finalizeLineupPlacement\(stabilizeLineupSourceX\(sourceMapped\), direction, outfieldRows\)/);
   assert.match(obs, /return finalizeLineupPlacement\(autoPositioned\.slice\(0, 11\), direction, outfieldRows\)/);
+  assert.match(obs, /safeLineupX\(rowSlotX\(playerIndex, row\.length\)\)/);
+  assert.match(obs, /safeLineupX\(Number\(player\.x \?\? autoPositioned\[index\]\?\.x \?\? 50\)\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
   assert.match(obs, /\/\(LW\|RW\|LAM\|RAM\|AM\|WING\|WINGER\)\//);
@@ -316,6 +321,20 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(shared, /'bih': 'ba'/);
   assert.match(shared, /getFlagUrl\(trimmed\)/);
   assert.match(shared, /Array\.from\(new Set\(/);
+});
+
+test('mondial knockout bracket displays penalty shootout context', async () => {
+  const bracket = await readSource('../components/renderers/mondial/MondialKnockoutBracket.tsx');
+
+  assert.match(bracket, /const scoreWithPenaltyLabel = \(score: number \| undefined, penaltyScore\?: number\): string/);
+  assert.match(bracket, /`\$\{scoreLabel\(score\)\} \(\$\{penaltyScore\}\)`/);
+  assert.match(bracket, /const resultMethodLabel = \(match: WorldCupMatch\): string/);
+  assert.match(bracket, /homePenaltyScore !== undefined && match\.awayPenaltyScore !== undefined\) return 'PEN'/);
+  assert.match(bracket, /penaltyScore\?: number/);
+  assert.match(bracket, /scoreWithPenaltyLabel\(score, penaltyScore\)/);
+  assert.match(bracket, /resultMethodLabel\(match\)/);
+  assert.match(bracket, /penaltyScore=\{match\.homePenaltyScore\}/);
+  assert.match(bracket, /penaltyScore=\{match\.awayPenaltyScore\}/);
 });
 
 test('mondial statistical templates expose and consume real display modes', async () => {

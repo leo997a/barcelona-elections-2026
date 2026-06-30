@@ -152,18 +152,29 @@ const isWinner = (match: WorldCupMatch, team: WorldCupTeam | null): boolean =>
 
 const scoreLabel = (score: number | undefined): string => score === undefined ? '–' : String(score);
 
+const scoreWithPenaltyLabel = (score: number | undefined, penaltyScore?: number): string =>
+  penaltyScore === undefined ? scoreLabel(score) : `${scoreLabel(score)} (${penaltyScore})`;
+
+const resultMethodLabel = (match: WorldCupMatch): string => {
+  if (match.homePenaltyScore !== undefined && match.awayPenaltyScore !== undefined) return 'PEN';
+  const token = `${match.status || ''} ${match.statusLabel || ''}`.toUpperCase();
+  if (token.includes('AET') || token.includes('EXTRA')) return 'AET';
+  return '';
+};
+
 const MatchTeam: React.FC<{
   match: WorldCupMatch;
   team: WorldCupTeam | null;
   placeholder?: string;
   score?: number;
-}> = ({ match, team, placeholder, score }) => {
+  penaltyScore?: number;
+}> = ({ match, team, placeholder, score, penaltyScore }) => {
   const name = team?.name || placeholder || 'TBD';
   return (
     <div className={`mondial-match-team ${isWinner(match, team) ? 'is-winner' : ''}`}>
       <BroadcastFlag team={team} label={placeholder} compact />
       <span className={`mondial-match-team-name ${team ? '' : 'mondial-match-placeholder'}`} title={name}>{name}</span>
-      <span className="mondial-match-score">{scoreLabel(score)}</span>
+      <span className="mondial-match-score">{scoreWithPenaltyLabel(score, penaltyScore)}</span>
     </div>
   );
 };
@@ -171,16 +182,17 @@ const MatchTeam: React.FC<{
 const MatchCard: React.FC<{ match: WorldCupMatch }> = ({ match }) => {
   const matchLabel = match.matchNo ? `M${match.matchNo}` : String(match.id);
   const routeLabel = match.routeLabel || [match.homePlaceholder, match.awayPlaceholder].filter(Boolean).join(' vs ');
+  const resultMethod = resultMethodLabel(match);
   const routeTitle = [routeLabel, match.kickoffLabel, match.venueLabel].filter(Boolean).join(' · ');
   return (
     <article className="mondial-match-card mondial-phase-out-anchor" aria-label={`Match ${matchLabel}`}>
       <div className="mondial-match-route-meta" title={routeTitle || matchLabel}>
         <span>{matchLabel}</span>
-        <b>{routeLabel || match.venueLabel || 'TBD'}</b>
+        <b>{[routeLabel || match.venueLabel || 'TBD', resultMethod].filter(Boolean).join(' · ')}</b>
       </div>
       <div className="mondial-match-teams">
-        <MatchTeam match={match} team={match.home} placeholder={match.homePlaceholder} score={match.homeScore} />
-        <MatchTeam match={match} team={match.away} placeholder={match.awayPlaceholder} score={match.awayScore} />
+        <MatchTeam match={match} team={match.home} placeholder={match.homePlaceholder} score={match.homeScore} penaltyScore={match.homePenaltyScore} />
+        <MatchTeam match={match} team={match.away} placeholder={match.awayPlaceholder} score={match.awayScore} penaltyScore={match.awayPenaltyScore} />
       </div>
     </article>
   );
