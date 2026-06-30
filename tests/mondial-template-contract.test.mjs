@@ -262,10 +262,12 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const lineupSafeYForLine = \(line: LineupLine, direction: string\): number/);
   assert.match(obs, /const lineupShouldRedistributeX = \(linePlayers: PositionedLineupPlayer\[\]\): boolean/);
   assert.match(obs, /const stabilizeLineupSourceX = \(players: PositionedLineupPlayer\[\]\): PositionedLineupPlayer\[\]/);
+  assert.match(obs, /const finalizeLineupPlacement = \(/);
   assert.match(obs, /byPosition[\s\S]*?lineupSafeYForLine\(line, direction\)/);
   assert.match(obs, /const uniqueBuckets = new Set\(xs\.map\(x => Math\.round\(x \/ 3\)\)\)\.size/);
   assert.match(obs, /spread < Math\.min\(18, \(linePlayers\.length - 1\) \* 8\)/);
-  assert.match(obs, /return stabilizeLineupSourceX\(sourceMapped\)/);
+  assert.match(obs, /return finalizeLineupPlacement\(stabilizeLineupSourceX\(sourceMapped\), direction, outfieldRows\)/);
+  assert.match(obs, /return finalizeLineupPlacement\(autoPositioned\.slice\(0, 11\), direction, outfieldRows\)/);
   assert.match(obs, /mirrorPitchY\(sourceY, direction\)/);
   assert.match(obs, /\/\(ST\|CF\|FW\|FWD\|ATT\|STRIKER\|FORWARD\)\//);
   assert.match(obs, /\/\(LW\|RW\|LAM\|RAM\|AM\|WING\|WINGER\)\//);
@@ -288,10 +290,11 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /placement: 'field' \| 'list'/);
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
-  assert.match(obs, /lineup-photo-shell relative pb-5/);
+  assert.match(obs, /lineup-photo-shell relative pb-8/);
   assert.match(obs, /lineup-photo-frame/);
   assert.match(obs, /lineup-number-badge/);
   assert.match(obs, /lineup-number-badge absolute left-1\/2 top-full/);
+  assert.match(obs, /-translate-y-\[18%\]/);
   assert.doesNotMatch(obs, /lineup-number-badge absolute z-\[6\] \$\{badgeClass\}/);
   assert.doesNotMatch(obs, /lineup-nameplate-number/);
   assert.match(obs, /data-lineup-marker-mode/);

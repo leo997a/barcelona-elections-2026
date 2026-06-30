@@ -488,6 +488,30 @@ const stabilizeLineupSourceX = (players: PositionedLineupPlayer[]): PositionedLi
   return stabilized;
 };
 
+const finalizeLineupPlacement = (
+  players: PositionedLineupPlayer[],
+  direction: string,
+  outfieldRows: number
+): PositionedLineupPlayer[] => {
+  const goalkeeperIndex = players.findIndex((player, index) =>
+    player.line === 'goalkeeper' || lineupIsGoalkeeperCandidate(player, index)
+  );
+  if (goalkeeperIndex < 0) return players;
+
+  return players.map((player, index) => {
+    if (index !== goalkeeperIndex) return player;
+    return {
+      ...player,
+      x: 50,
+      y: clamp(formationSlotY(0, outfieldRows, direction), 10, 90),
+      line: 'goalkeeper',
+      lineLabel: LINEUP_LINE_LABELS.goalkeeper,
+      rowIndex: 0,
+      slotIndex: 0,
+    };
+  });
+};
+
 const buildFormationLineup = (
   players: LineupPlayer[],
   formation: string,
@@ -544,10 +568,10 @@ const buildFormationLineup = (
         slotIndex: autoPositioned[index]?.slotIndex ?? 0,
       };
     });
-    return stabilizeLineupSourceX(sourceMapped);
+    return finalizeLineupPlacement(stabilizeLineupSourceX(sourceMapped), direction, outfieldRows);
   }
 
-  return autoPositioned.slice(0, 11);
+  return finalizeLineupPlacement(autoPositioned.slice(0, 11), direction, outfieldRows);
 };
 
 const lineupPlayerPhotoUrl = (
@@ -605,7 +629,7 @@ const ReoLineupPlayerMarker: React.FC<{
       className="flex flex-col items-center"
       style={{ animation: `wcBadgePop .72s ${.32 + index * .065}s cubic-bezier(.16,1.18,.3,1) both` }}
     >
-      <div className="lineup-photo-shell relative pb-5">
+      <div className="lineup-photo-shell relative pb-8">
         <div
           className={`lineup-photo-frame relative ${frameClass} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
           data-lineup-marker-mode={markerMode}
@@ -632,7 +656,7 @@ const ReoLineupPlayerMarker: React.FC<{
           )}
         </div>
         {hasImage && (
-          <span className={`lineup-number-badge absolute left-1/2 top-full z-[6] -translate-x-1/2 -translate-y-[72%] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
+          <span className={`lineup-number-badge absolute left-1/2 top-full z-[6] -translate-x-1/2 -translate-y-[18%] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
             {number}
           </span>
         )}
