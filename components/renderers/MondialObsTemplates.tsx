@@ -7,6 +7,7 @@ import {
 import {
   findDetailStat,
   lineupsToPlayersJson,
+  normalizeStatsPeriodKey,
   statValueNumber,
   type MondialMatchDetails,
 } from '../../utils/mondialMatchDetails';
@@ -838,7 +839,10 @@ const matchStatusPresentation = (
     : getField('matchStatus') ?? getField('status');
   const raw = String(rawValue || 'PRE').trim();
   const token = raw.toLowerCase();
-  const statusLabel = statusLabelAr(text(getField, 'statusLabel', text(getField, 'period', '')), '');
+  const statusLabelValue = resolveField
+    ? resolveField('statusLabel', 'statusLabel') ?? getField('statusLabel') ?? getField('matchPeriodLabel')
+    : getField('statusLabel') ?? getField('matchPeriodLabel');
+  const statusLabel = statusLabelAr(String(statusLabelValue ?? ''), '');
 
   if (token === 'live' || token.includes('playing') || token.includes('inprogress')) {
     return { code: 'LIVE', label: 'مباشر', isLive: true };
@@ -998,6 +1002,7 @@ const FlagOrImage: React.FC<{ code: string; image?: string; size: number }> = ({
         src={image}
         alt=""
         className="absolute inset-0 w-full h-full object-contain"
+        referrerPolicy="no-referrer"
         onError={event => { event.currentTarget.style.display = 'none'; }}
       />
     )}
@@ -1217,10 +1222,10 @@ export const ReoObsScoreboard: React.FC<ReoObsVariantProps> = ({
 }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
-  const homeCode = text(getField, 'homeCode', text(getField, 'homeShort', codeFromTeam(home, 'IQ')));
-  const awayCode = text(getField, 'awayCode', text(getField, 'awayShort', codeFromTeam(away, 'AR')));
-  const homeImage = text(getField, 'homeLogo', '');
-  const awayImage = text(getField, 'awayLogo', '');
+  const homeCode = resolvedText(getField, resolveField, 'homeCode', 'homeCode', text(getField, 'homeShort', codeFromTeam(home, 'IQ')));
+  const awayCode = resolvedText(getField, resolveField, 'awayCode', 'awayCode', text(getField, 'awayShort', codeFromTeam(away, 'AR')));
+  const homeImage = resolvedText(getField, resolveField, 'homeLogo', 'homeLogo', '');
+  const awayImage = resolvedText(getField, resolveField, 'awayLogo', 'awayLogo', '');
   const homeScore = resolvedNum(getField, resolveField, 'homeScore', 'homeScore', 1);
   const awayScore = resolvedNum(getField, resolveField, 'awayScore', 'awayScore', 0);
   const minute = resolvedText(getField, resolveField, 'minute', 'minute', '');
@@ -1267,10 +1272,10 @@ export const ReoObsMatchResult: React.FC<ReoObsVariantProps> = props => {
 export const ReoObsScorebug: React.FC<ReoObsVariantProps> = ({ t, getField, resolveField }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
-  const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
-  const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'AR'));
-  const homeImage = text(getField, 'homeLogo', '');
-  const awayImage = text(getField, 'awayLogo', '');
+  const homeCode = resolvedText(getField, resolveField, 'homeCode', 'homeCode', codeFromTeam(home, 'IQ'));
+  const awayCode = resolvedText(getField, resolveField, 'awayCode', 'awayCode', codeFromTeam(away, 'AR'));
+  const homeImage = resolvedText(getField, resolveField, 'homeLogo', 'homeLogo', '');
+  const awayImage = resolvedText(getField, resolveField, 'awayLogo', 'awayLogo', '');
   const score = `${resolvedNum(getField, resolveField, 'homeScore', 'homeScore', 1)} : ${resolvedNum(getField, resolveField, 'awayScore', 'awayScore', 0)}`;
   const minute = resolvedText(getField, resolveField, 'minute', 'minute', '');
   const matchStatus = matchStatusPresentation(getField, resolveField);
@@ -1379,13 +1384,13 @@ export const ReoObsLowerThird: React.FC<ReoObsVariantProps> = ({ t, getField }) 
   );
 };
 
-export const ReoObsMatchPreview: React.FC<ReoObsVariantProps> = ({ t, getField }) => {
+export const ReoObsMatchPreview: React.FC<ReoObsVariantProps> = ({ t, getField, resolveField }) => {
   const home = text(getField, 'homeName', text(getField, 'homeTeam', 'العراق'));
   const away = text(getField, 'awayName', text(getField, 'awayTeam', 'فرنسا'));
-  const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
-  const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'FR'));
-  const homeImage = text(getField, 'homeLogo', '');
-  const awayImage = text(getField, 'awayLogo', '');
+  const homeCode = resolvedText(getField, resolveField, 'homeCode', 'homeCode', codeFromTeam(home, 'IQ'));
+  const awayCode = resolvedText(getField, resolveField, 'awayCode', 'awayCode', codeFromTeam(away, 'FR'));
+  const homeImage = resolvedText(getField, resolveField, 'homeLogo', 'homeLogo', '');
+  const awayImage = resolvedText(getField, resolveField, 'awayLogo', 'awayLogo', '');
   const c = themedColors(t);
   return (
     <KineticStage image={stageImage(getField)} theme={t}>
@@ -1489,8 +1494,10 @@ export const ReoObsGroupTable: React.FC<ReoObsVariantProps> = ({ t, getField, li
 export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, resolveField, matchDetails }) => {
   const home = resolvedText(getField, resolveField, 'homeTeam', 'homeTeam', 'العراق');
   const away = resolvedText(getField, resolveField, 'awayTeam', 'awayTeam', 'الأرجنتين');
-  const homeCode = text(getField, 'homeCode', codeFromTeam(home, 'IQ'));
-  const awayCode = text(getField, 'awayCode', codeFromTeam(away, 'AR'));
+  const homeCode = resolvedText(getField, resolveField, 'homeCode', 'homeCode', codeFromTeam(home, 'IQ'));
+  const awayCode = resolvedText(getField, resolveField, 'awayCode', 'awayCode', codeFromTeam(away, 'AR'));
+  const homeLogo = resolvedText(getField, resolveField, 'homeLogo', 'homeLogo', '');
+  const awayLogo = resolvedText(getField, resolveField, 'awayLogo', 'awayLogo', '');
   const homeDisplayCode = String(homeCode || codeFromTeam(home, 'IQ')).trim().toUpperCase();
   const awayDisplayCode = String(awayCode || codeFromTeam(away, 'AR')).trim().toUpperCase();
   const homeDisplayName = String(home || homeDisplayCode).trim();
@@ -1500,7 +1507,13 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const status = matchStatusPresentation(getField, resolveField);
   const minute = String(matchDetails?.match.minute ?? getField('minute') ?? '').trim();
   const dataStatusLabel = status.isLive ? liveStatusText(minute) : status.label;
-  const statPeriodRaw = text(getField, 'period', 'FULL');
+  const selectedStatPeriod = text(getField, 'statsPeriod', text(getField, 'period', 'FULL'));
+  const statPeriodRaw = normalizeStatsPeriodKey(selectedStatPeriod);
+  const statPeriodUnavailable = Boolean(
+    matchDetails?.teamStats.length &&
+    statPeriodRaw !== 'FULL' &&
+    !matchDetails.teamStatsByPeriod?.[statPeriodRaw]?.length
+  );
   const statPeriodLabel = ({
     FULL: 'المباراة كاملة',
     '1H': 'الشوط الأول',
@@ -1509,7 +1522,11 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     PEN: 'ركلات الترجيح',
     LIVE: minute ? `حتى الدقيقة ${minute}` : 'حسب الدقيقة المباشرة',
   } as Record<string, string>)[statPeriodRaw] ?? statPeriodRaw;
-  const statClockLabel = [dataStatusLabel, statPeriodLabel]
+  const statClockLabel = [
+    dataStatusLabel,
+    statPeriodLabel,
+    statPeriodUnavailable ? 'بيانات الفترة غير متاحة - عرض المباراة كاملة' : '',
+  ]
     .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
     .join(' · ');
   const statFocusLabel = ({
@@ -1522,6 +1539,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   } as Record<string, string>)[statFocus] ?? 'كل مؤشرات المباراة';
   const statsViewModeLabel = ({
     reference_board: 'لوحة بث كلاسيكية',
+    photo_comparison_board: 'صورة + لوحة تلفزيونية',
     dual_bars: 'مقارنة مباشرة',
     key_numbers: 'أرقام رئيسية',
     momentum_grid: 'زخم المباراة',
@@ -1648,7 +1666,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
       awayFallback: 88,
     },
   ].map(definition => {
-    const liveRow = findDetailStat(matchDetails, definition.keys);
+    const liveRow = findDetailStat(matchDetails, definition.keys, statPeriodRaw);
     const homeValue = liveRow?.home ?? num(getField, definition.homeField, definition.homeFallback);
     const awayValue = liveRow?.away ?? num(getField, definition.awayField, definition.awayFallback);
     const homeBar = detailStatNumber(homeValue);
@@ -1720,7 +1738,11 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     ? 'جودة الفرص متعادلة'
     : `${xgLeaderName} متفوق في جودة الفرص`;
   const c = themedColors(t);
-  const teamAccents = distinctTeamAccents(t, getField('homeColor'), getField('awayColor'));
+  const teamAccents = distinctTeamAccents(
+    t,
+    resolveField ? resolveField('homeColor', 'homeColor') ?? getField('homeColor') : getField('homeColor'),
+    resolveField ? resolveField('awayColor', 'awayColor') ?? getField('awayColor') : getField('awayColor')
+  );
   const homeAccent = teamAccents.home;
   const awayAccent = teamAccents.away;
   return (
@@ -1733,13 +1755,13 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
             <div className="absolute inset-0 rounded-[32px]" style={{ background: c.success, transform: 'translate(18px,10px)' }} />
             <div className="relative bg-white text-black border-[6px] border-black rounded-[32px] overflow-hidden">
               <div className="grid grid-cols-[1fr_270px_1fr] items-center bg-black text-white px-9 py-5">
-                <div className="flex items-center gap-4"><MondialFlag codeOrName={homeCode} size={48} /><TeamCode value={homeDisplayCode} color={WC.green} small /></div>
+                <div className="flex items-center gap-4"><FlagOrImage code={homeCode} image={homeLogo} size={48} /><TeamCode value={homeDisplayCode} color={WC.green} small /></div>
                 <div className="stat-context-chip text-center font-black">
                   <div className="text-[10px] text-[#eeff00]">{statClockLabel}</div>
                   <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
                   <div className="mt-1 text-[9px] text-white/55">{statStoryLabel} · {statFocusLabel} · {statsViewModeLabel}</div>
                 </div>
-                <div className="flex items-center justify-end gap-4"><TeamCode value={awayDisplayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
+                <div className="flex items-center justify-end gap-4"><TeamCode value={awayDisplayCode} color={WC.red} small /><FlagOrImage code={awayCode} image={awayLogo} size={48} /></div>
               </div>
               {statsViewMode === 'reference_board' ? (
                 <div className="stats-reference-board relative min-h-[650px] overflow-hidden bg-black">
@@ -1760,7 +1782,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       <div className="stats-reference-board-header grid grid-cols-[1fr_110px_1fr] items-center bg-[#1d1a16] text-white">
                         <div className="grid grid-cols-[86px_1fr] items-center">
                           <div className="flex h-[84px] items-center justify-center" style={{ background: homeAccent }}>
-                            <MondialFlag codeOrName={homeCode} size={62} />
+                            <FlagOrImage code={homeCode} image={homeLogo} size={62} />
                           </div>
                           <div className="px-5 text-[32px] leading-none font-black">{homeDisplayName}</div>
                         </div>
@@ -1770,7 +1792,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div className="grid grid-cols-[1fr_86px] items-center">
                           <div className="px-5 text-left text-[32px] leading-none font-black">{awayDisplayName}</div>
                           <div className="flex h-[84px] items-center justify-center" style={{ background: awayAccent }}>
-                            <MondialFlag codeOrName={awayCode} size={62} />
+                            <FlagOrImage code={awayCode} image={awayLogo} size={62} />
                           </div>
                         </div>
                       </div>
@@ -1797,6 +1819,75 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                                 </div>
                               </div>
                               <div className="text-center text-[23px] leading-none">{detailStatText(awayValue)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : statsViewMode === 'photo_comparison_board' ? (
+                <div className="stats-photo-comparison-board relative min-h-[650px] overflow-hidden bg-[#ebe8dc] text-black">
+                  {stageImage(getField) ? (
+                    <img
+                      src={stageImage(getField)}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={event => { event.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, ${homeAccent} 0 18%, #e9e6dc 18% 82%, ${awayAccent} 82% 100%)` }} />
+                  )}
+                  <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
+                  <div className="relative min-h-[650px] px-8 py-7">
+                    <div className="grid grid-cols-[240px_1fr_240px] items-center rounded-t-[26px] border-[5px] border-black bg-[#1f1b17] text-white shadow-[12px_10px_0_rgba(0,0,0,.24)]">
+                      <div className="grid grid-cols-[86px_1fr] items-center">
+                        <div className="flex h-[86px] items-center justify-center" style={{ background: homeAccent }}>
+                          <FlagOrImage code={homeCode} image={homeLogo} size={62} />
+                        </div>
+                        <div className="px-4 text-[25px] leading-none font-black">{homeDisplayName}</div>
+                      </div>
+                      <div className="flex h-[86px] items-center justify-center border-x-[5px] border-black bg-black">
+                        <div className="rounded-[18px] border-[4px] border-white/80 px-7 py-2">
+                          <ReoMark compact dark={false} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-[1fr_86px] items-center">
+                        <div className="px-4 text-left text-[25px] leading-none font-black">{awayDisplayName}</div>
+                        <div className="flex h-[86px] items-center justify-center" style={{ background: awayAccent }}>
+                          <FlagOrImage code={awayCode} image={awayLogo} size={62} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats-photo-comparison-panel mx-auto w-[1010px] rounded-b-[26px] border-x-[5px] border-b-[5px] border-black bg-[#f4f2eb]/96 px-10 py-7 shadow-[12px_10px_0_rgba(0,0,0,.24)]">
+                      <div className="mb-4 grid grid-cols-[120px_1fr_120px] items-center text-[13px] font-black text-black/55">
+                        <div>{homeDisplayCode}</div>
+                        <div className="text-center">{statClockLabel} · {statStoryLabel} · {statFocusLabel}</div>
+                        <div className="text-left">{awayDisplayCode}</div>
+                      </div>
+                      <div className="space-y-1.5">
+                        {statRows.slice(0, 13).map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                          const total = Math.max(1, homeBar + awayBar);
+                          const homePct = Math.round((homeBar / total) * 100);
+                          const awayPct = 100 - homePct;
+                          return (
+                            <div
+                              key={`photo-comparison-${label}`}
+                              className="stats-photo-comparison-row grid grid-cols-[82px_1fr_82px] items-center gap-5 font-black"
+                              style={{ animation: `wcRowIn .46s ${.2 + index * .04}s cubic-bezier(.16,1,.3,1) both` }}
+                            >
+                              <div className="text-center text-[25px] leading-none">{detailStatText(homeValue)}</div>
+                              <div className="grid grid-cols-[1fr_190px_1fr] items-center gap-3">
+                                <div className="h-[7px] overflow-hidden rounded-full bg-black/10">
+                                  <div className="ml-auto h-full" style={{ width: `${homePct}%`, background: homeAccent }} />
+                                </div>
+                                <div className="text-center text-[16px] leading-tight font-black text-[#1f1b17]">{label}</div>
+                                <div className="h-[7px] overflow-hidden rounded-full bg-black/10">
+                                  <div className="h-full" style={{ width: `${awayPct}%`, background: awayAccent }} />
+                                </div>
+                              </div>
+                              <div className="text-center text-[25px] leading-none">{detailStatText(awayValue)}</div>
                             </div>
                           );
                         })}
@@ -1916,7 +2007,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                     <div className="relative grid gap-4">
                       <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4" style={{ boxShadow: `inset 12px 0 0 ${homeAccent}` }}>
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
-                          <span className="flex items-center gap-3"><MondialFlag codeOrName={homeCode} size={38} /><span>{homeDisplayCode}</span></span>
+                          <span className="flex items-center gap-3"><FlagOrImage code={homeCode} image={homeLogo} size={38} /><span>{homeDisplayCode}</span></span>
                           <span className="text-[11px] opacity-60">{homeDisplayName}</span>
                         </div>
                         <div className="mt-2 flex items-end justify-between gap-3">
@@ -1926,7 +2017,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       </div>
                       <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4 text-black" style={{ boxShadow: `inset 12px 0 0 ${awayAccent}` }}>
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
-                          <span className="flex items-center gap-3"><MondialFlag codeOrName={awayCode} size={38} /><span>{awayDisplayCode}</span></span>
+                          <span className="flex items-center gap-3"><FlagOrImage code={awayCode} image={awayLogo} size={38} /><span>{awayDisplayCode}</span></span>
                           <span className="text-[11px] opacity-60">{awayDisplayName}</span>
                         </div>
                         <div className="mt-2 flex items-end justify-between gap-3">
@@ -1936,9 +2027,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       </div>
                     </div>
                     <div className="xg-shot-summary relative grid grid-cols-[1fr_48px_1fr] items-center gap-3 rounded-[22px] border-[4px] border-black bg-white px-4 py-3 font-black">
-                      <div className="xg-shot-team flex items-center gap-2"><MondialFlag codeOrName={homeCode} size={28} /><span>{homeDisplayCode}</span><b className="text-[28px] leading-none">{detailStatText(shotsRow?.homeValue ?? 0)}</b></div>
+                      <div className="xg-shot-team flex items-center gap-2"><FlagOrImage code={homeCode} image={homeLogo} size={28} /><span>{homeDisplayCode}</span><b className="text-[28px] leading-none">{detailStatText(shotsRow?.homeValue ?? 0)}</b></div>
                       <div className="text-center text-[10px] leading-tight">تسديدات</div>
-                      <div className="xg-shot-team flex items-center justify-end gap-2 text-left"><b className="text-[28px] leading-none">{detailStatText(shotsRow?.awayValue ?? 0)}</b><span>{awayDisplayCode}</span><MondialFlag codeOrName={awayCode} size={28} /></div>
+                      <div className="xg-shot-team flex items-center justify-end gap-2 text-left"><b className="text-[28px] leading-none">{detailStatText(shotsRow?.awayValue ?? 0)}</b><span>{awayDisplayCode}</span><FlagOrImage code={awayCode} image={awayLogo} size={28} /></div>
                     </div>
                   </div>
                   <div className="relative bg-white text-black border-[5px] border-black rounded-[30px] p-6 overflow-hidden">
@@ -2025,7 +2116,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                 <div className="p-4 space-y-3">
                   <div className="stat-comparison-header grid grid-cols-[1fr_270px_1fr] items-center rounded-[22px] border-[5px] border-black bg-black px-5 py-3 text-white">
                     <div className="stat-team-chip flex min-w-0 items-center gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5">
-                      <MondialFlag codeOrName={homeCode} size={38} />
+                      <FlagOrImage code={homeCode} image={homeLogo} size={38} />
                       <div className="min-w-0">
                         <div className="text-[18px] leading-none font-black">{homeDisplayCode}</div>
                         <div className="mt-1 truncate text-[10px] font-black text-white/65">{homeDisplayName}</div>
@@ -2041,7 +2132,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div className="text-[18px] leading-none font-black">{awayDisplayCode}</div>
                         <div className="mt-1 truncate text-[10px] font-black text-white/65">{awayDisplayName}</div>
                       </div>
-                      <MondialFlag codeOrName={awayCode} size={38} />
+                      <FlagOrImage code={awayCode} image={awayLogo} size={38} />
                     </div>
                   </div>
                   <div className="stat-comparison-grid grid grid-cols-2 gap-3">
@@ -2064,7 +2155,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                               </div>
                               <div className="grid grid-cols-[82px_1fr_82px] items-center gap-3 font-black">
                                 <div className="stat-row-value-card flex min-w-0 items-center gap-1.5 rounded-[13px] border-[3px] border-black px-2 py-1" style={{ background: homeAccent, color: teamAccents.homeText }}>
-                                  <MondialFlag codeOrName={homeCode} size={20} />
+                                  <FlagOrImage code={homeCode} image={homeLogo} size={20} />
                                   <span className="text-[18px] leading-none">{detailStatText(homeValue)}</span>
                                 </div>
                                 <div className="min-w-0">
@@ -2079,7 +2170,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                                 </div>
                                 <div className="stat-row-value-card flex min-w-0 items-center justify-end gap-1.5 rounded-[13px] border-[3px] border-black px-2 py-1 text-left" style={{ background: awayAccent, color: teamAccents.awayText }}>
                                   <span className="text-[18px] leading-none">{detailStatText(awayValue)}</span>
-                                  <MondialFlag codeOrName={awayCode} size={20} />
+                                  <FlagOrImage code={awayCode} image={awayLogo} size={20} />
                                 </div>
                               </div>
                             </div>
@@ -2493,16 +2584,18 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
   const scorerCardStyle = text(getField, 'scorerCardStyle', 'reference_stack');
   const scorerMetric = text(getField, 'scorerMetric', 'goals');
   const scorerLimit = Math.max(3, Math.min(10, num(getField, 'scorerLimit', 6)));
-  const scorerMetricValue = (player: MondialLiveScorer, ...values: Array<number | undefined>): number =>
+  const scorerMetricValue = (player: MondialLiveScorer, ...values: Array<number | undefined>): number | undefined =>
     values.find(value => typeof value === 'number' && Number.isFinite(value))
-    ?? player.value
-    ?? player.goals
+    ?? (player.metricLabel && typeof player.value === 'number' && Number.isFinite(player.value) ? player.value : undefined);
+  const scorerFallbackMetricValue = (player: MondialLiveScorer): number =>
+    (typeof player.goals === 'number' && Number.isFinite(player.goals) ? player.goals : undefined)
+    ?? (typeof player.value === 'number' && Number.isFinite(player.value) ? player.value : undefined)
     ?? 0;
   const scorerMetricConfig = {
     goals: {
       title: 'سباق الحذاء الذهبي',
       label: 'أهداف',
-      value: (player: MondialLiveScorer) => player.goals,
+      value: (player: MondialLiveScorer) => scorerMetricValue(player, player.goals),
     },
     assists: {
       title: 'سباق صناعة الأهداف',
@@ -2529,14 +2622,21 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
       label: 'دقيقة',
       value: (player: MondialLiveScorer) => scorerMetricValue(player, player.minutesPlayed),
     },
-  } satisfies Record<string, { title: string; label: string; value: (player: MondialLiveScorer) => number }>;
+  } satisfies Record<string, { title: string; label: string; value: (player: MondialLiveScorer) => number | undefined }>;
   const activeMetric = scorerMetricConfig[scorerMetric] ?? scorerMetricConfig.goals;
   const scorers = (boundScorers.length ? boundScorers : DEFAULT_SCORERS)
-    .map(player => ({
-      ...player,
-      metricValue: activeMetric.value(player),
-      metricLabel: player.metricLabel || activeMetric.label,
-    }))
+    .map(player => {
+      const requestedMetricValue = activeMetric.value(player);
+      const metricFallbackValue = scorerFallbackMetricValue(player);
+      const metricMissing = scorerMetric !== 'goals' && requestedMetricValue === undefined;
+      return {
+        ...player,
+        metricValue: requestedMetricValue ?? metricFallbackValue,
+        metricLabel: metricMissing ? 'أهداف بديلة' : player.metricLabel || activeMetric.label,
+        metricMissing,
+        metricMissingLabel: metricMissing ? 'المؤشر غير متاح من الجسر' : '',
+      };
+    })
     .sort((a, b) =>
       (b.metricValue - a.metricValue)
       || ((b.goals ?? 0) - (a.goals ?? 0))
@@ -2548,6 +2648,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
   const c = themedColors(t);
   const leader = scorers[0];
   const maxMetric = Math.max(1, ...scorers.map(player => Number(player.metricValue) || 0));
+  const missingMetricCount = scorers.filter(player => player.metricMissing).length;
   const glassMode = scorerCardStyle === 'data_glass';
   const photoMode = scorerCardStyle === 'broadcast_photo';
   const classicMode = scorerCardStyle === 'classic_flags';
@@ -2577,7 +2678,11 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
       ? stats
       : [{ label: player.metricLabel || activeMetric.label, value: Number(player.metricValue ?? player.goals ?? 0) }];
   };
-  const sourceTag = liveScorers.length ? `${activeMetric.label} مباشر · REO SHOW` : `${activeMetric.label} · REO SHOW`;
+  const sourceTag = [
+    liveScorers.length ? `${activeMetric.label} مباشر` : activeMetric.label,
+    missingMetricCount ? 'المؤشر غير متاح - عرض بديل واضح' : '',
+    'REO SHOW',
+  ].filter(Boolean).join(' · ');
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-8 flex flex-col">

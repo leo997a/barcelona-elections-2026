@@ -470,6 +470,7 @@ const mondialStatsDetailFields: OverlayField[] = [
 
 const mondialStatsViewModeOptions = [
   { value: 'reference_board', label: 'لوحة بث كلاسيكية بصورة خلفية' },
+  { value: 'photo_comparison_board', label: 'ستايل صورة + لوحة إحصائيات تلفزيونية' },
   { value: 'dual_bars', label: 'أشرطة مقارنة كاملة' },
   { value: 'momentum_grid', label: 'شبكة زخم المباراة' },
   { value: 'key_numbers', label: 'أرقام رئيسية سريعة' },
@@ -1144,6 +1145,7 @@ export const MONDIAL_STARS_TEMPLATES: OverlayConfig[] = [
       { id: 'mondialVariant', label: 'نوع القالب', type: 'hidden', value: 'golden_boot' },
       { id: 'scorerViewMode', label: 'طريقة عرض الهدافين', type: 'select', value: 'race_board', options: [
         { value: 'race_board', label: 'سباق الهدافين' },
+        { value: 'broadcast_split', label: 'ستايل بث: قائد + سباق جانبي' },
         { value: 'tv_ladder', label: 'سلم تلفزيوني واسع' },
         { value: 'podium', label: 'منصة أول ثلاثة' },
         { value: 'compact_ranking', label: 'ترتيب مضغوط' },

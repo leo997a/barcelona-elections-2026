@@ -5,6 +5,7 @@ export type MondialLiveTeam = {
   countryCode: string;
   flagUrl: string;
   logoUrl?: string;
+  color?: string;
 };
 
 export type MondialLiveMatch = {
@@ -114,6 +115,7 @@ const normalizeTeam = (value: unknown, fallbackId: string): MondialLiveTeam | nu
     countryCode,
     flagUrl: stringValue(source.flagUrl, countryCode ? `https://flagcdn.com/${countryCode}.svg` : ''),
     logoUrl: stringValue(source.logoUrl ?? source.logo, '') || undefined,
+    color: stringValue(source.color ?? source.teamColor ?? source.primaryColor, '') || undefined,
   };
 };
 
@@ -140,7 +142,10 @@ const normalizeMatch = (value: unknown, index: number): MondialLiveMatch | null 
   const source = recordOf(value);
   if (!source) return null;
   const status = normalizeStatus(source.status ?? source.matchStatus);
-  const statusCode = normalizeStatusCode(source.status ?? source.matchStatus, source.statusLabel ?? source.period);
+  const statusCode = normalizeStatusCode(
+    source.status ?? source.matchStatus,
+    source.statusLabel ?? source.matchPeriodLabel ?? source.statusReason
+  );
   const home = normalizeTeam(source.home ?? source.homeTeam, `fixture-${index + 1}-home`);
   const away = normalizeTeam(source.away ?? source.awayTeam, `fixture-${index + 1}-away`);
   const homePlaceholder = stringValue(source.homePlaceholder, '') || undefined;
@@ -373,6 +378,7 @@ export const selectedMatchToFields = (
     : isExtraTime
       ? 'بعد الوقت الإضافي'
       : match.statusLabel ?? '';
+  const statsPeriod = hasPenaltyShootout ? 'PEN' : isExtraTime ? 'ET' : 'FULL';
   const resultNote = hasPenaltyShootout && winnerTeam
     ? `فاز ${winnerTeam} بركلات الترجيح ${penaltyScoreText}`
     : isExtraTime
@@ -392,11 +398,13 @@ export const selectedMatchToFields = (
     homeShort: home?.shortName ?? 'TBD',
     homeCode: home?.countryCode || home?.shortName || 'TBD',
     homeLogo: home?.logoUrl || home?.flagUrl || '',
+    homeColor: home?.color || '',
     awayTeam: away?.name ?? match.awayPlaceholder ?? 'TBD',
     awayName: away?.name ?? match.awayPlaceholder ?? 'TBD',
     awayShort: away?.shortName ?? 'TBD',
     awayCode: away?.countryCode || away?.shortName || 'TBD',
     awayLogo: away?.logoUrl || away?.flagUrl || '',
+    awayColor: away?.color || '',
     homeScore: match.homeScore ?? 0,
     awayScore: match.awayScore ?? 0,
     homePenaltyScore: match.homePenaltyScore,
@@ -410,11 +418,13 @@ export const selectedMatchToFields = (
     resultNote,
     scoreDetail,
     minute: match.minute ?? '',
-    period: normalizedStatusLabel,
+    period: statsPeriod,
+    statsPeriod,
     matchStatus: status,
     statusCode: status,
     status,
     statusLabel: normalizedStatusLabel,
+    matchPeriodLabel: normalizedStatusLabel,
     stage,
     matchStage: stage,
     groupBadge: stage,

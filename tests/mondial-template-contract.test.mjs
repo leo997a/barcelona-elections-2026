@@ -183,14 +183,19 @@ test('match status comes from the selected fixture, not bridge connectivity', as
 });
 
 test('partial live stats fall back per row and scorer cards use the richer live contract', async () => {
-  const [obs, templates] = await Promise.all([
+  const [obs, templates, renderer] = await Promise.all([
     readSource('../components/renderers/MondialObsTemplates.tsx'),
     readSource('../components/renderers/MondialTemplates.ts'),
+    readSource('../components/renderers/Mondial2026Renderer.tsx'),
   ]);
 
-  assert.match(obs, /const liveRow = findDetailStat\(matchDetails, definition\.keys\)/);
+  assert.match(obs, /const liveRow = findDetailStat\(matchDetails, definition\.keys, statPeriodRaw\)/);
   assert.match(obs, /liveRow\?\.home \?\? num\(getField, definition\.homeField/);
   assert.match(obs, /liveRow\?\.away \?\? num\(getField, definition\.awayField/);
+  assert.match(obs, /normalizeStatsPeriodKey\(selectedStatPeriod\)/);
+  assert.match(renderer, /const resolveStatsPeriodField = \(fieldId: string\): unknown =>/);
+  assert.match(renderer, /manualToken && manualToken !== 'FULL' \? manual : firstFilled\(auto, manual, 'FULL'\)/);
+  assert.match(renderer, /return firstFilled\(matchDetailFields\[fieldId\], selectedMatchFields\[fieldId\], getField\(fieldId\)\)/);
   assert.doesNotMatch(obs, /liveRows\.length >=/);
   assert.match(templates, /id: 'statXgHome'/);
   assert.match(templates, /id: 'statXgAway'/);
@@ -364,8 +369,10 @@ test('mondial statistical templates expose and consume real display modes', asyn
   for (const option of ['FULL', '1H', '2H', 'ET', 'PEN', 'LIVE']) {
     assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a match stats period`);
   }
-  assert.match(obs, /const statPeriodRaw = text\(getField, 'period', 'FULL'\)/);
-  assert.match(obs, /const statClockLabel = \[dataStatusLabel, statPeriodLabel\]/);
+  assert.match(obs, /const selectedStatPeriod = text\(getField, 'statsPeriod', text\(getField, 'period', 'FULL'\)\)/);
+  assert.match(obs, /const statPeriodRaw = normalizeStatsPeriodKey\(selectedStatPeriod\)/);
+  assert.match(obs, /const statClockLabel = \[/);
+  assert.match(obs, /statPeriodUnavailable \? /);
   assert.match(obs, /const statStoryLabel = homeStatLeads === awayStatLeads/);
   assert.match(obs, /homeDisplayCode/);
   assert.match(obs, /awayDisplayCode/);
@@ -379,7 +386,8 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /stat-row-label-card/);
   assert.match(obs, /stat-row-leader-card/);
   assert.match(obs, /stat-split-bar/);
-  assert.match(obs, /distinctTeamAccents\(t, getField\('homeColor'\), getField\('awayColor'\)\)/);
+  assert.match(obs, /distinctTeamAccents\(\s*t,\s*resolveField \? resolveField\('homeColor', 'homeColor'\)/);
+  assert.match(obs, /resolveField \? resolveField\('awayColor', 'awayColor'\)/);
   assert.match(obs, /const homeAccent = teamAccents\.home/);
   assert.match(obs, /const awayAccent = teamAccents\.away/);
   assert.match(obs, /stats-reference-board/);
@@ -421,7 +429,9 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /player\.shotsOnTarget/);
   assert.match(obs, /player\.keyPasses/);
   assert.match(obs, /referrerPolicy="no-referrer"/);
-  assert.match(obs, /metricValue: activeMetric\.value\(player\)/);
+  assert.match(obs, /requestedMetricValue \?\? metricFallbackValue/);
+  assert.match(obs, /metricMissing/);
+  assert.match(obs, /المؤشر غير متاح - عرض بديل واضح/);
   assert.match(obs, /scorerMetricValue/);
   assert.match(obs, /scorerKnownStat/);
   assert.doesNotMatch(obs, /player\.keyPasses \?\? 0/);

@@ -45,6 +45,7 @@ export type MondialMatchDetailStat = {
   label: string;
   home: number | string;
   away: number | string;
+  period?: string;
 };
 
 export type MondialMatchDetailPotm = {
@@ -94,6 +95,7 @@ export type MondialMatchDetails = {
     away?: MondialMatchDetailLineup;
   };
   teamStats: MondialMatchDetailStat[];
+  teamStatsByPeriod?: Record<string, MondialMatchDetailStat[]>;
   players: MondialMatchDetailPlayer[];
   playerOfTheMatch?: MondialMatchDetailPotm;
   topPlayers: {
@@ -624,10 +626,28 @@ const normalizeLineup = (
   };
 };
 
-const statRows = (statsSource: unknown): MondialMatchDetailStat[] => {
-  const periods = recordOf(recordOf(statsSource)?.Periods);
-  const all = recordOf(periods?.All);
-  const categories = Array.isArray(all?.stats) ? all.stats : [];
+export const normalizeStatsPeriodKey = (value: unknown): string => {
+  const raw = stringValue(value, 'FULL').trim();
+  const token = raw.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (!token || token === 'all' || token === 'full' || token.includes('fulltime') || token.includes('match')) return 'FULL';
+  if (token === '1h' || token.includes('firsthalf') || token.includes('1sthalf') || token.includes('halftime1')) return '1H';
+  if (token === '2h' || token.includes('secondhalf') || token.includes('2ndhalf') || token.includes('halftime2')) return '2H';
+  if (token === 'et' || token.includes('extratime') || token.includes('overtime')) return 'ET';
+  if (token === 'pen' || token.includes('penalty') || token.includes('shootout')) return 'PEN';
+  if (token === 'live' || token.includes('current')) return 'LIVE';
+  return raw.toUpperCase();
+};
+
+const statRowsFromPeriod = (
+  periodStats: unknown,
+  period: string
+): MondialMatchDetailStat[] => {
+  const periodRecord = recordOf(periodStats);
+  const categories = Array.isArray(periodRecord?.stats)
+    ? periodRecord.stats
+    : Array.isArray(periodStats)
+      ? periodStats
+      : [];
   const rows: MondialMatchDetailStat[] = [];
   const seen = new Set<string>();
   categories.forEach(categoryValue => {
@@ -647,11 +667,37 @@ const statRows = (statsSource: unknown): MondialMatchDetailStat[] => {
         label,
         home: values[0] as string | number,
         away: values[1] as string | number,
+        period,
       });
     });
   });
   return rows;
 };
+
+const statRowsByPeriod = (statsSource: unknown): Record<string, MondialMatchDetailStat[]> => {
+  const periods = recordOf(recordOf(statsSource)?.Periods);
+  const rowsByPeriod: Record<string, MondialMatchDetailStat[]> = {};
+  if (periods) {
+    Object.entries(periods).forEach(([periodName, periodValue]) => {
+      const period = normalizeStatsPeriodKey(periodName);
+      const rows = statRowsFromPeriod(periodValue, period);
+      if (!rows.length) return;
+      rowsByPeriod[period] = rows;
+    });
+  }
+
+  if (!rowsByPeriod.FULL && rowsByPeriod.LIVE) {
+    rowsByPeriod.FULL = rowsByPeriod.LIVE;
+  }
+  if (!Object.keys(rowsByPeriod).length) {
+    const rows = statRowsFromPeriod(statsSource, 'FULL');
+    if (rows.length) rowsByPeriod.FULL = rows;
+  }
+  return rowsByPeriod;
+};
+
+const statRows = (statsSource: unknown): MondialMatchDetailStat[] =>
+  statRowsByPeriod(statsSource).FULL ?? [];
 
 const playerStatRows = (statsSource: unknown): NonNullable<MondialMatchDetailPotm['stats']> => {
   const groups = Array.isArray(statsSource) ? statsSource : [];
@@ -786,6 +832,10 @@ export const normalizeFotMobMatchDetails = (
     ...(awayLineup?.subs ?? []),
   ];
   const topPlayers = normalizeTopPlayers(matchFacts?.topPlayers, home.id, away.id);
+  const teamStatsByPeriod = statRowsByPeriod(content?.stats);
+  const teamStats = teamStatsByPeriod.FULL
+    ?? Object.values(teamStatsByPeriod).find(rows => rows.length)
+    ?? [];
   const statusLabel = stringValue(recordOf(status?.reason)?.short, finished ? 'FT' : matchStatus.toUpperCase());
   const statusCode = statusCodeFrom(matchStatus, statusLabel, homePenaltyScore, awayPenaltyScore);
   const winnerSide = homePenaltyScore !== undefined && awayPenaltyScore !== undefined && homePenaltyScore !== awayPenaltyScore
@@ -822,14 +872,15 @@ export const normalizeFotMobMatchDetails = (
       home: homeLineup,
       away: awayLineup,
     },
-    teamStats: statRows(content?.stats),
+    teamStats,
+    teamStatsByPeriod,
     players,
     playerOfTheMatch: normalizePotm(matchFacts?.playerOfTheMatch, home.id, away.id),
     topPlayers,
     availability: {
       lineups: Boolean(homeLineup?.starters.length || awayLineup?.starters.length),
       events: Boolean(eventList(matchFacts?.events).length),
-      teamStats: Boolean(statRows(content?.stats).length),
+      teamStats: Boolean(Object.values(teamStatsByPeriod).some(rows => rows.length)),
       playerStats: Object.keys(playerStats).length > 0,
       ratings: players.some(player => player.rating !== undefined) || Boolean(matchFacts?.playerOfTheMatch),
     },
@@ -854,12 +905,27 @@ const normalizeDetailStatKey = (value: string): string =>
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9\u0600-\u06ff]+/g, '');
 
+export const statsForPeriod = (
+  details: MondialMatchDetails | null | undefined,
+  period: unknown = 'FULL'
+): MondialMatchDetailStat[] => {
+  if (!details) return [];
+  const key = normalizeStatsPeriodKey(period);
+  if (key === 'LIVE') {
+    const liveRows = details.teamStatsByPeriod?.LIVE;
+    if (liveRows?.length) return liveRows;
+  }
+  const periodRows = details.teamStatsByPeriod?.[key];
+  return periodRows?.length ? periodRows : details.teamStats;
+};
+
 export const findDetailStat = (
   details: MondialMatchDetails | null | undefined,
-  keys: string[]
+  keys: string[],
+  period: unknown = 'FULL'
 ): MondialMatchDetailStat | undefined => {
   const wanted = new Set(keys.flatMap(key => [key.toLowerCase(), normalizeDetailStatKey(key)]));
-  return details?.teamStats.find(stat =>
+  return statsForPeriod(details, period).find(stat =>
     wanted.has(stat.key.toLowerCase()) ||
     wanted.has(stat.label.toLowerCase()) ||
     wanted.has(normalizeDetailStatKey(stat.key)) ||
@@ -952,11 +1018,13 @@ export const matchDetailsToFields = (
     homeShort: home.code,
     homeCode: home.countryCode || home.code,
     homeLogo: home.logoUrl,
+    homeColor: home.color || '',
     awayTeam: away.name,
     awayName: away.name,
     awayShort: away.code,
     awayCode: away.countryCode || away.code,
     awayLogo: away.logoUrl,
+    awayColor: away.color || '',
     homeScore: details.match.homeScore,
     awayScore: details.match.awayScore,
     homePenaltyScore: details.match.homePenaltyScore,
@@ -973,7 +1041,7 @@ export const matchDetailsToFields = (
     status: detailStatusCode,
     statusCode: detailStatusCode,
     statusLabel: normalizedStatusLabel,
-    period: normalizedStatusLabel,
+    matchPeriodLabel: normalizedStatusLabel,
     minute: details.match.minute ?? '',
     stage: details.match.stage,
     matchStage: details.match.stage,

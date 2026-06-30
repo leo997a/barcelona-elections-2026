@@ -8,11 +8,12 @@ import {
   selectedMatchToFields,
 } from '../dist-server/utils/mondialLiveSelectors.js';
 
-const team = (id, name, shortName, countryCode) => ({
+const team = (id, name, shortName, countryCode, color) => ({
   id,
   name,
   shortName,
   countryCode,
+  color,
   flagUrl: `https://flagcdn.com/${countryCode}.svg`,
 });
 
@@ -68,8 +69,8 @@ const payload = {
     date: '2026-06-25T18:00:00Z',
     homeScore: 1,
     awayScore: 0,
-    home: team(3, 'Canada', 'CAN', 'ca'),
-    away: team(4, 'Qatar', 'QAT', 'qa'),
+    home: team(3, 'Canada', 'CAN', 'ca', '#d80027'),
+    away: team(4, 'Qatar', 'QAT', 'qa', '#7b1735'),
   }, {
     id: 'finished-c',
     group: 'C',
@@ -128,6 +129,21 @@ test('selects matches by team, group, round and status', () => {
   assert.equal(pickWorldCupMatch(fixtures, { mode: 'latest', statusFilter: 'finished' }).id, 'penalty-d');
 });
 
+test('does not treat the stats period field as match status', () => {
+  const [fixture] = fixturesFromWorldCupData({
+    fixtures: [{
+      id: 'period-only',
+      status: 'scheduled',
+      period: 'FirstHalf',
+      home: team(10, 'Spain', 'ESP', 'es'),
+      away: team(11, 'Canada', 'CAN', 'ca'),
+    }],
+  }, []);
+
+  assert.equal(fixture.status, 'scheduled');
+  assert.equal(fixture.statusCode, 'PRE');
+});
+
 test('maps the selected fixture to legacy template fields', () => {
   const fixtures = fixturesFromWorldCupData(payload, []);
   const selected = pickWorldCupMatch(fixtures, { mode: 'match_id', selectedMatchId: 'live-b' });
@@ -137,7 +153,15 @@ test('maps the selected fixture to legacy template fields', () => {
   assert.equal(fields.awayTeam, 'Qatar');
   assert.equal(fields.homeScore, 1);
   assert.equal(fields.minute, '67');
+  assert.equal(fields.period, 'FULL');
+  assert.equal(fields.statsPeriod, 'FULL');
   assert.equal(fields.matchStatus, 'LIVE');
+  assert.equal(fields.statusLabel, "67'");
+  assert.equal(fields.matchPeriodLabel, "67'");
+  assert.equal(fields.homeLogo, 'https://flagcdn.com/ca.svg');
+  assert.equal(fields.awayLogo, 'https://flagcdn.com/qa.svg');
+  assert.equal(fields.homeColor, '#d80027');
+  assert.equal(fields.awayColor, '#7b1735');
   assert.equal(fields.groupBadge, 'المجموعة B');
 });
 
@@ -146,6 +170,8 @@ test('maps penalty shootout matches with winner and score detail', () => {
   const selected = pickWorldCupMatch(fixtures, { mode: 'match_id', selectedMatchId: 'penalty-d' });
   const fields = selectedMatchToFields(selected, 'World Cup');
   assert.equal(fields.matchStatus, 'PEN');
+  assert.equal(fields.period, 'PEN');
+  assert.equal(fields.statsPeriod, 'PEN');
   assert.equal(fields.isPenaltyShootout, true);
   assert.equal(fields.penaltyScoreText, '4 : 3');
   assert.equal(fields.winnerTeam, 'Paraguay');

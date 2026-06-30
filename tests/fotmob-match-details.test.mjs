@@ -127,6 +127,26 @@ const rawMatchDetails = {
             ],
           }],
         },
+        FirstHalf: {
+          stats: [{
+            title: 'Top stats',
+            stats: [
+              { key: 'BallPossesion', title: 'Ball possession', stats: ['61%', '39%'] },
+              { key: 'expected_goals', title: 'Expected goals (xG)', stats: [1.1, 0.2] },
+              { key: 'TotalShots', title: 'Total shots', stats: [7, 3] },
+            ],
+          }],
+        },
+        SecondHalf: {
+          stats: [{
+            title: 'Top stats',
+            stats: [
+              { key: 'BallPossesion', title: 'Ball possession', stats: ['49%', '51%'] },
+              { key: 'expected_goals', title: 'Expected goals (xG)', stats: [0.7, 0.5] },
+              { key: 'TotalShots', title: 'Total shots', stats: [6, 5] },
+            ],
+          }],
+        },
       },
     },
   },
@@ -147,6 +167,9 @@ test('normalizes current FotMob match details into the REO contract', () => {
   assert.equal(details.lineups.home.formation, '4-3-3');
   assert.equal(details.lineups.away.coach, 'Hugo Broos');
   assert.equal(details.teamStats.length, 13);
+  assert.equal(details.teamStatsByPeriod.FULL.length, 13);
+  assert.equal(details.teamStatsByPeriod['1H'].length, 3);
+  assert.equal(details.teamStatsByPeriod['2H'].length, 3);
   assert.equal(details.playerOfTheMatch.rating, 8.7);
   assert.equal(details.playerOfTheMatch.stats[0].label, 'Rating');
   assert.equal(details.playerOfTheMatch.stats[1].key, 'goals');
@@ -198,6 +221,8 @@ test('finds detail stats across bridge key and label aliases', () => {
 
   assert.equal(findDetailStat(details, ['Expected goals'])?.home, 1.8);
   assert.equal(findDetailStat(details, ['expected_goals'])?.away, 0.7);
+  assert.equal(findDetailStat(details, ['Expected goals'], '1H')?.home, 1.1);
+  assert.equal(findDetailStat(details, ['Expected goals'], '2H')?.away, 0.5);
   assert.equal(findDetailStat(details, ['Shot accuracy'])?.home, '46%');
   assert.equal(findDetailStat(details, ['Shots on target'])?.away, 3);
 });

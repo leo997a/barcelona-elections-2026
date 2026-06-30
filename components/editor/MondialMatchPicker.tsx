@@ -80,12 +80,18 @@ export const MondialMatchPicker: React.FC<MondialMatchPickerProps> = ({ fields, 
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [stageFilter, setStageFilter] = useState('ANY');
-  const [statusFilter, setStatusFilter] = useState('any');
+  const [statusFilter, setStatusFilter] = useState(() => fieldValue(fields, 'matchStatusFilter', 'any'));
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const apiUrl = fieldValue(fields, 'bridgeApiUrl', '/api/reo-match?action=world-cup');
   const selectedMatchId = fieldValue(fields, 'selectedMatchId');
   const currentMode = fieldValue(fields, 'matchPickMode', 'next');
+  const allowedFields = useMemo(() => fieldIds(fields), [fields]);
+
+  useEffect(() => {
+    const nextStatus = fieldValue(fields, 'matchStatusFilter', 'any');
+    setStatusFilter(current => current === nextStatus ? current : nextStatus);
+  }, [fields]);
 
   useEffect(() => {
     let active = true;
@@ -139,7 +145,6 @@ export const MondialMatchPicker: React.FC<MondialMatchPickerProps> = ({ fields, 
   }, [fixtures, query, stageFilter, statusFilter]);
 
   const selectedFixture = fixtures.find(match => String(match.id) === selectedMatchId);
-  const allowedFields = fieldIds(fields);
 
   const applyFixture = (match: MondialLiveMatch) => {
     const mapped = selectedMatchToFields(match, String(data?.competition || 'FIFA World Cup 2026'));
@@ -199,7 +204,11 @@ export const MondialMatchPicker: React.FC<MondialMatchPickerProps> = ({ fields, 
         </select>
         <select
           value={statusFilter}
-          onChange={event => setStatusFilter(event.target.value)}
+          onChange={event => {
+            const nextStatus = event.target.value;
+            setStatusFilter(nextStatus);
+            if (allowedFields.has('matchStatusFilter')) onChange({ matchStatusFilter: nextStatus });
+          }}
           className="rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-xs text-white outline-none focus:border-cyan-400"
         >
           <option value="any">كل الحالات</option>

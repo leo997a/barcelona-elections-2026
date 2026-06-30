@@ -176,6 +176,7 @@ const mergeSelectedMatchDetails = (
       countryCode: detailMatch.home.countryCode,
       flagUrl: selectedMatch.home?.flagUrl || detailMatch.home.logoUrl,
       logoUrl: detailMatch.home.logoUrl,
+      color: detailMatch.home.color || homeFallback.color,
     },
     away: {
       ...awayFallback,
@@ -185,6 +186,7 @@ const mergeSelectedMatchDetails = (
       countryCode: detailMatch.away.countryCode,
       flagUrl: selectedMatch.away?.flagUrl || detailMatch.away.logoUrl,
       logoUrl: detailMatch.away.logoUrl,
+      color: detailMatch.away.color || awayFallback.color,
     },
     homeScore: detailMatch.homeScore,
     awayScore: detailMatch.awayScore,
@@ -449,12 +451,20 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
     matchDetails,
     bridgeStatus
   );
-  const getMatchField = (fieldId: string): unknown =>
-    matchDetailFields[fieldId] !== undefined
-      ? matchDetailFields[fieldId]
-      : selectedMatchFields[fieldId] !== undefined
-        ? selectedMatchFields[fieldId]
-        : getField(fieldId);
+  const firstFilled = (...values: unknown[]): unknown =>
+    values.find(value => value !== undefined && value !== null && value !== '');
+
+  const resolveStatsPeriodField = (fieldId: string): unknown => {
+    const manual = firstFilled(getField('statsPeriod'), getField('period'));
+    const auto = firstFilled(matchDetailFields[fieldId], selectedMatchFields[fieldId]);
+    const manualToken = String(manual ?? '').trim().toUpperCase();
+    return manualToken && manualToken !== 'FULL' ? manual : firstFilled(auto, manual, 'FULL');
+  };
+
+  const getMatchField = (fieldId: string): unknown => {
+    if (fieldId === 'period' || fieldId === 'statsPeriod') return resolveStatsPeriodField(fieldId);
+    return firstFilled(matchDetailFields[fieldId], selectedMatchFields[fieldId], getField(fieldId));
+  };
 
   useEffect(() => {
     if (!updateSequence) {
@@ -469,12 +479,15 @@ export const Mondial2026Renderer: React.FC<MondialRendererProps> = ({
 
   // دمج: البيانات الحية تتفوق على الحقول اليدوية عند توفرها
   const resolveField = (fieldId: string, liveKey?: string): unknown => {
-    if (matchDetailFields[fieldId] !== undefined) return matchDetailFields[fieldId];
-    if (liveKey && matchDetailFields[liveKey] !== undefined) return matchDetailFields[liveKey];
-    if (liveKey && selectedMatchFields[liveKey] !== undefined) return selectedMatchFields[liveKey];
-    if (selectedMatchFields[fieldId] !== undefined) return selectedMatchFields[fieldId];
-    if (liveData && liveKey && liveData[liveKey] !== undefined) return liveData[liveKey];
-    return getField(fieldId);
+    if (fieldId === 'period' || fieldId === 'statsPeriod') return resolveStatsPeriodField(fieldId);
+    return firstFilled(
+      matchDetailFields[fieldId],
+      liveKey ? matchDetailFields[liveKey] : undefined,
+      liveKey ? selectedMatchFields[liveKey] : undefined,
+      selectedMatchFields[fieldId],
+      liveData && liveKey ? liveData[liveKey] : undefined,
+      getField(fieldId)
+    );
   };
 
   return (
@@ -612,14 +625,18 @@ const MondialScoreboardVariant: React.FC<VariantProps> = ({
   const homeScore = Number(resolveField('homeScore', 'homeScore') ?? DEMO_MATCH.homeScore);
   const awayScore = Number(resolveField('awayScore', 'awayScore') ?? DEMO_MATCH.awayScore);
   const minute = String(resolveField('minute', 'minute') || DEMO_MATCH.minute);
-  const period = String(resolveField('period', 'period') || DEMO_MATCH.period);
+  const period = String(
+    resolveField('matchPeriodLabel', 'matchPeriodLabel') ||
+    resolveField('statusLabel', 'statusLabel') ||
+    DEMO_MATCH.period
+  );
   const status = String(resolveField('matchStatus', 'status') || 'PRE').toUpperCase();
-  const homeLogo = String(getField('homeLogo') || '');
-  const awayLogo = String(getField('awayLogo') || '');
-  const homeShort = String(getField('homeShort') || homeTeam.slice(0, 3).toUpperCase());
-  const awayShort = String(getField('awayShort') || awayTeam.slice(0, 3).toUpperCase());
-  const homeColor = String(getField('homeColor') || t.accent);
-  const awayColor = String(getField('awayColor') || t.accent2);
+  const homeLogo = String(resolveField('homeLogo', 'homeLogo') || getField('homeLogo') || '');
+  const awayLogo = String(resolveField('awayLogo', 'awayLogo') || getField('awayLogo') || '');
+  const homeShort = String(resolveField('homeShort', 'homeShort') || getField('homeShort') || homeTeam.slice(0, 3).toUpperCase());
+  const awayShort = String(resolveField('awayShort', 'awayShort') || getField('awayShort') || awayTeam.slice(0, 3).toUpperCase());
+  const homeColor = String(resolveField('homeColor', 'homeColor') || getField('homeColor') || t.accent);
+  const awayColor = String(resolveField('awayColor', 'awayColor') || getField('awayColor') || t.accent2);
   const isLive = status === 'LIVE';
 
   // أحداث المباراة
@@ -785,8 +802,8 @@ const MondialScorebugVariant: React.FC<VariantProps> = ({
   const awayScore = Number(resolveField('awayScore', 'awayScore') ?? 0);
   const minute = String(resolveField('minute', 'minute') || '67');
   const competition = String(getField('competitionShort') || 'WC26');
-  const homeColor = String(getField('homeColor') || t.accent);
-  const awayColor = String(getField('awayColor') || t.accent2);
+  const homeColor = String(resolveField('homeColor', 'homeColor') || getField('homeColor') || t.accent);
+  const awayColor = String(resolveField('awayColor', 'awayColor') || getField('awayColor') || t.accent2);
   const isLive = String(resolveField('matchStatus', 'status') || 'PRE').toUpperCase() === 'LIVE';
   const position = String(getField('scorebugPosition') || 'TOP_RIGHT');
 
@@ -863,8 +880,8 @@ const MondialMatchStatsVariant: React.FC<VariantProps> = ({
   const awayTeam = String(resolveField('awayTeam', 'awayTeam') || DEMO_MATCH.awayTeamAr);
   const homeScore = Number(resolveField('homeScore', 'homeScore') ?? DEMO_MATCH.homeScore);
   const awayScore = Number(resolveField('awayScore', 'awayScore') ?? DEMO_MATCH.awayScore);
-  const homeColor = String(getField('homeColor') || t.accent);
-  const awayColor = String(getField('awayColor') || t.accent2);
+  const homeColor = String(resolveField('homeColor', 'homeColor') || getField('homeColor') || t.accent);
+  const awayColor = String(resolveField('awayColor', 'awayColor') || getField('awayColor') || t.accent2);
   const competition = String(getField('competition') || 'FIFA World Cup 2026');
 
   // إحصائيات — من البيانات الحية أو اليدوية أو التجريبية
