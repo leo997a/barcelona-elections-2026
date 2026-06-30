@@ -14,9 +14,27 @@
  * يُرجِع «بطاقة REO موحّدة» لكل حقل فيها {value, _src}.
  */
 
-import { buildMemoryCard } from '../../REO-TRANSFERMARKT-INTEL/bridge/lib/normalize.js';
-
 const tag = (value, src) => ({ value, _src: src });
+
+function buildMemoryCard(tmStore, query) {
+  const players = Array.isArray(tmStore?.players) ? tmStore.players : [];
+  const needle = String(query?.name || '').trim().toLowerCase();
+  const player = players.find((item) => String(item?.name || '').trim().toLowerCase() === needle);
+  if (!player) {
+    return { matchQuality: 'missing', realDataAvailable: false, player: { dataStatus: 'missing' } };
+  }
+  return {
+    matchQuality: 'local',
+    realDataAvailable: true,
+    player: {
+      dataStatus: 'available',
+      ...player,
+      market: player.market || {},
+      transfers: player.transfers || {},
+      appearances: player.appearances || {},
+    },
+  };
+}
 
 function eurLabel(v) {
   if (typeof v !== 'number' || !isFinite(v)) return null;

@@ -13,6 +13,8 @@ import {
 type BridgeView = 'fee' | 'latest' | 'probability' | 'medical' | 'sources';
 type ResponseMode = 'bridge' | 'fallback';
 
+const DEFAULT_TRANSFERS_BRIDGE_URL = 'https://reo-mercato-bridge-871752181341.us-central1.run.app/api/feed';
+
 interface SourceStatus {
   configured: boolean;
   attempted: boolean;
@@ -246,7 +248,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   const query = getQuery(req);
   const view = resolveView(query.get('view'));
   const limit = Math.max(1, Math.min(24, Number(query.get('limit') || 6) || 6));
-  const transfersUrl = envText('REO_TRANSFERS_BRIDGE_URL');
+  const transfersEnvUrl = envText('REO_TRANSFERS_BRIDGE_URL');
+  const transfersUrl = transfersEnvUrl || DEFAULT_TRANSFERS_BRIDGE_URL;
   const transfermarktUrl = envText('REO_TRANSFERMARKT_BRIDGE_URL');
   const transfers = await fetchBridge(
     'fotmob',
@@ -273,9 +276,11 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   if (!cards.length) cards = MERCATO_FALLBACK_TRANSFERS;
 
   cards = filterCards(cards, query).slice(0, limit);
+  const bridgeEnvConfigured = Boolean(transfersEnvUrl || transfermarktUrl);
   const bridgeConfigured = Boolean(transfersUrl || transfermarktUrl);
   const upstreamAttempted = transfers.status.attempted || transfermarkt.status.attempted;
   const upstreamStatus = transfers.status.status ?? transfermarkt.status.status;
+  const bridgeTokenConfigured = Boolean(envText('REO_TRANSFERS_BRIDGE_TOKEN') || envText('REO_TRANSFERMARKT_BRIDGE_TOKEN'));
 
   return sendJson(res, 200, {
     ok: true,
@@ -288,22 +293,22 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     count: cards.length,
     bridgeConfigured,
     bridgeUrlConfigured: bridgeConfigured,
-    bridgeUrlEnvConfigured: bridgeConfigured,
-    bridgeUrlDefaultUsed: false,
-    bridgeTokenConfigured: Boolean(envText('REO_TRANSFERS_BRIDGE_TOKEN') || envText('REO_TRANSFERMARKT_BRIDGE_TOKEN')),
+    bridgeUrlEnvConfigured: bridgeEnvConfigured,
+    bridgeUrlDefaultUsed: !transfersEnvUrl,
+    bridgeTokenConfigured,
     upstreamAttempted,
     upstreamStatus,
     auth: {
-      required: bridgeConfigured,
-      provided: Boolean(envText('REO_TRANSFERS_BRIDGE_TOKEN') || envText('REO_TRANSFERMARKT_BRIDGE_TOKEN')),
-      valid: responseMode === 'bridge',
+      required: bridgeTokenConfigured,
+      provided: bridgeTokenConfigured,
+      valid: !bridgeTokenConfigured || responseMode === 'bridge',
     },
     sources: {
       fotmob: transfers.status,
       transfermarkt: transfermarkt.status,
     },
     warnings: [
-      ...(!bridgeConfigured ? ['REO_TRANSFERS_BRIDGE_URL is not configured; fallback cards are being used.'] : []),
+      ...(!transfersEnvUrl ? ['Using default REO Cloud Run mercato bridge because REO_TRANSFERS_BRIDGE_URL is not configured.'] : []),
       ...(bridgeConfigured && responseMode === 'fallback' ? ['Configured mercato bridge returned no usable transfer cards.'] : []),
     ],
     transfers: cards,
