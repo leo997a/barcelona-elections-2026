@@ -360,6 +360,13 @@ test('mondial statistical templates expose and consume real display modes', asyn
 
   assert.match(obs, /const statsViewMode = text\(getField, 'statsViewMode', 'dual_bars'\)/);
   assert.match(obs, /const statFocus = text\(getField, 'statFocus', 'balanced'\)/);
+  assert.match(templates, /id: 'period'[\s\S]*?type: 'select'/);
+  for (const option of ['FULL', '1H', '2H', 'ET', 'PEN', 'LIVE']) {
+    assert.match(templates, new RegExp(`value: '${option}'`), `${option} is not available as a match stats period`);
+  }
+  assert.match(obs, /const statPeriodRaw = text\(getField, 'period', 'FULL'\)/);
+  assert.match(obs, /const statClockLabel = \[dataStatusLabel, statPeriodLabel\]/);
+  assert.match(obs, /const statStoryLabel = homeStatLeads === awayStatLeads/);
   assert.match(obs, /homeDisplayCode/);
   assert.match(obs, /awayDisplayCode/);
   assert.match(obs, /stat-comparison-header/);
@@ -370,9 +377,11 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /stat-metric-card/);
   assert.match(obs, /stat-row-value-card/);
   assert.match(obs, /stat-row-label-card/);
+  assert.match(obs, /stat-row-leader-card/);
   assert.match(obs, /stat-split-bar/);
   assert.match(obs, /xg-team-card/);
   assert.match(obs, /xg-metric-card/);
+  assert.match(obs, /const xgLeaderName = xgLeaderCode === 'EVEN'/);
   assert.match(obs, /xg-shot-summary/);
   assert.match(obs, /shot-flow-legend/);
   assert.match(obs, /shot-flow-column/);

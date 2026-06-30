@@ -1466,6 +1466,18 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const status = matchStatusPresentation(getField, resolveField);
   const minute = String(matchDetails?.match.minute ?? getField('minute') ?? '').trim();
   const dataStatusLabel = status.isLive ? liveStatusText(minute) : status.label;
+  const statPeriodRaw = text(getField, 'period', 'FULL');
+  const statPeriodLabel = ({
+    FULL: 'المباراة كاملة',
+    '1H': 'الشوط الأول',
+    '2H': 'الشوط الثاني',
+    ET: 'الوقت الإضافي',
+    PEN: 'ركلات الترجيح',
+    LIVE: minute ? `حتى الدقيقة ${minute}` : 'حسب الدقيقة المباشرة',
+  } as Record<string, string>)[statPeriodRaw] ?? statPeriodRaw;
+  const statClockLabel = [dataStatusLabel, statPeriodLabel]
+    .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
+    .join(' · ');
   const statFocusLabel = ({
     balanced: 'كل مؤشرات المباراة',
     attack: 'الهجوم والتسديد',
@@ -1604,13 +1616,20 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     const liveRow = findDetailStat(matchDetails, definition.keys);
     const homeValue = liveRow?.home ?? num(getField, definition.homeField, definition.homeFallback);
     const awayValue = liveRow?.away ?? num(getField, definition.awayField, definition.awayFallback);
+    const homeBar = detailStatNumber(homeValue);
+    const awayBar = detailStatNumber(awayValue);
+    const leaderCode = homeBar === awayBar ? 'EVEN' : homeBar > awayBar ? homeDisplayCode : awayDisplayCode;
+    const leaderName = leaderCode === 'EVEN' ? 'تعادل' : leaderCode === homeDisplayCode ? homeDisplayName : awayDisplayName;
     return {
       label: definition.label,
       focus: definition.focus,
       homeValue,
       awayValue,
-      homeBar: detailStatNumber(homeValue),
-      awayBar: detailStatNumber(awayValue),
+      homeBar,
+      awayBar,
+      leaderCode,
+      leaderName,
+      leaderLabel: leaderCode === 'EVEN' ? 'متوازن' : `أفضلية ${leaderCode}`,
     };
   });
   const visibleRows = statFocus === 'balanced'
@@ -1624,6 +1643,13 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   ];
   const featuredRows = statRows.slice(0, 4);
   const momentumRows = statRows.slice(0, 6);
+  const homeStatLeads = statRows.filter(row => row.leaderCode === homeDisplayCode).length;
+  const awayStatLeads = statRows.filter(row => row.leaderCode === awayDisplayCode).length;
+  const statStoryLabel = homeStatLeads === awayStatLeads
+    ? 'المؤشرات متقاربة بين المنتخبين'
+    : homeStatLeads > awayStatLeads
+      ? `${homeDisplayName} يتفوق في ${homeStatLeads} مؤشرات`
+      : `${awayDisplayName} يتفوق في ${awayStatLeads} مؤشرات`;
   const pressureRows = rows
     .filter(row => row.focus === 'pressure' || row.focus === 'accuracy' || row.label === 'ميل الملعب')
     .slice(0, 6);
@@ -1650,14 +1676,19 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     : xgHomeNumber > xgAwayNumber
       ? homeDisplayCode
       : awayDisplayCode;
+  const xgLeaderName = xgLeaderCode === 'EVEN'
+    ? 'تعادل'
+    : xgLeaderCode === homeDisplayCode
+      ? homeDisplayName
+      : awayDisplayName;
   const xgLeaderCopy = xgLeaderCode === 'EVEN'
     ? 'جودة الفرص متعادلة'
-    : `${xgLeaderCode} متفوق في جودة الفرص`;
+    : `${xgLeaderName} متفوق في جودة الفرص`;
   const c = themedColors(t);
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-9 flex flex-col">
-        <KineticHeader title="إحصائيات المباراة" tag={`${dataStatusLabel} · REO SHOW`} theme={t} />
+        <KineticHeader title="إحصائيات المباراة" tag={`${statClockLabel} · REO SHOW`} theme={t} />
         <div className="flex-1 flex items-center justify-center">
           <div className="relative w-[1040px]">
             <div className="absolute inset-0 rounded-[32px]" style={{ background: c.danger, transform: 'translate(-18px,17px)' }} />
@@ -1666,9 +1697,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
               <div className="grid grid-cols-[1fr_270px_1fr] items-center bg-black text-white px-9 py-5">
                 <div className="flex items-center gap-4"><MondialFlag codeOrName={homeCode} size={48} /><TeamCode value={homeDisplayCode} color={WC.green} small /></div>
                 <div className="stat-context-chip text-center font-black">
-                  <div className="text-[10px] text-[#eeff00]">{dataStatusLabel}</div>
+                  <div className="text-[10px] text-[#eeff00]">{statClockLabel}</div>
                   <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
-                  <div className="mt-1 text-[9px] text-white/55">{statFocusLabel} · {statsViewModeLabel}</div>
+                  <div className="mt-1 text-[9px] text-white/55">{statStoryLabel} · {statFocusLabel} · {statsViewModeLabel}</div>
                 </div>
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayDisplayCode} color={WC.red} small /><MondialFlag codeOrName={awayCode} size={48} /></div>
               </div>
@@ -1770,7 +1801,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div className="text-[13px] font-black opacity-70">SHOT QUALITY</div>
                         <div className="text-[34px] leading-none font-black">جودة الفرص xG</div>
                       </div>
-                      <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">{dataStatusLabel}</div>
+                      <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">{statClockLabel}</div>
                     </div>
                     <div className="relative rounded-[22px] border-[4px] border-black bg-white px-5 py-3 font-black shadow-[8px_8px_0_rgba(0,0,0,.18)]">
                       <div className="flex items-center justify-between gap-4">
@@ -1792,7 +1823,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                           <div className="pb-2 text-[12px] font-black">xG</div>
                         </div>
                       </div>
-                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-black px-5 py-4 text-white">
+                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black px-5 py-4 text-white" style={{ background: c.danger }}>
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
                           <span className="flex items-center gap-3"><MondialFlag codeOrName={awayCode} size={38} /><span>{awayDisplayCode}</span></span>
                           <span className="text-[11px] opacity-60">{awayDisplayName}</span>
@@ -1809,12 +1840,12 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       <div className="xg-shot-team flex items-center justify-end gap-2 text-left"><b className="text-[28px] leading-none">{detailStatText(shotsRow?.awayValue ?? 0)}</b><span>{awayDisplayCode}</span><MondialFlag codeOrName={awayCode} size={28} /></div>
                     </div>
                   </div>
-                  <div className="relative bg-black text-white border-[5px] border-black rounded-[30px] p-6 overflow-hidden">
-                    <div className="absolute inset-0 opacity-30" style={{ background: `radial-gradient(circle at 18% 20%, ${c.danger}, transparent 30%), radial-gradient(circle at 85% 75%, ${c.accent}, transparent 34%)` }} />
+                  <div className="relative bg-white text-black border-[5px] border-black rounded-[30px] p-6 overflow-hidden">
+                    <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at 18% 20%, ${c.danger}, transparent 30%), radial-gradient(circle at 85% 75%, ${c.accent}, transparent 34%)` }} />
                     <div className="relative flex items-center justify-between mb-5">
                       <div>
                         <div className="text-[34px] leading-none font-black">تدفق التسديد</div>
-                        <div className="mt-2 text-[11px] font-black text-white/60">كل عمود يقارن المؤشر بين المنتخبين</div>
+                        <div className="mt-2 text-[11px] font-black text-black/60">كل عمود يقارن المؤشر بين المنتخبين</div>
                       </div>
                       <div className="shot-flow-legend flex items-center gap-3 rounded-full bg-white text-black border-[4px] border-black px-4 py-2 text-[12px] font-black">
                         <span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded-full" style={{ background: c.accent }} />{homeDisplayCode}</span>
@@ -1826,13 +1857,13 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         const maxValue = Math.max(1, homeBar, awayBar);
                         return (
                           <div key={`shot-flow-${label}`} className="shot-flow-column h-full flex flex-col justify-end gap-2" style={{ animation: `wcBadgePop .55s ${.3 + index * .08}s both` }}>
-                            <div className="grid grid-cols-2 gap-2 items-end h-[210px] rounded-[18px] border border-white/10 bg-white/5 px-2 pb-2 pt-8">
-                              <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (homeBar / maxValue) * 100)}%`, background: c.accent }} />
-                              <div className="rounded-t-[14px] border-[3px] border-white/40" style={{ height: `${Math.max(16, (awayBar / maxValue) * 100)}%`, background: c.danger }} />
+                            <div className="grid grid-cols-2 gap-2 items-end h-[210px] rounded-[18px] border-[3px] border-black bg-black/5 px-2 pb-2 pt-8">
+                              <div className="rounded-t-[14px] border-[3px] border-black" style={{ height: `${Math.max(16, (homeBar / maxValue) * 100)}%`, background: c.accent }} />
+                              <div className="rounded-t-[14px] border-[3px] border-black" style={{ height: `${Math.max(16, (awayBar / maxValue) * 100)}%`, background: c.danger }} />
                             </div>
                             <div className="text-center">
                               <div className="text-[19px] font-black">{detailStatText(homeValue)} : {detailStatText(awayValue)}</div>
-                              <div className="text-[9px] font-black text-white/65 leading-tight">{label}</div>
+                              <div className="text-[9px] font-black text-black/65 leading-tight">{label}</div>
                             </div>
                           </div>
                         );
@@ -1851,7 +1882,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                         <div key={label} className="border-[5px] border-black rounded-[26px] bg-white p-4 flex flex-col justify-between min-h-[154px]" style={{ animation: `wcBadgePop .55s ${.24 + index * .08}s cubic-bezier(.16,1.25,.3,1) both` }}>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-[13px] font-black">{label}</span>
-                            <span className="text-[10px] font-black rounded-full border-[3px] border-black px-2 py-1" style={{ background: paletteAt(t, index) }}>{dataStatusLabel}</span>
+                            <span className="text-[10px] font-black rounded-full border-[3px] border-black px-2 py-1" style={{ background: paletteAt(t, index) }}>{statClockLabel}</span>
                           </div>
                           <div className="grid grid-cols-[1fr_56px_1fr] items-end gap-3 mt-4 font-black">
                             <div>
@@ -1900,9 +1931,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       </div>
                     </div>
                     <div className="stat-context-chip text-center font-black">
-                      <div className="text-[10px] text-[#eeff00]">{dataStatusLabel}</div>
+                      <div className="text-[10px] text-[#eeff00]">{statClockLabel}</div>
                       <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
-                      <div className="mt-1 text-[9px] text-white/55">{statRows.length} مؤشرات · {statFocusLabel}</div>
+                      <div className="mt-1 text-[9px] text-white/55">{statStoryLabel} · {statRows.length} مؤشرات · {statFocusLabel}</div>
                     </div>
                     <div className="stat-team-chip flex min-w-0 items-center justify-end gap-3 rounded-[17px] border-[3px] border-white/15 bg-white/10 px-3 py-1.5 text-right">
                       <div className="min-w-0">
@@ -1915,7 +1946,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                   <div className="stat-comparison-grid grid grid-cols-2 gap-3">
                     {statComparisonColumns.map((column, columnIndex) => (
                       <div key={`stat-column-${columnIndex}`} className="space-y-2">
-                        {column.map(({ label, homeValue, awayValue, homeBar, awayBar }, index) => {
+                        {column.map(({ label, homeValue, awayValue, homeBar, awayBar, leaderLabel }, index) => {
                           const total = Math.max(1, homeBar + awayBar);
                           const homePct = Math.round((homeBar / total) * 100);
                           const awayPct = 100 - homePct;
@@ -1926,8 +1957,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                               className="stat-comparison-row stat-metric-card rounded-[15px] border-[3px] border-black/85 bg-white px-3 py-2"
                               style={{ animation: `wcRowIn .5s ${.28 + animationIndex * .045}s cubic-bezier(.16,1,.3,1) both` }}
                             >
-                              <div className="mb-1.5 flex items-center justify-center">
+                              <div className="mb-1.5 flex items-center justify-center gap-2">
                                 <span className="stat-row-label-card max-w-full truncate rounded-full border-[2px] border-black bg-black px-4 py-0.5 text-center text-[11px] font-black leading-tight text-white">{label}</span>
+                                <span className="stat-row-leader-card shrink-0 rounded-full border-[2px] border-black bg-white px-3 py-0.5 text-[9px] font-black text-black">{leaderLabel}</span>
                               </div>
                               <div className="grid grid-cols-[82px_1fr_82px] items-center gap-3 font-black">
                                 <div className="stat-row-value-card flex min-w-0 items-center gap-1.5 rounded-[13px] border-[3px] border-black px-2 py-1" style={{ background: c.accent }}>

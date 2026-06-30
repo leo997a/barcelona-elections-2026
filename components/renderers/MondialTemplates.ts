@@ -144,7 +144,14 @@ const mondialMatchDataFields: OverlayField[] = [
   { id: 'homeScore', label: 'نتيجة المضيف', type: 'number', value: 1 },
   { id: 'awayScore', label: 'نتيجة الضيف', type: 'number', value: 0 },
   { id: 'minute', label: 'الدقيقة', type: 'text', value: '67' },
-  { id: 'period', label: 'الشوط', type: 'text', value: 'الشوط الثاني' },
+  { id: 'period', label: 'الشوط / فترة الإحصائيات', type: 'select', value: 'FULL', options: [
+    { value: 'FULL', label: 'المباراة كاملة' },
+    { value: '1H', label: 'الشوط الأول' },
+    { value: '2H', label: 'الشوط الثاني' },
+    { value: 'ET', label: 'الوقت الإضافي' },
+    { value: 'PEN', label: 'ركلات الترجيح' },
+    { value: 'LIVE', label: 'حسب الدقيقة المباشرة' },
+  ]},
   { id: 'matchStatus', label: 'حالة المباراة', type: 'select', value: 'LIVE', options: [
     { value: 'PRE', label: 'قبل المباراة' },
     { value: 'LIVE', label: 'مباشر' },
