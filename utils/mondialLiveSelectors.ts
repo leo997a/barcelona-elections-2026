@@ -17,7 +17,9 @@ export type MondialLiveMatch = {
   awayScore?: number;
   homePenaltyScore?: number;
   awayPenaltyScore?: number;
+  winnerId?: string | number;
   status: string;
+  statusCode?: string;
   statusLabel?: string;
   minute?: string | number;
   date?: string;
@@ -84,6 +86,14 @@ const optionalNumber = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const firstNumber = (...values: unknown[]): number | undefined => {
+  for (const value of values) {
+    const parsed = optionalNumber(value);
+    if (parsed !== undefined) return parsed;
+  }
+  return undefined;
+};
+
 const normalizeCountryCode = (value: unknown): string =>
   stringValue(value).trim().toLowerCase().replace(/_/g, '-');
 
@@ -115,14 +125,27 @@ const normalizeStatus = (value: unknown): string => {
   return 'scheduled';
 };
 
+const normalizeStatusCode = (statusValue: unknown, statusLabelValue: unknown): string => {
+  const token = `${stringValue(statusValue)} ${stringValue(statusLabelValue)}`.trim().toLowerCase();
+  if (token.includes('pen') || token.includes('shootout') || token.includes('ركلات')) return 'PEN';
+  if (token.includes('aet') || token.includes('extra')) return 'AET';
+  if (token.includes('live') || token.includes('playing') || token.includes('inprogress')) return 'LIVE';
+  if (token === 'ht' || token.includes('half')) return 'HT';
+  if (token.includes('finish') || token.includes('full-time') || token.includes('full time') || token.includes('ft')) return 'FT';
+  if (token.includes('cancel') || token.includes('postpon')) return 'CANCELLED';
+  return 'PRE';
+};
+
 const normalizeMatch = (value: unknown, index: number): MondialLiveMatch | null => {
   const source = recordOf(value);
   if (!source) return null;
   const status = normalizeStatus(source.status ?? source.matchStatus);
+  const statusCode = normalizeStatusCode(source.status ?? source.matchStatus, source.statusLabel ?? source.period);
   const home = normalizeTeam(source.home ?? source.homeTeam, `fixture-${index + 1}-home`);
   const away = normalizeTeam(source.away ?? source.awayTeam, `fixture-${index + 1}-away`);
   const homePlaceholder = stringValue(source.homePlaceholder, '') || undefined;
   const awayPlaceholder = stringValue(source.awayPlaceholder, '') || undefined;
+  const penalties = recordOf(source.penalties ?? source.penaltyShootout ?? source.shootout);
   if (!home && !away && !homePlaceholder && !awayPlaceholder) return null;
   return {
     id: (source.id as string | number | undefined) ?? `fixture-${index + 1}`,
@@ -132,9 +155,25 @@ const normalizeMatch = (value: unknown, index: number): MondialLiveMatch | null 
     awayPlaceholder,
     homeScore: optionalNumber(source.homeScore),
     awayScore: optionalNumber(source.awayScore),
-    homePenaltyScore: optionalNumber(source.homePenaltyScore),
-    awayPenaltyScore: optionalNumber(source.awayPenaltyScore),
+    homePenaltyScore: firstNumber(
+      source.homePenaltyScore,
+      source.homePenScore,
+      source.homePens,
+      penalties?.home,
+      penalties?.homeScore,
+      penalties?.team1
+    ),
+    awayPenaltyScore: firstNumber(
+      source.awayPenaltyScore,
+      source.awayPenScore,
+      source.awayPens,
+      penalties?.away,
+      penalties?.awayScore,
+      penalties?.team2
+    ),
+    winnerId: source.winnerId as string | number | undefined,
     status,
+    statusCode,
     statusLabel: stringValue(source.statusLabel, '') || undefined,
     minute: source.minute as string | number | undefined,
     date: stringValue(source.date, '') || undefined,
@@ -280,6 +319,22 @@ const formatMatchDate = (dateValueInput: string | undefined): { date: string; ti
   };
 };
 
+const sideByWinnerId = (match: MondialLiveMatch): 'home' | 'away' | '' => {
+  const winnerId = stringValue(match.winnerId).trim();
+  if (!winnerId) return '';
+  if (match.home && String(match.home.id) === winnerId) return 'home';
+  if (match.away && String(match.away.id) === winnerId) return 'away';
+  return '';
+};
+
+const sideByScore = (
+  homeValue: number | undefined,
+  awayValue: number | undefined
+): 'home' | 'away' | '' => {
+  if (homeValue === undefined || awayValue === undefined || homeValue === awayValue) return '';
+  return homeValue > awayValue ? 'home' : 'away';
+};
+
 export const selectedMatchToFields = (
   match: MondialLiveMatch | undefined,
   competition = 'FIFA World Cup 2026'
@@ -288,16 +343,47 @@ export const selectedMatchToFields = (
   const home = match.home;
   const away = match.away;
   const formatted = formatMatchDate(match.date);
-  const stage = match.group
-    ? `المجموعة ${normalizedToken(match.group)}`
-    : stringValue(match.stage, 'WORLD CUP 2026');
-  const status = match.status === 'live'
+  const hasPenaltyShootout =
+    match.homePenaltyScore !== undefined &&
+    match.awayPenaltyScore !== undefined;
+  const baseStatus = match.statusCode || (match.status === 'live'
     ? 'LIVE'
     : match.status === 'finished'
       ? 'FT'
       : match.status === 'cancelled'
         ? 'CANCELLED'
-        : 'PRE';
+        : 'PRE');
+  const status = hasPenaltyShootout ? 'PEN' : baseStatus;
+  const isExtraTime = status === 'AET';
+  const winnerSide =
+    sideByWinnerId(match) ||
+    (hasPenaltyShootout
+      ? sideByScore(match.homePenaltyScore, match.awayPenaltyScore)
+      : sideByScore(match.homeScore, match.awayScore));
+  const winnerTeam = winnerSide === 'home'
+    ? home?.name ?? match.homePlaceholder ?? ''
+    : winnerSide === 'away'
+      ? away?.name ?? match.awayPlaceholder ?? ''
+      : '';
+  const penaltyScoreText = hasPenaltyShootout
+    ? `${match.homePenaltyScore} : ${match.awayPenaltyScore}`
+    : '';
+  const normalizedStatusLabel = hasPenaltyShootout
+    ? 'ركلات الترجيح'
+    : isExtraTime
+      ? 'بعد الوقت الإضافي'
+      : match.statusLabel ?? '';
+  const resultNote = hasPenaltyShootout && winnerTeam
+    ? `فاز ${winnerTeam} بركلات الترجيح ${penaltyScoreText}`
+    : isExtraTime
+      ? 'حسمت بعد الوقت الإضافي'
+      : normalizedStatusLabel;
+  const scoreDetail = hasPenaltyShootout
+    ? `الوقت الأصلي ${match.homeScore ?? 0} : ${match.awayScore ?? 0} · الترجيح ${penaltyScoreText}`
+    : resultNote;
+  const stage = match.group
+    ? `المجموعة ${normalizedToken(match.group)}`
+    : stringValue(match.stage, 'WORLD CUP 2026');
   return {
     selectedMatchId: match.id,
     competition,
@@ -315,11 +401,20 @@ export const selectedMatchToFields = (
     awayScore: match.awayScore ?? 0,
     homePenaltyScore: match.homePenaltyScore,
     awayPenaltyScore: match.awayPenaltyScore,
+    hasPenalties: hasPenaltyShootout,
+    isPenaltyShootout: hasPenaltyShootout,
+    isExtraTime,
+    penaltyScoreText,
+    winnerSide,
+    winnerTeam,
+    resultNote,
+    scoreDetail,
     minute: match.minute ?? '',
-    period: match.statusLabel ?? '',
+    period: normalizedStatusLabel,
     matchStatus: status,
+    statusCode: status,
     status,
-    statusLabel: match.statusLabel ?? '',
+    statusLabel: normalizedStatusLabel,
     stage,
     matchStage: stage,
     groupBadge: stage,

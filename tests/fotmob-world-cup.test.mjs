@@ -101,6 +101,18 @@ const payload = {
         liveTime: { short: "67'" },
         reason: { short: '2H' },
       },
+    }, {
+      id: '102',
+      group: 'D',
+      home: { id: '7', name: 'Germany', shortName: 'GER' },
+      away: { id: '8', name: 'Paraguay', shortName: 'PAR' },
+      status: {
+        utcTime: '2026-06-30T18:00:00Z',
+        started: true,
+        finished: true,
+        scoreStr: '1 - 1 (3 - 4)',
+        reason: { short: 'Pen' },
+      },
     }],
   },
 };
@@ -159,6 +171,19 @@ test('keeps live fixture minute for template live badges', () => {
   assert.equal(live.awayScore, 0);
   assert.equal(live.minute, '67');
   assert.equal(live.statusLabel, "67'");
+});
+
+test('normalizes penalty shootout scores and winner from FotMob score strings', () => {
+  const snapshot = normalizeFotMobWorldCup(payload);
+  const penalty = snapshot.fixtures.find((fixture) => fixture.id === '102');
+  assert.ok(penalty);
+  assert.equal(penalty.status, 'finished');
+  assert.equal(penalty.homeScore, 1);
+  assert.equal(penalty.awayScore, 1);
+  assert.equal(penalty.homePenaltyScore, 3);
+  assert.equal(penalty.awayPenaltyScore, 4);
+  assert.equal(penalty.winnerId, '8');
+  assert.equal(penalty.statusLabel, 'Pen');
 });
 
 test('normalizes the live Golden Boot leaders from FotMob player stats', () => {

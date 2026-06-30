@@ -1185,6 +1185,9 @@ export const ReoObsScoreboard: React.FC<ReoObsVariantProps> = ({
   const status = matchStatus.isLive ? liveStatusText(minute) : matchStatus.label;
   const competition = resolvedText(getField, resolveField, 'competition', 'competition', 'FIFA WORLD CUP 2026');
   const stage = text(getField, 'stage', text(getField, 'matchStage', 'GROUP STAGE'));
+  const resultNote = resolvedText(getField, resolveField, 'resultNote', 'resultNote', '');
+  const scoreDetail = resolvedText(getField, resolveField, 'scoreDetail', 'scoreDetail', '');
+  const resultDetail = scoreDetail || resultNote || stage;
   const c = themedColors(t);
   return (
     <KineticStage image={stageImage(getField)} theme={t}>
@@ -1201,7 +1204,7 @@ export const ReoObsScoreboard: React.FC<ReoObsVariantProps> = ({
             homeScore={homeScore}
             awayScore={awayScore}
             status={status}
-            detail={stage}
+            detail={resultDetail}
           />
         </div>
         <div className="flex items-end justify-between">
@@ -1627,6 +1630,20 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const awayControlScore = controlRows.length - homeControlScore;
   const xgRow = rows.find(row => row.label === 'الأهداف المتوقعة') || shotFlowRows[0];
   const shotsRow = rows.find(row => row.label === 'التسديدات') || shotFlowRows[1];
+  const xgHomeValue = xgRow?.homeValue ?? 0;
+  const xgAwayValue = xgRow?.awayValue ?? 0;
+  const xgHomeNumber = detailStatNumber(xgHomeValue);
+  const xgAwayNumber = detailStatNumber(xgAwayValue);
+  const xgDifference = Math.abs(xgHomeNumber - xgAwayNumber);
+  const xgDifferenceText = xgDifference.toFixed(2).replace(/\.?0+$/, '');
+  const xgLeaderCode = xgHomeNumber === xgAwayNumber
+    ? 'EVEN'
+    : xgHomeNumber > xgAwayNumber
+      ? homeDisplayCode
+      : awayDisplayCode;
+  const xgLeaderCopy = xgLeaderCode === 'EVEN'
+    ? 'جودة الفرص متعادلة'
+    : `${xgLeaderCode} متفوق في جودة الفرص`;
   const c = themedColors(t);
   return (
     <KineticStage theme={t}>
@@ -1746,6 +1763,15 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                       </div>
                       <div className="rounded-full border-[4px] border-black bg-white px-4 py-2 text-[11px] font-black">{dataStatusLabel}</div>
                     </div>
+                    <div className="relative rounded-[22px] border-[4px] border-black bg-white px-5 py-3 font-black shadow-[8px_8px_0_rgba(0,0,0,.18)]">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-[12px] opacity-65">من المتفوق في الأهداف المتوقعة؟</span>
+                        <span className="rounded-full border-[3px] border-black bg-black px-4 py-1 text-[13px] text-white">{xgLeaderCopy}</span>
+                      </div>
+                      <div className="mt-2 text-[11px] opacity-60">
+                        {xgLeaderCode === 'EVEN' ? 'لا يوجد فارق فعلي في جودة الفرص.' : `الفارق الحالي في xG: ${xgDifferenceText}`}
+                      </div>
+                    </div>
                     <div className="relative grid gap-4">
                       <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4">
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
@@ -1753,7 +1779,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                           <span className="text-[11px] opacity-60">{homeDisplayName}</span>
                         </div>
                         <div className="mt-2 flex items-end justify-between gap-3">
-                          <div className="text-[66px] leading-none font-black">{detailStatText(xgRow?.homeValue ?? 0)}</div>
+                          <div className="text-[66px] leading-none font-black">{detailStatText(xgHomeValue)}</div>
                           <div className="pb-2 text-[12px] font-black">xG</div>
                         </div>
                       </div>
@@ -1763,7 +1789,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                           <span className="text-[11px] opacity-60">{awayDisplayName}</span>
                         </div>
                         <div className="mt-2 flex items-end justify-between gap-3">
-                          <div className="text-[66px] leading-none font-black">{detailStatText(xgRow?.awayValue ?? 0)}</div>
+                          <div className="text-[66px] leading-none font-black">{detailStatText(xgAwayValue)}</div>
                           <div className="pb-2 text-[12px] font-black">xG</div>
                         </div>
                       </div>
@@ -2829,6 +2855,13 @@ export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ t, getField, r
   const timelineEvents = parsedEvents.length
     ? parsedEvents.slice(0, 5)
     : [{ minute: '23', type: 'goal', player: momName, team: 'home' }];
+  const resultNote = resolvedText(getField, resolveField, 'resultNote', 'resultNote', '');
+  const scoreDetail = resolvedText(getField, resolveField, 'scoreDetail', 'scoreDetail', '');
+  const goalScorersLine = parsedEvents
+    .filter(event => String(event.type || '').toLowerCase().includes('goal') && event.player)
+    .slice(0, 5)
+    .map(event => `${event.player} ${event.minute ?? ''}'`.trim())
+    .join(' · ');
   const c = themedColors(t);
   if (reportViewMode === 'storyline') {
     return (
@@ -2841,6 +2874,11 @@ export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ t, getField, r
               <div className="text-[96px] leading-none font-black mt-3">{score}</div>
               <div className="text-[18px] font-black mt-6">{home}</div>
               <div className="text-[18px] font-black">{away}</div>
+              {(scoreDetail || resultNote || goalScorersLine) && (
+                <div className="mt-5 rounded-[18px] border-[4px] border-black bg-black px-4 py-3 text-[14px] font-black text-white">
+                  {scoreDetail || resultNote || goalScorersLine}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               {timelineEvents.map((event, index) => (
@@ -2896,6 +2934,11 @@ export const ReoObsMatchReport: React.FC<ReoObsVariantProps> = ({ t, getField, r
             <div className="bg-white text-black border-[6px] border-black rounded-[30px] p-8 text-center" style={{ boxShadow: `14px 12px 0 ${c.danger}`, animation: 'wcScorePop .65s .35s both' }}>
               <div className="text-[11px] font-black">انتهت</div><div className="text-[84px] font-black leading-none">{score}</div>
             </div>
+            {(scoreDetail || resultNote || goalScorersLine) && (
+              <div className="rounded-[22px] border-[5px] border-black bg-black px-5 py-4 text-center text-[13px] font-black text-white" style={{ animation: 'wcRowIn .5s .46s both' }}>
+                {scoreDetail || resultNote || goalScorersLine}
+              </div>
+            )}
             <div className="border-[5px] border-black rounded-[25px] p-6 text-black" style={{ background: c.gold, animation: 'wcRowIn .55s .55s both' }}>
               <div className="text-[11px] font-black">نجم المباراة</div><div className="text-[25px] font-black mt-2">{momName}</div><div className="text-[49px] font-black">{momRating}</div>
             </div>

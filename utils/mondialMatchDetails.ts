@@ -82,6 +82,10 @@ export type MondialMatchDetails = {
     away: MondialMatchDetailTeam;
     homeScore: number;
     awayScore: number;
+    homePenaltyScore?: number;
+    awayPenaltyScore?: number;
+    statusCode?: string;
+    winnerSide?: 'home' | 'away' | '';
     venue?: string;
   };
   events: MondialMatchDetailEvent[];
@@ -256,6 +260,47 @@ const mappedTeamStatFields = (
 const optionalNumber = (value: unknown): number | undefined => {
   const parsed = numberValue(value, Number.NaN);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const firstNumber = (...values: unknown[]): number | undefined => {
+  for (const value of values) {
+    const parsed = optionalNumber(value);
+    if (parsed !== undefined) return parsed;
+  }
+  return undefined;
+};
+
+const parseScoreString = (value: string): {
+  homeScore?: number;
+  awayScore?: number;
+  homePenaltyScore?: number;
+  awayPenaltyScore?: number;
+} => {
+  const matches = [...value.matchAll(/(-?\d+)\s*[-:]\s*(-?\d+)/g)];
+  const regular = matches[0];
+  const shootout = matches.length > 1 ? matches[matches.length - 1] : undefined;
+  return {
+    homeScore: regular ? Number(regular[1]) : undefined,
+    awayScore: regular ? Number(regular[2]) : undefined,
+    homePenaltyScore: shootout ? Number(shootout[1]) : undefined,
+    awayPenaltyScore: shootout ? Number(shootout[2]) : undefined,
+  };
+};
+
+const statusCodeFrom = (
+  status: string,
+  statusLabel: string,
+  homePenaltyScore?: number,
+  awayPenaltyScore?: number
+): string => {
+  if (homePenaltyScore !== undefined && awayPenaltyScore !== undefined) return 'PEN';
+  const token = `${status} ${statusLabel}`.toLowerCase();
+  if (token.includes('pen') || token.includes('shootout')) return 'PEN';
+  if (token.includes('aet') || token.includes('extra')) return 'AET';
+  if (token.includes('live') || token.includes("'") || token.includes('ht')) return 'LIVE';
+  if (token.includes('finish') || token.includes('finished') || token.includes('ft')) return 'FT';
+  if (token.includes('cancel') || token.includes('postpon')) return 'CANCELLED';
+  return 'PRE';
 };
 
 const pitchScaleFor = (...values: Array<number | undefined>): number => {
@@ -698,9 +743,32 @@ export const normalizeFotMobMatchDetails = (
   const awayHeaderTeam = headerTeams[1] ?? recordOf(general?.awayTeam);
   const status = recordOf(header?.status);
   const scoreStr = stringValue(status?.scoreStr, '');
-  const scoreParts = scoreStr.split(/\s*-\s*/).map(item => Number(item));
-  const homeScore = optionalNumber(homeHeaderTeam?.score) ?? scoreParts[0] ?? 0;
-  const awayScore = optionalNumber(awayHeaderTeam?.score) ?? scoreParts[1] ?? 0;
+  const parsedScore = parseScoreString(scoreStr);
+  const homeScore = optionalNumber(homeHeaderTeam?.score) ?? parsedScore.homeScore ?? 0;
+  const awayScore = optionalNumber(awayHeaderTeam?.score) ?? parsedScore.awayScore ?? 0;
+  const penalties = recordOf(status?.penalties ?? status?.penaltyShootout ?? status?.shootout);
+  const homePenaltyScore = firstNumber(
+    homeHeaderTeam?.penaltyScore,
+    homeHeaderTeam?.penalties,
+    homeHeaderTeam?.penScore,
+    status?.homePenaltyScore,
+    status?.homePenScore,
+    penalties?.home,
+    penalties?.homeScore,
+    penalties?.team1,
+    parsedScore.homePenaltyScore
+  );
+  const awayPenaltyScore = firstNumber(
+    awayHeaderTeam?.penaltyScore,
+    awayHeaderTeam?.penalties,
+    awayHeaderTeam?.penScore,
+    status?.awayPenaltyScore,
+    status?.awayPenScore,
+    penalties?.away,
+    penalties?.awayScore,
+    penalties?.team2,
+    parsedScore.awayPenaltyScore
+  );
   const teamColors = recordOf(recordOf(general?.teamColors)?.darkMode) ?? {};
   const finished = status?.finished === true || general?.finished === true;
   const matchStatus = normalizeStatus(status, finished);
@@ -719,6 +787,12 @@ export const normalizeFotMobMatchDetails = (
   ];
   const topPlayers = normalizeTopPlayers(matchFacts?.topPlayers, home.id, away.id);
   const statusLabel = stringValue(recordOf(status?.reason)?.short, finished ? 'FT' : matchStatus.toUpperCase());
+  const statusCode = statusCodeFrom(matchStatus, statusLabel, homePenaltyScore, awayPenaltyScore);
+  const winnerSide = homePenaltyScore !== undefined && awayPenaltyScore !== undefined && homePenaltyScore !== awayPenaltyScore
+    ? homePenaltyScore > awayPenaltyScore ? 'home' : 'away'
+    : homeScore !== awayScore
+      ? homeScore > awayScore ? 'home' : 'away'
+      : '';
   const normalized: MondialMatchDetails = {
     schemaVersion: 'reo-match-details-v1',
     provider: 'fotmob',
@@ -738,6 +812,10 @@ export const normalizeFotMobMatchDetails = (
       away,
       homeScore,
       awayScore,
+      homePenaltyScore,
+      awayPenaltyScore,
+      statusCode,
+      winnerSide,
     },
     events: eventList(matchFacts?.events),
     lineups: {
@@ -798,6 +876,39 @@ export const matchDetailsToFields = (
   const away = details.match.away;
   const player = details.playerOfTheMatch;
   const playerStats = player?.stats ?? [];
+  const hasPenaltyShootout =
+    details.match.homePenaltyScore !== undefined &&
+    details.match.awayPenaltyScore !== undefined;
+  const detailStatusCode = details.match.statusCode || statusCodeFrom(
+    details.match.status,
+    details.match.statusLabel,
+    details.match.homePenaltyScore,
+    details.match.awayPenaltyScore
+  );
+  const winnerSide = details.match.winnerSide || (
+    hasPenaltyShootout && details.match.homePenaltyScore !== details.match.awayPenaltyScore
+      ? details.match.homePenaltyScore! > details.match.awayPenaltyScore! ? 'home' : 'away'
+      : details.match.homeScore !== details.match.awayScore
+        ? details.match.homeScore > details.match.awayScore ? 'home' : 'away'
+        : ''
+  );
+  const winnerTeam = winnerSide === 'home' ? home.name : winnerSide === 'away' ? away.name : '';
+  const penaltyScoreText = hasPenaltyShootout
+    ? `${details.match.homePenaltyScore} : ${details.match.awayPenaltyScore}`
+    : '';
+  const normalizedStatusLabel = hasPenaltyShootout
+    ? 'ركلات الترجيح'
+    : detailStatusCode === 'AET'
+      ? 'بعد الوقت الإضافي'
+      : details.match.statusLabel;
+  const resultNote = hasPenaltyShootout && winnerTeam
+    ? `فاز ${winnerTeam} بركلات الترجيح ${penaltyScoreText}`
+    : detailStatusCode === 'AET'
+      ? 'حسمت بعد الوقت الإضافي'
+      : normalizedStatusLabel;
+  const scoreDetail = hasPenaltyShootout
+    ? `الوقت الأصلي ${details.match.homeScore} : ${details.match.awayScore} · الترجيح ${penaltyScoreText}`
+    : resultNote;
   const playerStatLabels: Record<string, string> = {
     goals: 'الأهداف',
     assists: 'التمريرات الحاسمة',
@@ -839,10 +950,21 @@ export const matchDetailsToFields = (
     awayLogo: away.logoUrl,
     homeScore: details.match.homeScore,
     awayScore: details.match.awayScore,
-    matchStatus: details.match.status === 'finished' ? 'FT' : details.match.status === 'live' ? 'LIVE' : 'PRE',
-    status: details.match.status,
-    statusLabel: details.match.statusLabel,
-    period: details.match.statusLabel,
+    homePenaltyScore: details.match.homePenaltyScore,
+    awayPenaltyScore: details.match.awayPenaltyScore,
+    hasPenalties: hasPenaltyShootout,
+    isPenaltyShootout: hasPenaltyShootout,
+    isExtraTime: detailStatusCode === 'AET',
+    penaltyScoreText,
+    winnerSide,
+    winnerTeam,
+    resultNote,
+    scoreDetail,
+    matchStatus: detailStatusCode,
+    status: detailStatusCode,
+    statusCode: detailStatusCode,
+    statusLabel: normalizedStatusLabel,
+    period: normalizedStatusLabel,
     minute: details.match.minute ?? '',
     stage: details.match.stage,
     matchStage: details.match.stage,

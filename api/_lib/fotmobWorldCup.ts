@@ -264,6 +264,11 @@ const asNumber = (value: unknown, fallback = 0): number =>
       ? Number(value)
       : fallback;
 
+const asOptionalNumber = (value: unknown): number | undefined => {
+  const parsed = asNumber(value, Number.NaN);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 const asBoolean = (value: unknown): boolean => value === true;
 
 const normalizeName = (value: string) => value
@@ -290,10 +295,65 @@ const flagUrlFor = (countryCode: string) =>
     : `https://flagcdn.com/w160/${countryCode}.png`;
 
 const parseScores = (score: string) => {
-  const match = score.match(/(-?\d+)\s*[-:]\s*(-?\d+)/);
-  return match
-    ? { goalsFor: Number(match[1]), goalsAgainst: Number(match[2]) }
-    : { goalsFor: 0, goalsAgainst: 0 };
+  const matches = [...score.matchAll(/(-?\d+)\s*[-:]\s*(-?\d+)/g)];
+  const regular = matches[0];
+  const shootout = matches.length > 1 ? matches[matches.length - 1] : undefined;
+  return regular
+    ? {
+        goalsFor: Number(regular[1]),
+        goalsAgainst: Number(regular[2]),
+        homePenaltyScore: shootout ? Number(shootout[1]) : undefined,
+        awayPenaltyScore: shootout ? Number(shootout[2]) : undefined,
+      }
+    : { goalsFor: 0, goalsAgainst: 0, homePenaltyScore: undefined, awayPenaltyScore: undefined };
+};
+
+const firstNumber = (...values: unknown[]): number | undefined => {
+  for (const value of values) {
+    const parsed = asOptionalNumber(value);
+    if (parsed !== undefined) return parsed;
+  }
+  return undefined;
+};
+
+const extractPenaltyScores = (
+  home: Record<string, unknown>,
+  away: Record<string, unknown>,
+  status: Record<string, unknown>,
+  scoreStr = ''
+) => {
+  const parsed = parseScores(scoreStr);
+  const penalties = asRecord(status.penalties ?? status.penaltyShootout ?? status.shootout);
+  return {
+    homePenaltyScore: firstNumber(
+      home.penaltyScore,
+      home.penalties,
+      home.penaltyGoals,
+      home.penScore,
+      home.pens,
+      status.homePenaltyScore,
+      status.homePenScore,
+      status.homePens,
+      penalties.home,
+      penalties.homeScore,
+      penalties.team1,
+      parsed.homePenaltyScore
+    ),
+    awayPenaltyScore: firstNumber(
+      away.penaltyScore,
+      away.penalties,
+      away.penaltyGoals,
+      away.penScore,
+      away.pens,
+      status.awayPenaltyScore,
+      status.awayPenScore,
+      status.awayPens,
+      penalties.away,
+      penalties.awayScore,
+      penalties.team2,
+      parsed.awayPenaltyScore
+    ),
+  };
 };
 
 const makeTeam = (rawValue: unknown): WorldCupTeam | null => {
@@ -497,9 +557,10 @@ const normalizeMatchup = (rawValue: unknown, stage: WorldCupStage, index = 0): W
   const awayRaw = asRecord(match.away);
   const isHomeTbd = asBoolean(matchup.tbdTeam1);
   const isAwayTbd = asBoolean(matchup.tbdTeam2);
-  const status = getMatchStatus(match.status);
+  const statusRaw = asRecord(match.status);
+  const status = getMatchStatus(statusRaw);
   const started = status === 'live' || status === 'finished';
-  const minute = extractLiveMinute(match.status, match);
+  const minute = extractLiveMinute(statusRaw, match);
   const venue = asRecord(match.venueInfo);
   const routeMeta = OFFICIAL_KNOCKOUT_ROUTES[stage]?.[index];
   const result: WorldCupMatch = {
@@ -508,9 +569,9 @@ const normalizeMatchup = (rawValue: unknown, stage: WorldCupStage, index = 0): W
     home: isHomeTbd ? null : makeTeam(homeRaw),
     away: isAwayTbd ? null : makeTeam(awayRaw),
     status,
-    statusLabel: getStatusLabel(match.status, status, minute),
+    statusLabel: getStatusLabel(statusRaw, status, minute),
     minute,
-    date: asString(asRecord(match.status).utcTime) || asString(match.matchDate) || undefined,
+    date: asString(statusRaw.utcTime) || asString(match.matchDate) || undefined,
     pageUrl: asString(match.pageUrl) || undefined,
     venue: asString(venue.name) || undefined,
     matchNo: routeMeta?.matchNo,
@@ -523,8 +584,21 @@ const normalizeMatchup = (rawValue: unknown, stage: WorldCupStage, index = 0): W
   if (started) {
     result.homeScore = asNumber(homeRaw.score);
     result.awayScore = asNumber(awayRaw.score);
+    const penaltyScores = extractPenaltyScores(homeRaw, awayRaw, statusRaw);
+    if (penaltyScores.homePenaltyScore !== undefined) result.homePenaltyScore = penaltyScores.homePenaltyScore;
+    if (penaltyScores.awayPenaltyScore !== undefined) result.awayPenaltyScore = penaltyScores.awayPenaltyScore;
     const winnerId = getWinnerId(homeRaw, awayRaw);
-    if (winnerId !== undefined) result.winnerId = winnerId;
+    if (winnerId !== undefined) {
+      result.winnerId = winnerId;
+    } else if (
+      penaltyScores.homePenaltyScore !== undefined &&
+      penaltyScores.awayPenaltyScore !== undefined &&
+      penaltyScores.homePenaltyScore !== penaltyScores.awayPenaltyScore
+    ) {
+      result.winnerId = penaltyScores.homePenaltyScore > penaltyScores.awayPenaltyScore
+        ? result.home?.id
+        : result.away?.id;
+    }
   }
   return result;
 };
@@ -551,6 +625,21 @@ const normalizeFixture = (rawValue: unknown): WorldCupMatch | null => {
     const score = parseScores(asString(statusRaw.scoreStr));
     result.homeScore = score.goalsFor;
     result.awayScore = score.goalsAgainst;
+    const penaltyScores = extractPenaltyScores(homeRaw, awayRaw, statusRaw, asString(statusRaw.scoreStr));
+    if (penaltyScores.homePenaltyScore !== undefined) result.homePenaltyScore = penaltyScores.homePenaltyScore;
+    if (penaltyScores.awayPenaltyScore !== undefined) result.awayPenaltyScore = penaltyScores.awayPenaltyScore;
+    const winnerId = getWinnerId(homeRaw, awayRaw);
+    if (winnerId !== undefined) {
+      result.winnerId = winnerId;
+    } else if (
+      penaltyScores.homePenaltyScore !== undefined &&
+      penaltyScores.awayPenaltyScore !== undefined &&
+      penaltyScores.homePenaltyScore !== penaltyScores.awayPenaltyScore
+    ) {
+      result.winnerId = penaltyScores.homePenaltyScore > penaltyScores.awayPenaltyScore
+        ? result.home?.id
+        : result.away?.id;
+    }
   }
   return result.home && result.away ? result : null;
 };

@@ -45,6 +45,19 @@ const payload = {
     awayScore: 1,
     home: team(5, 'Brazil', 'BRA', 'br'),
     away: team(6, 'Morocco', 'MAR', 'ma'),
+  }, {
+    id: 'penalty-d',
+    stage: 'R32',
+    status: 'finished',
+    statusLabel: 'Pen',
+    date: '2026-06-30T18:00:00Z',
+    homeScore: 1,
+    awayScore: 1,
+    homePenaltyScore: 4,
+    awayPenaltyScore: 3,
+    winnerId: 8,
+    home: team(7, 'Germany', 'GER', 'de'),
+    away: team(8, 'Paraguay', 'PAR', 'py'),
   }],
   rounds: [{
     stage: 'R32',
@@ -77,8 +90,8 @@ test('selects matches by team, group, round and status', () => {
   const fixtures = fixturesFromWorldCupData(payload, []);
   assert.equal(pickWorldCupMatch(fixtures, { mode: 'team', teamCode: 'BRA' }).id, 'finished-c');
   assert.equal(pickWorldCupMatch(fixtures, { mode: 'group', groupCode: 'A' }).id, 'scheduled-a');
-  assert.equal(pickWorldCupMatch(fixtures, { mode: 'round', roundStage: 'R32' }).id, 'M73');
-  assert.equal(pickWorldCupMatch(fixtures, { mode: 'latest', statusFilter: 'finished' }).id, 'finished-c');
+  assert.equal(pickWorldCupMatch(fixtures, { mode: 'round', roundStage: 'R32', statusFilter: 'scheduled' }).id, 'M73');
+  assert.equal(pickWorldCupMatch(fixtures, { mode: 'latest', statusFilter: 'finished' }).id, 'penalty-d');
 });
 
 test('maps the selected fixture to legacy template fields', () => {
@@ -92,6 +105,18 @@ test('maps the selected fixture to legacy template fields', () => {
   assert.equal(fields.minute, '67');
   assert.equal(fields.matchStatus, 'LIVE');
   assert.equal(fields.groupBadge, 'المجموعة B');
+});
+
+test('maps penalty shootout matches with winner and score detail', () => {
+  const fixtures = fixturesFromWorldCupData(payload, []);
+  const selected = pickWorldCupMatch(fixtures, { mode: 'match_id', selectedMatchId: 'penalty-d' });
+  const fields = selectedMatchToFields(selected, 'World Cup');
+  assert.equal(fields.matchStatus, 'PEN');
+  assert.equal(fields.isPenaltyShootout, true);
+  assert.equal(fields.penaltyScoreText, '4 : 3');
+  assert.equal(fields.winnerTeam, 'Paraguay');
+  assert.match(String(fields.resultNote), /Paraguay/);
+  assert.match(String(fields.scoreDetail), /4 : 3/);
 });
 
 test('uses live scorer data before manual fallback data', () => {
