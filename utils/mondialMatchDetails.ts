@@ -557,6 +557,17 @@ const playerRating = (playerId: unknown, playerStats: Record<string, unknown>): 
   return optionalNumber(ratingRecord?.num ?? ratingRecord?.rating);
 };
 
+const lineupShirtNumber = (player: Record<string, unknown>): number | undefined =>
+  optionalNumber(
+    player.shirtNumber ??
+    player.shirt_number ??
+    player.jerseyNumber ??
+    player.jersey_number ??
+    player.shirtNo ??
+    player.jerseyNo ??
+    player.number
+  );
+
 const lineupPositionLabel = (player: Record<string, unknown>): string => {
   const explicit = stringValue(
     player.positionLabel ??
@@ -568,7 +579,7 @@ const lineupPositionLabel = (player: Record<string, unknown>): string => {
     ''
   );
   if (explicit) return explicit;
-  return optionalNumber(player.shirtNumber) === 1 ? 'GK' : '';
+  return lineupShirtNumber(player) === 1 ? 'GK' : '';
 };
 
 const lineupPlayer = (
@@ -591,7 +602,7 @@ const lineupPlayer = (
   return {
     id: id || undefined,
     name: stringValue(player.name, `Player ${index + 1}`),
-    number: optionalNumber(player.shirtNumber),
+    number: lineupShirtNumber(player),
     pos,
     x,
     y,

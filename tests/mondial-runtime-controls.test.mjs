@@ -286,6 +286,8 @@ test('public output links have fast fallback polling and template reconstruction
   assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
   assert.match(app, /const missingStateProbeMs = isObsBrowser \? 2200 : 5000;/);
   assert.match(app, /if \(consecutiveLiveMisses >= 8 && Date\.now\(\) - lastMissingProbeAt < missingStateProbeMs\) return;/);
+  assert.doesNotMatch(app, /if \(embeddedOverlay\) \{[\s\S]*?return;\s*\}[\s\S]*?if \(!id\) return;/);
+  assert.match(app, /if \(!id\) return;\s*if \(embeddedOverlay\) \{/);
   assert.doesNotMatch(app, /startFallback\(\);\s*connectSSE\(\);/);
   assert.match(app, /stopFallback\(\);\s*consecutiveLiveMisses = 0;\s*setConnStatus\('live'\);/);
   assert.match(app, /connectSSE\(\);/);

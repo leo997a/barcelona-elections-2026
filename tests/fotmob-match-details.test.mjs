@@ -262,10 +262,10 @@ test('infers a missing goalkeeper label from shirt number without inheriting fal
           name: 'Japan',
           formation: '3-4-2-1',
           starters: [
-            { id: 301, name: 'Hiroki Ito', shirtNumber: 21 },
-            { id: 302, name: 'Keito Nakamura', shirtNumber: 13 },
-            { id: 303, name: 'Zion Suzuki', shirtNumber: 1 },
-            { id: 304, name: 'Ko Itakura', shirtNumber: 4 },
+            { id: 301, name: 'Hiroki Ito', shirt_number: 21 },
+            { id: 302, name: 'Keito Nakamura', jerseyNumber: 13 },
+            { id: 303, name: 'Zion Suzuki', jersey_number: 1 },
+            { id: 304, name: 'Ko Itakura', shirtNo: 4 },
           ],
           subs: [],
         },
@@ -276,8 +276,10 @@ test('infers a missing goalkeeper label from shirt number without inheriting fal
 
   const japan = lineupsToPlayersJson(details, 'home');
   assert.equal(japan[0].name, 'Hiroki Ito');
+  assert.equal(japan[0].number, 21);
   assert.equal(japan[0].pos, '');
   assert.equal(japan[2].name, 'Zion Suzuki');
+  assert.equal(japan[2].number, 1);
   assert.equal(japan[2].pos, 'GK');
 });
 

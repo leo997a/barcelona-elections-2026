@@ -186,15 +186,14 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   }, []);
 
   useEffect(() => {
+    if (!id) return;
     if (embeddedOverlay) {
       lastGoodState.current = embeddedOverlay;
       setOutputState(embeddedOverlay);
       writeCachedOutputState(id, embeddedOverlay);
       setConnStatus('fallback');
-      return;
     }
 
-    if (!id) return;
     let sseActive = true;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
     let es: EventSource | null = null;

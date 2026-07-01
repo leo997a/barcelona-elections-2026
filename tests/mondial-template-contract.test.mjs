@@ -189,7 +189,7 @@ test('partial live stats fall back per row and scorer cards use the richer live 
     readSource('../components/renderers/Mondial2026Renderer.tsx'),
   ]);
 
-  assert.match(obs, /const liveRow = findDetailStat\(matchDetails, definition\.keys, statPeriodRaw\)/);
+  assert.match(obs, /const liveRow = findDetailStat\(matchDetails, definition\.keys, effectiveStatPeriod\)/);
   assert.match(obs, /liveRow\?\.home \?\? num\(getField, definition\.homeField/);
   assert.match(obs, /liveRow\?\.away \?\? num\(getField, definition\.awayField/);
   assert.match(obs, /normalizeStatsPeriodKey\(selectedStatPeriod\)/);
@@ -254,7 +254,12 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const useSourcePositions = sourceHasEnoughPositions && layoutMode === 'source_positions'/);
   assert.match(obs, /if \(useSourcePositions\)/);
   assert.match(obs, /const lineupIsGoalkeeperCandidate = \(player: LineupPlayer, index: number\): boolean/);
-  assert.match(obs, /حارس\|حراسة\|مرمى\|goalie/);
+  assert.match(obs, /goalie\|goalkeeper\|keeper\|portero\|gardien/);
+  assert.match(obs, /const firstLineupNumber = \(\.\.\.values: unknown\[\]\): number \| undefined/);
+  assert.match(obs, /player\?\.shirtNumber/);
+  assert.match(obs, /player\?\.jerseyNumber/);
+  assert.match(obs, /const lineupPositionText = \(player: Partial<LineupPlayer> \| undefined\): string/);
+  assert.match(obs, /const byPosition = lineupLineFromPosition\(lineupPositionText\(player\)\)/);
   assert.match(obs, /if \(shirt === 1 && index <= 3\) return true/);
   assert.match(obs, /if \(byPosition === 'goalkeeper'\) return true/);
   assert.match(obs, /if \(byPosition\) return false/);
@@ -262,7 +267,7 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /const lineupSourceLine = \(player: LineupPlayer, index: number\): LineupLine \| null/);
   assert.match(obs, /return lineupIsGoalkeeperCandidate\(player, index\) \? 'goalkeeper' : null/);
   assert.match(obs, /const goalkeeperIndex = cleanPlayers\.findIndex\(lineupIsGoalkeeperCandidate\)/);
-  assert.match(obs, /pos: String\(player\?\.pos \|\| \(player \? '' : DEFAULT_PLAYERS\[index\]\?\.pos\) \|\| ''\)/);
+  assert.match(obs, /pos: lineupPositionText\(player\) \|\| \(player \? '' : DEFAULT_PLAYERS\[index\]\?\.pos\) \|\| ''/);
   assert.match(obs, /const byPosition = lineupSourceLine\(player, index\)/);
   assert.match(obs, /byPosition === 'goalkeeper'/);
   assert.match(obs, /x: 50,[\s\S]*?formationSlotY\(0, outfieldRows, direction\)/);
@@ -300,11 +305,12 @@ test('mondial lineup has a defensive auto-formation layout for incomplete live d
   assert.match(obs, /placement: 'field' \| 'list'/);
   assert.match(obs, /ReoLineupPlayerMarker/);
   assert.match(obs, /ReoLineupMiniAvatar/);
-  assert.match(obs, /lineup-photo-shell relative pb-8/);
+  assert.match(obs, /lineup-photo-shell relative pb-10/);
   assert.match(obs, /lineup-photo-frame/);
   assert.match(obs, /lineup-number-badge/);
-  assert.match(obs, /lineup-number-badge absolute left-1\/2 top-full/);
-  assert.match(obs, /-translate-y-\[18%\]/);
+  assert.match(obs, /lineup-number-badge absolute left-1\/2 bottom-0/);
+  assert.match(obs, /translate-y-\[24%\]/);
+  assert.doesNotMatch(obs, /lineup-number-badge absolute left-1\/2 top-full/);
   assert.doesNotMatch(obs, /lineup-number-badge absolute z-\[6\] \$\{badgeClass\}/);
   assert.doesNotMatch(obs, /lineup-nameplate-number/);
   assert.match(obs, /data-lineup-marker-mode/);
@@ -371,7 +377,10 @@ test('mondial statistical templates expose and consume real display modes', asyn
   }
   assert.match(obs, /const selectedStatPeriod = text\(getField, 'statsPeriod', text\(getField, 'period', 'FULL'\)\)/);
   assert.match(obs, /const statPeriodRaw = normalizeStatsPeriodKey\(selectedStatPeriod\)/);
+  assert.match(obs, /const effectiveStatPeriod = statPeriodUnavailable \? 'FULL' : statPeriodRaw/);
   assert.match(obs, /const statClockLabel = \[/);
+  assert.match(obs, /const statPeriodWarning = statPeriodUnavailable/);
+  assert.match(obs, /stat-period-warning/);
   assert.match(obs, /statPeriodUnavailable \? /);
   assert.match(obs, /const statStoryLabel = homeStatLeads === awayStatLeads/);
   assert.match(obs, /homeDisplayCode/);

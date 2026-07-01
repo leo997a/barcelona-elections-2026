@@ -50,10 +50,22 @@ type GroupRow = {
 
 type LineupPlayer = {
   id?: string;
-  num?: number;
-  number?: number;
+  num?: number | string;
+  number?: number | string;
+  shirtNumber?: number | string;
+  shirt_number?: number | string;
+  jerseyNumber?: number | string;
+  jersey_number?: number | string;
+  shirtNo?: number | string;
+  jerseyNo?: number | string;
   name: string;
   pos?: string;
+  position?: string;
+  positionLabel?: string;
+  positionShort?: string;
+  positionString?: string;
+  positionDescription?: string;
+  role?: string;
   x?: number;
   y?: number;
   image?: string;
@@ -223,15 +235,42 @@ const parseFormationRows = (formation: string): number[] => {
   return total >= 8 && total <= 10 ? rows : [4, 3, 3];
 };
 
+const firstLineupNumber = (...values: unknown[]): number | undefined => {
+  for (const value of values) {
+    const numberValue = Number(value);
+    if (Number.isFinite(numberValue)) return numberValue;
+  }
+  return undefined;
+};
+
 const playerNumber = (player: Partial<LineupPlayer> | undefined, fallback: number): number =>
-  Number.isFinite(Number(player?.num ?? player?.number))
-    ? Number(player?.num ?? player?.number)
-    : fallback;
+  firstLineupNumber(
+    player?.num,
+    player?.number,
+    player?.shirtNumber,
+    player?.shirt_number,
+    player?.jerseyNumber,
+    player?.jersey_number,
+    player?.shirtNo,
+    player?.jerseyNo
+  ) ?? fallback;
+
+const lineupPositionText = (player: Partial<LineupPlayer> | undefined): string =>
+  String(
+    player?.pos ??
+    player?.positionLabel ??
+    player?.positionShort ??
+    player?.positionString ??
+    player?.position ??
+    player?.role ??
+    player?.positionDescription ??
+    ''
+  ).trim();
 
 const normalizedPlayer = (player: LineupPlayer | undefined, index: number): LineupPlayer => ({
   ...(player || {}),
   name: String(player?.name || DEFAULT_PLAYERS[index]?.name || `لاعب ${index + 1}`),
-  pos: String(player?.pos || (player ? '' : DEFAULT_PLAYERS[index]?.pos) || ''),
+  pos: lineupPositionText(player) || (player ? '' : DEFAULT_PLAYERS[index]?.pos) || '',
   num: playerNumber(player || {}, index + 1),
 });
 
@@ -331,7 +370,7 @@ const lineupIdentityCode = (candidateCode: unknown, teamName: unknown): string =
 
 const lineupLineFromPosition = (pos?: string): LineupLine | null => {
   const raw = String(pos || '').trim().toLowerCase();
-  if (/حارس|حراسة|مرمى|goalie/.test(raw)) return 'goalkeeper';
+  if (/حارس|حراسة|مرمى|goalie|goalkeeper|keeper|portero|gardien/.test(raw)) return 'goalkeeper';
   if (/دفاع|ظهير|مدافع/.test(raw)) return 'defence';
   if (/وسط|محور/.test(raw)) return 'midfield';
   if (/جناح|صانع/.test(raw)) return 'support';
@@ -347,7 +386,7 @@ const lineupLineFromPosition = (pos?: string): LineupLine | null => {
 };
 
 const lineupIsGoalkeeperCandidate = (player: LineupPlayer, index: number): boolean => {
-  const byPosition = lineupLineFromPosition(player.pos);
+  const byPosition = lineupLineFromPosition(lineupPositionText(player));
   const shirt = playerNumber(player, index + 1);
   if (shirt === 1 && index <= 3) return true;
   if (byPosition === 'goalkeeper') return true;
@@ -356,13 +395,13 @@ const lineupIsGoalkeeperCandidate = (player: LineupPlayer, index: number): boole
 };
 
 const lineupSourceLine = (player: LineupPlayer, index: number): LineupLine | null => {
-  const byPosition = lineupLineFromPosition(player.pos);
+  const byPosition = lineupLineFromPosition(lineupPositionText(player));
   if (byPosition) return byPosition;
   return lineupIsGoalkeeperCandidate(player, index) ? 'goalkeeper' : null;
 };
 
 const lineupLineFromRow = (rowIndex: number, rowsLength: number, player?: LineupPlayer): LineupLine => {
-  const byPosition = lineupLineFromPosition(player?.pos);
+  const byPosition = lineupLineFromPosition(lineupPositionText(player));
   if (byPosition) return byPosition;
   if (rowIndex === 0) return 'goalkeeper';
   if (rowIndex === 1) return 'defence';
@@ -372,7 +411,7 @@ const lineupLineFromRow = (rowIndex: number, rowsLength: number, player?: Lineup
 };
 
 const lineupLineFromY = (y: number, direction: string, player?: LineupPlayer): LineupLine => {
-  const byPosition = lineupLineFromPosition(player?.pos);
+  const byPosition = lineupLineFromPosition(lineupPositionText(player));
   if (byPosition) return byPosition;
   const defendingScaleY = direction === 'attack_down' ? 100 - y : y;
   if (defendingScaleY >= 80) return 'goalkeeper';
@@ -659,7 +698,7 @@ const ReoLineupPlayerMarker: React.FC<{
   theme?: MondialTheme;
 }> = ({ player, index, skin, styleId = 'reference_black', lineupNameMode, lineupPhotoMode, theme }) => {
   const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'field');
-  const number = player.num ?? player.number ?? index + 1;
+  const number = playerNumber(player, index + 1);
   const hasImage = Boolean(imageUrl);
   const rating = Number(player.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
@@ -694,7 +733,7 @@ const ReoLineupPlayerMarker: React.FC<{
       className="flex flex-col items-center"
       style={{ animation: `wcBadgePop .72s ${.32 + index * .065}s cubic-bezier(.16,1.18,.3,1) both` }}
     >
-      <div className="lineup-photo-shell relative pb-8">
+      <div className="lineup-photo-shell relative pb-10">
         <div
           className={`lineup-photo-frame relative ${frameClass} border-[5px] border-black flex items-center justify-center text-[28px] font-black`}
           data-lineup-marker-mode={markerMode}
@@ -721,7 +760,7 @@ const ReoLineupPlayerMarker: React.FC<{
           )}
         </div>
         {hasImage && (
-          <span className={`lineup-number-badge absolute left-1/2 top-full z-[6] -translate-x-1/2 -translate-y-[18%] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
+          <span className={`lineup-number-badge absolute left-1/2 bottom-0 z-[6] -translate-x-1/2 translate-y-[24%] ${badgeClass} flex items-center justify-center border-[4px] border-black bg-white px-1 leading-none font-black text-black shadow-[3px_3px_0_rgba(0,0,0,.55)]`}>
             {number}
           </span>
         )}
@@ -756,7 +795,7 @@ const ReoLineupMiniAvatar: React.FC<{
   theme?: MondialTheme;
 }> = ({ player, index, lineupPhotoMode, theme }) => {
   const imageUrl = lineupPlayerPhotoUrl(player, lineupPhotoMode, 'list');
-  const number = player.num ?? player.number ?? index + 1;
+  const number = playerNumber(player, index + 1);
   return (
     <span className="lineup-mini-avatar-clean relative w-7 h-7 flex items-center justify-center rounded-[10px] border-[3px] border-black overflow-hidden text-[11px] font-black" style={{ background: paletteAt(theme, index), color: '#050505' }}>
       {imageUrl ? (
@@ -1535,6 +1574,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
     statPeriodRaw !== 'FULL' &&
     !matchDetails.teamStatsByPeriod?.[statPeriodRaw]?.length
   );
+  const effectiveStatPeriod = statPeriodUnavailable ? 'FULL' : statPeriodRaw;
   const statPeriodLabel = ({
     FULL: 'المباراة كاملة',
     '1H': 'الشوط الأول',
@@ -1550,6 +1590,9 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   ]
     .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
     .join(' · ');
+  const statPeriodWarning = statPeriodUnavailable
+    ? 'مصدر البيانات لا يرسل هذه الفترة لهذا اللقاء، لذلك تعرض اللوحة إحصائيات المباراة كاملة'
+    : '';
   const statFocusLabel = ({
     balanced: 'كل مؤشرات المباراة',
     attack: 'الهجوم والتسديد',
@@ -1688,7 +1731,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
       awayFallback: 88,
     },
   ].map(definition => {
-    const liveRow = findDetailStat(matchDetails, definition.keys, statPeriodRaw);
+    const liveRow = findDetailStat(matchDetails, definition.keys, effectiveStatPeriod);
     const homeValue = liveRow?.home ?? num(getField, definition.homeField, definition.homeFallback);
     const awayValue = liveRow?.away ?? num(getField, definition.awayField, definition.awayFallback);
     const homeBar = detailStatNumber(homeValue);
@@ -1788,6 +1831,11 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                   <div className="text-[10px] text-[#eeff00]">{statClockLabel}</div>
                   <div className="mt-1 truncate text-[15px] leading-tight">{homeDisplayName} × {awayDisplayName}</div>
                   <div className="mt-1 text-[9px] text-white/55">{statStoryLabel} · {statFocusLabel} · {statsViewModeLabel}</div>
+                  {statPeriodWarning && (
+                    <div className="stat-period-warning mt-2 rounded-full border border-[#eeff00]/55 bg-[#eeff00]/12 px-3 py-1 text-[8px] leading-tight text-[#eeff00]">
+                      {statPeriodWarning}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-end gap-4"><TeamCode value={awayDisplayCode} color={WC.red} small /><FlagOrImage code={awayCode} image={awayLogo} size={48} /></div>
               </div>
