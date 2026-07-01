@@ -471,6 +471,7 @@ const mondialStatsDetailFields: OverlayField[] = [
 const mondialStatsViewModeOptions = [
   { value: 'reference_board', label: 'لوحة بث كلاسيكية بصورة خلفية' },
   { value: 'photo_comparison_board', label: 'ستايل صورة + لوحة إحصائيات تلفزيونية' },
+  { value: 'broadcast_split_panel', label: 'ستايل بث مقسوم: قصة + مؤشرات' },
   { value: 'dual_bars', label: 'أشرطة مقارنة كاملة' },
   { value: 'momentum_grid', label: 'شبكة زخم المباراة' },
   { value: 'key_numbers', label: 'أرقام رئيسية سريعة' },

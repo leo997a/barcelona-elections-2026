@@ -49,6 +49,13 @@ const getRuntimeCache = () => {
 
 const keyFor = (id: string) => `overlay:${id}`;
 const fileKeyFor = (id: string) => `${createHash('sha256').update(id).digest('hex').slice(0, 48)}.json`;
+const fingerprintState = (state: unknown) => {
+  try {
+    return JSON.stringify(state);
+  } catch {
+    return String(state);
+  }
+};
 
 const isLiveEntry = (value: unknown): value is LiveStateEntry => {
   if (!value || typeof value !== 'object') return false;
@@ -115,16 +122,19 @@ export const setLiveState = async (
   clientVersion = Date.now(),
 ): Promise<LiveStateEntry> => {
   const previous = await getLiveState(id);
-  if (previous?.clientVersion && clientVersion <= previous.clientVersion) {
+  const previousClientVersion = previous?.clientVersion ?? 0;
+  const stateChanged = previous ? fingerprintState(previous.state) !== fingerprintState(state) : true;
+  if (previousClientVersion && clientVersion <= previousClientVersion && !stateChanged) {
     return previous;
   }
+  const safeClientVersion = Math.max(clientVersion, previousClientVersion + 1);
 
   const entry: LiveStateEntry = {
     id,
     state,
     updatedAt: Date.now(),
     version: (previous?.version ?? 0) + 1,
-    clientVersion,
+    clientVersion: safeClientVersion,
   };
 
   fallbackStore.set(id, entry);

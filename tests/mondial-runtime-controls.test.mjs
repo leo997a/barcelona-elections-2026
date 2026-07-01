@@ -308,8 +308,13 @@ test('hostinger live output state has a persistent file-store fallback', async (
   assert.match(liveStore, /resolve\(process\.cwd\(\), 'data', 'live-state'\)/);
   assert.match(liveStore, /const readFileStoreEntry = async \(id: string\)/);
   assert.match(liveStore, /const writeFileStoreEntry = async \(entry: LiveStateEntry\)/);
+  assert.match(liveStore, /const fingerprintState = \(state: unknown\) => \{/);
   assert.match(liveStore, /const persisted = await readFileStoreEntry\(id\)/);
   assert.match(liveStore, /await writeFileStoreEntry\(entry\)/);
+  assert.match(liveStore, /const stateChanged = previous \? fingerprintState\(previous\.state\) !== fingerprintState\(state\) : true;/);
+  assert.match(liveStore, /if \(previousClientVersion && clientVersion <= previousClientVersion && !stateChanged\) \{/);
+  assert.match(liveStore, /const safeClientVersion = Math\.max\(clientVersion, previousClientVersion \+ 1\);/);
+  assert.match(liveStore, /clientVersion: safeClientVersion,/);
   assert.match(liveStore, /const fileStoreDisabled = \(\) => Boolean\(process\.env\.VERCEL\)/);
   assert.match(liveStore, /export const describeLiveStoreMode = \(\) => \{/);
   assert.match(liveStore, /return fileStoreDisabled\(\) \? 'memory' : 'file';/);

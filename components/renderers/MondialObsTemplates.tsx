@@ -142,6 +142,26 @@ const paletteAt = (theme: MondialTheme | undefined, index: number): string => {
 const colorKey = (value: unknown): string =>
   String(value || '').trim().toLowerCase();
 
+const normalizeHexColor = (value: unknown): string => {
+  const color = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : '';
+};
+
+const hexDistance = (a: string, b: string): number => {
+  const left = normalizeHexColor(a).replace(/^#/, '');
+  const right = normalizeHexColor(b).replace(/^#/, '');
+  if (!left || !right) return 255;
+  const dr = parseInt(left.slice(0, 2), 16) - parseInt(right.slice(0, 2), 16);
+  const dg = parseInt(left.slice(2, 4), 16) - parseInt(right.slice(2, 4), 16);
+  const db = parseInt(left.slice(4, 6), 16) - parseInt(right.slice(4, 6), 16);
+  return Math.sqrt((dr * dr) + (dg * dg) + (db * db));
+};
+
+const isDistinctAccent = (a: string, b: string): boolean =>
+  Boolean(normalizeHexColor(a) && normalizeHexColor(b)) &&
+  colorKey(a) !== colorKey(b) &&
+  hexDistance(a, b) >= 92;
+
 const textOnColor = (value: string): string => {
   const hex = value.trim().replace(/^#/, '');
   if (!/^[0-9a-f]{6}$/i.test(hex)) return WC.black;
@@ -158,11 +178,12 @@ const distinctTeamAccents = (
   awayOverride?: unknown
 ): { home: string; away: string; homeText: string; awayText: string } => {
   const c = themedColors(theme);
-  const home = String(homeOverride || c.danger || WC.red).trim();
-  const requestedAway = String(awayOverride || c.accent || WC.royal).trim();
-  const fallbackAway = [c.accent, c.accent2, c.success, c.gold, WC.royal, WC.cyan, WC.lime, WC.orange]
-    .find(color => colorKey(color) && colorKey(color) !== colorKey(home));
-  const away = colorKey(requestedAway) === colorKey(home)
+  const home = normalizeHexColor(homeOverride) || normalizeHexColor(c.danger) || WC.red;
+  const requestedAway = normalizeHexColor(awayOverride) || normalizeHexColor(c.accent) || WC.royal;
+  const fallbackAway = [c.accent, c.accent2, c.success, c.gold, WC.royal, WC.cyan, WC.lime, WC.orange, WC.blue]
+    .map(normalizeHexColor)
+    .find(color => color && isDistinctAccent(home, color));
+  const away = !isDistinctAccent(home, requestedAway)
     ? fallbackAway || WC.royal
     : requestedAway;
   return {
@@ -1540,6 +1561,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   const statsViewModeLabel = ({
     reference_board: 'لوحة بث كلاسيكية',
     photo_comparison_board: 'صورة + لوحة تلفزيونية',
+    broadcast_split_panel: 'قصة + مؤشرات بث',
     dual_bars: 'مقارنة مباشرة',
     key_numbers: 'أرقام رئيسية',
     momentum_grid: 'زخم المباراة',
@@ -1745,6 +1767,12 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
   );
   const homeAccent = teamAccents.home;
   const awayAccent = teamAccents.away;
+  const xgLeaderAccent = xgLeaderCode === homeDisplayCode
+    ? homeAccent
+    : xgLeaderCode === awayDisplayCode
+      ? awayAccent
+      : c.gold;
+  const xgLeaderText = textOnColor(xgLeaderAccent);
   return (
     <KineticStage theme={t}>
       <div className="w-full h-full p-9 flex flex-col">
@@ -1895,6 +1923,93 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                     </div>
                   </div>
                 </div>
+              ) : statsViewMode === 'broadcast_split_panel' ? (
+                <div className="stats-broadcast-split-panel min-h-[650px] bg-[#f2efe6] p-7 text-black">
+                  <div className="grid min-h-[596px] grid-cols-[360px_minmax(0,1fr)] gap-6">
+                    <div
+                      className="stats-broadcast-storyline relative overflow-hidden rounded-[32px] border-[5px] border-black p-6 text-white shadow-[12px_10px_0_rgba(0,0,0,.28)]"
+                      style={{ background: `linear-gradient(145deg, ${homeAccent} 0 34%, #171717 34% 62%, ${awayAccent} 62% 100%)` }}
+                    >
+                      <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/20" />
+                      <div className="absolute -left-16 bottom-8 h-44 w-44 rounded-full bg-black/25" />
+                      <div className="relative flex items-center justify-between gap-4">
+                        <div className="rounded-[22px] border-[4px] border-white bg-white px-4 py-3 text-black">
+                          <FlagOrImage code={homeCode} image={homeLogo} size={48} />
+                        </div>
+                        <div className="rounded-[22px] border-[4px] border-white bg-white px-4 py-3 text-black">
+                          <FlagOrImage code={awayCode} image={awayLogo} size={48} />
+                        </div>
+                      </div>
+                      <div className="relative mt-12">
+                        <div className="text-[13px] font-black text-white/75">{statClockLabel}</div>
+                        <div className="mt-3 text-[48px] leading-[.98] font-black">{homeDisplayName} × {awayDisplayName}</div>
+                        <div className="mt-5 rounded-[24px] border-[4px] border-white bg-white px-5 py-4 text-black">
+                          <div className="text-[12px] font-black text-black/55">قراءة المباراة</div>
+                          <div className="mt-2 text-[24px] leading-tight font-black">{statStoryLabel}</div>
+                          <div className="mt-3 text-[11px] font-black text-black/55">{statFocusLabel}</div>
+                        </div>
+                      </div>
+                      <div className="relative mt-8 grid grid-cols-2 gap-3">
+                        {[homeDisplayCode, awayDisplayCode].map((code, index) => (
+                          <div key={`broadcast-split-team-${code}`} className="stats-broadcast-team-strip rounded-[20px] border-[4px] border-white bg-black/75 px-4 py-3 font-black text-white">
+                            <div className="text-[12px] opacity-70">{index === 0 ? homeDisplayName : awayDisplayName}</div>
+                            <div className="mt-1 text-[32px] leading-none">{code}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="stats-broadcast-metrics rounded-[32px] border-[5px] border-black bg-white p-6 shadow-[12px_10px_0_rgba(0,0,0,.18)]">
+                      <div className="mb-5 grid grid-cols-3 gap-4">
+                        {featuredRows.slice(0, 3).map(({ label, homeValue, awayValue, leaderCode, leaderName }, index) => {
+                          const leaderAccent = leaderCode === homeDisplayCode ? homeAccent : leaderCode === awayDisplayCode ? awayAccent : c.gold;
+                          return (
+                            <div key={`broadcast-split-feature-${label}`} className="stats-broadcast-feature rounded-[24px] border-[4px] border-black p-4 font-black" style={{ background: index === 0 ? c.gold : '#f6f4ec', animation: `wcBadgePop .5s ${.2 + index * .08}s both` }}>
+                              <div className="text-[11px] text-black/55">{label}</div>
+                              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                                <div className="text-[31px] leading-none">{detailStatText(homeValue)}</div>
+                                <div className="pb-1 text-[10px] text-black/45">vs</div>
+                                <div className="text-left text-[31px] leading-none">{detailStatText(awayValue)}</div>
+                              </div>
+                              <div className="mt-3 rounded-full border-[3px] border-black px-3 py-1 text-center text-[10px]" style={{ background: leaderAccent, color: textOnColor(leaderAccent) }}>
+                                {leaderCode === 'EVEN' ? 'متوازن' : leaderName}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {statRows.slice(0, 10).map(({ label, homeValue, awayValue, homeBar, awayBar, leaderCode }, index) => {
+                          const total = Math.max(1, homeBar + awayBar);
+                          const homePct = Math.round((homeBar / total) * 100);
+                          const awayPct = 100 - homePct;
+                          const leaderAccent = leaderCode === homeDisplayCode ? homeAccent : leaderCode === awayDisplayCode ? awayAccent : c.gold;
+                          return (
+                            <div
+                              key={`broadcast-split-row-${label}`}
+                              className="stats-broadcast-row rounded-[20px] border-[3px] border-black bg-[#f8f6ef] px-4 py-3 font-black"
+                              style={{ animation: `wcRowIn .48s ${.28 + index * .045}s both` }}
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-3">
+                                <span className="truncate text-[13px]">{label}</span>
+                                <span className="rounded-full border-[2px] border-black px-2 py-0.5 text-[9px]" style={{ background: leaderAccent, color: textOnColor(leaderAccent) }}>
+                                  {leaderCode === 'EVEN' ? '50/50' : leaderCode}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-[44px_1fr_44px] items-center gap-3">
+                                <div className="text-[19px] leading-none">{detailStatText(homeValue)}</div>
+                                <div className="flex h-4 overflow-hidden rounded-full border-[2px] border-black bg-black/10">
+                                  <div className="h-full" style={{ width: `${homePct}%`, background: homeAccent }} />
+                                  <div className="h-full" style={{ width: `${awayPct}%`, background: awayAccent }} />
+                                </div>
+                                <div className="text-left text-[19px] leading-none">{detailStatText(awayValue)}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : statsViewMode === 'key_numbers' ? (
                 <div className="p-7 grid grid-cols-4 gap-4">
                   {featuredRows.map(({ label, homeValue, awayValue }, index) => (
@@ -1998,14 +2113,19 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                     <div className="relative rounded-[22px] border-[4px] border-black bg-white px-5 py-3 font-black shadow-[8px_8px_0_rgba(0,0,0,.18)]">
                       <div className="flex items-center justify-between gap-4">
                         <span className="text-[12px] opacity-65">من المتفوق في الأهداف المتوقعة؟</span>
-                        <span className="rounded-full border-[3px] border-black bg-black px-4 py-1 text-[13px] text-white">{xgLeaderCopy}</span>
+                        <span
+                          className="xg-leader-chip rounded-full border-[3px] border-black px-4 py-1 text-[13px]"
+                          style={{ background: xgLeaderAccent, color: xgLeaderText }}
+                        >
+                          {xgLeaderCopy}
+                        </span>
                       </div>
                       <div className="mt-2 text-[11px] opacity-60">
                         {xgLeaderCode === 'EVEN' ? 'لا يوجد فارق فعلي في جودة الفرص.' : `الفارق الحالي في xG: ${xgDifferenceText}`}
                       </div>
                     </div>
                     <div className="relative grid gap-4">
-                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4" style={{ boxShadow: `inset 12px 0 0 ${homeAccent}` }}>
+                      <div className="xg-metric-card xg-team-value-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4" style={{ boxShadow: `inset 12px 0 0 ${homeAccent}` }}>
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
                           <span className="flex items-center gap-3"><FlagOrImage code={homeCode} image={homeLogo} size={38} /><span>{homeDisplayCode}</span></span>
                           <span className="text-[11px] opacity-60">{homeDisplayName}</span>
@@ -2015,7 +2135,7 @@ export const ReoObsMatchStats: React.FC<ReoObsVariantProps> = ({ t, getField, re
                           <div className="pb-2 text-[12px] font-black">xG</div>
                         </div>
                       </div>
-                      <div className="xg-metric-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4 text-black" style={{ boxShadow: `inset 12px 0 0 ${awayAccent}` }}>
+                      <div className="xg-metric-card xg-team-value-card rounded-[24px] border-[5px] border-black bg-white px-5 py-4 text-black" style={{ boxShadow: `inset 12px 0 0 ${awayAccent}` }}>
                         <div className="flex items-center justify-between gap-3 text-[14px] font-black">
                           <span className="flex items-center gap-3"><FlagOrImage code={awayCode} image={awayLogo} size={38} /><span>{awayDisplayCode}</span></span>
                           <span className="text-[11px] opacity-60">{awayDisplayName}</span>
@@ -2629,12 +2749,17 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
       const requestedMetricValue = activeMetric.value(player);
       const metricFallbackValue = scorerFallbackMetricValue(player);
       const metricMissing = scorerMetric !== 'goals' && requestedMetricValue === undefined;
+      const metricValue = requestedMetricValue ?? metricFallbackValue;
+      const metricLabel = player.metricLabel || activeMetric.label;
       return {
         ...player,
-        metricValue: requestedMetricValue ?? metricFallbackValue,
-        metricLabel: metricMissing ? 'أهداف بديلة' : player.metricLabel || activeMetric.label,
+        metricValue,
+        metricSortValue: metricValue,
+        metricLabel,
+        metricDisplayValue: metricMissing ? 'غير متاح' : detailStatText(metricValue),
+        metricDisplayLabel: metricLabel,
         metricMissing,
-        metricMissingLabel: metricMissing ? 'المؤشر غير متاح من الجسر' : '',
+        metricMissingLabel: metricMissing ? 'غير متاح من المصدر - الترتيب بالأهداف' : '',
       };
     })
     .sort((a, b) =>
@@ -2666,7 +2791,17 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
     const parsed = Number(value);
     return Number.isFinite(parsed) ? { label, value: parsed } : null;
   };
-  const scorerSupportStats = (player: MondialLiveScorer & { metricValue?: number; metricLabel?: string }) => {
+  const scorerMetricText = (player: { metricDisplayValue?: string; metricValue?: number }) =>
+    player.metricDisplayValue || detailStatText(player.metricValue ?? 0);
+  const scorerMetricLabel = (player: { metricDisplayLabel?: string; metricLabel?: string }) =>
+    player.metricDisplayLabel || player.metricLabel || activeMetric.label;
+  const scorerMissingBadge = (player: { metricMissing?: boolean; metricMissingLabel?: string }) =>
+    player.metricMissing ? (
+      <div className="scorer-metric-missing-badge mt-1 rounded-full border-[3px] border-black bg-white px-3 py-1 text-[8px] font-black text-black">
+        {player.metricMissingLabel || 'غير متاح من المصدر'}
+      </div>
+    ) : null;
+  const scorerSupportStats = (player: MondialLiveScorer & { metricValue?: number; metricLabel?: string; metricDisplayLabel?: string }) => {
     const stats = [
       scorerKnownStat('أهداف', player.goals),
       scorerKnownStat('أسيست', player.assists),
@@ -2676,7 +2811,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
     ].filter((item): item is { label: string; value: number } => Boolean(item));
     return stats.length
       ? stats
-      : [{ label: player.metricLabel || activeMetric.label, value: Number(player.metricValue ?? player.goals ?? 0) }];
+      : [{ label: scorerMetricLabel(player), value: Number(player.metricValue ?? player.goals ?? 0) }];
   };
   const sourceTag = [
     liveScorers.length ? `${activeMetric.label} مباشر` : activeMetric.label,
@@ -2711,8 +2846,9 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   <div className="relative p-6">
                     <div className="text-[28px] leading-[1.08] font-black">{player.nameAr || player.name}</div>
                     <div className="text-[13px] font-black mt-2">{player.team}</div>
-                    <div className="mt-7 text-[96px] leading-none font-black">{detailStatText(player.metricValue)}</div>
-                    <div className="text-[12px] font-black">{player.metricLabel}</div>
+                    <div className="mt-7 text-[96px] leading-none font-black">{scorerMetricText(player)}</div>
+                    <div className="text-[12px] font-black">{scorerMetricLabel(player)}</div>
+                    {scorerMissingBadge(player)}
                     <div className="mt-5 grid grid-cols-2 gap-2">
                       {scorerSupportStats(player).slice(0, 4).map((stat, statIndex) => (
                         <div key={`${player.name}-${stat.label}`} className="rounded-[15px] border-[3px] border-black px-3 py-2 font-black" style={{ background: statIndex === 0 ? c.ink : paletteAt(t, statIndex), color: statIndex === 0 ? c.paper : c.ink }}>
@@ -2740,7 +2876,8 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   />
                   <div><div className="text-[18px] font-black leading-tight">{player.nameAr || player.name}</div><div className="text-[10px] font-black">{player.team}</div></div>
                   <div>
-                    <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold, color: c.ink }}><div className="text-[28px] leading-none font-black">{detailStatText(player.metricValue)}</div></div>
+                    <div className="rounded-[16px] border-[4px] border-black text-center py-2" style={{ background: c.gold, color: c.ink }}><div className="text-[28px] leading-none font-black">{scorerMetricText(player)}</div></div>
+                    {scorerMissingBadge(player)}
                     <div className="mt-2 grid grid-cols-2 gap-1 text-[8px] font-black">
                       {scorerSupportStats(player).slice(0, 2).map(stat => (
                         <span key={`${player.name}-compact-${stat.label}`} className="rounded-full border-2 border-black px-2 py-1" style={{ background: c.paper, color: c.ink }}>{stat.label} {detailStatText(stat.value)}</span>
@@ -2756,7 +2893,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                 {scorers.map((player, index) => {
                   const width = Math.max(10, Math.round(((Number(player.metricValue) || 0) / maxMetric) * 100));
                   const support = scorerSupportStats(player)
-                    .filter(stat => stat.label !== player.metricLabel)
+                    .filter(stat => stat.label !== scorerMetricLabel(player))
                     .slice(0, 2);
                   return (
                     <div
@@ -2791,8 +2928,9 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                         </div>
                       </div>
                       <div className="rounded-[22px] border-[5px] border-black py-3 text-center" style={{ background: c.ink, color: c.paper }}>
-                        <div className="text-[44px] leading-none font-black">{detailStatText(player.metricValue)}</div>
-                        <div className="mt-1 text-[10px] font-black">{player.metricLabel}</div>
+                        <div className="text-[44px] leading-none font-black">{scorerMetricText(player)}</div>
+                        <div className="mt-1 text-[10px] font-black">{scorerMetricLabel(player)}</div>
+                        {scorerMissingBadge(player)}
                       </div>
                     </div>
                   );
@@ -2823,8 +2961,9 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                       </div>
                     </div>
                     <div className="mt-5 rounded-[24px] border-[5px] border-black bg-black px-5 py-4 text-center text-white">
-                      <div className="text-[76px] leading-none font-black">{detailStatText(leader.metricValue)}</div>
-                      <div className="text-[12px] font-black">{leader.metricLabel}</div>
+                      <div className="text-[76px] leading-none font-black">{scorerMetricText(leader)}</div>
+                      <div className="text-[12px] font-black">{scorerMetricLabel(leader)}</div>
+                      {scorerMissingBadge(leader)}
                     </div>
                   </div>
                 )}
@@ -2851,8 +2990,8 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                     <div>
                       <div className="text-[13px] font-black opacity-70">قائد السباق</div>
                       <div className="mt-2 inline-flex items-end gap-2 rounded-[22px] border-[5px] border-black bg-white px-5 py-3 text-black">
-                        <span className="text-[68px] leading-none font-black">{detailStatText(leader.metricValue)}</span>
-                        <span className="pb-2 text-[12px] font-black">{leader.metricLabel}</span>
+                        <span className="text-[68px] leading-none font-black">{scorerMetricText(leader)}</span>
+                        <span className="pb-2 text-[12px] font-black">{scorerMetricLabel(leader)}</span>
                       </div>
                     </div>
                     <ScorerPortrait
@@ -2887,7 +3026,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                   const rowIndex = index + 1;
                   const width = Math.max(10, Math.round(((Number(player.metricValue) || 0) / maxMetric) * 100));
                   const rowSupportStats = scorerSupportStats(player)
-                    .filter(stat => stat.label !== player.metricLabel)
+                    .filter(stat => stat.label !== scorerMetricLabel(player))
                     .slice(0, 2);
                   return (
                     <div
@@ -2922,7 +3061,7 @@ export const ReoObsGoldenBoot: React.FC<ReoObsVariantProps> = ({ t, getField, li
                           <div className="h-full" style={{ width: `${width}%`, background: `linear-gradient(90deg, ${paletteAt(t, index + 1)}, ${c.gold})`, animation: `wcBarGrow .8s ${.44 + rowIndex * .06}s both` }} />
                         </div>
                       </div>
-                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[34px] leading-none font-black">{detailStatText(player.metricValue)}</div><div className="mt-1 text-[9px] font-black">{player.metricLabel}</div></div>
+                      <div className="h-full flex flex-col items-center justify-center border-l-[5px] border-black" style={{ background: c.gold }}><div className="text-[34px] leading-none font-black">{scorerMetricText(player)}</div><div className="mt-1 text-[9px] font-black">{scorerMetricLabel(player)}</div></div>
                     </div>
                   );
                 })}

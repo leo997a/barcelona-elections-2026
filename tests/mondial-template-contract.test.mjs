@@ -419,6 +419,13 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(templates, /id: 'template-mondial-territory-control'/);
   assert.match(templates, /id: 'template-mondial-xg-shot-flow'/);
   assert.match(templates, /id: 'template-mondial-live-momentum'/);
+  assert.match(obs, /normalizeHexColor/);
+  assert.match(obs, /isDistinctAccent/);
+  assert.match(obs, /statsViewMode === 'broadcast_split_panel'/);
+  assert.match(obs, /stats-broadcast-split-panel/);
+  assert.match(obs, /xg-leader-chip/);
+  assert.match(obs, /xg-team-value-card/);
+  assert.match(templates, /value: 'broadcast_split_panel'/);
 
   assert.match(obs, /const scorerViewMode = text\(getField, 'scorerViewMode', 'race_board'\)/);
   assert.match(obs, /const scorerCardStyle = text\(getField, 'scorerCardStyle', 'reference_stack'\)/);
@@ -429,7 +436,11 @@ test('mondial statistical templates expose and consume real display modes', asyn
   assert.match(obs, /player\.shotsOnTarget/);
   assert.match(obs, /player\.keyPasses/);
   assert.match(obs, /referrerPolicy="no-referrer"/);
-  assert.match(obs, /requestedMetricValue \?\? metricFallbackValue/);
+  assert.match(obs, /const metricValue = requestedMetricValue \?\? metricFallbackValue/);
+  assert.match(obs, /metricDisplayValue/);
+  assert.match(obs, /scorerMetricText/);
+  assert.match(obs, /scorerMetricLabel/);
+  assert.match(obs, /scorer-metric-missing-badge/);
   assert.match(obs, /metricMissing/);
   assert.match(obs, /المؤشر غير متاح - عرض بديل واضح/);
   assert.match(obs, /scorerMetricValue/);
