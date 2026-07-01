@@ -777,9 +777,40 @@ class SyncManager {
     this.pushState(normalizedOverlay);
   }
 
+  public setOverlayVisibility(overlayId: string, isVisible: boolean, fallbackOverlay?: OverlayConfig) {
+    const existingOverlay = this.currentState.find(overlay => overlay.id === overlayId);
+    const sourceOverlay = existingOverlay ?? fallbackOverlay;
+
+    if (!sourceOverlay) {
+      this.processAction({ action: 'set_visible', targetId: overlayId, value: isVisible });
+      return;
+    }
+
+    const nextOverlay = this.normalizeOverlay({ ...sourceOverlay, id: overlayId, isVisible });
+    let replaced = false;
+    this.currentState = this.currentState.map(overlay => {
+      if (overlay.id !== overlayId) return overlay;
+      replaced = true;
+      return nextOverlay;
+    });
+    if (!replaced) {
+      this.currentState = [...this.currentState, nextOverlay];
+    }
+
+    this.persist();
+    this.pushToLiveApi(overlayId, nextOverlay, { immediate: true, retry: true });
+    if (this.canWriteSecureState()) {
+      void this.pushToSecureState().catch(error => {
+        if (!this.disableSecureWrites(error, 'Firebase visibility state write denied')) {
+          console.error('Failed to publish secure visibility state', error);
+        }
+      });
+    }
+  }
+
   public updateLiveField(overlayId: string, fieldId: string | 'isVisible', value: unknown) {
     if (fieldId === 'isVisible') {
-      this.processAction({ action: 'set_visible', targetId: overlayId, value: Boolean(value) });
+      this.setOverlayVisibility(overlayId, Boolean(value));
       return;
     }
 

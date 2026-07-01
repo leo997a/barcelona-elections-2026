@@ -71,7 +71,7 @@ MIN_DELAY    = 2
 MAX_DELAY    = 4
 DEFAULT_INTERVAL = 60
 DEFAULT_PORT = 3005
-DEFAULT_SITE_URL = "https://barcelona-elections-2026.vercel.app"
+DEFAULT_SITE_URL = "https://peachpuff-herring-712997.hostingersite.com"
 
 LIVE_STATE: Dict[str, Any] = {
     "ok": True,

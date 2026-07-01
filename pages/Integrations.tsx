@@ -76,7 +76,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
   <script>
     var websocket = null;
     const DEFAULT_CONTROL_KEY = 'studio-live-control';
-    const DEFAULT_SITE_URL = 'https://barcelona-elections-2026.vercel.app';
+    const DEFAULT_SITE_URL = 'https://peachpuff-herring-712997.hostingersite.com';
 
     function createCommandId() {
       return 'cmd_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
@@ -587,7 +587,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
       var result = document.getElementById('connectionResult');
       var token = currentTokenData || {};
       var overlayId = token.id || currentSettings.overlayId;
-      var siteUrl = token.u || currentSettings.siteUrl || 'https://barcelona-elections-2026.vercel.app';
+      var siteUrl = token.u || currentSettings.siteUrl || 'https://peachpuff-herring-712997.hostingersite.com';
       if (!overlayId) {
         result.innerText = 'ألصق Smart Token صالحًا أولًا.';
         result.style.color = '#fca5a5';
@@ -630,7 +630,7 @@ const Integrations: React.FC<IntegrationsProps> = ({ overlays }) => {
         payload.studioId = tokenData.s;
         payload.overlayId = tokenData.id;
         payload.controlKey = tokenData.ct || 'studio-live-control';
-        payload.siteUrl = tokenData.u || 'https://barcelona-elections-2026.vercel.app';
+        payload.siteUrl = tokenData.u || 'https://peachpuff-herring-712997.hostingersite.com';
       } else {
         payload.studioId = currentSettings.studioId;
         payload.overlayId = currentSettings.overlayId;

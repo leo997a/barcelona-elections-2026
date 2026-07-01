@@ -277,6 +277,15 @@ test('output visibility controls publish immediately and editor links use the la
     syncManager,
     /this\.pushToLiveApi\(command\.targetId, changedOverlay \?\? undefined, \{[\s\S]*?immediate: isVisibilityCommand,[\s\S]*?retry: isVisibilityCommand,[\s\S]*?\}\);/
   );
+  assert.match(syncManager, /public setOverlayVisibility\(overlayId: string, isVisible: boolean, fallbackOverlay\?: OverlayConfig\) \{/);
+  assert.match(syncManager, /const sourceOverlay = existingOverlay \?\? fallbackOverlay;/);
+  assert.match(syncManager, /if \(!replaced\) \{[\s\S]*?this\.currentState = \[\.\.\.this\.currentState, nextOverlay\];[\s\S]*?\}/);
+  assert.match(syncManager, /this\.pushToLiveApi\(overlayId, nextOverlay, \{ immediate: true, retry: true \}\);/);
+  assert.match(editor, /const publishDraftVisibility = useCallback\(\(isVisible: boolean\) => \{/);
+  assert.match(editor, /syncManager\.setOverlayVisibility\(liveOverlay\.id, isVisible, outputSnapshot\);/);
+  assert.match(editor, /onShow=\{\(\) => publishDraftVisibility\(true\)\}/);
+  assert.match(editor, /onHide=\{\(\) => publishDraftVisibility\(false\)\}/);
+  assert.match(editor, /onReset=\{\(\) => publishDraftVisibility\(false\)\}/);
   assert.match(editor, /const outputSnapshot = normalizeElectionOverlay\(\{[\s\S]*?\.\.\.draftOverlay,[\s\S]*?isVisible: liveOverlay\.isVisible,[\s\S]*?\}\);/);
   assert.match(editor, /prepareOutputUrl\(outputSnapshot\.id, outputSnapshot\)/);
   assert.doesNotMatch(editor, /prepareOutputUrl\(liveOverlay\.id, liveOverlay\)/);
@@ -297,8 +306,23 @@ test('public output links have fast fallback polling and template reconstruction
   assert.doesNotMatch(app, /if \(embeddedOverlay\) \{[\s\S]*?return;\s*\}[\s\S]*?if \(!id\) return;/);
   assert.match(app, /if \(!id\) return;\s*if \(embeddedOverlay\) \{/);
   assert.doesNotMatch(app, /startFallback\(\);\s*connectSSE\(\);/);
-  assert.match(app, /stopFallback\(\);\s*consecutiveLiveMisses = 0;\s*setConnStatus\('live'\);/);
+  assert.match(app, /es\.onopen = \(\) => \{[\s\S]*?consecutiveLiveMisses = 0;[\s\S]*?setConnStatus\('live'\);[\s\S]*?startFallback\(\);[\s\S]*?\};/);
+  assert.doesNotMatch(app, /es\.onopen = \(\) => \{\s*stopFallback\(\);/);
   assert.match(app, /connectSSE\(\);/);
+});
+
+test('stream deck and match bridge defaults point at the hosted production origin', async () => {
+  const [integrations, bridgeExtractor, bridgeApp] = await Promise.all([
+    readSource('../pages/Integrations.tsx'),
+    readSource('../cloud/reo-match-bridge/extractor/extract_match.py'),
+    readSource('../cloud/reo-match-bridge/app.py'),
+  ]);
+
+  const hostingerOrigin = 'https://peachpuff-herring-712997.hostingersite.com';
+  assert.match(integrations, new RegExp(hostingerOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(bridgeExtractor, new RegExp(hostingerOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(bridgeApp, new RegExp(hostingerOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(integrations, /barcelona-elections-2026\.vercel\.app/);
 });
 
 test('stream fallback refresh is fast enough for hostinger live output', async () => {

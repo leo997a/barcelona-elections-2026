@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { OverlayConfig, OverlayType, OverlayField, Sponsor } from '../types';
 import { INITIAL_TEMPLATES, normalizeTemplateFields } from '../constants';
 import OverlayRenderer from '../components/OverlayRenderer';
@@ -565,6 +565,11 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
     setMotionPreviewKey(key => key + 1);
   };
 
+  const publishDraftVisibility = useCallback((isVisible: boolean) => {
+    const outputSnapshot = normalizeElectionOverlay({ ...draftOverlay, isVisible });
+    syncManager.setOverlayVisibility(liveOverlay.id, isVisible, outputSnapshot);
+  }, [draftOverlay, liveOverlay.id]);
+
   // Player Intel V2 dock state — height is resizable, fit mode controls preview scale.
   const [piDockHeight, setPiDockHeight] = useState<number>(() => {
     try {
@@ -739,13 +744,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
           if (e.code === 'Space') {
               e.preventDefault();
-              syncManager.updateLiveField(liveOverlay.id, 'isVisible', !liveOverlay.isVisible);
+              publishDraftVisibility(!liveOverlay.isVisible);
           }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [liveOverlay.id, liveOverlay.isVisible]);
+  }, [liveOverlay.isVisible, publishDraftVisibility]);
 
   // --- HANDLERS ---
   const handleDraftFieldChange = (id: string, value: any) => {
@@ -4881,7 +4886,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
                  {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
-                 <TemplateControlBar overlay={liveOverlay} compact />
+                 <TemplateControlBar
+                   overlay={liveOverlay}
+                   compact
+                   onShow={() => publishDraftVisibility(true)}
+                   onHide={() => publishDraftVisibility(false)}
+                   onReset={() => publishDraftVisibility(false)}
+                 />
              </div>
              <div className="flex items-center gap-2">
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>كروما</button>

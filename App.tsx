@@ -346,9 +346,9 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
         setConnStatus('connecting');
 
         es.onopen = () => {
-          stopFallback();
           consecutiveLiveMisses = 0;
           setConnStatus('live');
+          startFallback();
         };
 
         es.onmessage = (event) => {
