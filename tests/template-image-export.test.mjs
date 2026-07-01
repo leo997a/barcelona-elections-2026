@@ -65,7 +65,10 @@ test('image export is isolated from live output and does not expose a server ima
 });
 
 test('public output pages block third-party injected network calls', async () => {
-  const server = await readSource('../server/server.ts');
+  const [server, indexHtml] = await Promise.all([
+    readSource('../server/server.ts'),
+    readSource('../index.html'),
+  ]);
 
   for (const token of [
     'outputSecurityPolicy',
@@ -84,6 +87,10 @@ test('public output pages block third-party injected network calls', async () =>
     server,
     /applyOutputIsolationHeaders\(response, requestUrl\.pathname\);\s*sendFile\(response, indexPath, 'no-cache'\);/
   );
+  assert.match(indexHtml, /http-equiv="Content-Security-Policy"/);
+  assert.match(indexHtml, /script-src 'self'/);
+  assert.match(indexHtml, /connect-src 'self'[\s\S]*https:\/\/\*\.firebaseio\.com[\s\S]*https:\/\/api\.streamelements\.com/);
+  assert.doesNotMatch(indexHtml, /overbridgenet|image-proxy/);
 });
 
 test('color inputs never receive empty values', async () => {
