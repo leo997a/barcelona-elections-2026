@@ -3,7 +3,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import aiHandler from '../api/ai.js';
-import imageProxyHandler from '../api/image-proxy.js';
 import licenseHandler from '../api/license.js';
 import liveHandler from '../api/live.js';
 import mercatoHandler from '../api/mercato.js';
@@ -20,7 +19,6 @@ type ApiHandler = (request: IncomingMessage, response: ServerResponse) => unknow
 
 const apiRoutes = new Map<string, ApiHandler>([
   ['/api/ai', aiHandler as ApiHandler],
-  ['/api/image-proxy', imageProxyHandler as ApiHandler],
   ['/api/license', licenseHandler as ApiHandler],
   ['/api/live', liveHandler as ApiHandler],
   ['/api/mercato', mercatoHandler as ApiHandler],
@@ -95,6 +93,29 @@ loadRuntimeEnv();
 
 const port = Number(process.env.PORT || 3000);
 
+const outputSecurityPolicy = [
+  "default-src 'self' data: blob:",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "media-src 'self' data: blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+  'frame-ancestors *',
+].join('; ');
+
+const applyOutputIsolationHeaders = (response: ServerResponse, pathname: string) => {
+  if (!pathname.toLowerCase().startsWith('/output/')) return;
+
+  response.setHeader('Content-Security-Policy', outputSecurityPolicy);
+  response.setHeader('Referrer-Policy', 'no-referrer');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+};
+
 const sendJsonError = (response: ServerResponse, statusCode: number, message: string) => {
   if (response.headersSent) {
     response.end();
@@ -155,6 +176,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  applyOutputIsolationHeaders(response, requestUrl.pathname);
   sendFile(response, indexPath, 'no-cache');
 });
 

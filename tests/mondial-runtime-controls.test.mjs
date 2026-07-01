@@ -268,6 +268,11 @@ test('output visibility controls publish immediately and editor links use the la
   assert.match(syncManager, /assertLivePostAccepted\(response, `Live overlay publish \$\{overlay\.id\}`\)/);
   assert.match(syncManager, /publishOverlaySnapshotWithRetry\(overlay/);
   assert.match(syncManager, /publishProgramSnapshotWithRetry\(Boolean\(options\.keepalive\)\)/);
+  assert.match(syncManager, /Initial program output snapshot publish failed; retrying in background/);
+  assert.match(
+    syncManager,
+    /public async prepareProgramOutputUrl\(\) \{[\s\S]*?this\.publishProgramSnapshot\(false\)\.catch\(error => \{[\s\S]*?this\.publishProgramSnapshotWithRetry\(false\);[\s\S]*?\}\);[\s\S]*?return this\.buildProgramOutputUrl\(\);[\s\S]*?\}/
+  );
   assert.match(
     syncManager,
     /this\.pushToLiveApi\(command\.targetId, changedOverlay \?\? undefined, \{[\s\S]*?immediate: isVisibilityCommand,[\s\S]*?retry: isVisibilityCommand,[\s\S]*?\}\);/

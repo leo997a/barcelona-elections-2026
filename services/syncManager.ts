@@ -852,7 +852,10 @@ class SyncManager {
   }
 
   public async prepareProgramOutputUrl() {
-    await this.publishProgramSnapshot(false);
+    await this.publishProgramSnapshot(false).catch(error => {
+      console.warn('Initial program output snapshot publish failed; retrying in background', error);
+      this.publishProgramSnapshotWithRetry(false);
+    });
     return this.buildProgramOutputUrl();
   }
 

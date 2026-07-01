@@ -19,8 +19,9 @@ test('template image export library exposes real high-resolution platform preset
     '<foreignObject',
     'inlineComputedStyles',
     'inlineImages',
-    'loadExportableImageBlob',
-    '/api/image-proxy?url=',
+    'isExportSafeImageUrl',
+    'fetchExportSafeImageBlob',
+    "mode: 'same-origin'",
     'imageExportFallbackDataUrl',
     'replaceExternalImageForExport',
     'data-export-image-fallback',
@@ -31,27 +32,58 @@ test('template image export library exposes real high-resolution platform preset
 
   assert.match(source, /width:\s*3840[\s\S]*?height:\s*2160/);
   assert.match(source, /width:\s*1080[\s\S]*?height:\s*1920/);
+  assert.match(source, /parsed\.origin === window\.location\.origin/);
   assert.doesNotMatch(source, /canvas export will surface any CORS failure/);
+  assert.doesNotMatch(source, /\/api\/image-proxy|fetchImageBlobThroughProxy|loadExportableImageBlob/);
 });
 
-test('image export server proxy is registered for protected external images', async () => {
-  const [proxyApi, server] = await Promise.all([
-    readSource('../api/image-proxy.ts'),
+test('image export is isolated from live output and does not expose a server image proxy', async () => {
+  const [exportSource, app, server] = await Promise.all([
+    readSource('../utils/templateImageExport.ts'),
+    readSource('../App.tsx'),
     readSource('../server/server.ts'),
   ]);
 
-  for (const token of [
-    'MAX_IMAGE_BYTES',
-    'FETCH_TIMEOUT_MS',
-    'isBlockedHost',
-    "contentType.startsWith('image/')",
-    'response.arrayBuffer()',
+  for (const forbidden of [
+    '/api/image-proxy',
+    'imageProxyHandler',
+    'syncManager',
+    '/api/live',
+    '/api/stream',
+    'BroadcastChannel',
+    'EventSource',
+    'localStorage',
+    'sessionStorage',
   ]) {
-    assert.match(proxyApi, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${token} is missing`);
+    const pattern = new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    assert.doesNotMatch(exportSource, pattern, `export must not reference ${forbidden}`);
   }
 
-  assert.match(server, /import imageProxyHandler from '\.\.\/api\/image-proxy\.js';/);
-  assert.match(server, /\['\/api\/image-proxy', imageProxyHandler as ApiHandler\]/);
+  assert.doesNotMatch(server, /imageProxyHandler|\/api\/image-proxy/);
+  assert.doesNotMatch(app, /templateImageExport|exportTemplateElementAsPng|\/api\/image-proxy/);
+  assert.match(exportSource, /if \(!isExportSafeImageUrl\(absoluteUrl\)\) \{[\s\S]*?replaceExternalImageForExport\(image, rawSrc\);[\s\S]*?return;[\s\S]*?\}/);
+});
+
+test('public output pages block third-party injected network calls', async () => {
+  const server = await readSource('../server/server.ts');
+
+  for (const token of [
+    'outputSecurityPolicy',
+    "default-src 'self' data: blob:",
+    "script-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    'applyOutputIsolationHeaders(response, requestUrl.pathname)',
+    'Content-Security-Policy',
+    'Permissions-Policy',
+  ]) {
+    assert.match(server, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${token} is missing`);
+  }
+
+  assert.match(
+    server,
+    /applyOutputIsolationHeaders\(response, requestUrl\.pathname\);\s*sendFile\(response, indexPath, 'no-cache'\);/
+  );
 });
 
 test('color inputs never receive empty values', async () => {

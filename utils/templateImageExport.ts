@@ -247,27 +247,24 @@ const replaceExternalImageForExport = (image: HTMLImageElement, rawSrc: string) 
   image.setAttribute('src', imageExportFallbackDataUrl(image, rawSrc));
 };
 
-const fetchImageBlob = async (url: string) => {
-  const response = await fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
+const isExportSafeImageUrl = (absoluteUrl: string) => {
+  const parsed = new URL(absoluteUrl, window.location.href);
+  if (parsed.protocol === 'data:' || parsed.protocol === 'blob:') return true;
+  if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+  return parsed.origin === window.location.origin;
+};
+
+const fetchExportSafeImageBlob = async (absoluteUrl: string) => {
+  const parsed = new URL(absoluteUrl, window.location.href);
+  const isBlobUrl = parsed.protocol === 'blob:';
+  const response = await fetch(
+    absoluteUrl,
+    isBlobUrl
+      ? { cache: 'force-cache' }
+      : { cache: 'force-cache', credentials: 'same-origin', mode: 'same-origin' },
+  );
   if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
   return response.blob();
-};
-
-const fetchImageBlobThroughProxy = async (absoluteUrl: string) => {
-  const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(absoluteUrl)}`;
-  const response = await fetch(proxyUrl, { cache: 'force-cache', credentials: 'same-origin' });
-  if (!response.ok) throw new Error(`Image proxy failed: ${response.status}`);
-  return response.blob();
-};
-
-const loadExportableImageBlob = async (absoluteUrl: string) => {
-  try {
-    return await fetchImageBlob(absoluteUrl);
-  } catch (directError) {
-    const parsed = new URL(absoluteUrl, window.location.href);
-    if (!['http:', 'https:'].includes(parsed.protocol)) throw directError;
-    return fetchImageBlobThroughProxy(parsed.href);
-  }
 };
 
 const inlineImages = async (root: HTMLElement) => {
@@ -277,11 +274,15 @@ const inlineImages = async (root: HTMLElement) => {
     if (!rawSrc || rawSrc.startsWith('data:')) return;
     image.removeAttribute('srcset');
     image.removeAttribute('sizes');
-    image.setAttribute('crossorigin', 'anonymous');
 
     try {
       const absoluteUrl = new URL(rawSrc, window.location.href).href;
-      const blob = await loadExportableImageBlob(absoluteUrl);
+      if (!isExportSafeImageUrl(absoluteUrl)) {
+        replaceExternalImageForExport(image, rawSrc);
+        return;
+      }
+
+      const blob = await fetchExportSafeImageBlob(absoluteUrl);
       image.setAttribute('src', await blobToDataUrl(blob));
     } catch {
       replaceExternalImageForExport(image, rawSrc);
