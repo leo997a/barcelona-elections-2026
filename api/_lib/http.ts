@@ -11,7 +11,7 @@ export interface ServerlessRequest {
 export interface ServerlessResponse {
   statusCode?: number;
   setHeader: (name: string, value: string | string[]) => void;
-  end: (body?: string) => void;
+  end: (body?: string | Buffer) => void;
 }
 
 const normalizeHeader = (value: HeaderValue): string | null => {

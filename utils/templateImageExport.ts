@@ -247,6 +247,29 @@ const replaceExternalImageForExport = (image: HTMLImageElement, rawSrc: string) 
   image.setAttribute('src', imageExportFallbackDataUrl(image, rawSrc));
 };
 
+const fetchImageBlob = async (url: string) => {
+  const response = await fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
+  if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
+  return response.blob();
+};
+
+const fetchImageBlobThroughProxy = async (absoluteUrl: string) => {
+  const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(absoluteUrl)}`;
+  const response = await fetch(proxyUrl, { cache: 'force-cache', credentials: 'same-origin' });
+  if (!response.ok) throw new Error(`Image proxy failed: ${response.status}`);
+  return response.blob();
+};
+
+const loadExportableImageBlob = async (absoluteUrl: string) => {
+  try {
+    return await fetchImageBlob(absoluteUrl);
+  } catch (directError) {
+    const parsed = new URL(absoluteUrl, window.location.href);
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw directError;
+    return fetchImageBlobThroughProxy(parsed.href);
+  }
+};
+
 const inlineImages = async (root: HTMLElement) => {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(images.map(async image => {
@@ -258,12 +281,7 @@ const inlineImages = async (root: HTMLElement) => {
 
     try {
       const absoluteUrl = new URL(rawSrc, window.location.href).href;
-      const response = await fetch(absoluteUrl, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
-      if (!response.ok) {
-        replaceExternalImageForExport(image, rawSrc);
-        return;
-      }
-      const blob = await response.blob();
+      const blob = await loadExportableImageBlob(absoluteUrl);
       image.setAttribute('src', await blobToDataUrl(blob));
     } catch {
       replaceExternalImageForExport(image, rawSrc);

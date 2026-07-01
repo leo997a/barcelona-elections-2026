@@ -377,6 +377,12 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       }
     };
 
+    // Pull the authoritative state immediately. SSE can be delayed or blocked
+    // by OBS/host proxies, so the output must not wait for the first event.
+    void fetchLiveState().then(found => {
+      if (!found) startFallback();
+    });
+
     // ── Official output sync: SSE + fast polling fallback over /api/live ──
     connectSSE();
 

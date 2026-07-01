@@ -65,6 +65,7 @@ import {
   getTemplateExportPreset,
   type TemplateExportPresetId,
 } from '../utils/templateImageExport';
+import { normalizeColorInputValue } from '../utils/colorInput';
 
 interface EditorProps {
   overlay: OverlayConfig;
@@ -4254,7 +4255,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                          <div key={field.id} className="space-y-1">
                              <label className="text-xs text-gray-400 block">{field.label}</label>
                              <div className="flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2">
-                                 <input type="color" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="h-10 w-14 cursor-pointer rounded border-none bg-transparent" />
+                                 <input type="color" value={normalizeColorInputValue(field.value)} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="h-10 w-14 cursor-pointer rounded border-none bg-transparent" />
                                  <input type="text" value={field.value.toString()} onChange={(e) => handleDraftFieldChange(field.id, e.target.value)} className="flex-1 bg-transparent text-sm font-mono text-white focus:outline-none" />
                              </div>
                          </div>
@@ -4855,7 +4856,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                            <div key={key} className="mb-2">
                              <label className="text-xs text-gray-500 block mb-1">{key === 'primaryColor' ? '' : ''}</label>
                              <div className="flex items-center gap-2 bg-gray-800 p-2 rounded">
-                               <input type="color" value={(draftOverlay.theme as any)[key]} onChange={(e) => updateDraftTheme(key, e.target.value)} className="h-6 w-6 rounded border-none cursor-pointer bg-transparent" />
+                               <input type="color" value={normalizeColorInputValue((draftOverlay.theme as any)[key])} onChange={(e) => updateDraftTheme(key, e.target.value)} className="h-6 w-6 rounded border-none cursor-pointer bg-transparent" />
                                <span className="text-xs text-gray-400 font-mono">{(draftOverlay.theme as any)[key]}</span>
                              </div>
                            </div>

@@ -264,6 +264,8 @@ test('output visibility controls publish immediately and editor links use the la
     syncManager,
     /const isVisibilityCommand = command\.action === 'set_visible' \|\| command\.action === 'toggle_visible';/
   );
+  assert.match(syncManager, /const LIVE_PUBLISH_RETRY_DELAYS_MS = \[250, 750, 1500, 3000, 6000\];/);
+  assert.match(syncManager, /assertLivePostAccepted\(response, `Live overlay publish \$\{overlay\.id\}`\)/);
   assert.match(syncManager, /publishOverlaySnapshotWithRetry\(overlay/);
   assert.match(syncManager, /publishProgramSnapshotWithRetry\(Boolean\(options\.keepalive\)\)/);
   assert.match(
@@ -285,6 +287,7 @@ test('public output links have fast fallback polling and template reconstruction
   assert.match(app, /const pollIntervalMs = isObsBrowser \? 250 : 600;/);
   assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
   assert.match(app, /const missingStateProbeMs = isObsBrowser \? 2200 : 5000;/);
+  assert.match(app, /void fetchLiveState\(\)\.then\(found => \{[\s\S]*?if \(!found\) startFallback\(\);[\s\S]*?\}\);[\s\S]*?connectSSE\(\);/);
   assert.match(app, /if \(consecutiveLiveMisses >= 8 && Date\.now\(\) - lastMissingProbeAt < missingStateProbeMs\) return;/);
   assert.doesNotMatch(app, /if \(embeddedOverlay\) \{[\s\S]*?return;\s*\}[\s\S]*?if \(!id\) return;/);
   assert.match(app, /if \(!id\) return;\s*if \(embeddedOverlay\) \{/);

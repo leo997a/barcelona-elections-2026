@@ -37,6 +37,7 @@ const DEFAULT_STATE_ACCESS_KEY = 'public-live-output';
 const DEFAULT_CONTROL_ACCESS_KEY = 'studio-live-control';
 const OBS_OUTPUT_URL_VERSION = 'obs-live-v3';
 const LEGACY_FIREBASE_SYNC_KEY = 'rge_enable_legacy_firebase_sync';
+const LIVE_PUBLISH_RETRY_DELAYS_MS = [250, 750, 1500, 3000, 6000];
 export const PROGRAM_OUTPUT_ID = '__program_output__';
 
 interface ViewerSyncBundle {
@@ -474,6 +475,11 @@ class SyncManager {
     return this.liveClientVersion;
   }
 
+  private async assertLivePostAccepted(response: Response, context: string) {
+    if (response.ok) return response;
+    throw new Error(`${context} failed with HTTP ${response.status}`);
+  }
+
   private publishOverlaySnapshot(overlay: OverlayConfig, keepalive = false) {
     const body = JSON.stringify({
       state: overlay,
@@ -484,7 +490,7 @@ class SyncManager {
       headers: { 'Content-Type': 'application/json' },
       body,
       keepalive: keepalive && body.length < 60_000,
-    });
+    }).then(response => this.assertLivePostAccepted(response, `Live overlay publish ${overlay.id}`));
   }
 
   private publishProgramSnapshot(keepalive = false) {
@@ -497,23 +503,35 @@ class SyncManager {
       headers: { 'Content-Type': 'application/json' },
       body,
       keepalive: keepalive && body.length < 60_000,
-    });
+    }).then(response => this.assertLivePostAccepted(response, 'Live program publish'));
   }
 
   private publishOverlaySnapshotWithRetry(overlay: OverlayConfig, keepalive = false) {
-    this.publishOverlaySnapshot(overlay, keepalive).catch(() => {
-      setTimeout(() => {
-        this.publishOverlaySnapshot(overlay, false).catch(() => { /* silent */ });
-      }, 450);
-    });
+    const attempt = (retryIndex: number) => {
+      this.publishOverlaySnapshot(overlay, keepalive && retryIndex === 0).catch(error => {
+        const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
+        if (nextDelay === undefined) {
+          console.error('Live overlay publish exhausted retries', overlay.id, error);
+          return;
+        }
+        setTimeout(() => attempt(retryIndex + 1), nextDelay);
+      });
+    };
+    attempt(0);
   }
 
   private publishProgramSnapshotWithRetry(keepalive = false) {
-    this.publishProgramSnapshot(keepalive).catch(() => {
-      setTimeout(() => {
-        this.publishProgramSnapshot(false).catch(() => { /* silent */ });
-      }, 450);
-    });
+    const attempt = (retryIndex: number) => {
+      this.publishProgramSnapshot(keepalive && retryIndex === 0).catch(error => {
+        const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
+        if (nextDelay === undefined) {
+          console.error('Live program publish exhausted retries', error);
+          return;
+        }
+        setTimeout(() => attempt(retryIndex + 1), nextDelay);
+      });
+    };
+    attempt(0);
   }
 
   private flushPendingLiveApi(options: { keepalive?: boolean; retry?: boolean } = {}) {
@@ -824,7 +842,10 @@ class SyncManager {
 
   public async prepareOutputUrl(overlayId: string, snapshot?: OverlayConfig) {
     if (snapshot) {
-      await this.publishOverlaySnapshot(snapshot, false);
+      await this.publishOverlaySnapshot(snapshot, false).catch(error => {
+        console.warn('Initial output snapshot publish failed; retrying in background', error);
+        this.publishOverlaySnapshotWithRetry(snapshot, false);
+      });
     }
 
     return this.buildOutputUrl(overlayId);

@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import aiHandler from '../api/ai.js';
+import imageProxyHandler from '../api/image-proxy.js';
 import licenseHandler from '../api/license.js';
 import liveHandler from '../api/live.js';
 import mercatoHandler from '../api/mercato.js';
@@ -19,6 +20,7 @@ type ApiHandler = (request: IncomingMessage, response: ServerResponse) => unknow
 
 const apiRoutes = new Map<string, ApiHandler>([
   ['/api/ai', aiHandler as ApiHandler],
+  ['/api/image-proxy', imageProxyHandler as ApiHandler],
   ['/api/license', licenseHandler as ApiHandler],
   ['/api/live', liveHandler as ApiHandler],
   ['/api/mercato', mercatoHandler as ApiHandler],

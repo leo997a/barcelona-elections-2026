@@ -8,6 +8,7 @@ import OverlayRenderer from '../components/OverlayRenderer';
 import MondialMatchPicker, { hasMondialMatchPickerFields } from '../components/editor/MondialMatchPicker';
 import { resolveTemplateById } from '../utils/templateRegistry';
 import { getTaxonomy, listCategories, type CategoryKey } from '../utils/templateTaxonomy';
+import { normalizeColorInputValue } from '../utils/colorInput';
 
 interface OperatorProps {
   overlays: OverlayConfig[];
@@ -476,7 +477,7 @@ const Operator: React.FC<OperatorProps> = ({ overlays, focusedOverlayId, favorit
           <div className="flex gap-2">
             <input
               type="color"
-              value={String(value || '#ffffff')}
+              value={normalizeColorInputValue(value)}
               onChange={event => updateField(overlay, field.id, event.target.value)}
               className="h-10 w-12 rounded-lg border border-gray-700 bg-gray-900 p-1"
             />
