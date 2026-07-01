@@ -142,7 +142,7 @@ const buildOutputFallbackState = (id: string | null): OutputState | null => {
     ...overlay,
     id,
     templateId,
-    isVisible: true,
+    isVisible: false,
   };
 };
 
@@ -273,10 +273,29 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
       writeCachedOutputState(id, newState);
     };
 
+    const applyMissingState = () => {
+      if (isProgramOutput) {
+        applyState([], 0);
+        return true;
+      }
+
+      const lastSingleState = lastGoodState.current && !Array.isArray(lastGoodState.current)
+        ? lastGoodState.current
+        : null;
+      const hiddenState = lastSingleState ?? fallbackOutputState;
+      if (!hiddenState) return false;
+      applyState({ ...hiddenState, id, isVisible: false }, 0);
+      return true;
+    };
+
     const fetchLiveState = async () => {
       lastFullFetchAt = Date.now();
       try {
         const r = await fetchNoCache(liveUrl({ full: '1' }));
+        if (r.status === 404 || r.status === 410) {
+          applyMissingState();
+          return false;
+        }
         if (!r.ok) return false;
         const data = await r.json() as { state?: OverlayConfig | OverlayConfig[]; version?: number };
         if (isProgramOutput && Array.isArray(data?.state)) {
@@ -287,6 +306,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
           applyState(data.state, Number(data.version || 0));
           return true;
         }
+        applyMissingState();
       } catch { /* keep last state */ }
       return false;
     };
@@ -301,6 +321,9 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
         if (!r.ok) {
           consecutiveLiveMisses += 1;
           lastMissingProbeAt = Date.now();
+          if (r.status === 404 || r.status === 410) {
+            applyMissingState();
+          }
           if (!lastGoodState.current) await fetchLiveState();
           return;
         }

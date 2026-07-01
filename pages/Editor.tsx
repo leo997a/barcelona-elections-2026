@@ -509,6 +509,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [motionPreviewPhase, setMotionPreviewPhase] = useState<'IN' | 'OUT' | 'HOLD'>('IN');
   const [motionPreviewKey, setMotionPreviewKey] = useState(0);
   const [motionPreviewAudio, setMotionPreviewAudio] = useState(true);
+  const [editorPreviewVisible, setEditorPreviewVisible] = useState(() => Boolean(liveOverlay.isVisible));
   const [editLinkCopied, setEditLinkCopied] = useState(false);
   const [smartTokenCopied, setSmartTokenCopied] = useState(false);
   const [exportPresetId, setExportPresetId] = useState<TemplateExportPresetId>('youtube_4k');
@@ -555,6 +556,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
+  const editorPreviewOverlay = useMemo(
+    () => normalizeElectionOverlay({ ...draftOverlay, isVisible: editorPreviewVisible }),
+    [draftOverlay, editorPreviewVisible]
+  );
   const smartTokenInfo = useMemo(() => describeSmartToken(draftOverlay), [draftOverlay]);
   const smartTokenTooltip = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
   const selectedExportPreset = useMemo(() => getTemplateExportPreset(exportPresetId), [exportPresetId]);
@@ -567,6 +572,10 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   const publishDraftVisibility = useCallback((isVisible: boolean) => {
     const outputSnapshot = normalizeElectionOverlay({ ...draftOverlay, isVisible });
+    setDraftOverlay(outputSnapshot);
+    setEditorPreviewVisible(isVisible);
+    setMotionPreviewPhase(isVisible ? 'IN' : 'OUT');
+    setMotionPreviewKey(key => key + 1);
     syncManager.setOverlayVisibility(liveOverlay.id, isVisible, outputSnapshot);
   }, [draftOverlay, liveOverlay.id]);
 
@@ -667,6 +676,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // --- SMART SYNC ---
   useEffect(() => {
+     setEditorPreviewVisible(Boolean(liveOverlay.isVisible));
      setDraftOverlay(prevDraft => {
          const newDraft = normalizeElectionOverlay({ ...prevDraft, fields: prevDraft.fields.map(field => ({ ...field })) });
          let shouldUpdate = false;
@@ -744,13 +754,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
           if (e.code === 'Space') {
               e.preventDefault();
-              publishDraftVisibility(!liveOverlay.isVisible);
+              publishDraftVisibility(!editorPreviewVisible);
           }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [liveOverlay.isVisible, publishDraftVisibility]);
+  }, [editorPreviewVisible, publishDraftVisibility]);
 
   // --- HANDLERS ---
   const handleDraftFieldChange = (id: string, value: any) => {
@@ -4885,9 +4895,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </button>
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
-                 {liveOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
+                {editorPreviewOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
                  <TemplateControlBar
-                   overlay={liveOverlay}
+                   overlay={editorPreviewOverlay}
                    compact
                    onShow={() => publishDraftVisibility(true)}
                    onHide={() => publishDraftVisibility(false)}
@@ -4978,10 +4988,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </span>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
-                    const outputSnapshot = normalizeElectionOverlay({
-                      ...draftOverlay,
-                      isVisible: liveOverlay.isVisible,
-                    });
+                    const outputSnapshot = normalizeElectionOverlay(editorPreviewOverlay);
                     const url = await syncManager.prepareOutputUrl(outputSnapshot.id, outputSnapshot);
                     if (popup) popup.location.href = url;
                     else window.open(url, '_blank', 'width=1280,height=720');
@@ -5000,7 +5007,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 <PlayerIntelV2EditorFrame fitMode={piPreviewFit}>
                   <div ref={previewExportRef} className="absolute inset-0 overflow-hidden bg-transparent">
                     <OverlayRenderer
-                      config={{ ...draftOverlay, isVisible: true }}
+                      config={editorPreviewOverlay}
                       chromaKey={previewChroma}
                       isEditor={true}
                       editorPreviewPhase={motionPreviewPhase}
@@ -5013,7 +5020,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                 <div className="relative z-10 w-full max-w-[1920px] aspect-video rounded-xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] bg-black/40">
                    <div ref={previewExportRef} className="absolute inset-0 overflow-hidden bg-transparent">
                      <OverlayRenderer
-                       config={{ ...draftOverlay, isVisible: true }}
+                       config={editorPreviewOverlay}
                        chromaKey={previewChroma}
                        isEditor={true}
                        editorPreviewPhase={motionPreviewPhase}

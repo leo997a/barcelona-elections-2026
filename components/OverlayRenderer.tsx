@@ -917,11 +917,15 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
   };
 
   const activeSlot = String(getField('activeSlot') || '');
+  const editorHiddenClass = isEditor && !config.isVisible && !animCls
+      ? 'opacity-0 scale-[0.985] pointer-events-none'
+      : '';
+  const outerClassName = [animCls, editorHiddenClass].filter(Boolean).join(' ');
 
   return (
       <>
           <style dangerouslySetInnerHTML={{ __html: CSS }} />
-          <div className={animCls} style={containerStyle}>
+          <div className={outerClassName} style={containerStyle}>
               {/* Audio element for local playback */}
               {!isEditor && <audio ref={audioRef} style={{ display: 'none' }} />}
               

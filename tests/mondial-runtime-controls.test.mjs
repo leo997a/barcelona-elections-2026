@@ -255,9 +255,10 @@ test('remote controls can create the complete mondial broadcast settings', async
 });
 
 test('output visibility controls publish immediately and editor links use the latest draft snapshot', async () => {
-  const [syncManager, editor] = await Promise.all([
+  const [syncManager, editor, overlayRenderer] = await Promise.all([
     readSource('../services/syncManager.ts'),
     readSource('../pages/Editor.tsx'),
+    readSource('../components/OverlayRenderer.tsx'),
   ]);
 
   assert.match(
@@ -281,26 +282,39 @@ test('output visibility controls publish immediately and editor links use the la
   assert.match(syncManager, /const sourceOverlay = existingOverlay \?\? fallbackOverlay;/);
   assert.match(syncManager, /if \(!replaced\) \{[\s\S]*?this\.currentState = \[\.\.\.this\.currentState, nextOverlay\];[\s\S]*?\}/);
   assert.match(syncManager, /this\.pushToLiveApi\(overlayId, nextOverlay, \{ immediate: true, retry: true \}\);/);
+  assert.match(editor, /const \[editorPreviewVisible, setEditorPreviewVisible\] = useState\(\(\) => Boolean\(liveOverlay\.isVisible\)\);/);
+  assert.match(editor, /const editorPreviewOverlay = useMemo\(/);
   assert.match(editor, /const publishDraftVisibility = useCallback\(\(isVisible: boolean\) => \{/);
+  assert.match(editor, /setEditorPreviewVisible\(isVisible\);/);
   assert.match(editor, /syncManager\.setOverlayVisibility\(liveOverlay\.id, isVisible, outputSnapshot\);/);
+  assert.match(editor, /overlay=\{editorPreviewOverlay\}/);
+  assert.match(editor, /config=\{editorPreviewOverlay\}/);
   assert.match(editor, /onShow=\{\(\) => publishDraftVisibility\(true\)\}/);
   assert.match(editor, /onHide=\{\(\) => publishDraftVisibility\(false\)\}/);
   assert.match(editor, /onReset=\{\(\) => publishDraftVisibility\(false\)\}/);
-  assert.match(editor, /const outputSnapshot = normalizeElectionOverlay\(\{[\s\S]*?\.\.\.draftOverlay,[\s\S]*?isVisible: liveOverlay\.isVisible,[\s\S]*?\}\);/);
+  assert.match(editor, /const outputSnapshot = normalizeElectionOverlay\(editorPreviewOverlay\);/);
   assert.match(editor, /prepareOutputUrl\(outputSnapshot\.id, outputSnapshot\)/);
   assert.doesNotMatch(editor, /prepareOutputUrl\(liveOverlay\.id, liveOverlay\)/);
+  assert.doesNotMatch(editor, /config=\{\{[\s\S]*?\.\.\.draftOverlay,[\s\S]*?isVisible: true,[\s\S]*?\}\}/);
+  assert.doesNotMatch(editor, /isVisible: liveOverlay\.isVisible/);
+  assert.match(overlayRenderer, /const editorHiddenClass = isEditor && !config\.isVisible && !animCls/);
+  assert.match(overlayRenderer, /const outerClassName = \[animCls, editorHiddenClass\]\.filter\(Boolean\)\.join\(' '\);/);
+  assert.match(overlayRenderer, /<div className=\{outerClassName\} style=\{containerStyle\}>/);
 });
 
-test('public output links have fast fallback polling and template reconstruction', async () => {
+test('public output links poll quickly and stay hidden when live state is missing', async () => {
   const app = await readSource('../App.tsx');
 
   assert.match(app, /const OUTPUT_TEMPLATE_IDS = INITIAL_TEMPLATES/);
   assert.match(app, /const buildOutputFallbackState = \(id: string \| null\): OutputState \| null => \{/);
   assert.match(app, /createOverlayFromTemplate\(templateId, \[\], 'public-output-fallback'\)/);
+  assert.match(app, /isVisible: false,/);
   assert.match(app, /const initialOutputState = embeddedOverlay \?\? cachedOutputState \?\? fallbackOutputState;/);
   assert.match(app, /const pollIntervalMs = isObsBrowser \? 250 : 600;/);
   assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
   assert.match(app, /const missingStateProbeMs = isObsBrowser \? 2200 : 5000;/);
+  assert.match(app, /const applyMissingState = \(\) => \{/);
+  assert.match(app, /if \(r\.status === 404 \|\| r\.status === 410\) \{[\s\S]*?applyMissingState\(\);[\s\S]*?return false;[\s\S]*?\}/);
   assert.match(app, /void fetchLiveState\(\)\.then\(found => \{[\s\S]*?if \(!found\) startFallback\(\);[\s\S]*?\}\);[\s\S]*?connectSSE\(\);/);
   assert.match(app, /if \(consecutiveLiveMisses >= 8 && Date\.now\(\) - lastMissingProbeAt < missingStateProbeMs\) return;/);
   assert.doesNotMatch(app, /if \(embeddedOverlay\) \{[\s\S]*?return;\s*\}[\s\S]*?if \(!id\) return;/);
