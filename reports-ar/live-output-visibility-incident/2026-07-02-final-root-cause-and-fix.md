@@ -104,6 +104,8 @@ POST isVisible=true  -> عاد القالب
 
 ## قاعدة منع التكرار
 
+تم تثبيت هذه القواعد أيضا كتعليمات وكيل في `AGENTS.md` وكمستند عربي مستقل في `reports-ar/live-output-visibility-incident/RED_LINES_FOR_AGENTS.md`.
+
 أي تعديل مستقبلي في output/IN/OUT يجب أن يثبت هذه النقاط قبل اعتباره منتهيا:
 
 1. فتح رابط output مباشر حقيقي، وليس الاكتفاء بالمعاينة.
