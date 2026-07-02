@@ -71,7 +71,36 @@ npm run build
 - 24 اختبار نجح.
 - TypeScript العام بلا أخطاء.
 - بناء الواجهة والخادم نجح.
-- ملف الواجهة الإنتاجي بعد الإصلاح: `dist/assets/index-CEvwI_Bo.js`.
+- ملف الواجهة الإنتاجي النهائي بعد إصلاح طبقة OBS: `dist/assets/index-XDI-_U1v.js`.
+
+## التحقق الحي بعد النشر
+
+تم دفع الإصلاحات إلى `main` عبر commits:
+
+- `d21fcc4` إصلاح انهيار عرض output ورفض stale live updates.
+- `be9267a` نقل تخزين حالة البث خارج مجلد الإصدار.
+- `0d722b8` تعطيل طبقة تفعيل الصوت في روابط OBS.
+
+بعد أن بدأ Hostinger يخدم `assets/index-XDI-_U1v.js` تم اختبار نفس الرابط المباشر:
+
+```text
+POST isVisible=true  -> ظهر القالب
+POST isVisible=false -> اختفى القالب
+POST isVisible=true  -> عاد القالب
+```
+
+نتيجة فحص DOM النهائي:
+
+```json
+{
+  "rootChildCount": 1,
+  "rootHtmlLength": 26642,
+  "audioGatePresent": false,
+  "script": "https://peachpuff-herring-712997.hostingersite.com/assets/index-XDI-_U1v.js"
+}
+```
+
+الحالة النهائية بعد الاختبار: القالب ظاهر على الرابط المباشر.
 
 ## قاعدة منع التكرار
 
