@@ -88,6 +88,14 @@ const extractOutputId = (hashPath: string) => {
   }
 };
 
+const isObsOutputRequest = (hashPath: string) => {
+  const pageParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(hashPath.includes('?') ? hashPath.split('?')[1] : '');
+  return Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
+    || pageParams.get('obs') === '1'
+    || hashParams.get('obs') === '1';
+};
+
 type OutputState = OverlayConfig | OverlayConfig[];
 const OUTPUT_CACHE_PREFIX = 'rge_output_last_state:';
 const OUTPUT_CACHE_MAX_BYTES = 1_000_000;
@@ -206,11 +214,7 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     let lastAppliedFingerprint = initialOutputState ? JSON.stringify(initialOutputState) : '';
     let lastFullFetchAt = 0;
 
-    const pageParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(hashPath.includes('?') ? hashPath.split('?')[1] : '');
-    const isObsBrowser = Boolean((window as unknown as { obsstudio?: unknown }).obsstudio)
-      || pageParams.get('obs') === '1'
-      || hashParams.get('obs') === '1';
+    const isObsBrowser = isObsOutputRequest(hashPath);
     const pollIntervalMs = isObsBrowser ? 250 : 600;
     const staleFullFetchMs = isObsBrowser ? 900 : 1400;
     const missingStateProbeMs = isObsBrowser ? 2200 : 5000;
@@ -430,9 +434,10 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
   );
 
   if (Array.isArray(outputState)) {
+    const audioUnlockOverlay = isObsOutputRequest(hashPath) ? null : <AudioUnlockOverlay />;
     return (
       <div className="w-screen h-screen overflow-hidden bg-transparent relative" onClick={unlockAudio}>
-        <AudioUnlockOverlay />
+        {audioUnlockOverlay}
         {outputState.map(item => (
           <OverlayRenderer key={item.id} config={item} />
         ))}
@@ -440,9 +445,10 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
     );
   }
 
+  const audioUnlockOverlay = isObsOutputRequest(hashPath) ? null : <AudioUnlockOverlay />;
   return (
     <div className="w-screen h-screen overflow-hidden bg-transparent relative" onClick={unlockAudio}>
-      <AudioUnlockOverlay />
+      {audioUnlockOverlay}
       <OverlayRenderer config={outputState} />
     </div>
   );

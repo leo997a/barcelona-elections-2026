@@ -313,6 +313,9 @@ test('public output links poll quickly and stay hidden when live state is missin
   assert.match(app, /createOverlayFromTemplate\(templateId, \[\], 'public-output-fallback'\)/);
   assert.match(app, /isVisible: false,/);
   assert.match(app, /const initialOutputState = embeddedOverlay \?\? cachedOutputState \?\? fallbackOutputState;/);
+  assert.match(app, /const isObsOutputRequest = \(hashPath: string\) => \{/);
+  assert.match(app, /const isObsBrowser = isObsOutputRequest\(hashPath\);/);
+  assert.match(app, /const audioUnlockOverlay = isObsOutputRequest\(hashPath\) \? null : <AudioUnlockOverlay \/>;/);
   assert.match(app, /const pollIntervalMs = isObsBrowser \? 250 : 600;/);
   assert.match(app, /const staleFullFetchMs = isObsBrowser \? 900 : 1400;/);
   assert.match(app, /const missingStateProbeMs = isObsBrowser \? 2200 : 5000;/);
