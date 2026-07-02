@@ -506,10 +506,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiError, setAiError] = useState(false);
   const [previewChroma, setPreviewChroma] = useState(false);
-  const [motionPreviewPhase, setMotionPreviewPhase] = useState<'IN' | 'OUT' | 'HOLD'>('IN');
+  const [motionPreviewPhase, setMotionPreviewPhase] = useState<'IN' | 'OUT' | 'HOLD'>('HOLD');
   const [motionPreviewKey, setMotionPreviewKey] = useState(0);
   const [motionPreviewAudio, setMotionPreviewAudio] = useState(true);
-  const [editorPreviewVisible, setEditorPreviewVisible] = useState(() => Boolean(liveOverlay.isVisible));
   const [editLinkCopied, setEditLinkCopied] = useState(false);
   const [smartTokenCopied, setSmartTokenCopied] = useState(false);
   const [exportPresetId, setExportPresetId] = useState<TemplateExportPresetId>('youtube_4k');
@@ -557,25 +556,18 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
   // Draft State
   const [draftOverlay, setDraftOverlay] = useState<OverlayConfig>(() => normalizeElectionOverlay(JSON.parse(JSON.stringify(liveOverlay))));
   const editorPreviewOverlay = useMemo(
-    () => normalizeElectionOverlay({ ...draftOverlay, isVisible: editorPreviewVisible }),
-    [draftOverlay, editorPreviewVisible]
+    () => normalizeElectionOverlay({ ...draftOverlay, isVisible: true }),
+    [draftOverlay]
   );
   const smartTokenInfo = useMemo(() => describeSmartToken(draftOverlay), [draftOverlay]);
   const smartTokenTooltip = `Stream Deck: ${smartTokenInfo.capabilityLabels.join(' / ')} | ${smartTokenInfo.fieldCount} fields`;
   const selectedExportPreset = useMemo(() => getTemplateExportPreset(exportPresetId), [exportPresetId]);
   const [panelOpen, setPanelOpen] = useState(true);
 
-  const runMotionPreview = (phase: 'IN' | 'OUT' | 'HOLD') => {
-    setMotionPreviewPhase(phase);
-    setMotionPreviewKey(key => key + 1);
-  };
-
   const publishDraftVisibility = useCallback((isVisible: boolean) => {
     const outputSnapshot = normalizeElectionOverlay({ ...draftOverlay, isVisible });
     setDraftOverlay(outputSnapshot);
-    setEditorPreviewVisible(isVisible);
-    setMotionPreviewPhase(isVisible ? 'IN' : 'OUT');
-    setMotionPreviewKey(key => key + 1);
+    setMotionPreviewPhase('HOLD');
     syncManager.setOverlayVisibility(liveOverlay.id, isVisible, outputSnapshot);
   }, [draftOverlay, liveOverlay.id]);
 
@@ -676,7 +668,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
   // --- SMART SYNC ---
   useEffect(() => {
-     setEditorPreviewVisible(Boolean(liveOverlay.isVisible));
      setDraftOverlay(prevDraft => {
          const newDraft = normalizeElectionOverlay({ ...prevDraft, fields: prevDraft.fields.map(field => ({ ...field })) });
          let shouldUpdate = false;
@@ -754,13 +745,13 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
 
           if (e.code === 'Space') {
               e.preventDefault();
-              publishDraftVisibility(!editorPreviewVisible);
+              publishDraftVisibility(!draftOverlay.isVisible);
           }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorPreviewVisible, publishDraftVisibility]);
+  }, [draftOverlay.isVisible, publishDraftVisibility]);
 
   // --- HANDLERS ---
   const handleDraftFieldChange = (id: string, value: any) => {
@@ -4895,9 +4886,9 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </button>
                  <div className="h-4 w-px bg-white/10" />
                  <span className="text-white text-sm font-bold truncate max-w-[180px]">{draftOverlay.name}</span>
-                {editorPreviewOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
+                {draftOverlay.isVisible && <span className="text-[9px] font-black text-red-400 bg-red-900/20 border border-red-700/30 px-2 py-0.5 rounded-full animate-pulse">على الهواء</span>}
                  <TemplateControlBar
-                   overlay={editorPreviewOverlay}
+                   overlay={draftOverlay}
                    compact
                    onShow={() => publishDraftVisibility(true)}
                    onHide={() => publishDraftVisibility(false)}
@@ -4906,40 +4897,6 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
              </div>
              <div className="flex items-center gap-2">
                  <button onClick={() => setPreviewChroma(!previewChroma)} className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${previewChroma ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'text-gray-500 border-white/10 hover:text-white'}`}>كروما</button>
-                 <div className="hidden xl:flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
-                    <button
-                      onClick={() => runMotionPreview('IN')}
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'IN' ? 'bg-emerald-500/25 text-emerald-200' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-                      title="Preview transition in"
-                    >
-                      <FastForward className="h-3 w-3" />
-                      <span>IN</span>
-                    </button>
-                    <button
-                      onClick={() => runMotionPreview('OUT')}
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'OUT' ? 'bg-rose-500/25 text-rose-200' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-                      title="Preview transition out"
-                    >
-                      <Rewind className="h-3 w-3" />
-                      <span>OUT</span>
-                    </button>
-                    <button
-                      onClick={() => runMotionPreview('HOLD')}
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewPhase === 'HOLD' ? 'bg-slate-500/30 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-                      title="Reset preview to hold"
-                    >
-                      <Square className="h-3 w-3" />
-                      <span>HOLD</span>
-                    </button>
-                    <button
-                      onClick={() => setMotionPreviewAudio(value => !value)}
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-black transition-colors ${motionPreviewAudio ? 'bg-cyan-500/25 text-cyan-200' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}
-                      title="Toggle preview SFX"
-                    >
-                      <Zap className="h-3 w-3" />
-                      <span>SFX</span>
-                    </button>
-                 </div>
                  <div
                     className="hidden lg:flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] p-1"
                     title={`${selectedExportPreset.labelAr} - ${selectedExportPreset.width}x${selectedExportPreset.height}`}
@@ -4988,7 +4945,7 @@ const Editor: React.FC<EditorProps> = ({ overlay: liveOverlay, onBack }) => {
                  </span>
                  <button onClick={async () => {
                     const popup = window.open('', '_blank', 'width=1280,height=720');
-                    const outputSnapshot = normalizeElectionOverlay(editorPreviewOverlay);
+                    const outputSnapshot = normalizeElectionOverlay(draftOverlay);
                     const url = await syncManager.prepareOutputUrl(outputSnapshot.id, outputSnapshot);
                     if (popup) popup.location.href = url;
                     else window.open(url, '_blank', 'width=1280,height=720');

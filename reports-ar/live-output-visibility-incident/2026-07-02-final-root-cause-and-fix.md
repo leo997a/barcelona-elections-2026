@@ -1,0 +1,76 @@
+# تقرير خاص: فشل ظهور رابط البث المباشر و IN/OUT
+
+التاريخ: 2026-07-02
+الرابط المفحوص: `https://peachpuff-herring-712997.hostingersite.com/output/instance-studio-e24729356a4d264b-template-smart-news-1-mr2p48sn-4034aef6?obs=1&rgev=obs-live-v3`
+
+## الخلاصة
+
+المشكلة لم تكن مشكلة "انتظار بث" فقط. الرابط المباشر كان يستلم حالة صحيحة من `/api/live` وفيها `isVisible: true`، لكن جذر React بقي فارغا بعد التحميل. السبب الحقيقي كان خللا في ترتيب Hooks داخل `OverlayRenderer`: عند أول تحميل بحالة fallback مخفية كان المكون يرجع `null` قبل استدعاء `useResolvedTheme`، ثم عند وصول الحالة الحية الظاهرة تغير عدد الـ Hooks في نفس المكون، فانهار العرض في النسخة الإنتاجية وبقيت الصفحة فارغة.
+
+تمت معالجة مسار ثان مهم أيضا: تخزين حالة البث كان يسمح لطلب قديم بنفس `clientVersion` أو أقل أن يكتب حالة مختلفة إذا كان المحتوى مختلفا. هذا كان يفتح الباب أمام رجوع أمر قديم فوق أمر أحدث، خصوصا أثناء retry.
+
+## ما تم مراجعته
+
+- تقرير المحاولة السابقة: `reports-ar/2026-07-02-batch-66-visibility-retry-fix.md`.
+- نص المحادثة/التقرير المرفق من Codex/Kiro.
+- الرابط المباشر نفسه على Hostinger.
+- استجابة `/api/live` و `/api/stream` للرابط المذكور.
+- ملفات التنفيذ الأساسية: `components/OverlayRenderer.tsx`, `pages/Editor.tsx`, `api/_lib/liveStore.ts`, `services/syncManager.ts`.
+
+## الأسباب الجذرية
+
+1. `OverlayRenderer` كان يستدعي `useResolvedTheme(config)` بعد شرط الرجوع المبكر `if (!mounted && !isEditor) return null;`.
+2. صفحة output تبدأ أحيانا بحالة fallback مخفية، ثم تصل الحالة الحية من السيرفر وتصبح ظاهرة.
+3. هذا التحول كان يغير ترتيب Hooks داخل React، فيفشل العرض وتبقى صفحة output فارغة رغم أن API يعمل.
+4. `liveStore` كان يرفض الطلب القديم فقط إذا كان `clientVersion` قديما والحالة لم تتغير. أما إذا تغيرت الحالة، كان يقبل الطلب القديم ويرفع رقم النسخة، وهذا غير آمن لأوامر IN/OUT.
+5. معاينة المحرر كانت مرتبطة بحالة الظهور الحية وتعرض IN/OUT أثناء المعاينة، وهذا جعل التشخيص مضللا. المطلوب أن تبقى المعاينة ظاهرة، وأن يكون الظهور والإخفاء حصرا في الرابط المباشر.
+
+## الإصلاحات المنفذة
+
+- `components/OverlayRenderer.tsx`
+  - نقل استدعاءات `useResolvedTheme(config)` و `resolveStyleVariant(config)` قبل أي رجوع مبكر.
+  - النتيجة: لا يتغير ترتيب Hooks عندما تتحول صفحة output من hidden fallback إلى live visible state.
+
+- `api/_lib/liveStore.ts`
+  - حذف منطق `fingerprintState` و `stateChanged`.
+  - أي طلب `clientVersion` مساوي أو أقل من النسخة المخزنة يتم تجاهله مباشرة، حتى لو كان payload مختلفا.
+  - النتيجة: retry قديم لا يستطيع إعادة حالة IN/OUT قديمة فوق حالة أحدث.
+
+- `pages/Editor.tsx`
+  - معاينة المحرر صارت دائما ظاهرة عبر نسخة preview-only من `draftOverlay`.
+  - أزرار SHOW/HIDE تنشر إلى الرابط المباشر فقط وتبقي معاينة المحرر في وضع HOLD.
+  - إزالة أزرار IN/OUT/SFX الخاصة بالمعاينة من شريط المحرر، لأن المطلوب عدم تشغيل الظهور/الإخفاء أثناء المعاينة.
+  - فتح رابط output صار يستخدم حالة البث الحقيقية من `draftOverlay`، لا نسخة المعاينة الإجبارية الظاهرة.
+
+- `tests/mondial-runtime-controls.test.mjs`
+  - إضافة حواجز اختبارية تمنع رجوع ترتيب Hooks الخاطئ.
+  - إضافة حواجز تمنع قبول stale/equal `clientVersion`.
+  - تثبيت قاعدة: المحرر يعرض preview دائما، و IN/OUT يخص output المباشر فقط.
+
+## التحقق المحلي
+
+تم تنفيذ:
+
+```text
+node --test tests/mondial-runtime-controls.test.mjs tests/template-image-export.test.mjs
+npx tsc --noEmit
+npm run build
+```
+
+النتيجة:
+
+- 24 اختبار نجح.
+- TypeScript العام بلا أخطاء.
+- بناء الواجهة والخادم نجح.
+- ملف الواجهة الإنتاجي بعد الإصلاح: `dist/assets/index-CEvwI_Bo.js`.
+
+## قاعدة منع التكرار
+
+أي تعديل مستقبلي في output/IN/OUT يجب أن يثبت هذه النقاط قبل اعتباره منتهيا:
+
+1. فتح رابط output مباشر حقيقي، وليس الاكتفاء بالمعاينة.
+2. التأكد أن `#root` ليس فارغا بعد وصول `/api/live`.
+3. التأكد أن `isVisible: false` يخفي في الرابط المباشر فقط.
+4. التأكد أن `isVisible: true` يعيد الظهور في الرابط المباشر فقط.
+5. عدم ربط معاينة المحرر بحالة الإخفاء الحية إلا إذا طلب ذلك صراحة.
+6. رفض أي تحديث live قديم إذا كان `clientVersion <= previousClientVersion` بلا استثناءات مبنية على اختلاف payload.

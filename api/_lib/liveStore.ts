@@ -49,14 +49,6 @@ const getRuntimeCache = () => {
 
 const keyFor = (id: string) => `overlay:${id}`;
 const fileKeyFor = (id: string) => `${createHash('sha256').update(id).digest('hex').slice(0, 48)}.json`;
-const fingerprintState = (state: unknown) => {
-  try {
-    return JSON.stringify(state);
-  } catch {
-    return String(state);
-  }
-};
-
 const isLiveEntry = (value: unknown): value is LiveStateEntry => {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<LiveStateEntry>;
@@ -123,8 +115,7 @@ export const setLiveState = async (
 ): Promise<LiveStateEntry> => {
   const previous = await getLiveState(id);
   const previousClientVersion = previous?.clientVersion ?? 0;
-  const stateChanged = previous ? fingerprintState(previous.state) !== fingerprintState(state) : true;
-  if (previousClientVersion && clientVersion <= previousClientVersion && !stateChanged) {
+  if (previousClientVersion && clientVersion <= previousClientVersion) {
     return previous;
   }
   const safeClientVersion = Math.max(clientVersion, previousClientVersion + 1);

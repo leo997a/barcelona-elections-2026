@@ -764,6 +764,9 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       );
   }, [config.fields]);
 
+  const activeTheme = useResolvedTheme(config);
+  const styleVariant = resolveStyleVariant(config);
+
   useEffect(() => {
       if (!isEditor) return;
       clearTimeout(timer.current);
@@ -896,9 +899,6 @@ const OverlayRenderer: React.FC<OverlayRendererProps> = ({
       backfaceVisibility: 'hidden',
   };
 
-  const activeTheme = useResolvedTheme(config);
-  const styleVariant = resolveStyleVariant(config);
-  
   let innerAnimClass = '';
   // Removed old opacity-0 logic because the outer wrapper handles the entire element animation now
 
