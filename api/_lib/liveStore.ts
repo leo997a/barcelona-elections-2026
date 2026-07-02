@@ -16,7 +16,18 @@ export interface LiveStateEntry {
 const fallbackStore = new Map<string, LiveStateEntry>();
 const listeners = new Map<string, Set<(entry: LiveStateEntry) => void>>();
 const fileStoreDisabled = () => Boolean(process.env.VERCEL) || process.env.REO_LIVE_STATE_FILE_STORE === 'off';
-const fileStoreDir = () => process.env.REO_LIVE_STATE_DIR?.trim() || resolve(process.cwd(), 'data', 'live-state');
+const legacyFileStoreDir = () => resolve(process.cwd(), 'data', 'live-state');
+const preferredFileStoreDir = () => {
+  const configured = process.env.REO_LIVE_STATE_DIR?.trim();
+  if (configured) return configured;
+  if (process.env.HOME) return resolve(process.env.HOME, '.reo-live-stream', 'live-state');
+  if (process.env.LOCALAPPDATA) return resolve(process.env.LOCALAPPDATA, 'reo-live-stream', 'live-state');
+  return legacyFileStoreDir();
+};
+const fileStoreDirs = () => {
+  const dirs = [preferredFileStoreDir(), legacyFileStoreDir()];
+  return [...new Set(dirs)];
+};
 
 export const describeLiveStoreMode = () => {
   if (process.env.VERCEL) return 'runtime-cache';
@@ -57,14 +68,16 @@ const isLiveEntry = (value: unknown): value is LiveStateEntry => {
 
 const readFileStoreEntry = async (id: string): Promise<LiveStateEntry | null> => {
   if (fileStoreDisabled()) return null;
-  try {
-    const raw = await readFile(resolve(fileStoreDir(), fileKeyFor(id)), 'utf8');
-    const parsed = JSON.parse(raw) as unknown;
-    if (isLiveEntry(parsed) && parsed.id === id) return parsed;
-  } catch (error) {
-    const code = (error as { code?: string }).code;
-    if (code !== 'ENOENT') {
-      console.warn('Persistent live state read failed, using memory fallback', error);
+  for (const dir of fileStoreDirs()) {
+    try {
+      const raw = await readFile(resolve(dir, fileKeyFor(id)), 'utf8');
+      const parsed = JSON.parse(raw) as unknown;
+      if (isLiveEntry(parsed) && parsed.id === id) return parsed;
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'ENOENT') {
+        console.warn(`Persistent live state read failed from ${dir}, using next fallback`, error);
+      }
     }
   }
   return null;
@@ -73,7 +86,7 @@ const readFileStoreEntry = async (id: string): Promise<LiveStateEntry | null> =>
 const writeFileStoreEntry = async (entry: LiveStateEntry) => {
   if (fileStoreDisabled()) return;
   try {
-    const dir = fileStoreDir();
+    const dir = preferredFileStoreDir();
     await mkdir(dir, { recursive: true });
     const target = resolve(dir, fileKeyFor(entry.id));
     const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;

@@ -357,8 +357,13 @@ test('hostinger live output state has a persistent file-store fallback', async (
 
   assert.match(liveStore, /process\.env\.REO_LIVE_STATE_DIR/);
   assert.match(liveStore, /resolve\(process\.cwd\(\), 'data', 'live-state'\)/);
+  assert.match(liveStore, /if \(process\.env\.HOME\) return resolve\(process\.env\.HOME, '\.reo-live-stream', 'live-state'\);/);
+  assert.match(liveStore, /const fileStoreDirs = \(\) => \{/);
+  assert.match(liveStore, /return \[\.\.\.new Set\(dirs\)\];/);
   assert.match(liveStore, /const readFileStoreEntry = async \(id: string\)/);
   assert.match(liveStore, /const writeFileStoreEntry = async \(entry: LiveStateEntry\)/);
+  assert.match(liveStore, /for \(const dir of fileStoreDirs\(\)\) \{/);
+  assert.match(liveStore, /const dir = preferredFileStoreDir\(\);/);
   assert.doesNotMatch(liveStore, /const fingerprintState = \(state: unknown\) => \{/);
   assert.match(liveStore, /const persisted = await readFileStoreEntry\(id\)/);
   assert.match(liveStore, /await writeFileStoreEntry\(entry\)/);
