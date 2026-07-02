@@ -306,7 +306,9 @@ const LiveOutputView: React.FC<{ hashPath: string }> = ({ hashPath }) => {
           applyState(data.state, Number(data.version || 0));
           return true;
         }
-        applyMissingState();
+        // Server returned 200 but state id doesn't match or format unexpected.
+        // Do NOT call applyMissingState here — keep last known good state intact.
+        // Only 404/410 should trigger the hidden fallback.
       } catch { /* keep last state */ }
       return false;
     };

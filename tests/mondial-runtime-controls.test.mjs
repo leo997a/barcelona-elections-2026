@@ -369,3 +369,64 @@ test('hostinger live output state has a persistent file-store fallback', async (
   assert.match(liveApi, /res\.setHeader\('X-Live-Store', describeLiveStoreMode\(\)\)/);
   assert.match(streamApi, /res\.setHeader\('X-Live-Store', describeLiveStoreMode\(\)\)/);
 });
+
+test('visibility retry publishes frozen snapshot and never overwrites newer state', async () => {
+  // Guard: publishOverlaySnapshotWithRetry must freeze clientVersion once
+  // and reuse it across retries so a retry cannot land a stale isVisible
+  // value on top of a newer OUT/IN command that already succeeded.
+  const syncManager = await readSource('../services/syncManager.ts');
+
+  // The retry helper must NOT call this.publishOverlaySnapshot(overlay, ...)
+  // inside its retry loop — that function calls nextLiveClientVersion() each
+  // time, producing an ever-increasing version that can stomp newer state.
+  assert.doesNotMatch(
+    syncManager,
+    /publishOverlaySnapshotWithRetry[\s\S]*?attempt\(retryIndex\)[\s\S]*?this\.publishOverlaySnapshot\(overlay/
+  );
+
+  // Instead it must build body once with a frozen clientVersion.
+  assert.match(
+    syncManager,
+    /publishOverlaySnapshotWithRetry[\s\S]*?frozenClientVersion[\s\S]*?attempt\(0\);/
+  );
+  assert.match(
+    syncManager,
+    /publishProgramSnapshotWithRetry[\s\S]*?frozenClientVersion[\s\S]*?attempt\(0\);/
+  );
+
+  // The frozen body must be serialised once before the first attempt.
+  assert.match(
+    syncManager,
+    /const frozenClientVersion = this\.nextLiveClientVersion\(\);[\s\S]{0,200}const body = JSON\.stringify\(\{ state: overlay, clientVersion: frozenClientVersion \}\)/
+  );
+  assert.match(
+    syncManager,
+    /const frozenClientVersion = this\.nextLiveClientVersion\(\);[\s\S]{0,200}const body = JSON\.stringify\(\{ state: frozenState, clientVersion: frozenClientVersion \}\)/
+  );
+});
+
+test('output fetchLiveState does not hide template on unexpected 200 response format', async () => {
+  // Guard: applyMissingState (which forces isVisible:false) must only be
+  // called on explicit 404/410 from the server — never on a 200 response
+  // whose shape doesn't match expectations.  Calling it on 200 caused the
+  // template to flash hidden whenever the server returned a format the client
+  // didn't recognise (e.g. after a server upgrade or format change).
+  const app = await readSource('../App.tsx');
+
+  // applyMissingState must appear after the 404/410 guard inside fetchLiveState
+  assert.match(
+    app,
+    /if \(r\.status === 404 \|\| r\.status === 410\) \{[\s\S]*?applyMissingState\(\);[\s\S]*?return false;[\s\S]*?\}/
+  );
+
+  // After the two early-return paths (isProgramOutput + id match), the
+  // fallthrough must NOT call applyMissingState — it should just fall through
+  // to "return false" so the last good state is preserved.
+  assert.doesNotMatch(
+    app,
+    /data\?\.state\?\.id === id[\s\S]{0,300}applyMissingState\(\);/
+  );
+
+  // The comment explaining why we preserve last state must be present.
+  assert.match(app, /Do NOT call applyMissingState here/);
+});

@@ -507,29 +507,51 @@ class SyncManager {
   }
 
   private publishOverlaySnapshotWithRetry(overlay: OverlayConfig, keepalive = false) {
+    // Fix: capture clientVersion once so retries reuse the same version number
+    // and never accidentally overwrite a newer state with an older snapshot.
+    const frozenClientVersion = this.nextLiveClientVersion();
+    const body = JSON.stringify({ state: overlay, clientVersion: frozenClientVersion });
     const attempt = (retryIndex: number) => {
-      this.publishOverlaySnapshot(overlay, keepalive && retryIndex === 0).catch(error => {
-        const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
-        if (nextDelay === undefined) {
-          console.error('Live overlay publish exhausted retries', overlay.id, error);
-          return;
-        }
-        setTimeout(() => attempt(retryIndex + 1), nextDelay);
-      });
+      fetch(`/api/live?id=${encodeURIComponent(overlay.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: keepalive && retryIndex === 0 && body.length < 60_000,
+      })
+        .then(response => this.assertLivePostAccepted(response, `Live overlay publish ${overlay.id}`))
+        .catch(error => {
+          const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
+          if (nextDelay === undefined) {
+            console.error('Live overlay publish exhausted retries', overlay.id, error);
+            return;
+          }
+          setTimeout(() => attempt(retryIndex + 1), nextDelay);
+        });
     };
     attempt(0);
   }
 
   private publishProgramSnapshotWithRetry(keepalive = false) {
+    // Fix: capture state snapshot and clientVersion once; retries reuse both.
+    const frozenState = this.currentState;
+    const frozenClientVersion = this.nextLiveClientVersion();
+    const body = JSON.stringify({ state: frozenState, clientVersion: frozenClientVersion });
     const attempt = (retryIndex: number) => {
-      this.publishProgramSnapshot(keepalive && retryIndex === 0).catch(error => {
-        const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
-        if (nextDelay === undefined) {
-          console.error('Live program publish exhausted retries', error);
-          return;
-        }
-        setTimeout(() => attempt(retryIndex + 1), nextDelay);
-      });
+      fetch(`/api/live?id=${encodeURIComponent(PROGRAM_OUTPUT_ID)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: keepalive && retryIndex === 0 && body.length < 60_000,
+      })
+        .then(response => this.assertLivePostAccepted(response, 'Live program publish'))
+        .catch(error => {
+          const nextDelay = LIVE_PUBLISH_RETRY_DELAYS_MS[retryIndex];
+          if (nextDelay === undefined) {
+            console.error('Live program publish exhausted retries', error);
+            return;
+          }
+          setTimeout(() => attempt(retryIndex + 1), nextDelay);
+        });
     };
     attempt(0);
   }
